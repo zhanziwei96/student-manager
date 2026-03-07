@@ -1,0 +1,859 @@
+{% extends "base.html" %}
+
+{% block title %}学生签到 - 班级管理系统{% endblock %}
+
+{% block extra_css %}
+<style>
+.checkin-container {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.checkin-form {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 16px;
+    color: white;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+}
+
+.checkin-form h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: white;
+    border-bottom: none;
+}
+
+.checkin-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.checkin-form label {
+    color: rgba(255,255,255,0.9);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.checkin-form input {
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    background: rgba(255,255,255,0.95);
+}
+
+.checkin-form input:focus {
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+}
+
+.checkin-form button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.2rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    background: white;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.checkin-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+.checkin-form button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.2);
+    font-size: 0.9rem;
+}
+
+.status-indicator.online {
+    background: rgba(40, 167, 69, 0.2);
+}
+
+.status-indicator.busy {
+    background: rgba(255, 193, 7, 0.3);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #28a745;
+    animation: pulse 2s infinite;
+}
+
+.status-dot.busy {
+    background: #ffc107;
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.recent-checkins {
+    margin-top: 2rem;
+}
+
+.recent-checkins h3 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.checkin-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.checkin-item .name {
+    font-weight: 600;
+    color: #333;
+}
+
+.checkin-item .time {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.checkin-item.success {
+    border-left: 4px solid #28a745;
+}
+
+.checkin-item.error {
+    border-left: 4px solid #dc3545;
+}
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #667eea;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 已签到提示卡片 */
+.already-checked-card {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    padding: 2rem;
+    border-radius: 16px;
+    color: white;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(40, 167, 69, 0.3);
+}
+
+.already-checked-card h2 {
+    color: white;
+    border-bottom: none;
+    margin-bottom: 1rem;
+}
+
+.already-checked-card .checked-info {
+    background: rgba(255,255,255,0.2);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+}
+
+.already-checked-card .checked-info p {
+    margin: 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.already-checked-card .checked-info .label {
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+.reset-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.3);
+}
+
+.reset-section button {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+}
+
+.reset-section button:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.warning-text {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-top: 0.5rem;
+}
+
+.device-id-info {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+/* 学生签到状态标签 */
+.student-status-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.student-status-tag.unchecked {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.student-status-tag.checked {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.student-status-tag .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.student-status-tag.unchecked .status-dot {
+    background: #dc3545;
+}
+
+.student-status-tag.checked .status-dot {
+    background: #28a745;
+}
+
+.student-status-tag .checkin-time {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-left: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="alert-container"></div>
+
+<!-- 当前上课班级状态 -->
+<div id="class-status-container" style="display: none; margin-bottom: 1.5rem;">
+    <div class="card" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid #28a745;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="margin: 0; color: #28a745; font-size: 1.1rem;">📚 当前上课：<span id="current-class-display">-</span></h3>
+                <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.9rem;">
+                    应到 <strong id="class-total">0</strong> 人 | 
+                    已签到 <strong style="color: #28a745;" id="class-checked">0</strong> 人 | 
+                    未签到 <strong style="color: #dc3545;" id="class-unchecked">0</strong> 人
+                </p>
+            </div>
+            <div style="font-size: 1.5rem; font-weight: 600; color: #28a745;" id="class-rate">0%</div>
+        </div>
+    </div>
+    
+    <!-- 学生签到状态列表 -->
+    <div class="card" style="margin-top: 1rem;">
+        <h4 style="margin-bottom: 1rem;">📋 班级签到状态</h4>
+        <div id="student-status-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 300px; overflow-y: auto;">
+            <!-- 动态生成学生状态标签 -->
+        </div>
+    </div>
+</div>
+
+<!-- 未上课提示 -->
+<div id="no-class-container" class="card" style="background: #f8f9fa; border-left: 4px solid #6c757d; margin-bottom: 1.5rem;">
+    <p style="margin: 0; color: #666; text-align: center;">
+        💡 请等待老师开始上课后再进行签到<br>
+        <small style="color: #999;">管理后台可设置当前上课班级</small>
+    </p>
+</div>
+
+<div class="checkin-container">
+    <!-- 签到表单 -->
+    <div id="checkin-form-container">
+        <div class="checkin-form">
+            <h2>📝 学生签到</h2>
+            <form id="checkin-form">
+                <div class="form-group">
+                    <label for="student-id">学号</label>
+                    <input type="text" id="student-id" required placeholder="请输入学号" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="student-name">姓名</label>
+                    <input type="text" id="student-name" required placeholder="请输入姓名" autocomplete="off">
+                </div>
+                <button type="submit" id="submit-btn">
+                    <span class="btn-text">立即签到</span>
+                </button>
+            </form>
+            <div class="status-indicator online" id="status-indicator">
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-text">系统正常，可以签到</span>
+            </div>
+            <div class="device-id-info">
+                设备标识: <span id="device-id-display"></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 已签到提示（默认隐藏） -->
+    <div id="already-checked-container" style="display: none;">
+        <div class="already-checked-card">
+            <h2>✅ 已完成签到</h2>
+            <p>该设备已完成签到，不能重复签到</p>
+            
+            <div class="checked-info">
+                <p class="label">签到学生</p>
+                <p style="font-size: 1.3rem; font-weight: 600;" id="checked-student-name">-</p>
+                <p class="label" style="margin-top: 1rem;">学号</p>
+                <p style="font-size: 1.1rem;" id="checked-student-id">-</p>
+                <p class="label" style="margin-top: 1rem;">签到时间</p>
+                <p id="checked-time">-</p>
+            </div>
+            
+            <div class="reset-section">
+                <p class="warning-text">如需让其他学生签到，请点击下方按钮重置</p>
+                <button onclick="resetCheckin()">重置签到状态（需要密码）</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 最近签到记录 -->
+    <div class="recent-checkins card" style="margin-top: 2rem;">
+        <h3>🕐 最近签到</h3>
+        <div id="recent-list">
+            <p style="color: #999; text-align: center;">暂无签到记录</p>
+        </div>
+        <button onclick="loadTodayRecords()" class="secondary" style="width: 100%; margin-top: 1rem;">刷新记录</button>
+    </div>
+</div>
+
+<!-- 重置密码确认弹窗 -->
+<div class="modal" id="reset-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>重置签到状态</h3>
+            <button class="close-btn" onclick="closeResetModal()">&times;</button>
+        </div>
+        <form id="reset-form">
+            <div class="form-group">
+                <label for="reset-password">管理员密码</label>
+                <input type="password" id="reset-password" required placeholder="请输入管理员密码">
+                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                    重置签到状态需要验证管理员身份
+                </small>
+            </div>
+            <button type="submit">确认重置</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 设备 ID 存储键
+const DEVICE_ID_KEY = 'checkin_device_id';
+const CHECKIN_STATUS_KEY = 'checkin_status';
+
+// 生成或获取设备 ID
+function getDeviceId() {
+    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+    if (!deviceId) {
+        // 生成唯一设备 ID
+        deviceId = 'DEV_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem(DEVICE_ID_KEY, deviceId);
+    }
+    return deviceId;
+}
+
+// 检查是否已经签到
+function checkAlreadyChecked() {
+    const checkinStatus = localStorage.getItem(CHECKIN_STATUS_KEY);
+    if (checkinStatus) {
+        try {
+            const status = JSON.parse(checkinStatus);
+            // 检查是否是今天的签到
+            const today = new Date().toDateString();
+            const checkinDate = new Date(status.timestamp).toDateString();
+            
+            if (today === checkinDate) {
+                // 今天已签到，显示已签到界面
+                showAlreadyChecked(status);
+                return true;
+            } else {
+                // 不是今天的签到，清除状态
+                clearCheckinStatus();
+            }
+        } catch (e) {
+            clearCheckinStatus();
+        }
+    }
+    return false;
+}
+
+// 保存签到状态
+function saveCheckinStatus(studentId, studentName) {
+    const status = {
+        studentId: studentId,
+        studentName: studentName,
+        timestamp: new Date().toISOString(),
+        deviceId: getDeviceId()
+    };
+    localStorage.setItem(CHECKIN_STATUS_KEY, JSON.stringify(status));
+}
+
+// 清除签到状态
+function clearCheckinStatus() {
+    localStorage.removeItem(CHECKIN_STATUS_KEY);
+}
+
+// 显示已签到界面
+function showAlreadyChecked(status) {
+    document.getElementById('checkin-form-container').style.display = 'none';
+    document.getElementById('already-checked-container').style.display = 'block';
+    
+    document.getElementById('checked-student-name').textContent = status.studentName;
+    document.getElementById('checked-student-id').textContent = status.studentId;
+    document.getElementById('checked-time').textContent = new Date(status.timestamp).toLocaleString('zh-CN');
+}
+
+// 显示签到表单
+function showCheckinForm() {
+    document.getElementById('checkin-form-container').style.display = 'block';
+    document.getElementById('already-checked-container').style.display = 'none';
+}
+
+// 打开重置弹窗
+function resetCheckin() {
+    document.getElementById('reset-form').reset();
+    document.getElementById('reset-modal').classList.add('active');
+}
+
+// 关闭重置弹窗
+function closeResetModal() {
+    document.getElementById('reset-modal').classList.remove('active');
+}
+
+// 签到队列，防止同时提交过多请求
+const requestQueue = [];
+let isProcessing = false;
+
+// 显示提示
+function showAlert(message, type = 'success') {
+    const container = document.getElementById('alert-container');
+    const alert = document.createElement('div');
+    alert.className = `alert ${type}`;
+    alert.textContent = message;
+    container.innerHTML = '';
+    container.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
+}
+
+// 更新状态指示器
+function updateStatus(status, text) {
+    const indicator = document.getElementById('status-indicator');
+    const dot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    
+    if (status === 'busy') {
+        indicator.className = 'status-indicator busy';
+        dot.className = 'status-dot busy';
+    } else {
+        indicator.className = 'status-indicator online';
+        dot.className = 'status-dot';
+    }
+    statusText.textContent = text;
+}
+
+// 处理签到请求队列
+async function processQueue() {
+    if (isProcessing || requestQueue.length === 0) return;
+    
+    isProcessing = true;
+    updateStatus('busy', '正在处理签到...');
+    
+    const { studentId, studentName, resolve, reject } = requestQueue.shift();
+    
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+        
+        const response = await fetch('/api/checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                student_id: studentId,
+                name: studentName
+            }),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const result = await response.json();
+        resolve(result);
+        
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            reject(new Error('请求超时，请重试'));
+        } else {
+            reject(error);
+        }
+    } finally {
+        isProcessing = false;
+        
+        // 继续处理队列中的下一个请求
+        if (requestQueue.length > 0) {
+            setTimeout(processQueue, 100); // 100ms 间隔，减轻服务器压力
+        } else {
+            updateStatus('online', '系统正常，可以签到');
+        }
+    }
+}
+
+// 执行签到
+async function performCheckin(studentId, studentName) {
+    return new Promise((resolve, reject) => {
+        requestQueue.push({ studentId, studentName, resolve, reject });
+        processQueue();
+    });
+}
+
+// 提交表单
+document.getElementById('checkin-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // 检查是否已经签到
+    if (checkAlreadyChecked()) {
+        showAlert('该设备今天已经签到过了', 'error');
+        return;
+    }
+    
+    const studentId = document.getElementById('student-id').value.trim();
+    const studentName = document.getElementById('student-name').value.trim();
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = submitBtn.querySelector('.btn-text');
+    
+    if (!studentId || !studentName) {
+        showAlert('请填写学号和姓名', 'error');
+        return;
+    }
+    
+    // 禁用按钮，显示加载状态
+    submitBtn.disabled = true;
+    btnText.innerHTML = '<span class="spinner"></span> 签到中...';
+    
+    try {
+        const result = await performCheckin(studentId, studentName);
+        
+        if (result.success) {
+            showAlert(`签到成功！欢迎 ${result.student_name}`);
+            
+            // 保存签到状态到本地存储
+            saveCheckinStatus(studentId, result.student_name);
+            
+            // 显示已签到界面
+            showAlreadyChecked({
+                studentId: studentId,
+                studentName: result.student_name,
+                timestamp: new Date().toISOString()
+            });
+            
+            // 更新班级签到状态
+            updateStudentStatus(studentId, result.student_name, new Date().toISOString());
+            
+            addToRecentList(studentId, result.student_name, true);
+            loadTodayRecords();
+        } else {
+            showAlert(result.message, 'error');
+            addToRecentList(studentId, studentName, false, result.message);
+            
+            // 恢复按钮
+            submitBtn.disabled = false;
+            btnText.textContent = '立即签到';
+        }
+    } catch (error) {
+        showAlert(error.message || '签到失败，请重试', 'error');
+        addToRecentList(studentId, studentName, false, '网络错误');
+        
+        // 恢复按钮
+        submitBtn.disabled = false;
+        btnText.textContent = '立即签到';
+    }
+});
+
+// 重置表单提交
+document.getElementById('reset-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const password = document.getElementById('reset-password').value.trim();
+    
+    if (!password) {
+        showAlert('请输入密码', 'error');
+        return;
+    }
+    
+    try {
+        // 调用登录 API 验证管理员密码
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'admin', password: password })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // 验证成功，清除签到状态
+            clearCheckinStatus();
+            closeResetModal();
+            showCheckinForm();
+            showAlert('重置成功，可以重新签到');
+            
+            // 清除登录 session（因为只是验证密码，不需要保持登录状态）
+            await fetch('/api/logout', { method: 'POST' });
+        } else {
+            showAlert('密码错误，无法重置', 'error');
+        }
+    } catch (error) {
+        showAlert('验证失败，请重试', 'error');
+    }
+});
+
+// 添加到最近签到列表
+function addToRecentList(studentId, name, success, errorMsg = null) {
+    const list = document.getElementById('recent-list');
+    
+    // 移除"暂无签到记录"提示
+    if (list.querySelector('p')) {
+        list.innerHTML = '';
+    }
+    
+    const time = new Date().toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+    });
+    
+    const item = document.createElement('div');
+    item.className = `checkin-item ${success ? 'success' : 'error'}`;
+    item.innerHTML = `
+        <div>
+            <span class="name">${name}</span>
+            ${errorMsg ? `<span style="color: #dc3545; font-size: 0.85rem;">(${errorMsg})</span>` : ''}
+        </div>
+        <span class="time">${time}</span>
+    `;
+    
+    list.insertBefore(item, list.firstChild);
+    
+    // 只保留最近 5 条
+    while (list.children.length > 5) {
+        list.removeChild(list.lastChild);
+    }
+}
+
+// 加载今日签到记录
+async function loadTodayRecords() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+        const response = await fetch(`/api/checkin/records?date=${today}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayTodayRecords(result.data);
+        }
+    } catch (error) {
+        console.error('加载记录失败:', error);
+    }
+}
+
+// 显示今日签到记录
+async function displayTodayRecords(records) {
+    const list = document.getElementById('recent-list');
+    
+    if (records.length === 0) {
+        list.innerHTML = '<p style="color: #999; text-align: center;">暂无签到记录</p>';
+        return;
+    }
+    
+    // 获取学生信息
+    let students = [];
+    try {
+        const response = await fetch('/api/students');
+        const result = await response.json();
+        students = result.success ? result.data : [];
+    } catch (e) {
+        console.error('获取学生信息失败:', e);
+    }
+    
+    list.innerHTML = records.slice(0, 5).map(r => {
+        const student = students.find(s => s.student_id === r.student_id);
+        const time = new Date(r.checkin_time).toLocaleTimeString('zh-CN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        return `
+            <div class="checkin-item success">
+                <div>
+                    <span class="name">${student ? student.name : r.student_id}</span>
+                </div>
+                <span class="time">${time}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// 页面加载时执行
+// 加载班级签到状态
+async function loadClassStatus() {
+    try {
+        const response = await fetch('/api/class-session/students');
+        const result = await response.json();
+        
+        if (result.success && result.data.active) {
+            // 显示班级状态
+            document.getElementById('no-class-container').style.display = 'none';
+            document.getElementById('class-status-container').style.display = 'block';
+            
+            const data = result.data;
+            document.getElementById('current-class-display').textContent = data.class_name;
+            document.getElementById('class-total').textContent = data.total;
+            document.getElementById('class-checked').textContent = data.checked_in;
+            document.getElementById('class-unchecked').textContent = data.not_checked_in;
+            
+            const rate = data.total > 0 ? Math.round((data.checked_in / data.total) * 100) : 0;
+            document.getElementById('class-rate').textContent = rate + '%';
+            
+            // 渲染学生状态列表
+            renderStudentStatusList(data.students);
+        } else {
+            // 隐藏班级状态
+            document.getElementById('no-class-container').style.display = 'block';
+            document.getElementById('class-status-container').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('加载班级状态失败:', error);
+    }
+}
+
+// 渲染学生状态列表
+function renderStudentStatusList(students) {
+    const container = document.getElementById('student-status-list');
+    if (!container) return;
+    
+    container.innerHTML = students.map(s => `
+        <div class="student-status-tag ${s.checked_in ? 'checked' : 'unchecked'}" id="status-${s.student_id}">
+            <span class="status-dot"></span>
+            <span>${s.name}</span>
+            ${s.checked_in ? `<span class="checkin-time">${new Date(s.checkin_time).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})}</span>` : ''}
+        </div>
+    `).join('');
+}
+
+// 更新单个学生签到状态
+function updateStudentStatus(studentId, studentName, checkinTime) {
+    const statusEl = document.getElementById(`status-${studentId}`);
+    if (statusEl) {
+        statusEl.classList.remove('unchecked');
+        statusEl.classList.add('checked');
+        statusEl.innerHTML = `
+            <span class="status-dot"></span>
+            <span>${studentName}</span>
+            <span class="checkin-time">${new Date(checkinTime).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})}</span>
+        `;
+    }
+    // 刷新统计数据
+    loadClassStatus();
+}
+
+window.onload = function() {
+    // 显示设备 ID
+    document.getElementById('device-id-display').textContent = getDeviceId().substring(0, 20) + '...';
+    
+    // 检查是否已经签到
+    checkAlreadyChecked();
+    
+    // 加载今日签到记录
+    loadTodayRecords();
+    
+    // 加载班级签到状态
+    loadClassStatus();
+    
+    // 定期刷新班级状态（实时更新其他学生的签到状态）
+    setInterval(loadClassStatus, 3000);
+    
+    // 如果没有签到，聚焦到输入框
+    if (document.getElementById('checkin-form-container').style.display !== 'none') {
+        document.getElementById('student-id')?.focus();
+    }
+};
+
+// 点击弹窗外部关闭
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('active');
+    }
+};
+</script>
+{% endblock %}
