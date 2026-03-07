@@ -31,17 +31,28 @@ current_class_session = {
 def get_db_connection():
     """获取数据库连接（每个线程一个连接）"""
     if not hasattr(thread_local, 'conn') or thread_local.conn is None:
-        thread_local.conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+        # 增加连接超时时间为 20 秒，避免并发时超时
+        thread_local.conn = sqlite3.connect(
+            DB_FILE, 
+            check_same_thread=False,
+            timeout=20.0
+        )
         thread_local.conn.row_factory = sqlite3.Row
-        # 设置超时时间为 10 秒，等待锁释放
+        # 设置 busy_timeout 为 10 秒，等待锁释放
         thread_local.conn.execute("PRAGMA busy_timeout = 10000")
+        # 启用外键约束
+        thread_local.conn.execute("PRAGMA foreign_keys = ON")
     return thread_local.conn
 
 
 def close_db_connection():
     """关闭当前线程的数据库连接"""
-    if hasattr(thread_local, 'conn') and thread_local.conn is not None:
-        thread_local.conn.close()
+    try:
+        if hasattr(thread_local, 'conn') and thread_local.conn is not None:
+            thread_local.conn.close()
+            thread_local.conn = None
+    except Exception:
+        # 忽略关闭时的错误
         thread_local.conn = None
 
 
@@ -596,12 +607,23 @@ def delete_class(class_name):
 def set_current_class(class_name):
     """设置当前上课班级"""
     global current_class_session
+    
+    # 如果 class_name 为空，表示结束上课，清除今天的签到记录
+    if not class_name:
+        success, message = clear_today_checkin_records()
+        current_class_session = {
+            'class_name': None,
+            'start_time': None,
+            'active': False
+        }
+        return True, f"已结束上课，{message}"
+    
     current_class_session = {
         'class_name': class_name,
         'start_time': datetime.now().isoformat(),
-        'active': True if class_name else False
+        'active': True
     }
-    return True, f"当前上课班级: {class_name}" if class_name else "已结束上课"
+    return True, f"当前上课班级: {class_name}"
 
 
 def get_current_class():
@@ -648,6 +670,24 @@ def get_class_students_with_checkin_status(class_name):
         })
     
     return result
+
+
+def clear_today_checkin_records():
+    """清除今天的所有签到记录"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('''
+            DELETE FROM checkin_records
+            WHERE DATE(checkin_time) = ?
+        ''', (today,))
+        conn.commit()
+        return True, f"已清除今天的 {cursor.rowcount} 条签到记录"
+    except Exception as e:
+        conn.rollback()
+        return False, f"清除签到记录失败: {str(e)}"
 
 
 # 初始化

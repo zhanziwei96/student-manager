@@ -11,7 +11,8 @@ from data_manager import (
     import_students_from_xlsx, update_student_score, add_checkin_record,
     get_checkin_records, get_score_logs, delete_student, delete_class,
     authenticate_user, change_password, get_user_by_id,
-    set_current_class, get_current_class, get_class_students_with_checkin_status
+    set_current_class, get_current_class, get_class_students_with_checkin_status,
+    close_db_connection
 )
 
 app = Flask(__name__)
@@ -35,6 +36,12 @@ def login_required(f):
             return redirect(url_for('login_page'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+@app.teardown_appcontext
+def close_db(error):
+    """请求结束时关闭数据库连接"""
+    close_db_connection()
 
 
 def admin_required(f):
