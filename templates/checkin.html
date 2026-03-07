@@ -291,6 +291,55 @@
 {% block content %}
 <div id="alert-container"></div>
 
+<!-- 老师代签到入口（仅已登录的老师可见） -->
+<div id="teacher-panel" style="display: none; margin-bottom: 1.5rem;">
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="margin: 0; color: white; font-size: 1.1rem;">👨‍🏫 老师控制台</h3>
+                <p style="margin: 0.5rem 0 0 0; color: rgba(255,255,255,0.9); font-size: 0.9rem;">
+                    已登录：<span id="teacher-name">老师</span>
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="toggleTeacherCheckin()" class="secondary" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
+                    帮学生代签到
+                </button>
+                <a href="/admin" class="btn" style="background: white; color: #667eea; text-decoration: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.9rem;">
+                    进入管理后台
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 老师代签到表单（默认隐藏） -->
+    <div id="teacher-checkin-form" style="display: none; margin-top: 1rem;">
+        <div class="card">
+            <h4 style="margin-bottom: 1rem; color: #667eea;">📝 帮学生代签到</h4>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                    <label for="teacher-checkin-name">学生姓名</label>
+                    <input type="text" id="teacher-checkin-name" placeholder="输入学生姓名" autocomplete="off">
+                </div>
+                <button onclick="performTeacherCheckin()" class="btn" style="background: #667eea; color: white;">
+                    确认代签
+                </button>
+            </div>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666;">
+                💡 老师代签到不受次数限制，输入学生姓名即可签到。如有同名学生，将显示选择列表。
+            </p>
+            
+            <!-- 同名学生选择列表 -->
+            <div id="student-select-list" style="display: none; margin-top: 1rem;">
+                <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #333;">请选择具体学生：</p>
+                <div id="student-options" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <!-- 动态生成学生选项 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 当前上课班级状态 -->
 <div id="class-status-container" style="display: none; margin-bottom: 1.5rem;">
     <div class="card" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid #28a745;">
@@ -840,6 +889,9 @@ window.onload = function() {
     // 加载班级签到状态
     loadClassStatus();
     
+    // 检查老师登录状态
+    checkTeacherLogin();
+    
     // 定期刷新班级状态（实时更新其他学生的签到状态）
     setInterval(loadClassStatus, 3000);
     
@@ -848,6 +900,133 @@ window.onload = function() {
         document.getElementById('student-id')?.focus();
     }
 };
+
+// 检查老师登录状态
+async function checkTeacherLogin() {
+    try {
+        const response = await fetch('/api/me');
+        const result = await response.json();
+        
+        if (result.success) {
+            // 老师已登录，显示老师面板
+            document.getElementById('teacher-panel').style.display = 'block';
+            document.getElementById('teacher-name').textContent = result.user.name || result.user.username;
+        }
+    } catch (error) {
+        console.log('未登录老师账号');
+    }
+}
+
+// 切换老师代签到表单显示
+function toggleTeacherCheckin() {
+    const form = document.getElementById('teacher-checkin-form');
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        document.getElementById('teacher-checkin-id').focus();
+    } else {
+        form.style.display = 'none';
+    }
+}
+
+// 老师代签到
+async function performTeacherCheckin() {
+    const studentName = document.getElementById('teacher-checkin-name').value.trim();
+    
+    // 隐藏选择列表
+    document.getElementById('student-select-list').style.display = 'none';
+    
+    if (!studentName) {
+        showAlert('请输入学生姓名', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/teacher-checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_name: studentName })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert(`代签到成功！${result.student_name} (${result.class_name || '未分班'}) 已签到`, 'success');
+            document.getElementById('teacher-checkin-name').value = '';
+            
+            // 更新班级签到状态
+            updateStudentStatus(result.student_id, result.student_name, new Date().toISOString());
+            
+            // 刷新今日记录
+            loadTodayRecords();
+        } else if (result.multiple_students) {
+            // 显示同名学生选择列表
+            showStudentSelectList(result.students);
+        } else {
+            showAlert(result.message, 'error');
+        }
+    } catch (error) {
+        showAlert('代签到失败，请重试', 'error');
+    }
+}
+
+// 显示同名学生选择列表
+function showStudentSelectList(students) {
+    const container = document.getElementById('student-options');
+    container.innerHTML = students.map(s => `
+        <div class="student-option" onclick="selectStudentForCheckin('${s.student_id}', '${s.name}')" 
+             style="padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; 
+                    transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>${s.name}</strong>
+                <span style="color: #666; font-size: 0.85rem; margin-left: 0.5rem;">${s.class_name || '未分班'}</span>
+            </div>
+            <span style="color: #999; font-size: 0.85rem;">学号: ${s.student_id}</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('student-select-list').style.display = 'block';
+}
+
+// 选择指定学生进行代签到
+async function selectStudentForCheckin(studentId, studentName) {
+    try {
+        const response = await fetch('/api/teacher-checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert(`代签到成功！${result.student_name} (${result.class_name || '未分班'}) 已签到`, 'success');
+            document.getElementById('teacher-checkin-name').value = '';
+            document.getElementById('student-select-list').style.display = 'none';
+            
+            // 更新班级签到状态
+            updateStudentStatus(studentId, result.student_name, new Date().toISOString());
+            
+            // 刷新今日记录
+            loadTodayRecords();
+        } else {
+            showAlert(result.message, 'error');
+        }
+    } catch (error) {
+        showAlert('代签到失败，请重试', 'error');
+    }
+}
+
+// 回车键触发代签到
+document.addEventListener('DOMContentLoaded', function() {
+    const teacherInput = document.getElementById('teacher-checkin-name');
+    if (teacherInput) {
+        teacherInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performTeacherCheckin();
+            }
+        });
+    }
+});
 
 // 点击弹窗外部关闭
 window.onclick = function(event) {

@@ -31,6 +31,77 @@ python app.py
 
 打开浏览器访问：http://127.0.0.1:5000
 
+## 🗄️ 测试环境与生产环境
+
+系统支持两个独立的数据库环境，方便测试和正式使用分离。
+
+### 环境说明
+
+| 环境 | 数据库文件 | 用途 |
+|------|-----------|------|
+| 生产环境 | `data/class_system.db` | 正式使用，保存真实数据 |
+| 测试环境 | `data/test_class_system.db` | 测试功能，可随意操作 |
+
+### 启动方式
+
+**Windows (PowerShell):**
+```powershell
+# 启动生产环境（默认）
+.\start_server.ps1
+
+# 启动测试环境
+.\start_server.ps1 -Test
+```
+
+**Windows (CMD):**
+```cmd
+# 生产环境
+start_prod.bat
+
+# 测试环境
+start_test.bat
+```
+
+**Linux / Mac:**
+```bash
+# 首次使用需要添加执行权限
+chmod +x start_server.sh start_prod.sh start_test.sh
+
+# 启动生产环境（默认）
+./start_server.sh
+# 或
+./start_prod.sh
+
+# 启动测试环境
+./start_server.sh test
+# 或
+./start_test.sh
+```
+
+**命令行方式:**
+```bash
+# 生产环境（默认）
+python app.py
+
+# 或显式指定
+set FLASK_ENV=production  # Windows
+export FLASK_ENV=production  # Linux/Mac
+python app.py
+
+# 测试环境
+set FLASK_ENV=testing  # Windows
+export FLASK_ENV=testing  # Linux/Mac
+python app.py
+```
+
+### 环境标识
+
+在管理后台右上角会显示当前环境标识：
+- 🟢 **绿色**：生产环境
+- 🟡 **黄色**：测试环境
+
+鼠标悬停在标识上可查看具体的数据库文件路径。
+
 ## 📖 使用指南
 
 ### 老师登录

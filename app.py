@@ -7,12 +7,12 @@ import os
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from data_manager import (
-    init_data, get_all_students, get_student_by_id, add_student,
+    init_data, get_all_students, get_student_by_id, get_students_by_name, add_student,
     import_students_from_xlsx, update_student_score, add_checkin_record,
     get_checkin_records, get_score_logs, delete_student, delete_class,
     authenticate_user, change_password, get_user_by_id,
     set_current_class, get_current_class, get_class_students_with_checkin_status,
-    close_db_connection
+    reset_all_scores, close_db_connection, get_db_info, DB_ENV_NAME
 )
 
 app = Flask(__name__)
@@ -195,7 +195,15 @@ def api_delete_student(student_id):
 @login_required
 def api_delete_class(class_name):
     """删除整个班级"""
-    success, message = delete_class(class_name)
+    import urllib.parse
+    # 记录原始接收到的班级名
+    print(f"[删除班级] 原始接收到的班级名: {repr(class_name)}")
+    # URL解码后的班级名
+    decoded_name = urllib.parse.unquote(class_name)
+    print(f"[删除班级] URL解码后: {repr(decoded_name)}")
+    
+    success, message = delete_class(decoded_name)
+    print(f"[删除班级] 结果: success={success}, message={message}")
     return jsonify({'success': success, 'message': message})
 
 
@@ -302,6 +310,80 @@ def api_get_checkin_records():
     return jsonify({'success': True, 'data': records})
 
 
+@app.route('/api/admin/reset-scores', methods=['POST'])
+@login_required
+def api_reset_all_scores():
+    """重置所有学生分数为70分（管理员功能）"""
+    data = request.json or {}
+    default_score = data.get('default_score', 70)
+    
+    try:
+        default_score = int(default_score)
+    except ValueError:
+        return jsonify({'success': False, 'message': '分数必须是整数'})
+    
+    success, message = reset_all_scores(default_score)
+    return jsonify({'success': success, 'message': message})
+
+
+@app.route('/api/teacher-checkin', methods=['POST'])
+@login_required
+def api_teacher_checkin():
+    """
+    老师代签到接口 - 老师可以帮学生签到，不受次数限制
+    支持通过学生姓名进行代签到
+    """
+    data = request.json
+    student_name = data.get('student_name', '').strip()
+    student_id = data.get('student_id', '').strip()
+    
+    # 如果提供了学号，直接按学号签到
+    if student_id:
+        student = get_student_by_id(student_id)
+        if not student:
+            return jsonify({'success': False, 'message': '学生不存在'})
+        
+        success, message, _ = add_checkin_record(student_id, checkin_type='老师代签')
+        return jsonify({
+            'success': success, 
+            'message': message,
+            'student_name': student['name'],
+            'student_id': student_id,
+            'checkin_type': '老师代签'
+        })
+    
+    # 按姓名签到
+    if not student_name:
+        return jsonify({'success': False, 'message': '学生姓名不能为空'})
+    
+    # 查找匹配的学生
+    students = get_students_by_name(student_name)
+    
+    if not students:
+        return jsonify({'success': False, 'message': f'未找到名为 "{student_name}" 的学生'})
+    
+    # 如果只有一个匹配的学生，直接签到
+    if len(students) == 1:
+        student = students[0]
+        success, message, _ = add_checkin_record(student['student_id'], checkin_type='老师代签')
+        return jsonify({
+            'success': success, 
+            'message': message,
+            'student_name': student['name'],
+            'student_id': student['student_id'],
+            'class_name': student['class_name'],
+            'checkin_type': '老师代签'
+        })
+    
+    # 如果有多个匹配的学生，返回列表供选择
+    return jsonify({
+        'success': False, 
+        'message': f'找到 {len(students)} 个名为 "{student_name}" 的学生，请选择具体学生',
+        'multiple_students': True,
+        'students': students
+    })
+
+
 # ========== 上课状态管理 ==========
 
 @app.route('/api/class-session', methods=['GET'])
@@ -359,10 +441,41 @@ def api_get_class_session_students():
 
 @app.route('/api/score/logs', methods=['GET'])
 def api_get_score_logs():
-    """获取分数变更日志"""
+    """获取分数变更日志，默认只显示当前上课班级的学生"""
     student_id = request.args.get('student_id', '').strip()
-    logs = get_score_logs(student_id if student_id else None)
-    return jsonify({'success': True, 'data': logs})
+    class_name = request.args.get('class_name', '').strip()
+    student_name = request.args.get('student_name', '').strip()
+    only_current_class = request.args.get('only_current_class', 'true').lower() == 'true'
+    
+    # 如果请求指定只显示当前上课班级，且没有提供班级参数
+    if only_current_class and not class_name:
+        session_info = get_current_class()
+        if session_info['active'] and session_info['class_name']:
+            class_name = session_info['class_name']
+    
+    logs = get_score_logs(
+        student_id=student_id if student_id else None,
+        class_name=class_name if class_name else None,
+        student_name=student_name if student_name else None
+    )
+    
+    # 添加当前筛选信息到响应
+    result = {
+        'success': True, 
+        'data': logs,
+        'filter_info': {
+            'class_name': class_name if class_name else '全部班级',
+            'is_current_class': only_current_class and bool(class_name)
+        }
+    }
+    
+    return jsonify(result)
+
+
+@app.route('/api/db-info', methods=['GET'])
+def api_get_db_info():
+    """获取当前数据库环境信息"""
+    return jsonify({'success': True, 'data': get_db_info()})
 
 
 # ========== 页面路由 ==========
@@ -398,10 +511,18 @@ def unauthorized_error(error):
 
 if __name__ == '__main__':
     init_data()
+    db_info = get_db_info()
+    
     print("=" * 50)
-    print("班级管理系统已启动")
+    print(f"班级管理系统已启动 [{DB_ENV_NAME}]")
     print("访问地址: http://127.0.0.1:5000")
     print("=" * 50)
+    print(f"\n当前环境: {DB_ENV_NAME}")
+    print(f"数据库文件: {db_info['file']}")
+    print("\n切换环境方法:")
+    print("  测试环境: set FLASK_ENV=testing  (Windows)")
+    print("  测试环境: export FLASK_ENV=testing (Linux/Mac)")
+    print("  或直接设置: set DB_ENV=testing")
     print("\n功能说明:")
     print("- 首页: http://127.0.0.1:5000/")
     print("- 管理后台: http://127.0.0.1:5000/admin")

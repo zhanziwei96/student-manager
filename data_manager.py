@@ -1,6 +1,7 @@
 """
 班级管理系统 - 数据管理模块
 使用 SQLite 数据库进行数据存储，优化并发处理
+支持测试环境和生产环境分离
 """
 
 import sqlite3
@@ -11,8 +12,17 @@ import secrets
 from datetime import datetime
 from openpyxl import load_workbook
 
-# 数据库文件路径
-DB_FILE = 'data/class_system.db'
+# 根据环境变量选择数据库
+# 设置环境变量 FLASK_ENV=testing 或 DB_ENV=testing 使用测试数据库
+# 默认使用生产数据库
+ENV = os.environ.get('FLASK_ENV') or os.environ.get('DB_ENV', 'production')
+
+if ENV == 'testing' or ENV == 'test':
+    DB_FILE = 'data/test_class_system.db'
+    DB_ENV_NAME = '测试环境'
+else:
+    DB_FILE = 'data/class_system.db'
+    DB_ENV_NAME = '生产环境'
 
 # 确保数据目录存在
 os.makedirs('data', exist_ok=True)
@@ -26,6 +36,15 @@ current_class_session = {
     'start_time': None,
     'active': False
 }
+
+
+def get_db_info():
+    """获取当前数据库环境信息"""
+    return {
+        'env': ENV,
+        'name': DB_ENV_NAME,
+        'file': DB_FILE
+    }
 
 
 def get_db_connection():
@@ -104,31 +123,29 @@ def init_db():
             student_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             class_name TEXT DEFAULT '未分班',
-            score INTEGER DEFAULT 0,
+            score INTEGER DEFAULT 70,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
-    # 签到记录表
+    # 签到记录表（移除外键约束，允许删除学生时自动清空关联记录）
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS checkin_records (
             record_id TEXT PRIMARY KEY,
             student_id TEXT NOT NULL,
             checkin_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            checkin_type TEXT DEFAULT '网页签到',
-            FOREIGN KEY (student_id) REFERENCES students(student_id)
+            checkin_type TEXT DEFAULT '网页签到'
         )
     ''')
     
-    # 分数变更日志表
+    # 分数变更日志表（移除外键约束，允许删除学生时自动清空关联记录）
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS score_logs (
             log_id TEXT PRIMARY KEY,
             student_id TEXT NOT NULL,
             score_change INTEGER NOT NULL,
             reason TEXT,
-            operation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (student_id) REFERENCES students(student_id)
+            operation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
@@ -304,7 +321,30 @@ def get_student_by_id(student_id):
     return None
 
 
-def add_student(student_id, name, class_name, score=0):
+def get_students_by_name(name):
+    """根据姓名获取学生列表（支持同名学生）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT student_id, name, class_name, score 
+        FROM students 
+        WHERE name LIKE ?
+        ORDER BY class_name, student_id
+    ''', (f'%{name}%',))
+    rows = cursor.fetchall()
+    
+    return [
+        {
+            'student_id': row['student_id'],
+            'name': row['name'],
+            'class_name': row['class_name'],
+            'score': row['score'] if row['score'] else 0
+        }
+        for row in rows
+    ]
+
+
+def add_student(student_id, name, class_name, score=70):
     """添加单个学生"""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -399,8 +439,8 @@ def import_students_from_xlsx(file_path, default_class=None):
                 if excel_class:
                     cls = excel_class
             
-            # 添加学生
-            success, msg = add_student(student_id, name, cls, 0)
+            # 添加学生（使用默认分数 70 分）
+            success, msg = add_student(student_id, name, cls)
             if success:
                 imported_count += 1
             else:
@@ -427,7 +467,7 @@ def update_student_score(student_id, score_change, reason=""):
             return False, "学生不存在"
         
         # 计算新分数
-        current_score = row['score'] if row['score'] else 0
+        current_score = row['score'] if row['score'] is not None else 70
         new_score = current_score + score_change
         
         # 更新学生分数
@@ -529,23 +569,46 @@ def get_checkin_records(student_id=None, date=None):
     ]
 
 
-def get_score_logs(student_id=None):
-    """获取分数变更日志"""
+def get_score_logs(student_id=None, class_name=None, student_name=None):
+    """获取分数变更日志
+    
+    Args:
+        student_id: 学号筛选（可选）
+        class_name: 班级筛选（可选）
+        student_name: 学生姓名筛选（可选）
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # 使用 JOIN 关联 students 表以支持按班级和姓名筛选
     query = '''
-        SELECT log_id, student_id, score_change, reason, operation_time
-        FROM score_logs
+        SELECT 
+            sl.log_id, 
+            sl.student_id, 
+            sl.score_change, 
+            sl.reason, 
+            sl.operation_time,
+            s.name as student_name,
+            s.class_name
+        FROM score_logs sl
+        LEFT JOIN students s ON sl.student_id = s.student_id
         WHERE 1=1
     '''
     params = []
     
     if student_id:
-        query += ' AND student_id = ?'
+        query += ' AND sl.student_id = ?'
         params.append(student_id)
     
-    query += ' ORDER BY operation_time DESC'
+    if class_name:
+        query += ' AND s.class_name = ?'
+        params.append(class_name)
+    
+    if student_name:
+        query += ' AND s.name LIKE ?'
+        params.append(f'%{student_name}%')
+    
+    query += ' ORDER BY sl.operation_time DESC'
     
     cursor.execute(query, params)
     rows = cursor.fetchall()
@@ -554,6 +617,8 @@ def get_score_logs(student_id=None):
         {
             'log_id': row['log_id'],
             'student_id': row['student_id'],
+            'student_name': row['student_name'],
+            'class_name': row['class_name'],
             'score_change': row['score_change'],
             'reason': row['reason'],
             'operation_time': row['operation_time']
@@ -563,16 +628,38 @@ def get_score_logs(student_id=None):
 
 
 def delete_student(student_id):
-    """删除学生"""
+    """删除学生，同时清空该学生的签到记录和分数变更日志"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
+        # 先检查学生是否存在
+        cursor.execute('SELECT name FROM students WHERE student_id = ?', (student_id,))
+        row = cursor.fetchone()
+        if not row:
+            return False, "学生不存在"
+        
+        student_name = row['name']
+        
+        # 删除该学生的签到记录
+        cursor.execute('DELETE FROM checkin_records WHERE student_id = ?', (student_id,))
+        checkin_deleted = cursor.rowcount
+        
+        # 删除该学生的分数变更日志
+        cursor.execute('DELETE FROM score_logs WHERE student_id = ?', (student_id,))
+        score_logs_deleted = cursor.rowcount
+        
+        # 删除学生
         cursor.execute('DELETE FROM students WHERE student_id = ?', (student_id,))
         conn.commit()
         
         if cursor.rowcount > 0:
-            return True, "删除成功"
+            message = f"成功删除学生 '{student_name}'"
+            if checkin_deleted > 0:
+                message += f"，清空 {checkin_deleted} 条签到记录"
+            if score_logs_deleted > 0:
+                message += f"，清空 {score_logs_deleted} 条分数变更日志"
+            return True, message
         return False, "学生不存在"
     except Exception as e:
         conn.rollback()
@@ -580,26 +667,59 @@ def delete_student(student_id):
 
 
 def delete_class(class_name):
-    """删除整个班级的学生"""
+    """删除整个班级，同时清空该班级所有学生的签到记录和分数变更日志"""
+    print(f"[delete_class] 接收到的班级名: {repr(class_name)}")
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
+        # 先查看数据库中有哪些班级
+        cursor.execute('SELECT DISTINCT class_name FROM students')
+        all_classes = [row['class_name'] for row in cursor.fetchall()]
+        print(f"[delete_class] 数据库中所有班级: {all_classes}")
+        
         # 先统计要删除的学生数量
         cursor.execute('SELECT COUNT(*) as count FROM students WHERE class_name = ?', (class_name,))
         result = cursor.fetchone()
         count = result['count'] if result else 0
+        print(f"[delete_class] 班级 '{class_name}' 的学生数量: {count}")
         
         if count == 0:
             return False, "该班级不存在或没有学生"
+        
+        # 获取该班级所有学生的学号
+        cursor.execute('SELECT student_id FROM students WHERE class_name = ?', (class_name,))
+        student_ids = [row['student_id'] for row in cursor.fetchall()]
+        print(f"[delete_class] 要删除的学生: {student_ids}")
+        
+        # 批量删除该班级所有学生的签到记录和分数日志（使用 IN 子句更高效）
+        placeholders = ','.join('?' * len(student_ids))
+        
+        # 删除签到记录
+        cursor.execute(f'DELETE FROM checkin_records WHERE student_id IN ({placeholders})', student_ids)
+        checkin_deleted = cursor.rowcount
+        
+        # 删除分数变更日志
+        cursor.execute(f'DELETE FROM score_logs WHERE student_id IN ({placeholders})', student_ids)
+        score_logs_deleted = cursor.rowcount
+        
+        print(f"[delete_class] 已删除 {checkin_deleted} 条签到记录, {score_logs_deleted} 条分数变更日志")
         
         # 删除该班级的所有学生
         cursor.execute('DELETE FROM students WHERE class_name = ?', (class_name,))
         conn.commit()
         
-        return True, f"成功删除班级 '{class_name}' 的 {count} 名学生"
+        print(f"[delete_class] 成功删除班级 '{class_name}' 的 {count} 名学生")
+        message = f"成功删除班级 '{class_name}' 的 {count} 名学生"
+        if checkin_deleted > 0:
+            message += f"，清空 {checkin_deleted} 条签到记录"
+        if score_logs_deleted > 0:
+            message += f"，清空 {score_logs_deleted} 条分数变更日志"
+        return True, message
     except Exception as e:
         conn.rollback()
+        print(f"[delete_class] 删除失败: {str(e)}")
         return False, f"删除班级失败: {str(e)}"
 
 
@@ -688,6 +808,22 @@ def clear_today_checkin_records():
     except Exception as e:
         conn.rollback()
         return False, f"清除签到记录失败: {str(e)}"
+
+
+def reset_all_scores(default_score=70):
+    """重置所有学生的分数为指定值（默认70分）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE students SET score = ?', (default_score,))
+        conn.commit()
+        
+        affected_count = cursor.rowcount
+        return True, f"成功重置 {affected_count} 名学生的分数为 {default_score} 分"
+    except Exception as e:
+        conn.rollback()
+        return False, f"重置失败: {str(e)}"
 
 
 # 初始化

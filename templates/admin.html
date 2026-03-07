@@ -10,7 +10,10 @@
             <h2 style="margin: 0; border: none; color: white;">欢迎，<span id="user-name">老师</span></h2>
             <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">管理后台 | <span id="user-username"></span></p>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span id="db-env-badge" style="padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 500; background: rgba(255,255,255,0.2);">
+                加载中...
+            </span>
             <button class="secondary" onclick="openChangePasswordModal()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
                 修改密码
             </button>
@@ -66,6 +69,24 @@
             </div>
             <button type="submit">导入</button>
         </form>
+    </div>
+    
+    <!-- 分数管理 -->
+    <div class="card">
+        <h2>🎯 分数管理</h2>
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                <strong>重置所有学生分数</strong><br>
+                将所有学生的分数重置为默认值（70分）
+            </p>
+        </div>
+        <div class="form-group">
+            <label for="reset-score-value">默认分数值</label>
+            <input type="number" id="reset-score-value" value="70" min="0" max="100">
+        </div>
+        <button onclick="resetAllScores()" class="danger" style="background: #dc3545;">
+            ⚠️ 重置所有分数
+        </button>
     </div>
 </div>
 
@@ -167,12 +188,26 @@
 <!-- 分数日志 -->
 <div class="card">
     <h2>📊 分数变更日志</h2>
-    <button onclick="loadScoreLogs()" class="secondary">刷新日志</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+        <div id="scorelog-filter-info" style="display: none; background: #e3f2fd; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.9rem;">
+            <span>📍 当前显示: <strong id="scorelog-current-class">-</strong></span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button onclick="loadScoreLogs(true)" class="secondary" id="btn-current-class-logs" style="display: none;">
+                📍 当前班级
+            </button>
+            <button onclick="loadScoreLogs(false)" class="secondary" id="btn-all-logs">
+                📋 全部日志
+            </button>
+            <button onclick="refreshScoreLogs()" class="secondary">刷新</button>
+        </div>
+    </div>
     <table>
         <thead>
             <tr>
                 <th>学号</th>
                 <th>姓名</th>
+                <th>班级</th>
                 <th>变更</th>
                 <th>原因</th>
                 <th>时间</th>
@@ -180,7 +215,7 @@
         </thead>
         <tbody id="scorelog-tbody">
             <tr>
-                <td colspan="5" style="text-align: center; color: #999;">点击刷新查看日志</td>
+                <td colspan="6" style="text-align: center; color: #999;">点击刷新查看日志</td>
             </tr>
         </tbody>
     </table>
@@ -199,6 +234,34 @@
                 <label>当前学生</label>
                 <input type="text" id="score-student-name" readonly>
             </div>
+            
+            <!-- 快速标签 -->
+            <div class="form-group">
+                <label>快速选择</label>
+                <div class="score-tags">
+                    <button type="button" class="score-tag tag-absent" onclick="selectScoreTag(-5, '旷课')">
+                        <span class="tag-icon">❌</span>
+                        <span class="tag-text">旷课</span>
+                        <span class="tag-score">-5分</span>
+                    </button>
+                    <button type="button" class="score-tag tag-homework" onclick="selectScoreTag(-2, '未交作业')">
+                        <span class="tag-icon">📚</span>
+                        <span class="tag-text">未交作业</span>
+                        <span class="tag-score">-2分</span>
+                    </button>
+                    <button type="button" class="score-tag tag-discipline" onclick="selectScoreTag(-2, '课堂纪律')">
+                        <span class="tag-icon">🤫</span>
+                        <span class="tag-text">课堂纪律</span>
+                        <span class="tag-score">-2分</span>
+                    </button>
+                    <button type="button" class="score-tag tag-custom" onclick="selectScoreTag('', '')">
+                        <span class="tag-icon">⚙️</span>
+                        <span class="tag-text">其他</span>
+                        <span class="tag-score">自定义</span>
+                    </button>
+                </div>
+            </div>
+            
             <div class="form-group">
                 <label for="score-change">分数变更（正数为加分，负数为扣分）</label>
                 <input type="number" id="score-change" required placeholder="例如: 10 或 -5">
@@ -397,6 +460,86 @@
     border-radius: 4px;
     margin-left: 0.5rem;
 }
+
+/* 分数标签样式 */
+.score-tags {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.score-tag {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.score-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.score-tag.active {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.score-tag .tag-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.score-tag .tag-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.score-tag .tag-score {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+}
+
+/* 不同类型标签的颜色 */
+.score-tag.tag-absent:hover,
+.score-tag.tag-absent.active {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.score-tag.tag-homework:hover,
+.score-tag.tag-homework.active {
+    border-color: #fd7e14;
+    background: linear-gradient(135deg, #fd7e14 0%, #e56b0a 100%);
+    color: white;
+}
+
+.score-tag.tag-discipline:hover,
+.score-tag.tag-discipline.active {
+    border-color: #ffc107;
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #333;
+}
+
+.score-tag.tag-discipline.active .tag-score,
+.score-tag.tag-discipline.active .tag-text {
+    color: #333;
+}
+
+.score-tag.tag-custom:hover,
+.score-tag.tag-custom.active {
+    border-color: #6c757d;
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    color: white;
+}
 </style>
 {% endblock %}
 
@@ -432,6 +575,33 @@ async function loadUserInfo() {
         }
     } catch (error) {
         console.error('加载用户信息失败:', error);
+    }
+}
+
+// 加载数据库环境信息
+async function loadDbEnvInfo() {
+    try {
+        const response = await fetch('/api/db-info');
+        const result = await response.json();
+        
+        if (result.success) {
+            const badge = document.getElementById('db-env-badge');
+            const isTest = result.data.env === 'testing' || result.data.env === 'test';
+            badge.textContent = result.data.name;
+            badge.title = `数据库文件: ${result.data.file}`;
+            
+            if (isTest) {
+                // 测试环境使用黄色背景
+                badge.style.background = '#ffc107';
+                badge.style.color = '#333';
+            } else {
+                // 生产环境使用绿色背景
+                badge.style.background = '#28a745';
+                badge.style.color = 'white';
+            }
+        }
+    } catch (error) {
+        console.error('加载数据库环境信息失败:', error);
     }
 }
 
@@ -640,11 +810,19 @@ function updateClassSessionUI(sessionData) {
         
         // 加载学生签到统计
         loadClassStudentsStatus();
+        
+        // 更新分数日志筛选按钮状态
+        if (!scoreLogsFilterCurrentClass) {
+            document.getElementById('btn-current-class-logs').style.display = 'inline-block';
+        }
     } else {
         // 未上课
         inactiveDiv.style.display = 'block';
         activeDiv.style.display = 'none';
         card.style.background = 'linear-gradient(135deg, #6c757d 0%, #495057 100%)';
+        
+        // 隐藏"当前班级"按钮
+        document.getElementById('btn-current-class-logs').style.display = 'none';
     }
 }
 
@@ -707,10 +885,14 @@ function displayStudents(students, preservePage = false) {
     const sortedClasses = Object.keys(grouped).sort();
     
     // 生成 HTML
-    container.innerHTML = sortedClasses.map(className => {
+    container.innerHTML = sortedClasses.map((className, index) => {
         const classStudents = grouped[className];
-        const classId = 'class-' + className.replace(/[^a-zA-Z0-9]/g, '_');
-        const classKey = className.replace(/[^a-zA-Z0-9]/g, '_');
+        // 使用索引和编码确保 ID 唯一性，避免班级名称相似导致冲突
+        const safeClassName = encodeURIComponent(className).replace(/[^a-zA-Z0-9]/g, '_');
+        const classId = `class-${index}-${safeClassName}`;
+        const classKey = `key-${index}-${safeClassName}`;
+        // 转义 HTML 特殊字符，避免属性解析错误
+        const escapedClassName = className.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         
         // 初始化该班级的分页状态
         if (!preservePage || !classPageState[classKey]) {
@@ -740,15 +922,15 @@ function displayStudents(students, preservePage = false) {
         }
         
         return `
-            <div class="class-group" data-class-name="${className}">
+            <div class="class-group" data-class-name="${escapedClassName}">
                 <div class="class-header collapsed" onclick="toggleClass('${classId}')">
                     <div class="class-title">
                         <span class="class-toggle-icon">▼</span>
-                        <span>${className}</span>
+                        <span>${escapedClassName}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
                         <span class="class-count">${classStudents.length} 人</span>
-                        <button class="btn-small danger" onclick="event.stopPropagation(); deleteClass('${className}')" title="删除整个班级">
+                        <button class="btn-small danger" onclick="event.stopPropagation(); deleteClassByElement(this)" title="删除整个班级" data-class-name="${escapedClassName}">
                             删除班级
                         </button>
                     </div>
@@ -899,14 +1081,18 @@ function changePageSize(classKey, size) {
 // 切换班级展开/折叠
 function toggleClass(classId) {
     const content = document.getElementById(classId);
+    if (!content) {
+        console.error('找不到班级内容元素:', classId);
+        return;
+    }
     const header = content.previousElementSibling;
     
     if (content.classList.contains('collapsed')) {
         content.classList.remove('collapsed');
-        header.classList.remove('collapsed');
+        if (header) header.classList.remove('collapsed');
     } else {
         content.classList.add('collapsed');
-        header.classList.add('collapsed');
+        if (header) header.classList.add('collapsed');
     }
 }
 
@@ -1069,6 +1255,17 @@ async function deleteStudent(studentId) {
     }
 }
 
+// 从按钮元素删除班级（处理 HTML 转义）
+async function deleteClassByElement(button) {
+    // 从 data 属性获取 HTML 转义的班级名，然后解码
+    const escapedClassName = button.dataset.className;
+    // 创建临时元素来解码 HTML 实体
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = escapedClassName;
+    const className = tempDiv.textContent;
+    await deleteClass(className);
+}
+
 // 删除整个班级
 async function deleteClass(className) {
     if (!confirm(`确定要删除整个班级 "${className}" 吗？\n\n此操作将删除该班级的所有学生，且无法撤销！`)) {
@@ -1080,7 +1277,12 @@ async function deleteClass(className) {
     document.querySelectorAll('.class-content').forEach(el => {
         if (!el.classList.contains('collapsed')) {
             const group = el.closest('.class-group');
-            if (group && group.dataset.className !== className) {
+            // 比较时也需要解码 HTML 实体
+            const groupClassName = group ? group.dataset.className : '';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = groupClassName;
+            const decodedGroupClassName = tempDiv.textContent;
+            if (decodedGroupClassName !== className) {
                 expandedClasses.push(el.id);
             }
         }
@@ -1099,11 +1301,10 @@ async function deleteClass(className) {
             showAlert(result.message);
             // 从本地数组中移除该班级的所有学生
             allStudents = allStudents.filter(s => s.class_name !== className);
-            // 删除该班级的分页状态
-            const classKey = className.replace(/[^a-zA-Z0-9]/g, '_');
-            delete classPageState[classKey];
-            // 保持分页状态重新渲染
-            displayStudents(allStudents, true);
+            // 清空分页状态（因为索引可能变化）
+            Object.keys(classPageState).forEach(key => delete classPageState[key]);
+            // 重新渲染
+            displayStudents(allStudents, false);
             // 恢复其他班级的展开状态
             setTimeout(() => {
                 expandedClasses.forEach(classId => {
@@ -1125,6 +1326,40 @@ async function deleteClass(className) {
     }
 }
 
+// 重置所有学生分数
+async function resetAllScores() {
+    const defaultScore = parseInt(document.getElementById('reset-score-value').value) || 70;
+    
+    if (!confirm(`确定要将所有学生的分数重置为 ${defaultScore} 分吗？\n\n此操作不可撤销！`)) {
+        return;
+    }
+    
+    // 二次确认
+    if (!confirm('请再次确认：此操作将重置所有学生的分数，是否继续？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/reset-scores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ default_score: defaultScore })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showAlert(result.message);
+            loadStudents(); // 刷新学生列表
+            loadScoreLogs(); // 刷新分数日志
+        } else {
+            showAlert(result.message, 'error');
+        }
+    } catch (error) {
+        showAlert('重置分数失败', 'error');
+    }
+}
+
 // 打开分数调整弹窗
 function openScoreModal(studentId, studentName) {
     document.getElementById('score-student-id').value = studentId;
@@ -1132,6 +1367,41 @@ function openScoreModal(studentId, studentName) {
     document.getElementById('score-change').value = '';
     document.getElementById('score-reason').value = '';
     document.getElementById('score-modal').classList.add('active');
+    
+    // 清除所有标签的选中状态
+    document.querySelectorAll('.score-tag').forEach(tag => tag.classList.remove('active'));
+}
+
+// 选择分数标签
+function selectScoreTag(score, reason) {
+    // 更新输入框
+    document.getElementById('score-change').value = score;
+    document.getElementById('score-reason').value = reason;
+    
+    // 更新标签选中状态
+    document.querySelectorAll('.score-tag').forEach(tag => tag.classList.remove('active'));
+    
+    // 找到对应的标签并添加 active 类
+    let selector = '';
+    if (score === -5 && reason === '旷课') {
+        selector = '.tag-absent';
+    } else if (score === -2 && reason === '未交作业') {
+        selector = '.tag-homework';
+    } else if (score === -2 && reason === '课堂纪律') {
+        selector = '.tag-discipline';
+    } else {
+        selector = '.tag-custom';
+    }
+    
+    if (selector) {
+        const tag = document.querySelector(selector);
+        if (tag) tag.classList.add('active');
+    }
+    
+    // 如果是自定义，聚焦到输入框
+    if (score === '' && reason === '') {
+        document.getElementById('score-change').focus();
+    }
 }
 
 // 关闭分数调整弹窗
@@ -1224,17 +1494,62 @@ function resetRecordFilter() {
     loadRecords();
 }
 
+// 分数日志当前筛选状态
+let scoreLogsFilterCurrentClass = true;
+
+// 刷新分数日志（保持当前筛选状态）
+async function refreshScoreLogs() {
+    await loadScoreLogs(scoreLogsFilterCurrentClass);
+}
+
 // 加载分数日志
-async function loadScoreLogs() {
+async function loadScoreLogs(onlyCurrentClass = true) {
+    scoreLogsFilterCurrentClass = onlyCurrentClass;
+    
     try {
-        const response = await fetch('/api/score/logs');
+        const url = `/api/score/logs?only_current_class=${onlyCurrentClass}`;
+        const response = await fetch(url);
         const result = await response.json();
         
         if (result.success) {
             displayScoreLogs(result.data);
+            updateScoreLogsFilterUI(result.filter_info);
         }
     } catch (error) {
         showAlert('加载日志失败', 'error');
+    }
+}
+
+// 更新分数日志筛选 UI
+function updateScoreLogsFilterUI(filterInfo) {
+    const filterDiv = document.getElementById('scorelog-filter-info');
+    const classSpan = document.getElementById('scorelog-current-class');
+    const btnCurrent = document.getElementById('btn-current-class-logs');
+    const btnAll = document.getElementById('btn-all-logs');
+    
+    if (filterInfo.is_current_class) {
+        // 正在显示当前上课班级
+        filterDiv.style.display = 'block';
+        classSpan.textContent = filterInfo.class_name;
+        btnCurrent.style.display = 'none';
+        btnAll.style.display = 'inline-block';
+    } else {
+        // 显示全部或特定班级
+        if (filterInfo.class_name && filterInfo.class_name !== '全部班级') {
+            filterDiv.style.display = 'block';
+            classSpan.textContent = filterInfo.class_name;
+        } else {
+            filterDiv.style.display = 'none';
+        }
+        
+        // 检查是否有正在上课的班级
+        const currentClassEl = document.getElementById('current-class-name');
+        if (currentClassEl && currentClassEl.textContent && currentClassEl.textContent !== '-') {
+            btnCurrent.style.display = 'inline-block';
+        } else {
+            btnCurrent.style.display = 'none';
+        }
+        btnAll.style.display = 'none';
     }
 }
 
@@ -1243,18 +1558,18 @@ function displayScoreLogs(logs) {
     const tbody = document.getElementById('scorelog-tbody');
     
     if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">暂无记录</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">暂无记录</td></tr>';
         return;
     }
     
     tbody.innerHTML = logs.slice(0, 50).map(l => {
-        const student = allStudents.find(s => s.student_id === l.student_id);
         const changeClass = l.score_change > 0 ? 'score-positive' : (l.score_change < 0 ? 'score-negative' : '');
         const sign = l.score_change > 0 ? '+' : '';
         return `
             <tr>
                 <td>${l.student_id}</td>
-                <td>${student ? student.name : '未知'}</td>
+                <td>${l.student_name || '未知'}</td>
+                <td>${l.class_name || '-'}</td>
                 <td class="${changeClass}">${sign}${l.score_change}</td>
                 <td>${l.reason || '-'}</td>
                 <td>${l.operation_time}</td>
@@ -1272,8 +1587,10 @@ window.onclick = function(event) {
 
 // 页面加载时执行
 loadUserInfo();
+loadDbEnvInfo();
 loadStudents();
 loadClassSessionStatus();
+loadScoreLogs(true); // 默认加载当前班级的分数日志
 
 // 每 5 秒自动刷新上课状态
 setInterval(() => {
