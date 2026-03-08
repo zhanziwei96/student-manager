@@ -370,6 +370,27 @@
     </div>
 </div>
 
+<!-- 删除操作密码验证弹窗（通用） -->
+<div class="modal" id="delete-confirm-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>⚠️ 安全验证</h3>
+            <button class="close-btn" onclick="closeDeleteConfirmModal()">&times;</button>
+        </div>
+        <form id="delete-confirm-form">
+            <div class="form-group">
+                <p id="delete-confirm-message" style="color: #333; margin-bottom: 1rem;"></p>
+                <label for="delete-confirm-password">请输入管理员密码</label>
+                <input type="password" id="delete-confirm-password" required placeholder="请输入密码验证身份">
+                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                    删除操作不可撤销，请谨慎操作
+                </small>
+            </div>
+            <button type="submit" class="danger" style="background: #dc3545;">验证并执行重置</button>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
@@ -753,6 +774,12 @@ document.getElementById('change-password-form')?.addEventListener('submit', asyn
 document.getElementById('reset-score-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await resetAllScores();
+});
+
+// 删除确认表单提交
+document.getElementById('delete-confirm-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await verifyPasswordAndDelete();
 });
 
 // 加载学生列表
@@ -1283,20 +1310,8 @@ document.getElementById('import-form')?.addEventListener('submit', async (e) => 
     }
 });
 
-// 删除学生
-async function deleteStudent(studentId) {
-    if (!confirm(`确定要删除学号为 ${studentId} 的学生吗？`)) {
-        return;
-    }
-    
-    // 记录当前所有班级的展开状态
-    const expandedClasses = [];
-    document.querySelectorAll('.class-content').forEach(el => {
-        if (!el.classList.contains('collapsed')) {
-            expandedClasses.push(el.id);
-        }
-    });
-    
+// 实际执行删除学生的函数（密码验证后调用）
+async function executeDeleteStudent(studentId, expandedClasses) {
     try {
         const response = await fetch(`/api/students/${studentId}`, {
             method: 'DELETE'
@@ -1331,23 +1346,27 @@ async function deleteStudent(studentId) {
     }
 }
 
-// 从按钮元素删除班级（处理 HTML 转义）
-async function deleteClassByElement(button) {
-    // 从 data 属性获取 HTML 转义的班级名，然后解码
-    const escapedClassName = button.dataset.className;
-    // 创建临时元素来解码 HTML 实体
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = escapedClassName;
-    const className = tempDiv.textContent;
-    await deleteClass(className);
+// 删除学生（带密码验证）
+async function deleteStudent(studentId) {
+    // 记录当前所有班级的展开状态
+    const expandedClasses = [];
+    document.querySelectorAll('.class-content').forEach(el => {
+        if (!el.classList.contains('collapsed')) {
+            expandedClasses.push(el.id);
+        }
+    });
+    
+    // 保存待删除状态
+    pendingDeleteStudentId = studentId;
+    pendingDeleteExpandedClasses = expandedClasses;
+    pendingDeleteClassName = null;
+    
+    // 打开密码验证弹窗
+    openDeleteConfirmModal('student', studentId);
 }
 
-// 删除整个班级
+// 删除班级（带密码验证）
 async function deleteClass(className) {
-    if (!confirm(`确定要删除整个班级 "${className}" 吗？\n\n此操作将删除该班级的所有学生，且无法撤销！`)) {
-        return;
-    }
-    
     // 记录当前其他班级的展开状态（被删除的班级除外）
     const expandedClasses = [];
     document.querySelectorAll('.class-content').forEach(el => {
@@ -1364,6 +1383,28 @@ async function deleteClass(className) {
         }
     });
     
+    // 保存待删除状态
+    pendingDeleteClassName = className;
+    pendingDeleteExpandedClasses = expandedClasses;
+    pendingDeleteStudentId = null;
+    
+    // 打开密码验证弹窗
+    openDeleteConfirmModal('class', className);
+}
+
+// 从按钮元素删除班级（处理 HTML 转义）
+async function deleteClassByElement(button) {
+    // 从 data 属性获取 HTML 转义的班级名，然后解码
+    const escapedClassName = button.dataset.className;
+    // 创建临时元素来解码 HTML 实体
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = escapedClassName;
+    const className = tempDiv.textContent;
+    await deleteClass(className);
+}
+
+// 实际执行删除班级的函数（密码验证后调用）
+async function executeDeleteClass(className, expandedClasses) {
     try {
         // 对班级名进行 URL 编码
         const encodedClassName = encodeURIComponent(className);
@@ -1399,6 +1440,78 @@ async function deleteClass(className) {
         }
     } catch (error) {
         showAlert('删除班级失败', 'error');
+    }
+}
+
+// 删除操作的全局状态
+let pendingDeleteStudentId = null;
+let pendingDeleteClassName = null;
+let pendingDeleteExpandedClasses = [];
+
+// 打开删除确认弹窗
+function openDeleteConfirmModal(type, name) {
+    const modal = document.getElementById('delete-confirm-modal');
+    const message = document.getElementById('delete-confirm-message');
+    const form = document.getElementById('delete-confirm-form');
+    
+    if (type === 'student') {
+        message.innerHTML = `确定要删除学生 <strong>${name}</strong> 吗？<br><span style="color: #dc3545;">此操作将删除该学生的所有记录，不可撤销！</span>`;
+    } else if (type === 'class') {
+        message.innerHTML = `确定要删除整个班级 <strong>${name}</strong> 吗？<br><span style="color: #dc3545;">此操作将删除该班级的所有学生，不可撤销！</span>`;
+    }
+    
+    form.reset();
+    modal.classList.add('active');
+    document.getElementById('delete-confirm-password').focus();
+}
+
+// 关闭删除确认弹窗
+function closeDeleteConfirmModal() {
+    document.getElementById('delete-confirm-modal').classList.remove('active');
+    // 清空待删除状态
+    pendingDeleteStudentId = null;
+    pendingDeleteClassName = null;
+    pendingDeleteExpandedClasses = [];
+}
+
+// 验证密码并执行删除操作
+async function verifyPasswordAndDelete() {
+    const password = document.getElementById('delete-confirm-password').value;
+    
+    if (!password) {
+        showAlert('请输入密码', 'error');
+        return;
+    }
+    
+    try {
+        // 验证密码
+        const authResponse = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'admin', password: password })
+        });
+        
+        const authResult = await authResponse.json();
+        
+        if (!authResult.success) {
+            showAlert('密码错误，操作已取消', 'error');
+            return;
+        }
+        
+        // 密码验证通过，根据待删除类型执行相应操作
+        if (pendingDeleteStudentId) {
+            await executeDeleteStudent(pendingDeleteStudentId, pendingDeleteExpandedClasses);
+        } else if (pendingDeleteClassName) {
+            await executeDeleteClass(pendingDeleteClassName, pendingDeleteExpandedClasses);
+        }
+        
+        // 清理登录 session
+        await fetch('/api/logout', { method: 'POST' });
+        
+        closeDeleteConfirmModal();
+        
+    } catch (error) {
+        showAlert('验证失败，请重试', 'error');
     }
 }
 
