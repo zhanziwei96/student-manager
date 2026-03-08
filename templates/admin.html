@@ -84,7 +84,7 @@
             <label for="reset-score-value">默认分数值</label>
             <input type="number" id="reset-score-value" value="70" min="0" max="100">
         </div>
-        <button onclick="resetAllScores()" class="danger" style="background: #dc3545;">
+        <button onclick="openResetScoreModal()" class="danger" style="background: #dc3545;">
             ⚠️ 重置所有分数
         </button>
     </div>
@@ -346,6 +346,26 @@
                 <input type="password" id="confirm-password" required placeholder="请再次输入新密码" minlength="6">
             </div>
             <button type="submit">确认修改</button>
+        </form>
+    </div>
+</div>
+
+<!-- 重置分数密码验证弹窗 -->
+<div class="modal" id="reset-score-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>⚠️ 安全验证</h3>
+            <button class="close-btn" onclick="closeResetScoreModal()">&times;</button>
+        </div>
+        <form id="reset-score-form">
+            <div class="form-group">
+                <label for="reset-score-password">请输入管理员密码</label>
+                <input type="password" id="reset-score-password" required placeholder="请输入密码验证身份">
+                <small style="color: #666; display: block; margin-top: 0.5rem;">
+                    重置所有学生分数需要验证管理员身份
+                </small>
+            </div>
+            <button type="submit" class="danger" style="background: #dc3545;">验证并执行重置</button>
         </form>
     </div>
 </div>
@@ -727,6 +747,12 @@ document.getElementById('change-password-form')?.addEventListener('submit', asyn
     } catch (error) {
         showAlert('修改密码失败', 'error');
     }
+});
+
+// 重置分数密码验证表单提交
+document.getElementById('reset-score-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await resetAllScores();
 });
 
 // 加载学生列表
@@ -1376,8 +1402,8 @@ async function deleteClass(className) {
     }
 }
 
-// 重置所有学生分数
-async function resetAllScores() {
+// 打开重置分数密码验证弹窗
+function openResetScoreModal() {
     const defaultScore = parseInt(document.getElementById('reset-score-value').value) || 70;
     
     if (!confirm(`确定要将所有学生的分数重置为 ${defaultScore} 分吗？\n\n此操作不可撤销！`)) {
@@ -1389,7 +1415,42 @@ async function resetAllScores() {
         return;
     }
     
+    document.getElementById('reset-score-form').reset();
+    document.getElementById('reset-score-modal').classList.add('active');
+    document.getElementById('reset-score-password').focus();
+}
+
+// 关闭重置分数密码验证弹窗
+function closeResetScoreModal() {
+    document.getElementById('reset-score-modal').classList.remove('active');
+}
+
+// 重置所有学生分数（带密码验证）
+async function resetAllScores() {
+    const defaultScore = parseInt(document.getElementById('reset-score-value').value) || 70;
+    const password = document.getElementById('reset-score-password').value;
+    
+    if (!password) {
+        showAlert('请输入密码', 'error');
+        return;
+    }
+    
     try {
+        // 先验证密码
+        const authResponse = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'admin', password: password })
+        });
+        
+        const authResult = await authResponse.json();
+        
+        if (!authResult.success) {
+            showAlert('密码错误，无法重置分数', 'error');
+            return;
+        }
+        
+        // 密码验证通过，执行重置
         const response = await fetch('/api/admin/reset-scores', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1400,11 +1461,16 @@ async function resetAllScores() {
         
         if (result.success) {
             showAlert(result.message);
+            closeResetScoreModal();
             loadStudents(); // 刷新学生列表
             loadScoreLogs(); // 刷新分数日志
         } else {
             showAlert(result.message, 'error');
         }
+        
+        // 清理登录 session（只是验证密码，不需要保持登录状态）
+        await fetch('/api/logout', { method: 'POST' });
+        
     } catch (error) {
         showAlert('重置分数失败', 'error');
     }
