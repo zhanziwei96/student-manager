@@ -80,12 +80,28 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const res = await login(form)
+    console.log('登录响应:', res)
+    
     if (res.success) {
-      Cookies.set('user_id', res.user.id)
-      Cookies.set('username', res.user.username)
-      Cookies.set('name', res.user.name)
+      // 保存用户信息
+      Cookies.set('user_id', res.user.id, { expires: 1 })
+      Cookies.set('username', res.user.username, { expires: 1 })
+      Cookies.set('name', res.user.name, { expires: 1 })
+      
       ElMessage.success('登录成功')
-      router.push('/dashboard')
+      console.log('准备跳转到 /dashboard')
+      
+      // 尝试使用 Vue Router 跳转，失败则使用原生跳转
+      setTimeout(() => {
+        try {
+          router.push('/dashboard').catch(() => {
+            // Vue Router 跳转失败，使用原生跳转
+            window.location.href = '/dashboard'
+          })
+        } catch (e) {
+          window.location.href = '/dashboard'
+        }
+      }, 300)
     } else {
       ElMessage.error(res.message || '登录失败')
     }
