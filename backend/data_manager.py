@@ -784,43 +784,52 @@ def get_current_class():
 
 def get_class_students_with_checkin_status(class_name):
     """获取班级学生及其签到状态"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # 获取班级所有学生
-    cursor.execute('''
-        SELECT student_id, name, score 
-        FROM students 
-        WHERE class_name = ?
-        ORDER BY student_id
-    ''', (class_name,))
-    
-    students = cursor.fetchall()
-    if not students:
+    if not class_name:
         return []
     
-    # 获取今天的签到记录
-    today = datetime.now().strftime('%Y-%m-%d')
-    cursor.execute('''
-        SELECT student_id, checkin_time
-        FROM checkin_records
-        WHERE DATE(checkin_time) = ?
-    ''', (today,))
-    
-    checkin_records = {row['student_id']: row['checkin_time'] for row in cursor.fetchall()}
-    
-    # 组合数据
-    result = []
-    for student in students:
-        result.append({
-            'student_id': student['student_id'],
-            'name': student['name'],
-            'score': student['score'],
-            'checked_in': student['student_id'] in checkin_records,
-            'checkin_time': checkin_records.get(student['student_id'])
-        })
-    
-    return result
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 获取班级所有学生
+        cursor.execute('''
+            SELECT student_id, name, score 
+            FROM students 
+            WHERE class_name = ?
+            ORDER BY student_id
+        ''', (class_name,))
+        
+        students = cursor.fetchall()
+        if not students:
+            return []
+        
+        # 获取今天的签到记录
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('''
+            SELECT student_id, checkin_time
+            FROM checkin_records
+            WHERE DATE(checkin_time) = ?
+        ''', (today,))
+        
+        checkin_records = {row['student_id']: row['checkin_time'] for row in cursor.fetchall()}
+        
+        # 组合数据
+        result = []
+        for student in students:
+            result.append({
+                'student_id': student['student_id'],
+                'name': student['name'],
+                'score': student['score'] if student['score'] else 0,
+                'checked_in': student['student_id'] in checkin_records,
+                'checkin_time': checkin_records.get(student['student_id'])
+            })
+        
+        return result
+    except Exception as e:
+        import traceback
+        print(f"get_class_students_with_checkin_status 错误: {str(e)}")
+        print(traceback.format_exc())
+        raise
 
 
 def clear_today_checkin_records():

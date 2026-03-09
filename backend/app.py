@@ -598,7 +598,10 @@ def catch_all(path):
 @app.errorhandler(500)
 def internal_error(error):
     """处理 500 错误"""
-    return jsonify({'success': False, 'message': '服务器内部错误，请稍后重试'}), 500
+    import traceback
+    print(f"500 错误: {str(error)}")
+    print(traceback.format_exc())
+    return jsonify({'success': False, 'message': f'服务器错误: {str(error)}'}), 500
 
 
 @app.errorhandler(401)
