@@ -469,11 +469,20 @@ def api_teacher_checkin():
 @app.route('/api/class-session', methods=['GET'])
 def api_get_class_session():
     """获取当前上课状态（公开访问）"""
-    session_info = get_current_class()
-    return jsonify({
-        'success': True,
-        'data': session_info
-    })
+    try:
+        session_info = get_current_class()
+        return jsonify({
+            'success': True,
+            'data': session_info
+        })
+    except Exception as e:
+        import traceback
+        print(f"获取上课状态失败: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'获取上课状态失败: {str(e)}'
+        }), 500
 
 
 @app.route('/api/class-session', methods=['POST'])
@@ -490,32 +499,41 @@ def api_set_class_session():
 @app.route('/api/class-session/students', methods=['GET'])
 def api_get_class_session_students():
     """获取当前上课班级的学生签到状态"""
-    session_info = get_current_class()
-    
-    if not session_info['active'] or not session_info['class_name']:
+    try:
+        session_info = get_current_class()
+        
+        if not session_info['active'] or not session_info['class_name']:
+            return jsonify({
+                'success': False,
+                'message': '没有正在上课的班级',
+                'data': {
+                    'active': False,
+                    'students': []
+                }
+            })
+        
+        students = get_class_students_with_checkin_status(session_info['class_name'])
+        
         return jsonify({
-            'success': False,
-            'message': '没有正在上课的班级',
+            'success': True,
             'data': {
-                'active': False,
-                'students': []
+                'active': True,
+                'class_name': session_info['class_name'],
+                'start_time': session_info['start_time'],
+                'students': students,
+                'total': len(students),
+                'checked_in': sum(1 for s in students if s['checked_in']),
+                'not_checked_in': sum(1 for s in students if not s['checked_in'])
             }
         })
-    
-    students = get_class_students_with_checkin_status(session_info['class_name'])
-    
-    return jsonify({
-        'success': True,
-        'data': {
-            'active': True,
-            'class_name': session_info['class_name'],
-            'start_time': session_info['start_time'],
-            'students': students,
-            'total': len(students),
-            'checked_in': sum(1 for s in students if s['checked_in']),
-            'not_checked_in': sum(1 for s in students if not s['checked_in'])
-        }
-    })
+    except Exception as e:
+        import traceback
+        print(f"获取班级学生状态失败: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'获取班级学生状态失败: {str(e)}'
+        }), 500
 
 
 @app.route('/api/score/logs', methods=['GET'])
