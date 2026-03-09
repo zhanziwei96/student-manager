@@ -145,6 +145,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Camera, Search, Check } from '@element-plus/icons-vue'
+import { cache, CACHE_KEYS } from '../utils/cache'
 import * as api from '../api'
 
 // 数据
@@ -194,9 +195,28 @@ const checkinRate = computed(() => {
 })
 
 // 加载数据
-const loadData = async () => {
+const loadData = async (forceRefresh = false) => {
   loading.value = true
+  
   try {
+    // 尝试从缓存读取
+    if (!forceRefresh) {
+      const cachedStats = cache.get(CACHE_KEYS.STATS)
+      const cachedStudents = cache.get(CACHE_KEYS.STUDENTS)
+      
+      if (cachedStats && cachedStudents) {
+        allStudents.value = cachedStudents.map(s => ({ ...s, loading: false }))
+        if (cachedStats.classStats) {
+          classList.value = cachedStats.classStats.map(c => ({
+            className: c.class_name,
+            studentCount: c.student_count
+          }))
+        }
+        loading.value = false
+        return
+      }
+    }
+    
     const [studentsRes, statsRes] = await Promise.all([
       api.getStudentsWithCheckin(),
       api.getStats()
@@ -204,13 +224,22 @@ const loadData = async () => {
     
     if (studentsRes.success) {
       allStudents.value = studentsRes.data.map(s => ({ ...s, loading: false }))
+      // 缓存学生数据
+      cache.set(CACHE_KEYS.STUDENTS, studentsRes.data)
     }
     
-    if (statsRes.success && statsRes.data.class_stats) {
-      classList.value = statsRes.data.class_stats.map(c => ({
-        className: c.class_name,
-        studentCount: c.student_count
-      }))
+    if (statsRes.success) {
+      if (statsRes.data.class_stats) {
+        classList.value = statsRes.data.class_stats.map(c => ({
+          className: c.class_name,
+          studentCount: c.student_count
+        }))
+      }
+      // 缓存统计数据
+      cache.set(CACHE_KEYS.STATS, {
+        ...statsRes.data,
+        classStats: statsRes.data.class_stats
+      })
     }
   } catch (error) {
     console.error('加载数据失败:', error)

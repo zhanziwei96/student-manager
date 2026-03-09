@@ -49,6 +49,10 @@
         <el-icon><Upload /></el-icon>
         批量导入
       </el-button>
+      <el-button text @click="refreshAllData" :loading="loading">
+        <el-icon><Refresh /></el-icon>
+        刷新数据
+      </el-button>
     </div>
 
     <!-- 主内容区：左侧班级 + 右侧学生列表 -->
@@ -57,9 +61,7 @@
       <div class="class-sidebar">
         <div class="sidebar-header">
           <span class="title">班级列表</span>
-          <el-button text @click="loadData" :loading="loading">
-            <el-icon><Refresh /></el-icon>
-          </el-button>
+          <span class="count">{{ classList.length }}个班级</span>
         </div>
         <div class="class-list">
           <div 
@@ -96,7 +98,7 @@
             v-model="searchKeyword" 
             placeholder="搜索姓名或学号" 
             clearable
-            style="width: 200px"
+            style="width: 220px"
             :prefix-icon="Search"
           />
           <el-slider 
@@ -106,80 +108,158 @@
             :min="0"
             style="width: 200px; margin: 0 16px"
           />
-          <span class="score-label">分数: {{ scoreRange[0] }}-{{ scoreRange[1] }}</span>
+          <span class="score-label">{{ scoreRange[0] }}-{{ scoreRange[1] }}分</span>
           <el-radio-group v-model="filterCheckin" size="small">
             <el-radio-button label="all">全部</el-radio-button>
             <el-radio-button label="checked">已签到</el-radio-button>
             <el-radio-button label="unchecked">未签到</el-radio-button>
           </el-radio-group>
+          <el-tag v-if="filteredStudents.length !== allStudents.length" type="info" size="small">
+            显示 {{ filteredStudents.length }}/{{ allStudents.length }} 人
+          </el-tag>
         </div>
 
         <!-- 学生表格 -->
-        <el-table 
-          :data="filteredStudents" 
-          stripe
-          style="width: 100%"
-          :header-cell-style="{ background: '#fafafa' }"
-          v-loading="loading"
-        >
-          <el-table-column type="selection" width="50" />
-          <el-table-column prop="student_id" label="学号" width="120" sortable />
-          <el-table-column prop="name" label="姓名" width="100" sortable />
-          <el-table-column prop="class_name" label="班级" />
-          <el-table-column prop="score" label="分数" width="120" sortable>
-            <template #default="{ row }">
-              <div class="score-cell">
+        <div class="table-container" v-loading="loading">
+          <!-- 数据量小使用普通表格 -->
+          <el-table 
+            v-if="filteredStudents.length <= 100"
+            :data="pagedStudents" 
+            stripe
+            style="width: 100%"
+            :header-cell-style="{ background: '#fafafa' }"
+            @sort-change="handleSortChange"
+          >
+            <el-table-column type="selection" width="50" />
+            <el-table-column prop="student_id" label="学号" width="120" sortable />
+            <el-table-column prop="name" label="姓名" width="100" sortable />
+            <el-table-column prop="class_name" label="班级" sortable />
+            <el-table-column prop="score" label="分数" width="140" sortable>
+              <template #default="{ row }">
+                <div class="score-cell">
+                  <el-button 
+                    circle 
+                    size="small" 
+                    type="danger"
+                    :disabled="row._updating"
+                    @click="quickScore(row, -1)"
+                  >
+                    <el-icon v-if="row._updating && row._pendingScore < 0" class="is-loading"><Loading /></el-icon>
+                    <span v-else>-</span>
+                  </el-button>
+                  <span class="score-value" :class="{ 'positive': row.score >= 70, 'negative': row.score < 60, 'pending': row._pendingScore !== undefined }">
+                    {{ row._pendingScore !== undefined ? row._pendingScore : row.score }}
+                  </span>
+                  <el-button 
+                    circle 
+                    size="small" 
+                    type="success"
+                    :disabled="row._updating"
+                    @click="quickScore(row, 1)"
+                  >
+                    <el-icon v-if="row._updating && row._pendingScore > 0" class="is-loading"><Loading /></el-icon>
+                    <span v-else>+</span>
+                  </el-button>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="签到状态" width="100">
+              <template #default="{ row }">
+                <el-tag 
+                  :type="row.checked_in ? 'success' : 'info'"
+                  size="small"
+                  :effect="row.checked_in ? 'dark' : 'plain'"
+                >
+                  {{ row.checked_in ? '已签到' : '未签到' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right">
+              <template #default="{ row }">
                 <el-button 
-                  circle 
-                  size="small" 
-                  type="danger"
-                  @click="quickScore(row, -1)"
-                >-</el-button>
-                <span class="score-value" :class="{ 'positive': row.score >= 70, 'negative': row.score < 60 }">
-                  {{ row.score }}
-                </span>
-                <el-button 
-                  circle 
-                  size="small" 
-                  type="success"
-                  @click="quickScore(row, 1)"
-                >+</el-button>
+                  v-if="!row.checked_in" 
+                  link 
+                  type="primary" 
+                  :loading="row._checkingIn"
+                  @click="handleCheckin(row)"
+                >
+                  签到
+                </el-button>
+                <el-button v-else link type="success" disabled>已签到</el-button>
+                <el-button link type="primary" @click="openScoreDialog(row)">
+                  分数
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- 数据量大使用虚拟滚动 -->
+          <div v-else class="virtual-table-container">
+            <div class="virtual-table-header">
+              <div class="th" style="width: 50px">
+                <el-checkbox v-model="selectAll" @change="handleSelectAll" />
               </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="签到状态" width="100">
-            <template #default="{ row }">
-              <el-tag 
-                :type="row.checked_in ? 'success' : 'info'"
-                size="small"
-              >
-                {{ row.checked_in ? '已签到' : '未签到' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="150" fixed="right">
-            <template #default="{ row }">
-              <el-button link type="primary" @click="handleCheckin(row)">
-                签到
-              </el-button>
-              <el-button link type="primary" @click="openScoreDialog(row)">
-                分数
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+              <div class="th" style="width: 120px">学号</div>
+              <div class="th" style="width: 100px">姓名</div>
+              <div class="th" style="flex: 1">班级</div>
+              <div class="th" style="width: 140px">分数</div>
+              <div class="th" style="width: 100px">签到状态</div>
+              <div class="th" style="width: 180px">操作</div>
+            </div>
+            <VirtualList
+              :data="filteredStudents"
+              :item-height="60"
+              key-prop="student_id"
+              style="height: calc(100% - 50px)"
+            >
+              <template #default="{ item, index }">
+                <div class="virtual-table-row">
+                  <div class="td" style="width: 50px">
+                    <el-checkbox v-model="item._selected" />
+                  </div>
+                  <div class="td" style="width: 120px">{{ item.student_id }}</div>
+                  <div class="td" style="width: 100px">{{ item.name }}</div>
+                  <div class="td" style="flex: 1">{{ item.class_name }}</div>
+                  <div class="td" style="width: 140px">
+                    <div class="score-cell">
+                      <el-button circle size="small" type="danger" @click="quickScore(item, -1)">-</el-button>
+                      <span class="score-value">{{ item.score }}</span>
+                      <el-button circle size="small" type="success" @click="quickScore(item, 1)">+</el-button>
+                    </div>
+                  </div>
+                  <div class="td" style="width: 100px">
+                    <el-tag :type="item.checked_in ? 'success' : 'info'" size="small">
+                      {{ item.checked_in ? '已签到' : '未签到' }}
+                    </el-tag>
+                  </div>
+                  <div class="td" style="width: 180px">
+                    <el-button v-if="!item.checked_in" link type="primary" @click="handleCheckin(item)">签到</el-button>
+                    <el-button link type="primary" @click="openScoreDialog(item)">分数</el-button>
+                  </div>
+                </div>
+              </template>
+            </VirtualList>
+          </div>
+        </div>
 
         <!-- 分页器 -->
-        <div class="pagination-bar">
+        <div class="pagination-bar" v-if="filteredStudents.length <= 100">
           <el-pagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :page-sizes="[20, 50, 100]"
-            layout="total, sizes, prev, pager, next"
-            :total="totalStudents"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="filteredStudents.length"
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
           />
+        </div>
+        <div v-else class="virtual-scroll-hint">
+          <el-alert type="info" :closable="false" show-icon>
+            <template #title>
+              数据量较大，已启用虚拟滚动，支持流畅展示 {{ filteredStudents.length }} 条数据
+            </template>
+          </el-alert>
         </div>
       </div>
     </div>
@@ -187,9 +267,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { EditPen, User, Upload, Refresh, Search } from '@element-plus/icons-vue'
+import { EditPen, User, Upload, Refresh, Search, Loading } from '@element-plus/icons-vue'
+import VirtualList from '../components/VirtualList.vue'
+import { cache, CACHE_KEYS } from '../utils/cache'
+import { debounce } from '../utils'
 import * as api from '../api'
 
 // 统计数据
@@ -211,15 +294,16 @@ const loading = ref(false)
 const searchKeyword = ref('')
 const scoreRange = ref([0, 100])
 const filterCheckin = ref('all')
+const sortConfig = ref({ prop: '', order: '' })
 
 // 分页
 const currentPage = ref(1)
 const pageSize = ref(20)
-const totalStudents = ref(0)
+const selectAll = ref(false)
 
 // 计算属性：筛选后的学生
 const filteredStudents = computed(() => {
-  let result = allStudents.value
+  let result = [...allStudents.value]
   
   // 按班级筛选
   if (selectedClass.value) {
@@ -247,15 +331,54 @@ const filteredStudents = computed(() => {
     result = result.filter(s => !s.checked_in)
   }
   
-  return result.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value)
+  // 排序
+  if (sortConfig.value.prop && sortConfig.value.order) {
+    const { prop, order } = sortConfig.value
+    result.sort((a, b) => {
+      let comparison = 0
+      if (typeof a[prop] === 'string') {
+        comparison = a[prop].localeCompare(b[prop])
+      } else {
+        comparison = a[prop] - b[prop]
+      }
+      return order === 'ascending' ? comparison : -comparison
+    })
+  }
+  
+  return result
 })
 
-// 加载数据
-const loadData = async () => {
+// 分页后的数据
+const pagedStudents = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredStudents.value.slice(start, start + pageSize.value)
+})
+
+// 加载数据（带缓存）
+const loadData = async (forceRefresh = false) => {
   loading.value = true
+  
   try {
-    // 加载统计数据
-    const statsRes = await api.getStats()
+    // 尝试从缓存读取
+    if (!forceRefresh) {
+      const cachedStats = cache.get(CACHE_KEYS.STATS)
+      const cachedStudents = cache.get(CACHE_KEYS.STUDENTS)
+      
+      if (cachedStats && cachedStudents) {
+        stats.value = cachedStats
+        classList.value = cachedStats.classStats || []
+        allStudents.value = cachedStudents
+        loading.value = false
+        return
+      }
+    }
+    
+    // 并行请求统计数据和学生列表
+    const [statsRes, studentsRes] = await Promise.all([
+      api.getStats(),
+      api.getStudentsWithCheckin()
+    ])
+    
     if (statsRes.success) {
       stats.value = {
         classCount: statsRes.data.class_count || 0,
@@ -265,7 +388,10 @@ const loadData = async () => {
         avgScore: statsRes.data.avg_score || 70
       }
       
-      // 使用 API 返回的班级统计
+      // 缓存统计数据
+      cache.set(CACHE_KEYS.STATS, stats.value)
+      
+      // 处理班级列表
       if (statsRes.data.class_stats) {
         classList.value = statsRes.data.class_stats.map(c => ({
           className: c.class_name,
@@ -275,11 +401,10 @@ const loadData = async () => {
       }
     }
     
-    // 加载所有学生（包含签到状态）
-    const studentsRes = await api.getStudentsWithCheckin()
     if (studentsRes.success) {
       allStudents.value = studentsRes.data
-      totalStudents.value = studentsRes.data.length
+      // 缓存学生数据
+      cache.set(CACHE_KEYS.STUDENTS, allStudents.value)
     }
   } catch (error) {
     console.error('加载数据失败:', error)
@@ -289,38 +414,96 @@ const loadData = async () => {
   }
 }
 
+// 强制刷新所有数据
+const refreshAllData = () => {
+  cache.delete(CACHE_KEYS.STATS)
+  cache.delete(CACHE_KEYS.STUDENTS)
+  loadData(true)
+}
+
 // 选择班级
 const selectClass = (className) => {
   selectedClass.value = selectedClass.value === className ? '' : className
   currentPage.value = 1
 }
 
-// 快速修改分数
+// 快速修改分数（乐观更新）
 const quickScore = async (student, delta) => {
+  // 乐观更新：先改 UI
+  const originalScore = student.score
+  const pendingScore = originalScore + delta
+  student._pendingScore = pendingScore
+  student._updating = true
+  
   try {
     const res = await api.updateScore(student.student_id, {
       score_change: delta,
       reason: delta > 0 ? '加分' : '扣分'
     })
+    
     if (res.success) {
-      student.score += delta
+      // 更新成功
+      student.score = pendingScore
       ElMessage.success(res.message)
+      
+      // 更新缓存中的数据
+      updateCacheStudent(student.student_id, { score: student.score })
+    } else {
+      // 更新失败，恢复原值
+      ElMessage.error(res.message)
     }
   } catch (error) {
     ElMessage.error('操作失败')
+  } finally {
+    student._updating = false
+    student._pendingScore = undefined
   }
 }
 
-// 处理签到
+// 更新缓存中的学生数据（增量更新）
+const updateCacheStudent = (studentId, updates) => {
+  const cachedStudents = cache.get(CACHE_KEYS.STUDENTS)
+  if (cachedStudents) {
+    const student = cachedStudents.find(s => s.student_id === studentId)
+    if (student) {
+      Object.assign(student, updates)
+      cache.set(CACHE_KEYS.STUDENTS, cachedStudents)
+    }
+  }
+}
+
+// 处理签到（乐观更新）
 const handleCheckin = async (student) => {
+  student._checkingIn = true
+  
+  // 乐观更新
+  const wasCheckedIn = student.checked_in
+  student.checked_in = true
+  
   try {
     const res = await api.teacherCheckin({ student_id: student.student_id })
     if (res.success) {
-      student.checked_in = true
       ElMessage.success(`${student.name} 签到成功`)
+      
+      // 更新缓存
+      updateCacheStudent(student.student_id, { checked_in: true })
+      
+      // 更新班级签到数
+      const classItem = classList.value.find(c => c.className === student.class_name)
+      if (classItem) {
+        classItem.checkinCount++
+      }
+      stats.value.todayCheckin++
+    } else {
+      // 失败回滚
+      student.checked_in = wasCheckedIn
+      ElMessage.error(res.message)
     }
   } catch (error) {
+    student.checked_in = wasCheckedIn
     ElMessage.error('签到失败')
+  } finally {
+    student._checkingIn = false
   }
 }
 
@@ -332,8 +515,32 @@ const openScoreDialog = (student) => {
     inputPattern: /^-?\d+$/,
     inputErrorMessage: '请输入有效的数字'
   }).then(({ value }) => {
-    quickScore(student, parseInt(value))
+    const delta = parseInt(value)
+    const originalScore = student.score
+    student.score += delta
+    
+    api.updateScore(student.student_id, {
+      score_change: delta,
+      reason: '手动调整分数'
+    }).then(res => {
+      if (res.success) {
+        ElMessage.success(res.message)
+        updateCacheStudent(student.student_id, { score: student.score })
+      } else {
+        student.score = originalScore
+        ElMessage.error(res.message)
+      }
+    }).catch(() => {
+      student.score = originalScore
+      ElMessage.error('操作失败')
+    })
   }).catch(() => {})
+}
+
+// 处理排序
+const handleSortChange = ({ prop, order }) => {
+  sortConfig.value = { prop, order }
+  currentPage.value = 1
 }
 
 // 分页处理
@@ -345,6 +552,26 @@ const handleSizeChange = (size) => {
 const handleCurrentChange = (page) => {
   currentPage.value = page
 }
+
+// 全选处理
+const handleSelectAll = (val) => {
+  pagedStudents.value.forEach(s => s._selected = val)
+}
+
+// Debounce 搜索
+const debouncedSearch = debounce(() => {
+  currentPage.value = 1
+}, 300)
+
+// 监听搜索关键词变化
+watch(searchKeyword, () => {
+  debouncedSearch()
+})
+
+// 监听筛选条件变化，重置分页
+watch([selectedClass, scoreRange, filterCheckin], () => {
+  currentPage.value = 1
+})
 
 onMounted(() => {
   loadData()
@@ -476,6 +703,11 @@ onMounted(() => {
   color: #262626;
 }
 
+.sidebar-header .count {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
 .class-list {
   max-height: calc(100vh - 300px);
   overflow-y: auto;
@@ -548,6 +780,10 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+.table-container {
+  min-height: 400px;
+}
+
 .score-cell {
   display: flex;
   align-items: center;
@@ -558,6 +794,7 @@ onMounted(() => {
   font-weight: 600;
   min-width: 40px;
   text-align: center;
+  transition: all 0.3s;
 }
 
 .score-value.positive {
@@ -568,12 +805,56 @@ onMounted(() => {
   color: #f5222d;
 }
 
+.score-value.pending {
+  color: #1890ff;
+  font-style: italic;
+}
+
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
   padding-top: 16px;
   border-top: 1px solid #f0f0f0;
   margin-top: 16px;
+}
+
+.virtual-scroll-hint {
+  margin-top: 16px;
+}
+
+/* 虚拟滚动表格 */
+.virtual-table-container {
+  height: 500px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+
+.virtual-table-header {
+  display: flex;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 0;
+  font-weight: 600;
+  color: #262626;
+}
+
+.virtual-table-header .th {
+  padding: 0 12px;
+}
+
+.virtual-table-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.virtual-table-row:hover {
+  background: #f5f7fa;
+}
+
+.virtual-table-row .td {
+  padding: 0 12px;
 }
 
 /* 响应式 */
