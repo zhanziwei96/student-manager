@@ -26,8 +26,7 @@ const routes = [
   {
     path: '/checkin',
     name: 'Checkin',
-    component: () => import('../views/Checkin.vue'),
-    meta: { requiresAuth: true }
+    component: () => import('../views/Checkin.vue')
   }
 ]
 

@@ -5,6 +5,9 @@
       <div class="header-content">
         <h1 class="logo">📚 班级管理系统</h1>
         <div class="header-actions">
+          <el-button type="success" size="large" @click="$router.push('/checkin')">
+            📝 学生签到
+          </el-button>
           <el-button type="primary" @click="$router.push('/login')">
             教师登录
           </el-button>
