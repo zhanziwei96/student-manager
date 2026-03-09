@@ -6,8 +6,9 @@
 import os
 from functools import wraps
 from datetime import datetime
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
+from config import config
 from data_manager import (
     init_data, get_all_students, get_student_by_id, get_students_by_name, add_student,
     import_students_from_xlsx, update_student_score, add_checkin_record,
@@ -18,17 +19,18 @@ from data_manager import (
     get_db_connection
 )
 
-app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['SECRET_KEY'] = os.urandom(24)
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['PERMANENT_SESSION_LIFETIME'] = 3600
+# 根据环境变量加载配置
+env = os.environ.get('FLASK_ENV', 'production')
+app = Flask(__name__, static_folder='../frontend/dist', static_url_path='')
+app.config.from_object(config.get(env, config['default']))
 
-# 启用 CORS，允许前端访问
-CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://127.0.0.1:3000'])
+# 生产环境关闭 CORS，Nginx 会处理跨域
+# 开发环境启用 CORS
+if env == 'development':
+    CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://127.0.0.1:3000'])
 
 # 上传文件临时目录
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = app.config.get('UPLOAD_FOLDER', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -558,6 +560,22 @@ def api_get_db_info():
 
 # ========== 页面路由 ==========
 
+# 生产环境：Vue 前端路由交由前端处理
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    """处理前端路由"""
+    # API 请求直接返回 404
+    if path.startswith('api/'):
+        return jsonify({'success': False, 'message': 'API not found'}), 404
+    
+    # 静态文件直接返回
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    
+    # 其他路径返回 index.html（Vue 前端处理路由）
+    return send_from_directory(app.static_folder, 'index.html')
+
 # ========== 错误处理 ==========
 
 @app.errorhandler(500)
@@ -576,28 +594,33 @@ if __name__ == '__main__':
     init_data()
     db_info = get_db_info()
     
+    # 获取当前环境
+    env = os.environ.get('FLASK_ENV', 'production')
+    is_dev = env == 'development'
+    
     print("=" * 50)
     print(f"班级管理系统已启动 [{DB_ENV_NAME}]")
-    print("访问地址: http://127.0.0.1:5000")
     print("=" * 50)
-    print(f"\n当前环境: {DB_ENV_NAME}")
+    print(f"\n当前环境: {env}")
     print(f"数据库文件: {db_info['file']}")
-    print("\n切换环境方法:")
-    print("  测试环境: set FLASK_ENV=testing  (Windows)")
-    print("  测试环境: export FLASK_ENV=testing (Linux/Mac)")
-    print("  或直接设置: set DB_ENV=testing")
-    print("\n功能说明:")
-    print("- 首页: http://127.0.0.1:5000/")
-    print("- 管理后台: http://127.0.0.1:5000/admin")
-    print("- 登录页面: http://127.0.0.1:5000/login")
-    print("- 签到页面: http://127.0.0.1:5000/checkin")
-    print("\n特殊功能:")
-    print("- 一机一签: 每台设备每天只能签到一次")
+    
+    if is_dev:
+        print("\n开发模式:")
+        print("- 前端开发服务器: http://localhost:3000")
+        print("- Flask API 服务器: http://localhost:5000")
+        print("\n切换生产环境:")
+        print("  export FLASK_ENV=production")
+    else:
+        print("\n生产模式:")
+        print("- 访问地址: http://localhost:5000")
+        print("\n建议使用 Nginx + Gunicorn 部署")
+        print("  gunicorn -w 4 -b 127.0.0.1:5000 app:app")
+    
     print("\n默认管理员账户:")
     print("- 用户名: admin")
     print("- 密码: admin123")
     print("\n按 Ctrl+C 停止服务")
     print("=" * 50)
     
-    # 使用 threaded=True 启用多线程处理并发请求
-    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+    # 生产环境关闭 debug
+    app.run(debug=is_dev, host='0.0.0.0', port=5000, threaded=True)

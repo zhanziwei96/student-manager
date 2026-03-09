@@ -63,7 +63,7 @@ echo ""
 # 启动前端
 echo -e "${BLUE}[2/2] 启动前端服务 (Vue)...${NC}"
 cd frontend
-npm run dev &
+npm run  &
 FRONTEND_PID=$!
 cd ..
 
