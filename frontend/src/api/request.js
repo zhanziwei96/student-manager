@@ -26,9 +26,11 @@ request.interceptors.response.use(
   },
   error => {
     if (error.response?.status === 401) {
+      // 清除登录状态，但不自动跳转
+      // 让各个页面自己处理未登录的情况
       Cookies.remove('user_id')
       Cookies.remove('username')
-      window.location.href = '/login'
+      Cookies.remove('name')
     }
     return Promise.reject(error)
   }

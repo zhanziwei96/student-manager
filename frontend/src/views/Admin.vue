@@ -701,7 +701,18 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+// 检查是否已登录
+const checkAuth = () => {
+  const userId = Cookies.get('user_id')
+  if (!userId) {
+    router.push('/login')
+    return false
+  }
+  return true
+}
+
 onMounted(() => {
+  if (!checkAuth()) return
   loadStudents()
   loadClassSession()
   api.getDbInfo().then(res => {
