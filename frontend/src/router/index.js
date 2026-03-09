@@ -8,12 +8,6 @@ const routes = [
     component: () => import('../views/PublicHome.vue')
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue')
