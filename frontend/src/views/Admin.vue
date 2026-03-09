@@ -287,7 +287,7 @@
     </el-dialog>
     
     <!-- 调整分数对话框 -->
-    <el-dialog v-model="scoreDialogVisible" title="调整分数" width="400px">
+    <el-dialog v-model="scoreDialogVisible" title="调整分数" width="450px">
       <div class="student-info">
         <span>学生：{{ selectedStudent.name }}</span>
         <span>学号：{{ selectedStudent.student_id }}</span>
@@ -296,6 +296,20 @@
         <el-form-item label="分数变更">
           <el-input-number v-model="scoreChange" :min="-100" :max="100" />
           <span class="tip">正数加分，负数扣分</span>
+        </el-form-item>
+        <el-form-item label="快捷标签">
+          <div class="score-tags">
+            <el-tag 
+              v-for="tag in scoreTags" 
+              :key="tag.label"
+              :type="tag.score > 0 ? 'success' : 'danger'"
+              class="score-tag"
+              @click="applyScoreTag(tag)"
+              style="cursor: pointer; margin-right: 8px; margin-bottom: 8px;"
+            >
+              {{ tag.label }} {{ tag.score > 0 ? '+' : '' }}{{ tag.score }}分
+            </el-tag>
+          </div>
         </el-form-item>
         <el-form-item label="变更原因">
           <el-input v-model="scoreReason" type="textarea" rows="3" placeholder="请输入分数变更原因" />
@@ -398,6 +412,20 @@ const classStats = ref({ total: 0, checked_in: 0, not_checked_in: 0, rate: 0 })
 const selectedStudent = ref({})
 const scoreChange = ref(0)
 const scoreReason = ref('')
+
+// 分数变更快捷标签
+const scoreTags = [
+  { label: '回答问题', score: 2 },
+  { label: '违反课堂纪律', score: -2 },
+  { label: '旷课', score: -5 },
+  { label: '未交作业', score: -2 }
+]
+
+// 应用分数标签
+const applyScoreTag = (tag) => {
+  scoreChange.value = tag.score
+  scoreReason.value = tag.label
+}
 
 // 删除确认
 const deleteMessage = ref('')
