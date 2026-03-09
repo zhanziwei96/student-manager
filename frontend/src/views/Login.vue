@@ -89,18 +89,10 @@ const handleLogin = async () => {
       Cookies.set('name', res.user.name, { expires: 1 })
       
       ElMessage.success('登录成功')
-      console.log('准备跳转到 /dashboard')
       
-      // 尝试使用 Vue Router 跳转，失败则使用原生跳转
+      // 跳转到管理后台
       setTimeout(() => {
-        try {
-          router.push('/dashboard').catch(() => {
-            // Vue Router 跳转失败，使用原生跳转
-            window.location.href = '/dashboard'
-          })
-        } catch (e) {
-          window.location.href = '/dashboard'
-        }
+        router.push('/admin')
       }, 300)
     } else {
       ElMessage.error(res.message || '登录失败')
