@@ -114,16 +114,6 @@
           </div>
         </template>
         
-        <el-alert
-          v-if="locationInfo.latitude"
-          title="已启用位置验证"
-          :description="`允许范围：${locationInfo.radius || 500}米`"
-          type="info"
-          show-icon
-          :closable="false"
-          style="margin-bottom: 20px;"
-        />
-        
         <el-form
           ref="formRef"
           :model="form"
@@ -160,20 +150,16 @@
             >
               <template v-if="loading">
                 <el-icon class="is-loading"><Loading /></el-icon>
-                定位中...
+                签到中...
               </template>
               <template v-else>
-                <el-icon><Location /></el-icon>
                 立即签到
               </template>
             </el-button>
           </el-form-item>
         </el-form>
         
-        <div class="form-tips">
-          <el-icon><InfoFilled /></el-icon>
-          <span>请确保允许浏览器获取位置权限</span>
-        </div>
+
       </el-card>
       
       <!-- 已签到提示 -->
@@ -276,7 +262,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   School, Management, UserFilled, EditPen, CircleCheckFilled,
-  CircleCheck, Refresh, Calendar, User, Location, Loading,
+  CircleCheck, Refresh, Calendar, User, Loading,
   InfoFilled, RefreshLeft
 } from '@element-plus/icons-vue'
 import Cookies from 'js-cookie'
@@ -302,9 +288,6 @@ const selectedStudentId = ref('')
 const classSession = ref({ active: false })
 const classStudents = ref([])
 const classStats = ref({ total: 0, checked_in: 0, not_checked_in: 0, rate: 0 })
-
-// 位置信息
-const locationInfo = ref({})
 
 // 最近记录
 const recentRecords = ref([])
@@ -340,51 +323,27 @@ const handleCheckin = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   
-  if (!navigator.geolocation) {
-    ElMessage.error('您的浏览器不支持地理定位')
-    return
-  }
-  
   loading.value = true
   
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const res = await api.checkin({
-        student_id: form.student_id,
-        name: form.name,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude
-      })
-      
-      loading.value = false
-      
-      if (res.success) {
-        ElMessage.success(`签到成功！欢迎 ${res.student_name}`)
-        hasCheckedIn.value = true
-        checkedInInfo.value = {
-          name: res.student_name,
-          time: new Date().toISOString()
-        }
-        loadRecords()
-        loadClassSession()
-      } else {
-        if (res.location_error) {
-          ElMessage.error(`距离太远：${res.distance}米，超出允许范围${res.allowed_radius}米`)
-        } else {
-          ElMessage.error(res.message)
-        }
-      }
-    },
-    (error) => {
-      loading.value = false
-      let msg = '获取位置失败'
-      if (error.code === error.PERMISSION_DENIED) {
-        msg = '请允许获取位置权限'
-      }
-      ElMessage.error(msg)
-    },
-    { enableHighAccuracy: true, timeout: 15000 }
-  )
+  const res = await api.checkin({
+    student_id: form.student_id,
+    name: form.name
+  })
+  
+  loading.value = false
+  
+  if (res.success) {
+    ElMessage.success(`签到成功！欢迎 ${res.student_name}`)
+    hasCheckedIn.value = true
+    checkedInInfo.value = {
+      name: res.student_name,
+      time: new Date().toISOString()
+    }
+    loadRecords()
+    loadClassSession()
+  } else {
+    ElMessage.error(res.message)
+  }
 }
 
 // 老师代签到
@@ -476,14 +435,6 @@ const loadClassSession = async () => {
   }
 }
 
-// 加载位置信息
-const loadLocation = async () => {
-  const res = await api.getLocation()
-  if (res.success) {
-    locationInfo.value = res.data
-  }
-}
-
 // 加载签到记录
 const loadRecords = async () => {
   const today = new Date().toISOString().split('T')[0]
@@ -514,7 +465,6 @@ const formatFullTime = (time) => {
 onMounted(() => {
   checkLogin()
   loadClassSession()
-  loadLocation()
   loadRecords()
 })
 </script>

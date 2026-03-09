@@ -37,14 +37,6 @@ current_class_session = {
     'active': False
 }
 
-# 全局签到位置设置
-class_checkin_location = {
-    'latitude': None,  # 纬度
-    'longitude': None,  # 经度
-    'radius': 500,  # 允许签到半径（米）
-    'address': None  # 地址描述
-}
-
 
 def get_db_info():
     """获取当前数据库环境信息"""
@@ -832,96 +824,6 @@ def reset_all_scores(default_score=70):
     except Exception as e:
         conn.rollback()
         return False, f"重置失败: {str(e)}"
-
-
-import math
-
-def calculate_distance(lat1, lon1, lat2, lon2):
-    """
-    使用 Haversine 公式计算地球表面两点之间的距离（米）
-    
-    Args:
-        lat1, lon1: 点1的纬度和经度
-        lat2, lon2: 点2的纬度和经度
-    
-    Returns:
-        两点之间的距离（米）
-    """
-    # 地球半径（米）
-    R = 6371000
-    
-    # 转换为弧度
-    lat1_rad = math.radians(lat1)
-    lat2_rad = math.radians(lat2)
-    delta_lat = math.radians(lat2 - lat1)
-    delta_lon = math.radians(lon2 - lon1)
-    
-    # Haversine 公式
-    a = math.sin(delta_lat / 2) ** 2 + \
-        math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    
-    distance = R * c
-    return distance
-
-
-def set_checkin_location(latitude, longitude, radius=None, address=None):
-    """
-    设置签到目标位置
-    
-    Args:
-        latitude: 纬度
-        longitude: 经度
-        radius: 允许签到半径（米），默认 500 米
-        address: 地址描述
-    """
-    global class_checkin_location
-    class_checkin_location['latitude'] = latitude
-    class_checkin_location['longitude'] = longitude
-    class_checkin_location['radius'] = radius if radius else 500
-    class_checkin_location['address'] = address
-    return True, "位置设置成功"
-
-
-def get_checkin_location():
-    """获取当前签到目标位置"""
-    global class_checkin_location
-    return class_checkin_location.copy()
-
-
-def check_location_valid(student_lat, student_lon):
-    """
-    检查学生位置是否在允许的签到范围内
-    
-    Args:
-        student_lat: 学生纬度
-        student_lon: 学生经度
-    
-    Returns:
-        (is_valid, distance, message)
-        is_valid: 是否在范围内
-        distance: 与目标位置的距离（米）
-        message: 提示信息
-    """
-    global class_checkin_location
-    
-    # 如果没有设置目标位置，允许签到
-    if class_checkin_location['latitude'] is None or class_checkin_location['longitude'] is None:
-        return True, 0, "未设置位置限制"
-    
-    # 计算距离
-    distance = calculate_distance(
-        class_checkin_location['latitude'],
-        class_checkin_location['longitude'],
-        student_lat,
-        student_lon
-    )
-    
-    # 判断是否超出范围
-    if distance <= class_checkin_location['radius']:
-        return True, distance, f"距离目标位置 {distance:.0f} 米，在允许范围内"
-    else:
-        return False, distance, f"距离目标位置 {distance:.0f} 米，超出允许范围（{class_checkin_location['radius']} 米）"
 
 
 # 初始化

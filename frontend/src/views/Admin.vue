@@ -132,34 +132,6 @@
         </el-col>
       </el-row>
       
-      <!-- 位置设置 -->
-      <el-card class="location-card">
-        <template #header>
-          <div class="card-header">
-            <span><el-icon><Location /></el-icon> 位置签到设置</span>
-            <el-switch v-model="locationSet" @change="toggleLocation" />
-          </div>
-        </template>
-        <div v-if="locationSet" class="location-info">
-          <el-descriptions :column="3" border>
-            <el-descriptions-item label="允许半径">{{ currentLocation.radius || 500 }} 米</el-descriptions-item>
-            <el-descriptions-item label="地址">{{ currentLocation.address || '未设置' }}</el-descriptions-item>
-            <el-descriptions-item label="坐标">
-              {{ currentLocation.latitude ? currentLocation.latitude.toFixed(6) : '-' }},
-              {{ currentLocation.longitude ? currentLocation.longitude.toFixed(6) : '-' }}
-            </el-descriptions-item>
-          </el-descriptions>
-          <div class="location-actions">
-            <el-button type="primary" @click="showSetLocation = true">重新设置</el-button>
-          </div>
-        </div>
-        <div v-else class="location-empty">
-          <el-empty description="位置签到未启用，学生可在任意位置签到">
-            <el-button type="primary" @click="showSetLocation = true">启用位置签到</el-button>
-          </el-empty>
-        </div>
-      </el-card>
-      
       <!-- 学生列表 -->
       <el-card class="student-list-card">
         <template #header>
@@ -314,23 +286,6 @@
       </template>
     </el-dialog>
     
-    <!-- 设置位置对话框 -->
-    <el-dialog v-model="showSetLocation" title="设置签到位置" width="400px">
-      <el-form label-width="100px">
-        <el-form-item label="允许半径">
-          <el-input-number v-model="locationRadius" :min="50" :max="2000" :step="50" />
-          <span class="unit">米</span>
-        </el-form-item>
-        <el-form-item label="地址描述">
-          <el-input v-model="locationAddress" placeholder="如：教学楼A座" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showSetLocation = false">取消</el-button>
-        <el-button type="primary" @click="setCurrentLocation">使用当前位置</el-button>
-      </template>
-    </el-dialog>
-    
     <!-- 调整分数对话框 -->
     <el-dialog v-model="scoreDialogVisible" title="调整分数" width="400px">
       <div class="student-info">
@@ -400,7 +355,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   School, User, UserFilled, ArrowDown, Lock, SwitchButton,
   VideoPlay, VideoPause, Refresh, CircleCloseFilled,
-  Upload, Edit, Delete, Search, EditPen, Location
+  Upload, Edit, Delete, Search, EditPen
 } from '@element-plus/icons-vue'
 import Cookies from 'js-cookie'
 import * as api from '../api'
@@ -418,7 +373,6 @@ const dbInfo = ref({})
 const showAddStudent = ref(false)
 const showImport = ref(false)
 const showResetScore = ref(false)
-const showSetLocation = ref(false)
 const scoreDialogVisible = ref(false)
 const deleteDialogVisible = ref(false)
 const changePasswordVisible = ref(false)
@@ -439,12 +393,6 @@ const resetPassword = ref('')
 const classSession = ref({ active: false })
 const selectedClass = ref('')
 const classStats = ref({ total: 0, checked_in: 0, not_checked_in: 0, rate: 0 })
-
-// 位置
-const locationSet = ref(false)
-const locationRadius = ref(500)
-const locationAddress = ref('')
-const currentLocation = ref({})
 
 // 分数调整
 const selectedStudent = ref({})
@@ -493,10 +441,8 @@ const loadStudents = async () => {
   const res = await api.getStudents()
   if (res.success) {
     students.value = res.data
-    // 默认展开第一个班级
-    if (groupedStudents.value.length > 0 && activeGroups.value.length === 0) {
-      activeGroups.value = [groupedStudents.value[0].className]
-    }
+    // 默认所有班级折叠
+    activeGroups.value = []
   }
 }
 
@@ -676,46 +622,6 @@ const loadClassSession = async () => {
 const refreshClassStatus = () => {
   loadClassSession()
   ElMessage.success('状态已刷新')
-}
-
-const toggleLocation = async (val) => {
-  if (!val) {
-    const res = await api.clearLocation()
-    if (res.success) {
-      ElMessage.success('位置限制已取消')
-      locationSet.value = false
-    }
-  }
-}
-
-const setCurrentLocation = () => {
-  if (!navigator.geolocation) {
-    ElMessage.error('您的浏览器不支持地理定位')
-    return
-  }
-  
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const res = await api.setLocation({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        radius: locationRadius.value,
-        address: locationAddress.value
-      })
-      if (res.success) {
-        ElMessage.success('位置设置成功')
-        locationSet.value = true
-        currentLocation.value = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          radius: locationRadius.value,
-          address: locationAddress.value
-        }
-        showSetLocation.value = false
-      }
-    },
-    () => ElMessage.error('获取位置失败')
-  )
 }
 
 const expandAll = () => {
@@ -964,20 +870,6 @@ onMounted(() => {
 .action-desc {
   font-size: 13px;
   color: #999;
-}
-
-.location-card {
-  margin-bottom: 24px;
-  border-radius: 12px;
-}
-
-.location-info {
-  padding: 16px 0;
-}
-
-.location-actions {
-  margin-top: 16px;
-  text-align: center;
 }
 
 .student-list-card {

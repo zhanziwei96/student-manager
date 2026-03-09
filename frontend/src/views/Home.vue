@@ -28,7 +28,7 @@
           <template #header>
             <span>📝 签到系统</span>
           </template>
-          <p>GPS定位签到，支持位置验证，实时统计</p>
+          <p>在线签到，实时统计</p>
         </el-card>
       </el-col>
       <el-col :span="8">

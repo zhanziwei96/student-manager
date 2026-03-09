@@ -116,11 +116,6 @@ npm run dev
 - `POST /api/class-session` - 设置上课状态
 - `GET /api/class-session/students` - 获取班级学生签到状态
 
-### 位置管理
-- `GET /api/location` - 获取位置设置
-- `POST /api/location` - 设置位置
-- `POST /api/location/clear` - 清除位置
-
 ## 开发说明
 
 ### 前端开发

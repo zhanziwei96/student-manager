@@ -143,7 +143,6 @@
     50% { opacity: 0.5; transform: scale(0.9); }
 }
 
-/* 位置状态栏 */
 .device-id-info {
     margin-top: 0.75rem;
     padding: 0.875rem;
@@ -623,12 +622,7 @@ button, .student-status-tag {
                 <span class="status-dot" id="status-dot"></span>
                 <span id="status-text">系统正常，可以签到</span>
             </div>
-            <div id="location-status" class="device-id-info">
-                📍 位置限制: <span id="location-text">检查中...</span>
-            </div>
-            <div class="device-id-info" style="margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.7;">
-                💡 请确保允许位置权限
-            </div>
+
         </div>
     </div>
     
@@ -865,27 +859,19 @@ async function processQueue() {
     isProcessing = true;
     updateStatus('busy', '正在处理签到...');
     
-    const { studentId, studentName, latitude, longitude, resolve, reject } = requestQueue.shift();
+    const { studentId, studentName, resolve, reject } = requestQueue.shift();
     
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
         
-        const requestBody = { 
-            student_id: studentId,
-            name: studentName
-        };
-        
-        // 如果有位置信息，添加到请求中
-        if (latitude !== undefined && longitude !== undefined) {
-            requestBody.latitude = latitude;
-            requestBody.longitude = longitude;
-        }
-        
         const response = await fetch('/api/checkin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
+            body: JSON.stringify({ 
+                student_id: studentId,
+                name: studentName
+            }),
             signal: controller.signal
         });
         
@@ -911,82 +897,16 @@ async function processQueue() {
     }
 }
 
-// 获取用户位置（带超时和精度检测）
-function getCurrentPosition() {
-    return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-            reject(new Error('您的浏览器不支持地理定位'));
-            return;
-        }
-        
-        // 移动端使用更长的超时时间
-        const timeout = isMobile() ? 15000 : 10000;
-        
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const accuracy = position.coords.accuracy;
-                
-                // 如果精度太差（> 1km），在移动端提示
-                if (isMobile() && accuracy > 1000) {
-                    console.warn('位置精度较差:', accuracy, '米');
-                }
-                
-                resolve({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: accuracy
-                });
-            },
-            (error) => {
-                let message = '获取位置失败';
-                let isPermissionError = false;
-                
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        message = '请允许位置权限：设置 → 隐私 → 位置服务';
-                        isPermissionError = true;
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        message = '位置信息不可用，请检查 GPS 是否开启';
-                        break;
-                    case error.TIMEOUT:
-                        message = '获取位置超时，请检查网络或 GPS';
-                        break;
-                }
-                
-                const err = new Error(message);
-                err.isPermissionError = isPermissionError;
-                reject(err);
-            },
-            {
-                enableHighAccuracy: true,  // 高精度
-                timeout: timeout,
-                maximumAge: 30000  // 30秒缓存
-            }
-        );
-    });
-}
-
-// 执行签到（带位置信息）
+// 执行签到
 async function performCheckin(studentId, studentName) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            // 先获取位置信息
-            const position = await getCurrentPosition();
-            
-            // 将位置信息加入队列
-            requestQueue.push({ 
-                studentId, 
-                studentName, 
-                latitude: position.latitude,
-                longitude: position.longitude,
-                resolve, 
-                reject 
-            });
-            processQueue();
-        } catch (error) {
-            reject(error);
-        }
+    return new Promise((resolve, reject) => {
+        requestQueue.push({ 
+            studentId, 
+            studentName, 
+            resolve, 
+            reject 
+        });
+        processQueue();
     });
 }
 
@@ -1013,7 +933,7 @@ document.getElementById('checkin-form')?.addEventListener('submit', async (e) =>
     
     // 禁用按钮，显示加载状态
     submitBtn.disabled = true;
-    btnText.innerHTML = '<span class="spinner"></span> 获取位置中...';
+    btnText.innerHTML = '<span class="spinner"></span> 签到中...';
     
     // 轻微振动提示开始
     vibrate(30);
@@ -1251,34 +1171,6 @@ function updateStudentStatus(studentId, studentName, checkinTime) {
     loadClassStatus();
 }
 
-// 加载位置设置状态
-async function loadLocationStatus() {
-    try {
-        const response = await fetch('/api/location');
-        const result = await response.json();
-        
-        if (result.success) {
-            const loc = result.data;
-            const locText = document.getElementById('location-text');
-            const locStatus = document.getElementById('location-status');
-            
-            if (loc.latitude !== null && loc.longitude !== null) {
-                const address = loc.address ? ` (${loc.address})` : '';
-                locText.innerHTML = `已启用 · 允许范围 ${loc.radius} 米${address}`;
-                locStatus.style.background = 'rgba(40, 167, 69, 0.15)';
-                locStatus.style.color = '#155724';
-            } else {
-                locText.textContent = '未设置（任意位置可签到）';
-                locStatus.style.background = 'rgba(255, 193, 7, 0.15)';
-                locStatus.style.color = '#856404';
-            }
-        }
-    } catch (error) {
-        console.error('加载位置设置失败:', error);
-        document.getElementById('location-text').textContent = '加载失败';
-    }
-}
-
 window.onload = function() {
     // 显示设备 ID（移动端隐藏部分）
     const deviceDisplay = document.getElementById('device-id-display');
@@ -1288,9 +1180,6 @@ window.onload = function() {
     
     // 检查是否已经签到
     checkAlreadyChecked();
-    
-    // 加载位置设置状态
-    loadLocationStatus();
     
     // 加载今日签到记录
     loadTodayRecords();
@@ -1303,9 +1192,6 @@ window.onload = function() {
     
     // 定期刷新班级状态（实时更新其他学生的签到状态）
     setInterval(loadClassStatus, 3000);
-    
-    // 定期刷新位置状态
-    setInterval(loadLocationStatus, 10000);
     
     // 如果没有签到，聚焦到输入框（仅桌面端）
     if (!isMobile() && document.getElementById('checkin-form-container').style.display !== 'none') {

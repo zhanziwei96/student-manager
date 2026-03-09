@@ -12,8 +12,7 @@ from data_manager import (
     get_checkin_records, get_score_logs, delete_student, delete_class,
     authenticate_user, change_password, get_user_by_id,
     set_current_class, get_current_class, get_class_students_with_checkin_status,
-    reset_all_scores, close_db_connection, get_db_info, DB_ENV_NAME,
-    set_checkin_location, get_checkin_location, check_location_valid
+    reset_all_scores, close_db_connection, get_db_info, DB_ENV_NAME
 )
 
 app = Flask(__name__)
@@ -266,14 +265,12 @@ def api_update_score(student_id):
 @app.route('/api/checkin', methods=['POST'])
 def api_checkin():
     """
-    签到接口 - 优化并发处理，增加位置验证
+    签到接口 - 优化并发处理
     学生输入学号和姓名进行签到
     """
     data = request.json
     student_id = data.get('student_id', '').strip()
     name = data.get('name', '').strip()
-    latitude = data.get('latitude')  # 学生纬度
-    longitude = data.get('longitude')  # 学生经度
     
     if not student_id:
         return jsonify({'success': False, 'message': '学号不能为空'})
@@ -289,35 +286,6 @@ def api_checkin():
     # 验证姓名是否匹配（防止输错学号签到成别人）
     if student['name'] != name:
         return jsonify({'success': False, 'message': '学号与姓名不匹配'})
-    
-    # 位置验证
-    location = get_checkin_location()
-    if location['latitude'] is not None and location['longitude'] is not None:
-        # 检查是否提供了位置信息
-        if latitude is None or longitude is None:
-            return jsonify({
-                'success': False, 
-                'message': '无法获取您的位置信息，请允许浏览器获取位置权限后重试'
-            })
-        
-        # 验证位置是否在允许范围内
-        try:
-            is_valid, distance, loc_message = check_location_valid(
-                float(latitude), float(longitude)
-            )
-            if not is_valid:
-                return jsonify({
-                    'success': False,
-                    'message': f'签到失败：{loc_message}',
-                    'location_error': True,
-                    'distance': round(distance, 2),
-                    'allowed_radius': location['radius']
-                })
-        except (ValueError, TypeError):
-            return jsonify({
-                'success': False,
-                'message': '位置信息格式错误，请重试'
-            })
     
     # 添加签到记录
     success, message, student_name = add_checkin_record(student_id)
@@ -414,54 +382,6 @@ def api_teacher_checkin():
         'multiple_students': True,
         'students': students
     })
-
-
-# ========== 位置签到管理 ==========
-
-@app.route('/api/location', methods=['GET'])
-def api_get_location():
-    """获取当前签到目标位置"""
-    location = get_checkin_location()
-    return jsonify({
-        'success': True,
-        'data': location
-    })
-
-
-@app.route('/api/location', methods=['POST'])
-@login_required
-def api_set_location():
-    """设置签到目标位置（老师功能）"""
-    data = request.json
-    latitude = data.get('latitude')
-    longitude = data.get('longitude')
-    radius = data.get('radius', 500)  # 默认 500 米
-    address = data.get('address', '')
-    
-    if latitude is None or longitude is None:
-        return jsonify({'success': False, 'message': '请提供纬度和经度'})
-    
-    try:
-        lat = float(latitude)
-        lon = float(longitude)
-        rad = int(radius) if radius else 500
-        
-        # 验证坐标范围
-        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
-            return jsonify({'success': False, 'message': '经纬度范围错误'})
-        
-        success, message = set_checkin_location(lat, lon, rad, address)
-        return jsonify({'success': success, 'message': message})
-    except (ValueError, TypeError):
-        return jsonify({'success': False, 'message': '参数格式错误'})
-
-
-@app.route('/api/location/clear', methods=['POST'])
-@login_required
-def api_clear_location():
-    """清除签到位置限制（老师功能）"""
-    success, message = set_checkin_location(None, None, 500, None)
-    return jsonify({'success': success, 'message': '已取消位置限制'})
 
 
 # ========== 上课状态管理 ==========

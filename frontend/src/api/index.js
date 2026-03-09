@@ -28,11 +28,6 @@ export const getClassSession = () => request.get('/class-session')
 export const setClassSession = (data) => request.post('/class-session', data)
 export const getClassSessionStudents = () => request.get('/class-session/students')
 
-// 位置管理
-export const getLocation = () => request.get('/location')
-export const setLocation = (data) => request.post('/location', data)
-export const clearLocation = () => request.post('/location/clear')
-
 // 分数日志
 export const getScoreLogs = (params) => request.get('/score/logs', { params })
 
