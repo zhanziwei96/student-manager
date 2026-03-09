@@ -86,7 +86,12 @@ const handleLogin = async () => {
       Cookies.set('name', res.user.name)
       ElMessage.success('登录成功')
       router.push('/dashboard')
+    } else {
+      ElMessage.error(res.message || '登录失败')
     }
+  } catch (error) {
+    console.error('登录错误:', error)
+    ElMessage.error('网络错误，请检查后端服务是否启动')
   } finally {
     loading.value = false
   }
