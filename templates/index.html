@@ -73,32 +73,34 @@
 // 加载统计数据
 async function loadStats() {
     try {
-        const response = await fetch('/api/students');
+        const response = await fetch('/api/stats');
         const result = await response.json();
+        console.log('API 返回:', result);
         
         if (result.success) {
-            const students = result.data;
-            document.getElementById('student-count').textContent = students.length;
+            const data = result.data;
+            document.getElementById('student-count').textContent = data.student_count || 0;
+            document.getElementById('class-count').textContent = data.class_count || 0;
+            document.getElementById('today-checkin').textContent = data.today_checkin || 0;
             
-            // 统计班级数量
-            const classes = new Set(students.map(s => s.class_name));
-            document.getElementById('class-count').textContent = classes.size;
-            
-            // 加载今日签到
-            const today = new Date().toISOString().split('T')[0];
-            const recordsResponse = await fetch(`/api/checkin/records?date=${today}`);
-            const recordsResult = await recordsResponse.json();
-            
-            if (recordsResult.success) {
-                document.getElementById('today-checkin').textContent = recordsResult.data.length;
+            // 显示排行榜
+            if (data.top_students && Array.isArray(data.top_students)) {
+                displayRanking(data.top_students);
+            } else {
+                console.error('排行榜数据格式错误:', data.top_students);
+                displayRanking([]);
             }
-            
-            // 排序并显示排行榜
-            const sortedStudents = [...students].sort((a, b) => b.score - a.score);
-            displayRanking(sortedStudents.slice(0, 10));
+        } else {
+            console.error('API 返回失败:', result);
+            displayRanking([]);
         }
     } catch (error) {
         console.error('加载统计数据失败:', error);
+        // 如果失败，显示默认值
+        document.getElementById('student-count').textContent = '-';
+        document.getElementById('class-count').textContent = '-';
+        document.getElementById('today-checkin').textContent = '-';
+        displayRanking([]);
     }
 }
 
@@ -129,7 +131,7 @@ function displayRanking(students) {
     }).join('');
 }
 
-// 页面加载时执行
-loadStats();
+// 页面加载完成后执行
+document.addEventListener('DOMContentLoaded', loadStats);
 </script>
 {% endblock %}

@@ -5,6 +5,7 @@
 
 import os
 from functools import wraps
+from datetime import datetime
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from data_manager import (
     init_data, get_all_students, get_student_by_id, get_students_by_name, add_student,
@@ -12,7 +13,8 @@ from data_manager import (
     get_checkin_records, get_score_logs, delete_student, delete_class,
     authenticate_user, change_password, get_user_by_id,
     set_current_class, get_current_class, get_class_students_with_checkin_status,
-    reset_all_scores, close_db_connection, get_db_info, DB_ENV_NAME
+    reset_all_scores, close_db_connection, get_db_info, DB_ENV_NAME,
+    get_db_connection
 )
 
 app = Flask(__name__)
@@ -165,6 +167,66 @@ def api_get_students():
     """获取所有学生"""
     students = get_all_students()
     return jsonify({'success': True, 'data': students})
+
+
+@app.route('/api/stats', methods=['GET'])
+def api_get_stats():
+    """获取首页统计数据（优化版）"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 1. 获取学生总数和班级数
+        cursor.execute('SELECT COUNT(*) as count FROM students')
+        student_count = cursor.fetchone()['count']
+        
+        # 2. 获取班级数量
+        cursor.execute('SELECT COUNT(DISTINCT class_name) as count FROM students')
+        class_count = cursor.fetchone()['count']
+        
+        # 3. 获取今日签到数
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('''
+            SELECT COUNT(*) as count 
+            FROM checkin_records 
+            WHERE DATE(checkin_time) = ?
+        ''', (today,))
+        today_checkin = cursor.fetchone()['count']
+        
+        # 4. 获取分数前10名（直接在数据库排序）
+        cursor.execute('''
+            SELECT student_id, name, class_name, score 
+            FROM students 
+            ORDER BY score DESC 
+            LIMIT 10
+        ''')
+        top_students = [
+            {
+                'student_id': row['student_id'],
+                'name': row['name'],
+                'class_name': row['class_name'],
+                'score': row['score'] if row['score'] else 0
+            }
+            for row in cursor.fetchall()
+        ]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'student_count': student_count,
+                'class_count': class_count,
+                'today_checkin': today_checkin,
+                'top_students': top_students
+            }
+        })
+    except Exception as e:
+        import traceback
+        print(f"获取统计数据失败: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': f'获取统计数据失败: {str(e)}'
+        }), 500
 
 
 @app.route('/api/students', methods=['POST'])

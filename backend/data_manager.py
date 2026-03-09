@@ -534,26 +534,28 @@ def add_checkin_record(student_id, checkin_type="网页签到"):
 
 
 def get_checkin_records(student_id=None, date=None):
-    """获取签到记录"""
+    """获取签到记录（包含学生姓名）"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     query = '''
-        SELECT record_id, student_id, checkin_time, checkin_type
-        FROM checkin_records
+        SELECT cr.record_id, cr.student_id, cr.checkin_time, cr.checkin_type,
+               s.name as student_name
+        FROM checkin_records cr
+        LEFT JOIN students s ON cr.student_id = s.student_id
         WHERE 1=1
     '''
     params = []
     
     if student_id:
-        query += ' AND student_id = ?'
+        query += ' AND cr.student_id = ?'
         params.append(student_id)
     
     if date:
-        query += ' AND DATE(checkin_time) = ?'
+        query += ' AND DATE(cr.checkin_time) = ?'
         params.append(date)
     
-    query += ' ORDER BY checkin_time DESC'
+    query += ' ORDER BY cr.checkin_time DESC'
     
     cursor.execute(query, params)
     rows = cursor.fetchall()
@@ -562,6 +564,7 @@ def get_checkin_records(student_id=None, date=None):
         {
             'record_id': row['record_id'],
             'student_id': row['student_id'],
+            'student_name': row['student_name'] or row['student_id'],
             'checkin_time': row['checkin_time'],
             'checkin_type': row['checkin_type']
         }

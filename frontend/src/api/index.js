@@ -36,3 +36,6 @@ export const resetAllScores = (data) => request.post('/admin/reset-scores', data
 
 // 数据库信息
 export const getDbInfo = () => request.get('/db-info')
+
+// 首页统计
+export const getStats = () => request.get('/stats')
