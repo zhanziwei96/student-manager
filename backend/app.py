@@ -468,7 +468,7 @@ def api_teacher_checkin():
 
 @app.route('/api/class-session', methods=['GET'])
 def api_get_class_session():
-    """获取当前上课状态（公开访问）"""
+    """获取当前上课状态（公开接口）"""
     try:
         session_info = get_current_class()
         return jsonify({

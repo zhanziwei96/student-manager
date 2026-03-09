@@ -163,6 +163,23 @@ def init_db():
         ON score_logs(operation_time)
     ''')
     
+    # 当前班级状态表（持久化存储）
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS class_session (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            class_name TEXT,
+            start_time TIMESTAMP,
+            active INTEGER DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 插入初始记录
+    cursor.execute('''
+        INSERT OR IGNORE INTO class_session (id, class_name, start_time, active) 
+        VALUES (1, NULL, NULL, 0)
+    ''')
+    
     conn.commit()
     conn.close()
     
@@ -754,31 +771,66 @@ def delete_class(class_name):
         return False, f"删除班级失败: {str(e)}"
 
 
-# 上课状态管琁函数
+# 上课状态管理函数
 def set_current_class(class_name):
-    """设置当前上课班级"""
-    global current_class_session
+    """设置当前上课班级（持久化到数据库）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
     # 如果 class_name 为空，表示结束上课，清除今天的签到记录
     if not class_name:
         success, message = clear_today_checkin_records()
-        current_class_session = {
-            'class_name': None,
-            'start_time': None,
-            'active': False
-        }
+        cursor.execute('''
+            UPDATE class_session 
+            SET class_name = NULL, start_time = NULL, active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = 1
+        ''')
+        conn.commit()
+        # 注意：不要关闭 conn，由 teardown 处理
         return True, f"已结束上课，{message}"
     
+    # 设置当前上课班级
+    start_time = datetime.now().isoformat()
+    cursor.execute('''
+        UPDATE class_session 
+        SET class_name = ?, start_time = ?, active = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1
+    ''', (class_name, start_time))
+    conn.commit()
+    # 注意：不要关闭 conn，由 teardown 处理
+    
+    # 同时更新内存变量（用于兼容）
+    global current_class_session
     current_class_session = {
         'class_name': class_name,
-        'start_time': datetime.now().isoformat(),
+        'start_time': start_time,
         'active': True
     }
+    
     return True, f"当前上课班级: {class_name}"
 
 
 def get_current_class():
-    """获取当前上课班级信息"""
+    """获取当前上课班级信息（从数据库读取）"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT class_name, start_time, active FROM class_session WHERE id = 1
+        ''')
+        row = cursor.fetchone()
+        # 注意：不要关闭 conn，由 teardown 处理
+        
+        if row:
+            return {
+                'class_name': row['class_name'],
+                'start_time': row['start_time'],
+                'active': bool(row['active'])
+            }
+    except Exception as e:
+        print(f"获取班级会话失败: {e}")
+    
+    # 如果数据库读取失败，返回内存变量（兼容）
     return current_class_session
 
 

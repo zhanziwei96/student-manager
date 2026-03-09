@@ -35,8 +35,8 @@ class ProductionConfig(Config):
     TESTING = False
     DB_ENV = 'production'
     
-    # 生产环境必须使用环境变量设置的 SECRET_KEY
-    SECRET_KEY = os.environ.get('SECRET_KEY')
+    # 生产环境必须使用环境变量设置的 SECRET_KEY（如果没有则使用默认值）
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'student-manage-v2-secret-key-change-me'
     
     # 生产环境 Session 配置
     SESSION_COOKIE_SECURE = True  # 仅 HTTPS
