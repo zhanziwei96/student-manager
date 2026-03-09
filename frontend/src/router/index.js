@@ -4,6 +4,12 @@ import Cookies from 'js-cookie'
 const routes = [
   {
     path: '/',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/home',
     name: 'Home',
     component: () => import('../views/Home.vue')
   },
@@ -22,6 +28,11 @@ const routes = [
     path: '/checkin',
     name: 'Checkin',
     component: () => import('../views/Checkin.vue')
+  },
+  {
+    path: '/checkin-cards',
+    name: 'CardCheckin',
+    component: () => import('../views/CardCheckin.vue')
   }
 ]
 

@@ -279,25 +279,53 @@ def get_user_by_id(user_id):
 
 # ========== 学生相关操作 ==========
 
-def get_all_students():
-    """获取所有学生信息"""
+def get_all_students(with_checkin_status=False):
+    """获取所有学生信息
+    
+    Args:
+        with_checkin_status: 是否包含今日签到状态
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('''
-        SELECT student_id, name, class_name, score 
-        FROM students 
-        ORDER BY student_id
-    ''')
-    rows = cursor.fetchall()
-    return [
-        {
-            'student_id': row['student_id'],
-            'name': row['name'],
-            'class_name': row['class_name'],
-            'score': row['score'] if row['score'] else 0
-        }
-        for row in rows
-    ]
+    
+    if with_checkin_status:
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('''
+            SELECT s.student_id, s.name, s.class_name, s.score,
+                   CASE WHEN cr.record_id IS NOT NULL THEN 1 ELSE 0 END as checked_in
+            FROM students s
+            LEFT JOIN checkin_records cr ON s.student_id = cr.student_id 
+                AND DATE(cr.checkin_time) = ?
+            ORDER BY s.class_name, s.student_id
+        ''', (today,))
+        rows = cursor.fetchall()
+        return [
+            {
+                'student_id': row['student_id'],
+                'name': row['name'],
+                'class_name': row['class_name'],
+                'score': row['score'] if row['score'] else 0,
+                'checked_in': bool(row['checked_in'])
+            }
+            for row in rows
+        ]
+    else:
+        cursor.execute('''
+            SELECT student_id, name, class_name, score 
+            FROM students 
+            ORDER BY student_id
+        ''')
+        rows = cursor.fetchall()
+        return [
+            {
+                'student_id': row['student_id'],
+                'name': row['name'],
+                'class_name': row['class_name'],
+                'score': row['score'] if row['score'] else 0
+            }
+            for row in rows
+        ]
 
 
 def get_student_by_id(student_id):

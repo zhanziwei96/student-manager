@@ -8,6 +8,7 @@ export const changePassword = (data) => request.post('/change-password', data)
 
 // 学生管理
 export const getStudents = () => request.get('/students')
+export const getStudentsWithCheckin = () => request.get('/students?with_checkin=true')
 export const addStudent = (data) => request.post('/students', data)
 export const deleteStudent = (id) => request.delete(`/students/${id}`)
 export const updateScore = (id, data) => request.post(`/students/${id}/score`, data)

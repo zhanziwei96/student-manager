@@ -152,7 +152,9 @@ def api_get_current_user():
 @app.route('/api/students', methods=['GET'])
 def api_get_students():
     """获取所有学生"""
-    students = get_all_students()
+    # 支持参数控制是否返回签到状态
+    with_checkin = request.args.get('with_checkin', 'false').lower() == 'true'
+    students = get_all_students(with_checkin_status=with_checkin)
     return jsonify({'success': True, 'data': students})
 
 
@@ -180,7 +182,12 @@ def api_get_stats():
         ''', (today,))
         today_checkin = cursor.fetchone()['count']
         
-        # 4. 获取分数前10名（直接在数据库排序）
+        # 4. 获取平均分数
+        cursor.execute('SELECT AVG(score) as avg_score FROM students')
+        avg_score_row = cursor.fetchone()
+        avg_score = round(avg_score_row['avg_score']) if avg_score_row['avg_score'] else 70
+        
+        # 5. 获取分数前10名（直接在数据库排序）
         cursor.execute('''
             SELECT student_id, name, class_name, score 
             FROM students 
@@ -197,13 +204,35 @@ def api_get_stats():
             for row in cursor.fetchall()
         ]
         
+        # 6. 获取班级列表及签到统计
+        cursor.execute('''
+            SELECT s.class_name, COUNT(*) as total,
+                   COUNT(CASE WHEN cr.record_id IS NOT NULL THEN 1 END) as checked
+            FROM students s
+            LEFT JOIN checkin_records cr ON s.student_id = cr.student_id 
+                AND DATE(cr.checkin_time) = ?
+            GROUP BY s.class_name
+            ORDER BY s.class_name
+        ''', (today,))
+        class_stats = [
+            {
+                'class_name': row['class_name'],
+                'student_count': row['total'],
+                'checkin_count': row['checked']
+            }
+            for row in cursor.fetchall()
+        ]
+        
         return jsonify({
             'success': True,
             'data': {
                 'student_count': student_count,
                 'class_count': class_count,
                 'today_checkin': today_checkin,
-                'top_students': top_students
+                'today_checkin_rate': round(today_checkin / student_count * 100) if student_count > 0 else 0,
+                'avg_score': avg_score,
+                'top_students': top_students,
+                'class_stats': class_stats
             }
         })
     except Exception as e:
