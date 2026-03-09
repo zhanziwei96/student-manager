@@ -85,7 +85,7 @@ const handleLogin = async () => {
       Cookies.set('username', res.user.username)
       Cookies.set('name', res.user.name)
       ElMessage.success('登录成功')
-      router.push('/admin')
+      router.push('/dashboard')
     }
   } finally {
     loading.value = false

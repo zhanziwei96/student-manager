@@ -1,5 +1,30 @@
 <template>
   <div class="dashboard-container">
+    <!-- 顶部导航栏 -->
+    <header class="top-header">
+      <div class="header-left">
+        <h2 class="page-title">📊 管理后台</h2>
+      </div>
+      <div class="header-right">
+        <el-button text @click="$router.push('/')">
+          <el-icon><Home /></el-icon>
+          返回首页
+        </el-button>
+        <el-dropdown @command="handleCommand">
+          <span class="user-info">
+            👨‍🏫 {{ userName }}
+            <el-icon><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="admin">系统管理</el-dropdown-item>
+              <el-dropdown-item command="password">修改密码</el-dropdown-item>
+              <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </header>
     <!-- 顶部数据看板 -->
     <div class="stats-row">
       <div class="stat-card blue">
@@ -268,12 +293,19 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { EditPen, User, Upload, Refresh, Search, Loading } from '@element-plus/icons-vue'
+import { EditPen, User, Upload, Refresh, Search, Loading, Home, ArrowDown } from '@element-plus/icons-vue'
+import Cookies from 'js-cookie'
 import VirtualList from '../components/VirtualList.vue'
 import { cache, CACHE_KEYS } from '../utils/cache'
 import { debounce } from '../utils'
 import * as api from '../api'
+
+const router = useRouter()
+
+// 用户名称
+const userName = ref(Cookies.get('name') || '教师')
 
 // 统计数据
 const stats = ref({
@@ -537,6 +569,31 @@ const openScoreDialog = (student) => {
   }).catch(() => {})
 }
 
+// 处理下拉菜单命令
+const handleCommand = (command) => {
+  switch (command) {
+    case 'admin':
+      router.push('/admin')
+      break
+    case 'password':
+      // 预留修改密码功能
+      ElMessage.info('修改密码功能开发中')
+      break
+    case 'logout':
+      handleLogout()
+      break
+  }
+}
+
+// 退出登录
+const handleLogout = () => {
+  Cookies.remove('user_id')
+  Cookies.remove('username')
+  Cookies.remove('name')
+  ElMessage.success('已退出登录')
+  router.push('/')
+}
+
 // 处理排序
 const handleSortChange = ({ prop, order }) => {
   sortConfig.value = { prop, order }
@@ -583,6 +640,43 @@ onMounted(() => {
   min-height: 100vh;
   background: #f0f2f5;
   padding: 20px;
+}
+
+/* 顶部导航栏 */
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 18px;
+  color: #262626;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info {
+  cursor: pointer;
+  color: #595959;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-info:hover {
+  color: #1890ff;
 }
 
 /* 顶部数据看板 */
