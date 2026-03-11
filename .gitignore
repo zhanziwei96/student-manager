@@ -139,3 +139,11 @@ data/*
 backend/data/*
 !backend/data/.gitkeep
 node_modules
+
+# Backup and sensitive config
+backups/
+*.db.backup*
+nginx.conf
+*.crt
+*.key
+/etc/nginx/ssl/

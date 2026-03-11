@@ -18,14 +18,14 @@ from openpyxl import load_workbook
 ENV = os.environ.get('FLASK_ENV') or os.environ.get('DB_ENV', 'production')
 
 if ENV == 'testing' or ENV == 'test':
-    DB_FILE = 'data/test_class_system.db'
+    DB_FILE = 'backend/data/test_class_system.db'
     DB_ENV_NAME = '测试环境'
 else:
-    DB_FILE = 'data/class_system.db'
+    DB_FILE = 'backend/data/class_system.db'
     DB_ENV_NAME = '生产环境'
 
 # 确保数据目录存在
-os.makedirs('data', exist_ok=True)
+os.makedirs('backend/data', exist_ok=True)
 
 # 线程本地存储
 thread_local = threading.local()

@@ -4,8 +4,8 @@
 """
 
 import os
-from functools import wraps
-from datetime import datetime
+from functools import wraps, lru_cache
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
 from data_manager import (
     init_data, get_all_students, get_student_by_id, get_students_by_name, add_student,
@@ -18,6 +18,11 @@ from data_manager import (
 )
 
 app = Flask(__name__)
+
+# 首页统计数据缓存
+_stats_cache = None
+_stats_cache_time = None
+CACHE_DURATION = timedelta(seconds=30)  # 缓存30秒
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大 16MB 上传
 app.config['SECRET_KEY'] = os.urandom(24)  # 用于 session 加密
 app.config['SESSION_TYPE'] = 'filesystem'
@@ -171,54 +176,49 @@ def api_get_students():
 
 @app.route('/api/stats', methods=['GET'])
 def api_get_stats():
-    """获取首页统计数据（优化版）"""
+    """获取首页统计数据（带缓存优化）"""
+    global _stats_cache, _stats_cache_time
+    
+    # 检查缓存是否有效
+    if _stats_cache and _stats_cache_time:
+        if datetime.now() - _stats_cache_time < CACHE_DURATION:
+            return jsonify({'success': True, 'data': _stats_cache})
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 1. 获取学生总数和班级数
-        cursor.execute('SELECT COUNT(*) as count FROM students')
-        student_count = cursor.fetchone()['count']
-        
-        # 2. 获取班级数量
-        cursor.execute('SELECT COUNT(DISTINCT class_name) as count FROM students')
-        class_count = cursor.fetchone()['count']
-        
-        # 3. 获取今日签到数
-        today = datetime.now().strftime('%Y-%m-%d')
+        # 合并为一个查询，减少数据库往返
         cursor.execute('''
-            SELECT COUNT(*) as count 
-            FROM checkin_records 
-            WHERE DATE(checkin_time) = ?
-        ''', (today,))
-        today_checkin = cursor.fetchone()['count']
+            SELECT 
+                (SELECT COUNT(*) FROM students) as student_count,
+                (SELECT COUNT(DISTINCT class_name) FROM students) as class_count,
+                (SELECT COUNT(*) FROM checkin_records WHERE DATE(checkin_time) = date('now')) as today_checkin
+        ''')
+        row = cursor.fetchone()
         
-        # 4. 获取分数前10名（直接在数据库排序）
+        # 获取分数前10名
         cursor.execute('''
-            SELECT student_id, name, class_name, score 
+            SELECT student_id, name, class_name, COALESCE(score, 0) as score 
             FROM students 
             ORDER BY score DESC 
             LIMIT 10
         ''')
-        top_students = [
-            {
-                'student_id': row['student_id'],
-                'name': row['name'],
-                'class_name': row['class_name'],
-                'score': row['score'] if row['score'] else 0
-            }
-            for row in cursor.fetchall()
-        ]
+        top_students = [dict(r) for r in cursor.fetchall()]
         
-        return jsonify({
-            'success': True,
-            'data': {
-                'student_count': student_count,
-                'class_count': class_count,
-                'today_checkin': today_checkin,
-                'top_students': top_students
-            }
-        })
+        result = {
+            'student_count': row['student_count'],
+            'class_count': row['class_count'],
+            'today_checkin': row['today_checkin'],
+            'top_students': top_students
+        }
+        
+        # 更新缓存
+        _stats_cache = result
+        _stats_cache_time = datetime.now()
+        
+        return jsonify({'success': True, 'data': result})
+        
     except Exception as e:
         import traceback
         print(f"获取统计数据失败: {str(e)}")
