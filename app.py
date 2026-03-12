@@ -24,7 +24,7 @@ _stats_cache = None
 _stats_cache_time = None
 CACHE_DURATION = timedelta(seconds=30)  # 缓存30秒
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大 16MB 上传
-app.config['SECRET_KEY'] = os.urandom(24)  # 用于 session 加密
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'student-manage-fixed-secret-key-2024')  # 用于 session 加密
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # session 有效期 1 小时
 

@@ -639,17 +639,19 @@ const loadClassSession = async () => {
             not_checked_in,
             rate: total > 0 ? Math.round((checked_in / total) * 100) : 0
           }
+        } else {
+          ElMessage.warning(studentsRes.message || '获取学生列表失败')
         }
       }
     }
   } catch (error) {
-    // 静默处理
+    ElMessage.error('刷新状态失败，请重试')
+    console.error('loadClassSession error:', error)
   }
 }
 
-const refreshClassStatus = () => {
-  loadClassSession()
-  ElMessage.success('状态已刷新')
+const refreshClassStatus = async () => {
+  await loadClassSession()
 }
 
 const expandAll = () => {
