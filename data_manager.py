@@ -12,30 +12,27 @@ import secrets
 from datetime import datetime
 from openpyxl import load_workbook
 
+# 获取项目根目录（data_manager.py 所在目录）
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, 'backend', 'data')
+
 # 根据环境变量选择数据库
 # 设置环境变量 FLASK_ENV=testing 或 DB_ENV=testing 使用测试数据库
 # 默认使用生产数据库
 ENV = os.environ.get('FLASK_ENV') or os.environ.get('DB_ENV', 'production')
 
 if ENV == 'testing' or ENV == 'test':
-    DB_FILE = 'backend/data/test_class_system.db'
+    DB_FILE = os.path.join(DATA_DIR, 'test_class_system.db')
     DB_ENV_NAME = '测试环境'
 else:
-    DB_FILE = 'backend/data/class_system.db'
+    DB_FILE = os.path.join(DATA_DIR, 'class_system.db')
     DB_ENV_NAME = '生产环境'
 
 # 确保数据目录存在
-os.makedirs('backend/data', exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 # 线程本地存储
 thread_local = threading.local()
-
-# 全局上课状态（由于只有一个老师使用，用内存存储即可）
-current_class_session = {
-    'class_name': None,
-    'start_time': None,
-    'active': False
-}
 
 
 def get_db_info():
@@ -147,6 +144,23 @@ def init_db():
             reason TEXT,
             operation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
+    ''')
+
+    # 上课状态表（用于多进程共享状态）
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS class_session (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            class_name TEXT,
+            start_time TIMESTAMP,
+            active INTEGER DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 初始化上课状态记录（如果不存在）
+    cursor.execute('''
+        INSERT OR IGNORE INTO class_session (id, class_name, start_time, active)
+        VALUES (1, NULL, NULL, 0)
     ''')
     
     # 创建索引，提高查询性能
@@ -726,40 +740,77 @@ def delete_class(class_name):
         return False, f"删除班级失败: {str(e)}"
 
 
-# 上课状态管琁函数
+# 上课状态管理函数（使用数据库持久化，支持多 worker 共享）
 def set_current_class(class_name):
     """设置当前上课班级"""
-    global current_class_session
-    
-    # 如果 class_name 为空，表示结束上课，清除今天的签到记录
-    if not class_name:
-        success, message = clear_today_checkin_records()
-        current_class_session = {
-            'class_name': None,
-            'start_time': None,
-            'active': False
-        }
-        return True, f"已结束上课，{message}"
-    
-    current_class_session = {
-        'class_name': class_name,
-        'start_time': datetime.now().isoformat(),
-        'active': True
-    }
-    return True, f"当前上课班级: {class_name}"
-
-
-def get_current_class():
-    """获取当前上课班级信息"""
-    return current_class_session
-
-
-def get_class_students_with_checkin_status(class_name):
-    """获取班级学生及其签到状态"""
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
+        # 如果 class_name 为空，表示结束上课，清除今天的签到记录
+        if not class_name:
+            success, message = clear_today_checkin_records()
+            cursor.execute('''
+                UPDATE class_session
+                SET class_name = NULL, start_time = NULL, active = 0, updated_at = CURRENT_TIMESTAMP
+                WHERE id = 1
+            ''')
+            conn.commit()
+            return True, f"已结束上课，{message}"
+
+        # 开始上课
+        cursor.execute('''
+            UPDATE class_session
+            SET class_name = ?, start_time = CURRENT_TIMESTAMP, active = 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = 1
+        ''', (class_name,))
+        conn.commit()
+        return True, f"当前上课班级: {class_name}"
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERROR] set_current_class 失败: {str(e)}")
+        return False, f"设置上课班级失败: {str(e)}"
+
+
+def get_current_class():
+    """获取当前上课班级信息（从数据库读取）"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT class_name, start_time, active
+            FROM class_session
+            WHERE id = 1
+        ''')
+        row = cursor.fetchone()
+
+        if row:
+            return {
+                'class_name': row['class_name'],
+                'start_time': row['start_time'],
+                'active': bool(row['active'])
+            }
+        else:
+            # 如果没有记录，返回默认状态
+            return {'class_name': None, 'start_time': None, 'active': False}
+    except Exception as e:
+        print(f"[ERROR] get_current_class 失败: {str(e)}")
+        return {'class_name': None, 'start_time': None, 'active': False}
+
+
+def get_class_students_with_checkin_status(class_name):
+    """获取班级学生及其签到状态"""
+    # 参数验证
+    if not class_name:
+        print(f"[ERROR] get_class_students_with_checkin_status: class_name 为空")
+        return []
+
+    print(f"[DEBUG] 查询班级学生: class_name={class_name}, DB_FILE={DB_FILE}")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
         # 获取班级所有学生
         cursor.execute('''
             SELECT student_id, name, score
@@ -769,6 +820,8 @@ def get_class_students_with_checkin_status(class_name):
         ''', (class_name,))
 
         students = cursor.fetchall()
+        print(f"[DEBUG] 查询到学生数量: {len(students)}")
+
         if not students:
             return []
 
@@ -781,6 +834,7 @@ def get_class_students_with_checkin_status(class_name):
         ''', (today,))
 
         checkin_records = {row['student_id']: row['checkin_time'] for row in cursor.fetchall()}
+        print(f"[DEBUG] 今天签到记录数量: {len(checkin_records)}")
 
         # 组合数据
         result = []
@@ -793,9 +847,12 @@ def get_class_students_with_checkin_status(class_name):
                 'checkin_time': checkin_records.get(student['student_id'])
             })
 
+        print(f"[DEBUG] 返回学生数据数量: {len(result)}")
         return result
     except Exception as e:
-        print(f"获取班级学生签到状态失败: {str(e)}")
+        print(f"[ERROR] 获取班级学生签到状态失败: {str(e)}, class_name={class_name}")
+        import traceback
+        traceback.print_exc()
         return []
 
 

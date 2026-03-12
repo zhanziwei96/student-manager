@@ -474,8 +474,10 @@ def api_set_class_session():
 def api_get_class_session_students():
     """获取当前上课班级的学生签到状态"""
     session_info = get_current_class()
-    
+    print(f"[DEBUG] api_get_class_session_students: session_info={session_info}")
+
     if not session_info['active'] or not session_info['class_name']:
+        print(f"[DEBUG] 没有正在上课的班级")
         return jsonify({
             'success': False,
             'message': '没有正在上课的班级',
@@ -484,14 +486,17 @@ def api_get_class_session_students():
                 'students': []
             }
         })
-    
-    students = get_class_students_with_checkin_status(session_info['class_name'])
-    
+
+    class_name = session_info['class_name']
+    print(f"[DEBUG] 获取班级学生: {class_name}")
+    students = get_class_students_with_checkin_status(class_name)
+    print(f"[DEBUG] 返回学生数量: {len(students)}")
+
     return jsonify({
         'success': True,
         'data': {
             'active': True,
-            'class_name': session_info['class_name'],
+            'class_name': class_name,
             'start_time': session_info['start_time'],
             'students': students,
             'total': len(students),
