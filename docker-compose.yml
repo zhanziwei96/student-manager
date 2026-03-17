@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  student-manage:
+    build: .
+    container_name: student-manage-v3
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+    volumes:
+      # 数据目录挂载到本地 backend/data 目录
+      - ./backend/data:/app/backend/data
+      # 上传文件目录挂载
+      - ./uploads:/app/uploads
+      # 备份目录挂载
+      - ./backups:/app/backups
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-student-manage-fixed-secret-key-2024}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

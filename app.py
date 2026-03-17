@@ -449,7 +449,6 @@ def api_teacher_checkin():
 # ========== 上课状态管理 ==========
 
 @app.route('/api/class-session', methods=['GET'])
-@login_required
 def api_get_class_session():
     """获取当前上课状态"""
     session_info = get_current_class()
@@ -537,6 +536,53 @@ def api_get_score_logs():
     }
     
     return jsonify(result)
+
+
+@app.route('/api/student/query', methods=['POST'])
+def api_query_student():
+    """学生查询自己的分数、排名和记录"""
+    data = request.json
+    student_id = data.get('student_id', '').strip()
+    name = data.get('name', '').strip()
+    
+    if not student_id or not name:
+        return jsonify({'success': False, 'message': '请输入学号和姓名'})
+    
+    # 获取学生信息
+    student = get_student_by_id(student_id)
+    if not student:
+        return jsonify({'success': False, 'message': '学生不存在'})
+    
+    # 验证姓名
+    if student['name'] != name:
+        return jsonify({'success': False, 'message': '学号与姓名不匹配'})
+    
+    # 计算排名
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT COUNT(*) + 1 as rank
+        FROM students
+        WHERE score > (SELECT score FROM students WHERE student_id = ?)
+    ''', (student_id,))
+    rank = cursor.fetchone()['rank']
+    
+    # 获取总学生数
+    cursor.execute('SELECT COUNT(*) as count FROM students')
+    total_count = cursor.fetchone()['count']
+    
+    # 获取分数变更记录
+    logs = get_score_logs(student_id=student_id)
+    
+    return jsonify({
+        'success': True,
+        'data': {
+            'student': student,
+            'rank': rank,
+            'total_count': total_count,
+            'score_logs': logs
+        }
+    })
 
 
 @app.route('/api/db-info', methods=['GET'])

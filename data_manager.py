@@ -530,8 +530,8 @@ def add_checkin_record(student_id, checkin_type="网页签到"):
         
         check_result = cursor.fetchone()
         if check_result and check_result['count'] > 0:
-            # 已经签到过，仍然允许签到但提示
-            pass  # 如果需要禁止重复签到，可以在这里返回
+            # 已经签到过，阻止重复签到
+            return False, "今天已经签到过了，请勿重复签到", student_name
         
         # 添加签到记录
         record_id = datetime.now().strftime('%Y%m%d%H%M%S%f')

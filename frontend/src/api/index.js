@@ -40,3 +40,6 @@ export const getDbInfo = () => request.get('/db-info')
 
 // 首页统计
 export const getStats = () => request.get('/stats')
+
+// 学生查询（查看自己的分数、排名和记录）
+export const queryStudent = (data) => request.post('/student/query', data)

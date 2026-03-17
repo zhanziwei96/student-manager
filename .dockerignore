@@ -1,0 +1,55 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 前端源码（构建产物在 frontend/dist 中）
+frontend/src/
+frontend/public/
+frontend/index.html
+frontend/vite.config.js
+frontend/package*.json
+frontend/README.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 临时文件
+tmp/
+temp/
+
+# 备份文件（运行时生成）
+backups/*.db
+backups/*.zip
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

@@ -267,6 +267,7 @@ import {
 } from '@element-plus/icons-vue'
 import Cookies from 'js-cookie'
 import * as api from '../api'
+import '../styles/cyber-theme.css'
 
 const router = useRouter()
 
@@ -339,6 +340,8 @@ const handleCheckin = async () => {
       name: res.student_name,
       time: new Date().toISOString()
     }
+    // 保存签到状态到 localStorage
+    saveCheckinStatus(form.student_id, res.student_name)
     loadRecords()
     loadClassSession()
   } else {
@@ -400,6 +403,8 @@ const handleReset = async () => {
   if (res.success) {
     hasCheckedIn.value = false
     checkedInInfo.value = { name: '', time: '' }
+    // 清除 localStorage 中的签到状态
+    localStorage.removeItem(CHECKIN_STATUS_KEY)
     ElMessage.success('重置成功')
     showResetDialog.value = false
     await api.logout()
@@ -454,19 +459,65 @@ const refreshStatus = async () => {
 
 const formatTime = (time) => {
   if (!time) return ''
-  return new Date(time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  // 把后端返回的 UTC 时间转换为本地时间
+  const utcTime = time.endsWith('Z') ? time : time + 'Z'
+  return new Date(utcTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 const formatFullTime = (time) => {
   if (!time) return ''
-  return new Date(time).toLocaleString('zh-CN')
+  // 把后端返回的 UTC 时间转换为本地时间
+  const utcTime = time.endsWith('Z') ? time : time + 'Z'
+  return new Date(utcTime).toLocaleString('zh-CN')
 }
 
 onMounted(() => {
   checkLogin()
   loadClassSession()
   loadRecords()
+  checkLocalStorage()
 })
+
+// 检查 localStorage 中的签到状态
+const CHECKIN_STATUS_KEY = 'checkin_status'
+
+const checkLocalStorage = () => {
+  const checkinStatus = localStorage.getItem(CHECKIN_STATUS_KEY)
+  if (checkinStatus) {
+    try {
+      const status = JSON.parse(checkinStatus)
+      const today = new Date().toDateString()
+      // 优先使用保存的 date 字段，兼容旧数据
+      const checkinDate = status.date || new Date(status.timestamp).toDateString()
+      
+      if (today === checkinDate) {
+        // 今天已签到
+        hasCheckedIn.value = true
+        checkedInInfo.value = {
+          name: status.studentName,
+          time: status.timestamp
+        }
+      } else {
+        // 不是今天的签到，清除状态
+        localStorage.removeItem(CHECKIN_STATUS_KEY)
+      }
+    } catch (e) {
+      localStorage.removeItem(CHECKIN_STATUS_KEY)
+    }
+  }
+}
+
+// 保存签到状态到 localStorage
+const saveCheckinStatus = (studentId, studentName) => {
+  const now = new Date()
+  const status = {
+    studentId: studentId,
+    studentName: studentName,
+    timestamp: now.toISOString(),
+    date: now.toDateString()  // 保存本地日期，避免时区问题
+  }
+  localStorage.setItem(CHECKIN_STATUS_KEY, JSON.stringify(status))
+}
 </script>
 
 <style scoped>
@@ -763,5 +814,32 @@ onMounted(() => {
     flex-wrap: wrap;
     gap: 16px;
   }
+}
+
+/* 输入框样式优化 - 深色背景下的可读性 */
+:deep(.el-input__wrapper) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
+}
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4) inset !important;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #667eea inset !important;
+}
+
+:deep(.el-input__inner) {
+  color: white !important;
+  font-weight: 500;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+:deep(.el-input__prefix-inner) {
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 </style>

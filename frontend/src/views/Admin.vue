@@ -179,35 +179,38 @@
                 </div>
               </template>
               
-              <el-table :data="group.students" stripe>
-                <el-table-column prop="student_id" label="学号" width="120" />
-                <el-table-column prop="name" label="姓名" width="100" />
-                <el-table-column prop="class_name" label="班级" />
-                <el-table-column prop="score" label="分数" width="100">
+              <el-table :data="group.students" stripe class="student-table" style="width: 100%">
+                <el-table-column prop="student_id" label="学号" class-name="col-student-id">
                   <template #default="scope">
-                    <el-tag :type="getScoreType(scope.row.score)">
-                      {{ scope.row.score }}
-                    </el-tag>
+                    <span class="student-id-badge">{{ scope.row.student_id }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="200" fixed="right">
+                <el-table-column prop="name" label="姓名" class-name="col-name">
+                  <template #default="scope">
+                    <span class="student-name-badge">{{ scope.row.name }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="score" label="分数" class-name="col-score">
+                  <template #default="scope">
+                    <span :class="['score-badge', getScoreClass(scope.row.score)]">
+                      {{ scope.row.score }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" class-name="col-action" fixed="right">
                   <template #default="scope">
                     <el-button
                       type="primary"
                       size="small"
                       :icon="Edit"
                       @click="openScoreDialog(scope.row)"
-                    >
-                      分数
-                    </el-button>
+                    />
                     <el-button
-                      type="danger"
+                      class="delete-btn-icon"
                       size="small"
                       :icon="Delete"
                       @click="handleDeleteStudent(scope.row)"
-                    >
-                      删除
-                    </el-button>
+                    />
                   </template>
                 </el-table-column>
               </el-table>
@@ -373,6 +376,7 @@ import {
 } from '@element-plus/icons-vue'
 import Cookies from 'js-cookie'
 import * as api from '../api'
+import '../styles/cyber-theme.css'
 
 const router = useRouter()
 const userName = ref(Cookies.get('name') || '老师')
@@ -607,6 +611,13 @@ const getScoreType = (score) => {
   return 'danger'
 }
 
+// 新增：获取分数样式类名
+const getScoreClass = (score) => {
+  if (score >= 80) return 'score-high'
+  if (score >= 60) return 'score-medium'
+  return 'score-low'
+}
+
 const startClass = async () => {
   if (!selectedClass.value) return
   const res = await api.setClassSession({ class_name: selectedClass.value })
@@ -778,7 +789,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 4px 12px;
+  padding: 2px 8px;
   border-radius: 20px;
   background: rgba(255,255,255,0.1);
   transition: background 0.3s;
@@ -971,4 +982,122 @@ onMounted(() => {
   border-radius: 8px;
   overflow: hidden;
 }
+
+/* ===== 学号样式 - 禁止换行 ===== */
+.student-id-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #4b5563;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+/* ===== 姓名样式 ===== */
+.student-name-badge {
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  display: inline-flex;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  align-items: center;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  justify-content: center;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  padding: 2px 8px;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  background: transparent;/* 背景已移除 */
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  /* 边框已移除 */
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  border-radius: 6px;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  color: #374151;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  font-weight: 600;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  font-size: 13px;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+}
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+
+/* ===== 分数标签样式 ===== */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 40px;
+}
+
+.score-high {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.score-medium {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.score-low {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* ===== 删除按钮 - 图标+柔和色 ===== */
+.delete-btn-icon {
+  background: #fee2e2 !important;
+  border: none !important;
+  color: #991b1b !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.delete-btn-icon:hover {
+  background: #fecaca !important;
+  color: #7f1d1d !important;
+  transform: scale(1.05);
+}
+
+/* ===== 斑马纹颜色调整 ===== */
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
+  background: #f8fafc !important;
+}
+
+/* ===== 行高调整 ===== */
+:deep(.el-table .el-table__cell) {
+  padding: 4px 0 !important;
+  height: auto; min-height: 36px;
+}
+
+/* ===== 悬停效果 ===== */
+:deep(.el-table__row:hover td) {
+  background: #f1f5f9 !important;
+}
+
+/* ===== 表格行悬停时增强效果 ===== */
+:deep(.el-table__row:hover) .student-id-badge {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+:deep(.el-table__row:hover) .student-name-badge {
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  background: #ffedd5;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+  border-color: #fdba74;
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
+}
+/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
 </style>

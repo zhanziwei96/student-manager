@@ -147,3 +147,6 @@ nginx.conf
 *.crt
 *.key
 /etc/nginx/ssl/
+*.bak
+*.bak2
+*.backup
