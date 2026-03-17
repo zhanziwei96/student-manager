@@ -974,6 +974,7 @@ def query_student_info(student_id, name):
         return {
             'student': student,
             'rank': rank,
+            'total_count': total_in_class,  # 兼容前端字段名
             'total_in_class': total_in_class,
             'score_logs': score_logs,
             'checkin_records': checkin_records[:10]  # 只返回最近10条
