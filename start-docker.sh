@@ -9,7 +9,7 @@ mkdir -p /app/data /app/uploads /app/backups
 # 启动 Flask 后端（Gunicorn）
 echo "[1/3] Starting Flask backend on port 5000..."
 cd /app
-gunicorn -w 2 -b 127.0.0.1:5000 --access-logfile - --error-logfile - --daemon app:app
+gunicorn -w 2 -b 0.0.0.0:5000 --access-logfile - --error-logfile - --daemon app:app
 
 # 等待后端启动
 sleep 2
