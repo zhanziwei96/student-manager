@@ -918,6 +918,74 @@ def reset_all_scores(default_score=70):
         return False, f"重置失败: {str(e)}"
 
 
+def query_student_info(student_id, name):
+    """学生自助查询：通过学号和姓名查询自己的信息、排名和变更记录
+    
+    返回：{
+        'student': {...},  # 学生基本信息
+        'rank': int,       # 班级排名
+        'total_in_class': int,  # 班级总人数
+        'score_logs': [...],    # 分数变更记录
+        'checkin_records': [...]  # 签到记录
+    }
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. 验证学号和姓名匹配
+        cursor.execute('''
+            SELECT student_id, name, class_name, score 
+            FROM students 
+            WHERE student_id = ? AND name = ?
+        ''', (student_id, name))
+        row = cursor.fetchone()
+        
+        if not row:
+            return None, "学号或姓名错误，请检查输入"
+        
+        student = {
+            'student_id': row['student_id'],
+            'name': row['name'],
+            'class_name': row['class_name'],
+            'score': row['score'] if row['score'] else 0
+        }
+        
+        # 2. 获取班级排名
+        cursor.execute('''
+            SELECT COUNT(*) + 1 as rank
+            FROM students
+            WHERE class_name = ? AND score > ?
+        ''', (student['class_name'], student['score']))
+        rank = cursor.fetchone()['rank']
+        
+        # 3. 获取班级总人数
+        cursor.execute('''
+            SELECT COUNT(*) as total FROM students WHERE class_name = ?
+        ''', (student['class_name'],))
+        total_in_class = cursor.fetchone()['total']
+        
+        # 4. 获取分数变更记录
+        score_logs = get_score_logs(student_id=student_id)
+        
+        # 5. 获取签到记录（最近10条）
+        checkin_records = get_checkin_records(student_id=student_id)
+        
+        return {
+            'student': student,
+            'rank': rank,
+            'total_in_class': total_in_class,
+            'score_logs': score_logs,
+            'checkin_records': checkin_records[:10]  # 只返回最近10条
+        }, None
+        
+    except Exception as e:
+        import traceback
+        print(f"query_student_info 错误: {str(e)}")
+        print(traceback.format_exc())
+        return None, f"查询失败: {str(e)}"
+
+
 # 初始化
 def init_data():
     """初始化数据"""

@@ -16,7 +16,7 @@ from data_manager import (
     authenticate_user, change_password, get_user_by_id,
     set_current_class, get_current_class, get_class_students_with_checkin_status,
     reset_all_scores, close_db_connection, get_db_info, DB_ENV_NAME,
-    get_db_connection
+    get_db_connection, query_student_info
 )
 
 # 根据环境变量加载配置
@@ -573,6 +573,35 @@ def api_get_score_logs():
 def api_get_db_info():
     """获取当前数据库环境信息"""
     return jsonify({'success': True, 'data': get_db_info()})
+
+
+# ========== 学生自助查询 ==========
+
+@app.route('/api/student/query', methods=['POST'])
+def api_query_student():
+    """学生自助查询 - 通过学号和姓名查询自己的分数、排名和记录"""
+    try:
+        data = request.json
+        student_id = data.get('student_id', '').strip()
+        name = data.get('name', '').strip()
+        
+        if not student_id or not name:
+            return jsonify({'success': False, 'message': '请输入学号和姓名'})
+        
+        result, error = query_student_info(student_id, name)
+        
+        if error:
+            return jsonify({'success': False, 'message': error})
+        
+        return jsonify({
+            'success': True,
+            'data': result
+        })
+    except Exception as e:
+        import traceback
+        print(f"学生查询失败: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'message': f'查询失败: {str(e)}'}), 500
 
 
 # ========== 页面路由 ==========
