@@ -923,8 +923,8 @@ def query_student_info(student_id, name):
     
     返回：{
         'student': {...},  # 学生基本信息
-        'rank': int,       # 班级排名
-        'total_in_class': int,  # 班级总人数
+        'rank': int,       # 全校排名
+        'total_count': int,  # 全校总人数
         'score_logs': [...],    # 分数变更记录
         'checkin_records': [...]  # 签到记录
     }
@@ -951,19 +951,17 @@ def query_student_info(student_id, name):
             'score': row['score'] if row['score'] else 0
         }
         
-        # 2. 获取班级排名
+        # 2. 获取全校排名（分数高于该学生的人数+1）
         cursor.execute('''
             SELECT COUNT(*) + 1 as rank
             FROM students
-            WHERE class_name = ? AND score > ?
-        ''', (student['class_name'], student['score']))
+            WHERE score > ?
+        ''', (student['score'],))
         rank = cursor.fetchone()['rank']
         
-        # 3. 获取班级总人数
-        cursor.execute('''
-            SELECT COUNT(*) as total FROM students WHERE class_name = ?
-        ''', (student['class_name'],))
-        total_in_class = cursor.fetchone()['total']
+        # 3. 获取全校总人数
+        cursor.execute('SELECT COUNT(*) as total FROM students')
+        total_count = cursor.fetchone()['total']
         
         # 4. 获取分数变更记录
         score_logs = get_score_logs(student_id=student_id)
@@ -974,8 +972,7 @@ def query_student_info(student_id, name):
         return {
             'student': student,
             'rank': rank,
-            'total_count': total_in_class,  # 兼容前端字段名
-            'total_in_class': total_in_class,
+            'total_count': total_count,
             'score_logs': score_logs,
             'checkin_records': checkin_records[:10]  # 只返回最近10条
         }, None
