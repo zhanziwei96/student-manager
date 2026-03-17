@@ -151,7 +151,7 @@
             <div class="rank-info">
               <div class="rank-item">
                 <div class="rank-value">{{ searchResult.rank }}</div>
-                <div class="rank-label">班级排名</div>
+                <div class="rank-label">全校排名</div>
               </div>
               <div class="rank-item">
                 <div class="rank-value">{{ searchResult.total_count }}</div>
