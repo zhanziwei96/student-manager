@@ -123,7 +123,7 @@ def init_db():
             student_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             class_name TEXT DEFAULT '未分班',
-            score INTEGER DEFAULT 70,
+            score REAL DEFAULT 70,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -143,7 +143,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS score_logs (
             log_id TEXT PRIMARY KEY,
             student_id TEXT NOT NULL,
-            score_change INTEGER NOT NULL,
+            score_change REAL NOT NULL,
             reason TEXT,
             operation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -181,10 +181,82 @@ def init_db():
     ''')
     
     conn.commit()
+    
+    # 数据库迁移：将 INTEGER 类型的 score 和 score_change 列改为 REAL 类型
+    migrate_score_columns(cursor, conn)
+    
     conn.close()
     
     # 创建默认管理员账户
     create_default_admin()
+
+
+def migrate_score_columns(cursor, conn):
+    """迁移数据库：将 score 和 score_change 列从 INTEGER 改为 REAL"""
+    try:
+        # 检查 students 表的 score 列类型
+        cursor.execute("PRAGMA table_info(students)")
+        columns = cursor.fetchall()
+        score_col = next((col for col in columns if col['name'] == 'score'), None)
+        
+        if score_col and score_col['type'] == 'INTEGER':
+            print("[DB Migrate] 迁移 students.score 列类型 INTEGER -> REAL")
+            # SQLite 不支持直接修改列类型，需要重建表
+            cursor.execute('''
+                CREATE TABLE students_new (
+                    student_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    class_name TEXT DEFAULT '未分班',
+                    score REAL DEFAULT 70,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                INSERT INTO students_new (student_id, name, class_name, score, created_at)
+                SELECT student_id, name, class_name, CAST(score AS REAL), created_at FROM students
+            ''')
+            cursor.execute('DROP TABLE students')
+            cursor.execute('ALTER TABLE students_new RENAME TO students')
+            conn.commit()
+            print("[DB Migrate] students 表迁移完成")
+        
+        # 检查 score_logs 表的 score_change 列类型
+        cursor.execute("PRAGMA table_info(score_logs)")
+        columns = cursor.fetchall()
+        score_change_col = next((col for col in columns if col['name'] == 'score_change'), None)
+        
+        if score_change_col and score_change_col['type'] == 'INTEGER':
+            print("[DB Migrate] 迁移 score_logs.score_change 列类型 INTEGER -> REAL")
+            cursor.execute('''
+                CREATE TABLE score_logs_new (
+                    log_id TEXT PRIMARY KEY,
+                    student_id TEXT NOT NULL,
+                    score_change REAL NOT NULL,
+                    reason TEXT,
+                    operation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                INSERT INTO score_logs_new (log_id, student_id, score_change, reason, operation_time)
+                SELECT log_id, student_id, CAST(score_change AS REAL), reason, operation_time FROM score_logs
+            ''')
+            cursor.execute('DROP TABLE score_logs')
+            cursor.execute('ALTER TABLE score_logs_new RENAME TO score_logs')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_score_log_time 
+                ON score_logs(operation_time)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_score_log_student 
+                ON score_logs(student_id)
+            ''')
+            conn.commit()
+            print("[DB Migrate] score_logs 表迁移完成")
+            
+    except Exception as e:
+        print(f"[DB Migrate] 迁移失败: {e}")
+        import traceback
+        print(traceback.format_exc())
 
 
 def create_default_admin():

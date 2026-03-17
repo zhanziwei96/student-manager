@@ -332,9 +332,9 @@ def api_update_score(student_id):
     reason = data.get('reason', '').strip()
     
     try:
-        score_change = int(score_change)
+        score_change = float(score_change)
     except ValueError:
-        return jsonify({'success': False, 'message': '分数变更必须是整数'})
+        return jsonify({'success': False, 'message': '分数变更必须是数字'})
     
     success, message = update_student_score(student_id, score_change, reason)
     return jsonify({'success': success, 'message': message})
