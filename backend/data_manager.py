@@ -344,11 +344,13 @@ def change_password(user_id, old_password, new_password):
 
 
 def get_user_by_id(user_id):
-    """根据ID获取用户信息"""
+    """根据ID获取用户信息（包含角色和班级绑定）"""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT id, username, name, is_admin, created_at, last_login
+        SELECT id, username, name, is_admin, role, assigned_class, 
+               is_active, last_login_ip, login_fail_count, locked_until,
+               created_at, last_login
         FROM users
         WHERE id = ?
     ''', (user_id,))
@@ -360,6 +362,12 @@ def get_user_by_id(user_id):
             'username': row['username'],
             'name': row['name'],
             'is_admin': row['is_admin'],
+            'role': row['role'] or ('admin' if row['is_admin'] else 'teacher'),
+            'assigned_class': row['assigned_class'] or '',
+            'is_active': row['is_active'] if row['is_active'] is not None else 1,
+            'last_login_ip': row['last_login_ip'],
+            'login_fail_count': row['login_fail_count'] or 0,
+            'locked_until': row['locked_until'],
             'created_at': row['created_at'],
             'last_login': row['last_login']
         }

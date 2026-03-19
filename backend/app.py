@@ -14,6 +14,10 @@ from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 from config import config
 from decorators import login_required, admin_required, require_role, require_class_access
+from privacy import (
+    filter_student_data, filter_students_list, filter_stats_data,
+    filter_checkin_records, get_allowed_classes, can_access_student
+)
 from data_manager import (
     init_data, get_all_students, get_student_by_id, get_students_by_name, add_student,
     import_students_from_xlsx, update_student_score, add_checkin_record,
@@ -245,11 +249,29 @@ def api_get_current_user():
 @app.route('/api/students', methods=['GET'])
 @login_required
 def api_get_students():
-    """获取所有学生"""
+    """获取所有学生（带数据脱敏）"""
     # 支持参数控制是否返回签到状态
     with_checkin = request.args.get('with_checkin', 'false').lower() == 'true'
     students = get_all_students(with_checkin_status=with_checkin)
-    return jsonify({'success': True, 'data': students})
+    
+    # 获取当前用户信息
+    user = get_user_by_id(session['user_id'])
+    user_role = user.get('role', 'teacher')
+    assigned_classes = user.get('assigned_class', '')
+    
+    # 根据角色过滤班级数据
+    allowed_classes = get_allowed_classes(user_role, assigned_classes)
+    if allowed_classes is not None:
+        students = [s for s in students if s.get('class_name') in allowed_classes]
+    
+    # 数据脱敏
+    filtered_students = filter_students_list(
+        students, 
+        user_role, 
+        session.get('user_id')
+    )
+    
+    return jsonify({'success': True, 'data': filtered_students})
 
 
 @app.route('/api/stats', methods=['GET'])
@@ -318,17 +340,32 @@ def api_get_stats():
             for row in cursor.fetchall()
         ]
         
+        # 构建统计数据
+        stats = {
+            'student_count': student_count,
+            'class_count': class_count,
+            'today_checkin': today_checkin,
+            'today_checkin_rate': round(today_checkin / student_count * 100) if student_count > 0 else 0,
+            'avg_score': avg_score,
+            'top_students': top_students,
+            'class_stats': class_stats
+        }
+        
+        # 获取当前用户信息进行数据脱敏
+        user = get_user_by_id(session['user_id'])
+        user_role = user.get('role', 'teacher')
+        assigned_classes = user.get('assigned_class', '')
+        
+        # 应用数据脱敏
+        filtered_stats = filter_stats_data(
+            stats, 
+            user_role, 
+            assigned_classes.split(',') if assigned_classes else None
+        )
+        
         return jsonify({
             'success': True,
-            'data': {
-                'student_count': student_count,
-                'class_count': class_count,
-                'today_checkin': today_checkin,
-                'today_checkin_rate': round(today_checkin / student_count * 100) if student_count > 0 else 0,
-                'avg_score': avg_score,
-                'top_students': top_students,
-                'class_stats': class_stats
-            }
+            'data': filtered_stats
         })
     except Exception as e:
         import traceback
@@ -512,7 +549,7 @@ def api_checkin():
 @app.route('/api/checkin/records', methods=['GET'])
 @login_required
 def api_get_checkin_records():
-    """获取签到记录"""
+    """获取签到记录（带数据脱敏）"""
     student_id = request.args.get('student_id', '').strip()
     date = request.args.get('date', '').strip()
     
@@ -520,7 +557,21 @@ def api_get_checkin_records():
         student_id if student_id else None,
         date if date else None
     )
-    return jsonify({'success': True, 'data': records})
+    
+    # 获取当前用户信息
+    user = get_user_by_id(session['user_id'])
+    user_role = user.get('role', 'teacher')
+    assigned_classes = user.get('assigned_class', '')
+    
+    # 应用数据脱敏
+    filtered_records = filter_checkin_records(
+        records,
+        user_role,
+        session.get('user_id'),
+        assigned_classes.split(',') if assigned_classes else None
+    )
+    
+    return jsonify({'success': True, 'data': filtered_records})
 
 
 @app.route('/api/admin/reset-scores', methods=['POST'])
@@ -733,8 +784,9 @@ def api_get_db_info():
 # ========== 学生自助查询 ==========
 
 @app.route('/api/student/query', methods=['POST'])
+@limiter.limit("10 per minute")  # 限制查询频率，防止信息泄露
 def api_query_student():
-    """学生自助查询 - 通过学号和姓名查询自己的分数、排名和记录"""
+    """学生自助查询 - 通过学号和姓名查询自己的分数、排名和记录（只能查自己）"""
     try:
         data = request.json
         student_id = data.get('student_id', '').strip()
@@ -743,10 +795,21 @@ def api_query_student():
         if not student_id or not name:
             return jsonify({'success': False, 'message': '请输入学号和姓名'})
         
+        # 验证学号和姓名是否匹配
         result, error = query_student_info(student_id, name)
         
         if error:
             return jsonify({'success': False, 'message': error})
+        
+        # 对返回的数据进行脱敏（隐藏其他学生信息）
+        if result and 'rank' in result:
+            # 隐藏排行榜中的其他学生敏感信息
+            if 'nearby_students' in result['rank']:
+                for student in result['rank']['nearby_students']:
+                    if student.get('student_id') != student_id:
+                        # 其他学生脱敏显示
+                        student['student_id'] = '****' + student.get('student_id', '')[-4:]
+                        student['name'] = '同学'
         
         return jsonify({
             'success': True,
