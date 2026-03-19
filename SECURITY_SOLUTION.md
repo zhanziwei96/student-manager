@@ -1658,3 +1658,51 @@ def api_checkin():
 - 敏感字段分级
 - 学生自助查询接口改造
 
+
+### 2026-03-19 完成：Phase 2 数据安全
+
+**完成任务**：
+1. ✅ 创建 `privacy.py` 数据脱敏模块
+   - `mask_string()`: 学号脱敏 (2513010101 → 2513****01)
+   - `mask_name()`: 姓名脱敏 (段静云 → 段**)
+   - `filter_student_data()`: 单条学生数据脱敏
+   - `filter_students_list()`: 学生列表脱敏
+   - `filter_stats_data()`: 统计数据脱敏
+   - `filter_checkin_records()`: 签到记录脱敏
+
+2. ✅ 数据脱敏规则配置
+   ```python
+   MASKING_RULES = {
+       'student_id': {
+           'admin': 'full',        # 完整显示
+           'teacher': 'partial',   # 部分脱敏
+           'student': 'self_only'  # 只能看自己
+       },
+       'name': {
+           'admin': 'full',
+           'teacher': 'partial',   # 姓氏保留
+           'student': 'self_only'
+       }
+   }
+   ```
+
+3. ✅ API接口数据脱敏
+   - `GET /api/students` - 学生列表脱敏 + 班级过滤
+   - `GET /api/stats` - 统计数据脱敏
+   - `GET /api/checkin/records` - 签到记录脱敏
+   - `POST /api/student/query` - 学生自助查询脱敏
+
+4. ✅ 班级数据隔离
+   - 老师只能查看 `assigned_class` 绑定的班级
+   - 管理员可查看所有班级
+   - 学生只能查看自己的数据
+
+**测试验证**：
+| 角色 | 学号显示 | 姓名显示 | 可见班级 |
+|------|---------|---------|---------|
+| admin | 2513010101 | 段静云 | 所有班级 |
+| teacher | 2513****01 | 段** | 绑定班级 |
+| student | ****0101 | ** | 仅自己 |
+
+**状态**：✅ 已完成并测试
+

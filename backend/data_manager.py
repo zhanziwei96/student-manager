@@ -1068,3 +1068,180 @@ def query_student_info(student_id, name):
 def init_data():
     """初始化数据"""
     init_db()
+
+
+# ========== 用户管理函数 ==========
+
+def get_all_users():
+    """获取所有用户列表"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, username, name, role, assigned_class, is_admin, is_active, 
+               last_login, last_login_ip, login_fail_count, created_at
+        FROM users
+        ORDER BY id
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return [{
+        'id': row['id'],
+        'username': row['username'],
+        'name': row['name'],
+        'role': row['role'] or ('admin' if row['is_admin'] else 'teacher'),
+        'assigned_class': row['assigned_class'] or '',
+        'is_admin': bool(row['is_admin']),
+        'is_active': bool(row['is_active']) if row['is_active'] is not None else True,
+        'last_login': row['last_login'],
+        'last_login_ip': row['last_login_ip'],
+        'login_fail_count': row['login_fail_count'] or 0,
+        'created_at': row['created_at']
+    } for row in rows]
+
+
+def add_user(username, password, name, role='teacher', assigned_class=''):
+    """添加新用户"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 检查用户名是否已存在
+    cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
+    if cursor.fetchone():
+        conn.close()
+        return False, "用户名已存在"
+    
+    # 密码哈希
+    salt, password_hash = hash_password(password)
+    is_admin = 1 if role == 'admin' else 0
+    
+    try:
+        cursor.execute('''
+            INSERT INTO users (username, password_hash, salt, name, is_admin, role, assigned_class, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (username, password_hash, salt, name, is_admin, role, assigned_class, 1))
+        conn.commit()
+        conn.close()
+        return True, "用户创建成功"
+    except Exception as e:
+        conn.close()
+        return False, f"创建失败: {str(e)}"
+
+
+def update_user(user_id, **kwargs):
+    """更新用户信息"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 检查用户是否存在
+    cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return False, "用户不存在"
+    
+    # 构建更新字段
+    allowed_fields = ['name', 'role', 'assigned_class', 'is_active']
+    updates = []
+    values = []
+    
+    for field in allowed_fields:
+        if field in kwargs:
+            updates.append(f"{field} = ?")
+            values.append(kwargs[field])
+    
+    if not updates:
+        conn.close()
+        return False, "没有要更新的字段"
+    
+    # 如果是 role 更新，同步更新 is_admin
+    if 'role' in kwargs:
+        updates.append("is_admin = ?")
+        values.append(1 if kwargs['role'] == 'admin' else 0)
+    
+    values.append(user_id)
+    
+    try:
+        cursor.execute(f'''
+            UPDATE users SET {', '.join(updates)} WHERE id = ?
+        ''', values)
+        conn.commit()
+        conn.close()
+        return True, "更新成功"
+    except Exception as e:
+        conn.close()
+        return False, f"更新失败: {str(e)}"
+
+
+def delete_user(user_id):
+    """删除用户（不能删除自己）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT username, is_admin FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+    
+    if not user:
+        conn.close()
+        return False, "用户不存在"
+    
+    if user['username'] == 'admin':
+        conn.close()
+        return False, "不能删除管理员账号"
+    
+    try:
+        cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        return True, "删除成功"
+    except Exception as e:
+        conn.close()
+        return False, f"删除失败: {str(e)}"
+
+
+def admin_reset_password(user_id, new_password):
+    """管理员重置用户密码"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return False, "用户不存在"
+    
+    # 生成新密码哈希
+    salt, password_hash = hash_password(new_password)
+    
+    try:
+        cursor.execute('''
+            UPDATE users SET password_hash = ?, salt = ?, login_fail_count = 0, locked_until = NULL
+            WHERE id = ?
+        ''', (password_hash, salt, user_id))
+        conn.commit()
+        conn.close()
+        return True, "密码重置成功"
+    except Exception as e:
+        conn.close()
+        return False, f"重置失败: {str(e)}"
+
+
+def unlock_user(user_id):
+    """解锁用户账号"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return False, "用户不存在"
+    
+    try:
+        cursor.execute('''
+            UPDATE users SET login_fail_count = 0, locked_until = NULL, is_active = 1
+            WHERE id = ?
+        ''', (user_id,))
+        conn.commit()
+        conn.close()
+        return True, "账号已解锁"
+    except Exception as e:
+        conn.close()
+        return False, f"解锁失败: {str(e)}"
