@@ -14,9 +14,10 @@ echo -e "${BLUE}    班级管理系统 - 开发环境启动脚本${NC}"
 echo -e "${BLUE}==========================================${NC}"
 echo ""
 
-# 获取脚本所在目录
+# 获取项目根目录（脚本在 backend/scripts/ 下）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
 
 # 检查后端依赖
 echo -e "${YELLOW}[检查] 检查Python依赖...${NC}"
@@ -63,7 +64,7 @@ echo ""
 # 启动前端
 echo -e "${BLUE}[2/2] 启动前端服务 (Vue)...${NC}"
 cd frontend
-npm run  &
+npm run dev &
 FRONTEND_PID=$!
 cd ..
 

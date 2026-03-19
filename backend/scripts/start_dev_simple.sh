@@ -7,9 +7,10 @@ echo "    班级管理系统 - 开发环境启动"
 echo "=========================================="
 echo ""
 
-# 获取脚本所在目录
+# 获取项目根目录（脚本在 backend/scripts/ 下）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
 
 # 启动后端
 echo "[1/2] 启动后端服务..."
@@ -44,6 +45,6 @@ echo "  默认账号: admin / admin123"
 echo ""
 echo "=========================================="
 echo ""
-echo "使用 ./stop_dev.sh 停止服务"
+echo "使用 ./backend/scripts/stop_dev.sh 停止服务"
 echo "查看日志: tail -f backend.log 或 tail -f frontend.log"
 echo ""

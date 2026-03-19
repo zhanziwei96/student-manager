@@ -36,7 +36,7 @@ build:
 
 deploy: build
 	@echo "生产环境部署..."
-	bash deploy.sh
+	bash backend/scripts/deploy.sh
 
 update:
 	@echo "更新代码..."
