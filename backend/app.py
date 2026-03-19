@@ -25,7 +25,9 @@ from data_manager import (
     authenticate_user, change_password, get_user_by_id,
     set_current_class, get_current_class, get_class_students_with_checkin_status,
     reset_all_scores, close_db_connection, get_db_info, DB_ENV_NAME,
-    get_db_connection, query_student_info
+    get_db_connection, query_student_info,
+    # 用户管理函数
+    get_all_users, add_user, update_user, delete_user, admin_reset_password, unlock_user
 )
 
 # 根据环境变量加载配置
@@ -821,6 +823,82 @@ def api_query_student():
         print(traceback.format_exc())
         return jsonify({'success': False, 'message': f'查询失败: {str(e)}'}), 500
 
+
+
+# ========== 用户管理 API（仅管理员） ==========
+
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def api_get_all_users():
+    """获取所有用户列表"""
+    users = get_all_users()
+    return jsonify({'success': True, 'data': users})
+
+@app.route('/api/admin/users', methods=['POST'])
+@admin_required
+def api_add_user():
+    """创建新用户"""
+    data = request.json
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    name = data.get('name', '').strip()
+    role = data.get('role', 'teacher')
+    assigned_class = data.get('assigned_class', '').strip()
+    
+    if not username or not password or not name:
+        return jsonify({'success': False, 'message': '用户名、密码和姓名不能为空'})
+    if len(password) < 6:
+        return jsonify({'success': False, 'message': '密码长度至少6位'})
+    if role not in ['admin', 'teacher']:
+        return jsonify({'success': False, 'message': '角色必须是 admin 或 teacher'})
+    
+    success, message = add_user(username, password, name, role, assigned_class)
+    return jsonify({'success': success, 'message': message})
+
+@app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
+@admin_required
+def api_update_user(user_id):
+    """更新用户信息"""
+    data = request.json
+    update_data = {}
+    if 'name' in data:
+        update_data['name'] = data['name'].strip()
+    if 'role' in data:
+        update_data['role'] = data['role']
+    if 'assigned_class' in data:
+        update_data['assigned_class'] = data['assigned_class'].strip()
+    if 'is_active' in data:
+        update_data['is_active'] = 1 if data['is_active'] else 0
+    
+    success, message = update_user(user_id, **update_data)
+    return jsonify({'success': success, 'message': message})
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def api_delete_user(user_id):
+    """删除用户"""
+    if user_id == session.get('user_id'):
+        return jsonify({'success': False, 'message': '不能删除当前登录账号'})
+    success, message = delete_user(user_id)
+    return jsonify({'success': success, 'message': message})
+
+@app.route('/api/admin/users/<int:user_id>/reset-password', methods=['POST'])
+@admin_required
+def api_admin_reset_password(user_id):
+    """管理员重置用户密码"""
+    data = request.json
+    new_password = data.get('new_password', '').strip()
+    if not new_password or len(new_password) < 6:
+        return jsonify({'success': False, 'message': '密码长度至少6位'})
+    success, message = admin_reset_password(user_id, new_password)
+    return jsonify({'success': success, 'message': message})
+
+@app.route('/api/admin/users/<int:user_id>/unlock', methods=['POST'])
+@admin_required
+def api_unlock_user(user_id):
+    """解锁用户账号"""
+    success, message = unlock_user(user_id)
+    return jsonify({'success': success, 'message': message})
 
 # ========== 页面路由 ==========
 
