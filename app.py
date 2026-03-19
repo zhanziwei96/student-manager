@@ -4,9 +4,11 @@
 """
 
 import os
+import uuid
 from functools import wraps, lru_cache
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, flash
+from werkzeug.utils import secure_filename
 from data_manager import (
     init_data, get_all_students, get_student_by_id, get_students_by_name, add_student,
     import_students_from_xlsx, update_student_score, add_checkin_record,
@@ -23,8 +25,16 @@ app = Flask(__name__)
 _stats_cache = None
 _stats_cache_time = None
 CACHE_DURATION = timedelta(seconds=30)  # 缓存30秒
+# 从环境变量获取 SECRET_KEY，生产环境必须设置
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    # 非生产环境自动生成随机密钥（每次重启失效）
+    import secrets
+    SECRET_KEY = secrets.token_hex(32)
+    print(f"[WARNING] 未设置 SECRET_KEY 环境变量，已生成临时密钥（重启后失效）")
+    
+app.config['SECRET_KEY'] = SECRET_KEY
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 最大 16MB 上传
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'student-manage-fixed-secret-key-2024')  # 用于 session 加密
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # session 有效期 1 小时
 
@@ -60,10 +70,12 @@ def admin_required(f):
                 return jsonify({'success': False, 'message': '请先登录'}), 401
             return redirect(url_for('login_page'))
         
-        # 可以在这里添加管理员权限验证
-        # user = get_user_by_id(session['user_id'])
-        # if not user or not user.get('is_admin'):
-        #     return jsonify({'success': False, 'message': '权限不足'}), 403
+        # 检查管理员权限
+        user = get_user_by_id(session['user_id'])
+        if not user or not user.get('is_admin'):
+            if request.is_json:
+                return jsonify({'success': False, 'message': '权限不足，需要管理员权限'}), 403
+            return jsonify({'success': False, 'message': '权限不足，需要管理员权限'}), 403
         
         return f(*args, **kwargs)
     return decorated_function
@@ -286,8 +298,11 @@ def api_import_students():
     
     class_name = request.form.get('class_name', '').strip()
     
-    # 保存上传的文件
-    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    # 保存上传的文件（使用随机文件名防止路径遍历攻击）
+    original_filename = secure_filename(file.filename)
+    ext = original_filename.split('.')[-1] if '.' in original_filename else 'xlsx'
+    safe_filename = f"{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(UPLOAD_FOLDER, safe_filename)
     file.save(filepath)
     
     try:
@@ -373,7 +388,7 @@ def api_get_checkin_records():
 
 
 @app.route('/api/admin/reset-scores', methods=['POST'])
-@login_required
+@admin_required
 def api_reset_all_scores():
     """重置所有学生分数为70分（管理员功能）"""
     data = request.json or {}

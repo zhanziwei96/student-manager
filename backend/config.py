@@ -5,9 +5,12 @@ Flask 配置文件
 
 import os
 
+import secrets
+
 class Config:
     """基础配置"""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here-change-in-production'
+    # 从环境变量获取 SECRET_KEY，未设置时生成随机密钥
+    SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
     SESSION_TYPE = 'filesystem'
     PERMANENT_SESSION_LIFETIME = 3600  # 1小时
     
@@ -35,11 +38,19 @@ class ProductionConfig(Config):
     TESTING = False
     DB_ENV = 'production'
     
-    # 生产环境必须使用环境变量设置的 SECRET_KEY（如果没有则使用默认值）
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'student-manage-v2-secret-key-change-me'
+    # 生产环境强制要求设置 SECRET_KEY 环境变量
+    @classmethod
+    def init_app(cls, app):
+        if not os.environ.get('SECRET_KEY'):
+            raise ValueError(
+                "生产环境必须设置 SECRET_KEY 环境变量！\n"
+                "请执行: export SECRET_KEY=$(openssl rand -hex 32)\n"
+                "或在启动脚本中设置。"
+            )
     
     # 生产环境 Session 配置
-    SESSION_COOKIE_SECURE = True  # 仅 HTTPS
+    # 如果设置了 DISABLE_SECURE_COOKIE 环境变量（用于本地测试），则允许非 HTTPS
+    SESSION_COOKIE_SECURE = False if os.environ.get('DISABLE_SECURE_COOKIE') else True
     SESSION_COOKIE_HTTPONLY = True  # 防止 XSS
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF 保护
     

@@ -88,7 +88,6 @@
                   placeholder="请输入密码"
                   @focus="focused = 'password'"
                   @blur="focused = null"
-                  @keyup.enter="handleLogin"
                 />
                 <button type="button" class="toggle-password" @click="showPassword = !showPassword">
                   <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

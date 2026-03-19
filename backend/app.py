@@ -4,11 +4,16 @@
 """
 
 import os
+import uuid
 from functools import wraps
 from datetime import datetime
 from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.utils import secure_filename
 from config import config
+from decorators import login_required, admin_required, require_role, require_class_access
 from data_manager import (
     init_data, get_all_students, get_student_by_id, get_students_by_name, add_student,
     import_students_from_xlsx, update_student_score, add_checkin_record,
@@ -24,6 +29,15 @@ env = os.environ.get('FLASK_ENV', 'production')
 app = Flask(__name__, static_folder='../frontend/dist', static_url_path='')
 app.config.from_object(config.get(env, config['default']))
 
+# 配置请求限流
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+    strategy="fixed-window"
+)
+
 # 生产环境关闭 CORS，Nginx 会处理跨域
 # 开发环境启用 CORS
 if env == 'development':
@@ -34,36 +48,10 @@ UPLOAD_FOLDER = app.config.get('UPLOAD_FOLDER', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-def login_required(f):
-    """登录验证装饰器（API版本）"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': '请先登录'}), 401
-        return f(*args, **kwargs)
-    return decorated_function
-
-
 @app.teardown_appcontext
 def close_db(error):
     """请求结束时关闭数据库连接"""
     close_db_connection()
-
-
-def admin_required(f):
-    """管理员验证装饰器（API版本）"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': '请先登录'}), 401
-        
-        # 可以在这里添加管理员权限验证
-        # user = get_user_by_id(session['user_id'])
-        # if not user or not user.get('is_admin'):
-        #     return jsonify({'success': False, 'message': '权限不足'}), 403
-        
-        return f(*args, **kwargs)
-    return decorated_function
 
 
 @app.route('/')
@@ -77,8 +65,9 @@ def index():
 
 
 @app.route('/api/login', methods=['POST'])
+@limiter.limit("5 per minute")  # 登录接口限流：每分钟5次
 def api_login():
-    """登录 API"""
+    """登录 API（增强版：支持账号锁定、失败计数、IP记录）"""
     data = request.json
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
@@ -86,24 +75,126 @@ def api_login():
     if not username or not password:
         return jsonify({'success': False, 'message': '请输入用户名和密码'})
     
-    user = authenticate_user(username, password)
+    # 先通过用户名获取用户信息（用于检查锁定状态）
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, username, name, is_admin, role, is_active, 
+               password_hash, salt, locked_until, login_fail_count
+        FROM users WHERE username = ?
+    ''', (username,))
+    row = cursor.fetchone()
     
-    if user:
+    # 用户不存在
+    if not row:
+        return jsonify({'success': False, 'message': '用户名或密码错误'})
+    
+    user = dict(row)
+    
+    # 1. 检查账号是否激活
+    if not user.get('is_active', 1):
+        return jsonify({'success': False, 'message': '账号已被禁用'}), 403
+    
+    # 2. 检查账号是否被锁定
+    locked_until = user.get('locked_until')
+    if locked_until:
+        try:
+            if isinstance(locked_until, str):
+                locked_time = datetime.fromisoformat(locked_until.replace('Z', '+00:00').replace('+00:00', ''))
+            else:
+                locked_time = locked_until
+            
+            if datetime.now() < locked_time:
+                remaining = (locked_time - datetime.now()).seconds // 60
+                return jsonify({
+                    'success': False, 
+                    'message': f'账号已被锁定，请 {remaining} 分钟后重试'
+                }), 403
+            else:
+                # 锁定已过期，清除锁定
+                cursor.execute('''
+                    UPDATE users SET locked_until = NULL, login_fail_count = 0 
+                    WHERE id = ?
+                ''', (user['id'],))
+                conn.commit()
+        except Exception as e:
+            print(f"[Login] 解析锁定时间出错: {e}")
+    
+    # 3. 验证密码
+    from data_manager import verify_password
+    if verify_password(password, user['salt'], user['password_hash']):
+        # 登录成功
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['name'] = user['name']
         session.permanent = True
+        
+        # 重置失败计数，记录登录IP和时间
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        cursor.execute('''
+            UPDATE users 
+            SET login_fail_count = 0, 
+                last_login_ip = ?,
+                last_login = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (client_ip, user['id']))
+        conn.commit()
+        
+        # 记录审计日志
+        try:
+            cursor.execute('''
+                INSERT INTO audit_logs 
+                (user_id, user_name, role, action, resource, method, ip_address, status_code, response_msg)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user['id'], user['username'], user.get('role', 'admin'), 
+                'login', 'auth', 'POST', client_ip, 200, '登录成功'
+            ))
+            conn.commit()
+        except Exception as e:
+            print(f"[Audit Log Error] {e}")
+        
+        conn.close()
+        
         return jsonify({
             'success': True, 
             'message': '登录成功',
             'user': {
                 'id': user['id'],
                 'username': user['username'],
-                'name': user['name']
+                'name': user['name'],
+                'role': user.get('role', 'admin'),
+                'is_admin': bool(user.get('is_admin'))
             }
         })
     else:
-        return jsonify({'success': False, 'message': '用户名或密码错误'})
+        # 登录失败，增加失败计数
+        fail_count = user.get('login_fail_count', 0) + 1
+        
+        # 失败5次锁定15分钟
+        if fail_count >= 5:
+            lock_time = datetime.now()
+            cursor.execute('''
+                UPDATE users 
+                SET login_fail_count = ?, locked_until = datetime('now', '+15 minutes')
+                WHERE id = ?
+            ''', (fail_count, user['id']))
+            conn.commit()
+            conn.close()
+            return jsonify({
+                'success': False, 
+                'message': '密码错误次数过多，账号已锁定15分钟'
+            }), 403
+        else:
+            cursor.execute('''
+                UPDATE users SET login_fail_count = ? WHERE id = ?
+            ''', (fail_count, user['id']))
+            conn.commit()
+            conn.close()
+            return jsonify({
+                'success': False, 
+                'message': f'用户名或密码错误（还剩 {5 - fail_count} 次机会）'
+            })
 
 
 @app.route('/api/logout', methods=['POST'])
@@ -152,6 +243,7 @@ def api_get_current_user():
 # ========== 学生管理 ==========
 
 @app.route('/api/students', methods=['GET'])
+@login_required
 def api_get_students():
     """获取所有学生"""
     # 支持参数控制是否返回签到状态
@@ -161,6 +253,7 @@ def api_get_students():
 
 
 @app.route('/api/stats', methods=['GET'])
+@login_required
 def api_get_stats():
     """获取首页统计数据（优化版）"""
     try:
@@ -268,6 +361,23 @@ def api_add_student():
 def api_delete_student(student_id):
     """删除学生"""
     success, message = delete_student(student_id)
+    
+    # 记录审计日志
+    try:
+        cursor = get_db_connection().cursor()
+        cursor.execute('''
+            INSERT INTO audit_logs 
+            (user_id, user_name, action, resource, resource_id, method, ip_address, status_code, response_msg)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            session.get('user_id'), session.get('username', 'unknown'),
+            'delete', 'student', student_id, 'DELETE', 
+            request.remote_addr, 200 if success else 400, message
+        ))
+        get_db_connection().commit()
+    except Exception as e:
+        print(f"[Audit Log Error] {e}")
+    
     return jsonify({'success': success, 'message': message})
 
 
@@ -304,8 +414,11 @@ def api_import_students():
     
     class_name = request.form.get('class_name', '').strip()
     
-    # 保存上传的文件
-    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    # 保存上传的文件（使用随机文件名防止路径遍历攻击）
+    original_filename = secure_filename(file.filename)
+    ext = original_filename.split('.')[-1] if '.' in original_filename else 'xlsx'
+    safe_filename = f"{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(UPLOAD_FOLDER, safe_filename)
     file.save(filepath)
     
     try:
@@ -337,12 +450,31 @@ def api_update_score(student_id):
         return jsonify({'success': False, 'message': '分数变更必须是数字'})
     
     success, message = update_student_score(student_id, score_change, reason)
+    
+    # 记录审计日志
+    try:
+        cursor = get_db_connection().cursor()
+        cursor.execute('''
+            INSERT INTO audit_logs 
+            (user_id, user_name, action, resource, resource_id, method, ip_address, status_code, response_msg)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            session.get('user_id'), session.get('username', 'unknown'),
+            'update_score', 'student', student_id, 'POST', 
+            request.remote_addr, 200 if success else 400, 
+            f"Change: {score_change}, Reason: {reason}"
+        ))
+        get_db_connection().commit()
+    except Exception as e:
+        print(f"[Audit Log Error] {e}")
+    
     return jsonify({'success': success, 'message': message})
 
 
 # ========== 签到相关 ==========
 
 @app.route('/api/checkin', methods=['POST'])
+@limiter.limit("10 per minute")  # 签到接口限流：每分钟10次
 def api_checkin():
     """
     签到接口 - 优化并发处理
@@ -378,6 +510,7 @@ def api_checkin():
 
 
 @app.route('/api/checkin/records', methods=['GET'])
+@login_required
 def api_get_checkin_records():
     """获取签到记录"""
     student_id = request.args.get('student_id', '').strip()
@@ -391,7 +524,7 @@ def api_get_checkin_records():
 
 
 @app.route('/api/admin/reset-scores', methods=['POST'])
-@login_required
+@admin_required
 def api_reset_all_scores():
     """重置所有学生分数为70分（管理员功能）"""
     data = request.json or {}
@@ -403,6 +536,24 @@ def api_reset_all_scores():
         return jsonify({'success': False, 'message': '分数必须是整数'})
     
     success, message = reset_all_scores(default_score)
+    
+    # 记录审计日志（重要操作）
+    try:
+        cursor = get_db_connection().cursor()
+        cursor.execute('''
+            INSERT INTO audit_logs 
+            (user_id, user_name, action, resource, method, ip_address, status_code, response_msg)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            session.get('user_id'), session.get('username', 'unknown'),
+            'reset_all_scores', 'system', 'POST', 
+            request.remote_addr, 200 if success else 400, 
+            f"Reset to {default_score}: {message}"
+        ))
+        get_db_connection().commit()
+    except Exception as e:
+        print(f"[Audit Log Error] {e}")
+    
     return jsonify({'success': success, 'message': message})
 
 
@@ -467,6 +618,7 @@ def api_teacher_checkin():
 # ========== 上课状态管理 ==========
 
 @app.route('/api/class-session', methods=['GET'])
+@login_required
 def api_get_class_session():
     """获取当前上课状态（公开接口）"""
     try:
@@ -497,6 +649,7 @@ def api_set_class_session():
 
 
 @app.route('/api/class-session/students', methods=['GET'])
+@login_required
 def api_get_class_session_students():
     """获取当前上课班级的学生签到状态"""
     try:
@@ -537,6 +690,7 @@ def api_get_class_session_students():
 
 
 @app.route('/api/score/logs', methods=['GET'])
+@login_required
 def api_get_score_logs():
     """获取分数变更日志，默认只显示当前上课班级的学生"""
     student_id = request.args.get('student_id', '').strip()
@@ -570,8 +724,9 @@ def api_get_score_logs():
 
 
 @app.route('/api/db-info', methods=['GET'])
+@admin_required
 def api_get_db_info():
-    """获取当前数据库环境信息"""
+    """获取当前数据库环境信息（仅管理员）"""
     return jsonify({'success': True, 'data': get_db_info()})
 
 

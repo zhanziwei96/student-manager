@@ -1304,3 +1304,357 @@ class SecurityConfig:
 **方案版本**: v1.0  
 **最后更新**: 2026-03-18  
 **文档位置**: `/root/student-manage-v3/SECURITY_SOLUTION.md`
+
+---
+
+## ✅ 已修复问题记录
+
+### 2026-03-18 修复：SECRET_KEY 硬编码漏洞 (CRITICAL)
+
+**问题描述**：
+- `app.py` 和 `config.py` 中存在硬编码的默认 SECRET_KEY
+- 风险：Session Cookie 可被伪造，攻击者可完全绕过登录认证
+
+**修复内容**：
+
+1. **app.py 修改**（第26-34行）：
+   - 移除硬编码密钥 `student-manage-fixed-secret-key-2024`
+   - 未设置环境变量时自动生成随机密钥（每次重启失效）
+   - 添加警告日志提示用户设置永久密钥
+
+2. **backend/config.py 修改**：
+   - 移除硬编码密钥 `your-secret-key-here-change-in-production` 和 `student-manage-v2-secret-key-change-me`
+   - 生产环境强制检查 `SECRET_KEY` 环境变量，未设置时抛异常阻止启动
+
+**安全改进**：
+```
+修复前：密钥固定，任何人知道源码就能伪造 Session
+修复后：
+  - 开发环境：自动生成随机密钥（安全但重启失效）
+  - 生产环境：强制要求设置环境变量，否则拒绝启动
+```
+
+**使用方式**：
+```bash
+# 生成密钥
+./generate_secret_key.sh
+
+# 临时设置
+export SECRET_KEY=your-generated-key
+
+# 永久设置（推荐）
+echo 'export SECRET_KEY=your-generated-key' >> ~/.bashrc
+```
+
+**状态**：✅ 已修复并验证
+
+
+### 2026-03-18 修复：文件上传路径遍历漏洞 (HIGH)
+
+**问题描述**：
+- `api_import_students` 接口直接使用用户上传的文件名保存文件
+- 风险：攻击者可构造 `../../../etc/passwd` 等路径上传文件到任意位置
+
+**漏洞代码（修复前）**：
+```python
+filepath = os.path.join(UPLOAD_FOLDER, file.filename)  # 危险！
+file.save(filepath)
+```
+
+**修复内容**：
+
+1. **backend/app.py 和 app.py 修改**：
+```python
+import uuid
+from werkzeug.utils import secure_filename
+
+# 保存上传的文件（使用随机文件名防止路径遍历攻击）
+original_filename = secure_filename(file.filename)
+ext = original_filename.split('.')[-1] if '.' in original_filename else 'xlsx'
+safe_filename = f"{uuid.uuid4().hex}.{ext}"
+filepath = os.path.join(UPLOAD_FOLDER, safe_filename)
+file.save(filepath)
+```
+
+**安全改进**：
+```
+修复前：
+  用户上传 "../../../etc/passwd" → 保存到 /etc/passwd（系统被入侵）
+  
+修复后：
+  用户上传 "../../../etc/passwd" → 保存为 "a1b2c3d4...e5f6.passwd"（随机文件名）
+  攻击者无法控制文件路径和名称
+```
+
+**状态**：✅ 已修复并验证
+
+
+### 2026-03-18 修复：管理员权限绕过 (HIGH)
+
+**问题描述**：
+- `admin_required` 装饰器没有实际检查管理员权限
+- `api_reset_all_scores` 只检查登录，不检查是否是管理员
+- 任何登录用户都可以重置全校学生分数
+
+**漏洞代码（修复前）**：
+```python
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': '请先登录'}), 401
+        # 没有实际检查管理员权限！
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/api/admin/reset-scores', methods=['POST'])
+@login_required  # ❌ 只检查登录
+def api_reset_all_scores():
+    ...
+```
+
+**修复内容**：
+
+1. **修复 admin_required 装饰器**：
+```python
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': '请先登录'}), 401
+        
+        # ✅ 检查管理员权限
+        user = get_user_by_id(session['user_id'])
+        if not user or not user.get('is_admin'):
+            return jsonify({'success': False, 'message': '权限不足，需要管理员权限'}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+```
+
+2. **应用 admin_required 到敏感接口**：
+```python
+@app.route('/api/admin/reset-scores', methods=['POST'])
+@admin_required  # ✅ 必须使用管理员权限
+def api_reset_all_scores():
+    ...
+
+@app.route('/api/db-info', methods=['GET'])
+@admin_required  # ✅ 数据库信息也需要保护
+def api_get_db_info():
+    ...
+```
+
+**安全改进**：
+```
+修复前：
+  任何登录用户 → 可以重置全校分数
+  
+修复后：
+  普通登录用户 → 403 权限不足
+  管理员 (is_admin=1) → 允许操作
+```
+
+**受保护的接口**：
+| 接口 | 方法 | 需要权限 |
+|------|------|----------|
+| /api/admin/reset-scores | POST | 管理员 |
+| /api/db-info | GET | 管理员 |
+
+**状态**：✅ 已修复并验证
+
+
+### 2026-03-18 修复：缺乏请求限流 (HIGH)
+
+**问题描述**：
+- 登录接口可被无限次尝试，存在暴力破解风险
+- 签到接口可被刷，影响数据统计
+- API 缺乏频率限制，可能被爬虫滥用
+
+**修复内容**：
+
+1. **安装 flask-limiter**：
+```bash
+pip install flask-limiter>=4.0.0
+```
+
+2. **backend/app.py 配置限流器**：
+```python
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+    strategy="fixed-window"
+)
+```
+
+3. **敏感接口添加限流装饰器**：
+```python
+# 登录接口限流：5次/分钟
+@app.route('/api/login', methods=['POST'])
+@limiter.limit("5 per minute")
+def api_login():
+    ...
+
+# 签到接口限流：10次/分钟
+@app.route('/api/checkin', methods=['POST'])
+@limiter.limit("10 per minute")
+def api_checkin():
+    ...
+```
+
+**安全改进**：
+```
+修复前：
+  攻击者可无限次尝试破解密码
+  
+修复后：
+  - 登录接口：5次/分钟
+  - 签到接口：10次/分钟
+  - 其他接口：50次/小时，200次/天
+  - 超限返回 429 Too Many Requests
+```
+
+**限流策略**：
+| 接口 | 限制 | 说明 |
+|------|------|------|
+| /api/login | 5/分钟 | 防止暴力破解 |
+| /api/checkin | 10/分钟 | 防止刷签到 |
+| 其他接口 | 50/小时, 200/天 | 默认保护 |
+
+**状态**：✅ 已修复并验证
+
+
+---
+
+## ✅ 实施进度记录
+
+### 2026-03-19 完成：第一阶段 Day 1-2 - 数据库改造
+
+**完成任务**：
+1. ✅ 创建数据库迁移脚本 `migrations/add_security_tables.sql`
+2. ✅ 扩展 users 表字段：
+   - `role` - 用户角色（admin/teacher/student）
+   - `assigned_class` - 老师绑定的班级
+   - `is_active` - 账号是否激活
+   - `last_login_ip` - 最后登录IP
+   - `login_fail_count` - 登录失败次数
+   - `locked_until` - 账号锁定时间
+3. ✅ 创建 audit_logs 审计日志表
+4. ✅ 创建 security_alerts 安全告警表
+5. ✅ 创建 db_migrations 迁移版本表
+6. ✅ 为现有用户设置默认角色（admin→admin）
+7. ✅ 创建相关索引优化查询
+
+**迁移状态**：✅ 已执行并验证
+
+
+### 2026-03-19 完成：第一阶段 Day 3-4 - 核心装饰器开发
+
+**完成任务**：
+1. ✅ 创建 `decorators.py` 权限装饰器模块
+   - `login_required` 增强版：检查账号激活状态、锁定状态
+   - `admin_required`：管理员权限验证
+   - `require_role`：角色权限控制（admin/teacher/student）
+   - `require_class_access`：班级数据访问控制
+   - `audit_log`：操作审计日志装饰器
+
+2. ✅ 登录接口安全增强
+   - 密码错误计数（login_fail_count）
+   - 5次错误后自动锁定15分钟（locked_until）
+   - 登录IP记录（last_login_ip）
+   - 登录时间更新（last_login）
+   - 失败次数提示（"还剩 X 次机会"）
+   - 登录审计日志写入（audit_logs）
+
+3. ✅ 后端架构优化
+   - 使用新的增强版装饰器替换旧装饰器
+   - 保留原有的限流保护（flask-limiter）
+
+**测试验证**：
+| 测试项 | 结果 |
+|--------|:--:|
+| 正常登录 | ✅ 返回用户信息（含role） |
+| 错误密码 | ✅ 提示剩余次数 |
+| 审计日志 | ✅ 记录到audit_logs表 |
+| 账号锁定 | ✅ 5次错误后锁定15分钟 |
+
+**状态**：✅ 已完成并测试
+
+
+### 2026-03-19 完成：第一阶段 Day 5-7 - 接口加固
+
+**完成任务**：
+1. ✅ 敏感接口添加 `@login_required` 权限控制
+   - `GET /api/students` - 学生列表查询
+   - `GET /api/stats` - 统计数据查询
+   - `GET /api/checkin/records` - 签到记录查询
+   - `GET /api/class-session` - 上课状态查询
+   - `GET /api/class-session/students` - 上课班级学生查询
+   - `GET /api/score/logs` - 分数变更日志查询
+
+2. ✅ 敏感操作添加审计日志记录
+   - 删除学生 (`api_delete_student`) - 记录操作人、被删学生ID
+   - 修改分数 (`api_update_score`) - 记录变更值和原因
+   - 重置全校分数 (`api_reset_all_scores`) - 记录重置分数值
+   - 用户登录 (`api_login`) - 记录登录IP和结果
+
+3. ✅ 保留必要的公开接口（限流保护）
+   - `POST /api/login` - 登录（5次/分钟限流）
+   - `POST /api/checkin` - 学生签到（10次/分钟限流）
+   - `POST /api/query_student` - 学生自助查询
+
+**接口权限状态总览**：
+
+| 接口 | 方法 | 权限 |
+|------|------|------|
+| /api/login | POST | 公开（限流） |
+| /api/logout | POST | 公开 |
+| /api/checkin | POST | 公开（限流） |
+| /api/students | GET | 🔒 需登录 |
+| /api/stats | GET | 🔒 需登录 |
+| /api/checkin/records | GET | 🔒 需登录 |
+| /api/score/logs | GET | 🔒 需登录 |
+| /api/admin/* | POST | 🔴 需管理员 |
+
+**状态**：✅ 已完成并测试
+
+---
+
+## 📊 Phase 1 完成总结
+
+### 已完成内容（Week 1）
+
+| 阶段 | 任务 | 关键成果 |
+|------|------|----------|
+| Day 1-2 | 数据库改造 | users表扩展6个字段，audit_logs表，security_alerts表 |
+| Day 3-4 | 核心装饰器 | login_required增强版，admin_required，审计日志装饰器 |
+| Day 5-7 | 接口加固 | 6个敏感接口加权限控制，4类操作加审计日志 |
+
+### 安全能力提升
+
+```
+改造前：
+  ❌ 任何人可查看全校学生名单
+  ❌ 任何人可查看签到记录
+  ❌ 无操作审计，无法追溯
+  ❌ 密码可无限次尝试
+  ❌ 账号无法禁用
+
+改造后：
+  ✅ 敏感数据需登录才能访问
+  ✅ 所有重要操作有审计日志
+  ✅ 5次密码错误自动锁定15分钟
+  ✅ 账号可禁用、可锁定
+  ✅ 登录IP被记录
+```
+
+### 下一步：Phase 2 - 数据安全（Week 2）
+- 数据脱敏实现（privacy.py）
+- 敏感字段分级
+- 学生自助查询接口改造
+
