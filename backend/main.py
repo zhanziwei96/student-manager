@@ -10,6 +10,7 @@ from infrastructure.security.rate_limiter import init_rate_limiter
 from interface.api.student_controller import student_bp
 from interface.api.user_controller import user_bp
 from interface.api.checkin_controller import checkin_bp
+from interface.api.class_session_controller import class_session_bp
 
 
 def create_app() -> Flask:
@@ -46,6 +47,7 @@ def create_app() -> Flask:
     app.register_blueprint(student_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(checkin_bp)
+    app.register_blueprint(class_session_bp)
     
     # 2. API路由兜底
     @app.route('/api/', defaults={'path': ''})
