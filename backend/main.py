@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from infrastructure.persistence.database import Database
-from infrastructure.security.rate_limiter import init_rate_limiter
+from infrastructure.security.rate_limiter import init_rate_limiter, RateLimitMiddleware
 from interface.api import student_controller, user_controller, checkin_controller, class_session_controller
 
 
@@ -81,6 +81,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # 限流中间件
+    app.add_middleware(RateLimitMiddleware)
     
     # 初始化数据库
     db = Database()

@@ -1,87 +1,120 @@
 """
-限流保护模块 - FastAPI-Limiter + 内存存储版本
-使用 fakeredis 实现内存中的 Redis 兼容存储
+限流保护模块 - 纯内存版本
+不依赖 Redis，使用简单的内存字典实现
 """
-from fastapi import Request
-from fastapi_limiter import FastAPILimiter
-from fastapi_limiter.depends import RateLimiter
-import fakeredis.aioredis as fake_redis
+import time
+from typing import Optional, Tuple
+from collections import defaultdict
+from fastapi import Request, HTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 
 
-# 限流规则配置（次数/时间窗口）
+class SimpleRateLimiter:
+    """
+    简单的内存限流器
+    """
+    
+    def __init__(self):
+        # 存储请求记录: {key: [(timestamp, count), ...]}
+        self.requests = defaultdict(list)
+        self.blocked = {}  # {key: unblock_timestamp}
+    
+    def is_allowed(self, key: str, max_requests: int, window_seconds: int) -> Tuple[bool, int]:
+        """
+        检查请求是否允许
+        
+        Returns:
+            (allowed: bool, retry_after: int)
+        """
+        now = time.time()
+        
+        # 检查是否被封锁
+        if key in self.blocked:
+            if now < self.blocked[key]:
+                return False, int(self.blocked[key] - now)
+            else:
+                del self.blocked[key]
+        
+        # 清理过期记录
+        cutoff = now - window_seconds
+        self.requests[key] = [
+            (ts, cnt) for ts, cnt in self.requests[key] 
+            if ts > cutoff
+        ]
+        
+        # 计算当前窗口内的请求数
+        count = sum(cnt for ts, cnt in self.requests[key])
+        
+        if count >= max_requests:
+            # 封锁一段时间（窗口期的2倍）
+            block_until = now + window_seconds * 2
+            self.blocked[key] = block_until
+            return False, int(window_seconds * 2)
+        
+        # 记录本次请求
+        self.requests[key].append((now, 1))
+        return True, 0
+
+
+# 全局限流器实例
+_limiter = SimpleRateLimiter()
+
+# 限流规则: {endpoint: (max_requests, window_seconds)}
 RATE_LIMITS = {
-    'login': '5/minute',           # 登录接口: 5次/分钟
-    'checkin': '10/minute',        # 签到接口: 10次/分钟
-    'score_change': '10/minute',   # 分数修改: 10次/分钟
-    'user_search': '10/minute',    # 用户查询: 10次/分钟
-    'default': '60/minute',        # 默认: 60次/分钟
+    'login': (5, 60),        # 登录: 5次/分钟
+    'checkin': (10, 60),     # 签到: 10次/分钟
+    'score_change': (10, 60), # 分数修改: 10次/分钟
+    'default': (60, 60),     # 默认: 60次/分钟
 }
 
-# 全局内存 Redis 实例
-_memory_redis = None
+
+def get_client_ip(request: Request) -> str:
+    """获取客户端IP"""
+    forwarded = request.headers.get('X-Forwarded-For')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.client.host
 
 
-async def init_rate_limiter():
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """全局限流中间件"""
+    
+    async def dispatch(self, request: Request, call_next):
+        if not request.url.path.startswith('/api/'):
+            return await call_next(request)
+        
+        ip = get_client_ip(request)
+        allowed, retry_after = _limiter.is_allowed(f"{ip}:global", 100, 60)
+        
+        if not allowed:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=429,
+                content={'success': False, 'message': '请求过于频繁，请稍后再试'}
+            )
+        
+        return await call_next(request)
+
+
+def rate_limit(limit_name: str = 'default'):
     """
-    初始化 FastAPI-Limiter（使用内存存储）
-    
-    使用 fakeredis 实现纯内存存储，无需安装 Redis
-    """
-    global _memory_redis
-    
-    # 创建内存 Redis 实例
-    _memory_redis = fake_redis.FakeRedis()
-    
-    # 初始化 FastAPI-Limiter
-    await FastAPILimiter.init(_memory_redis)
-    
-    print("✅ 内存限流器已启用（无需 Redis）")
-
-
-def rate_limit(limit_type: str = 'default'):
-    """
-    限流装饰器
+    限流装饰器 - 用于FastAPI依赖注入
     
     Usage:
         @app.post("/api/login", dependencies=[Depends(rate_limit('login'))])
-        async def login(...):
-            ...
-    
-    Args:
-        limit_type: 限流类型，对应 RATE_LIMITS 中的key
+    """
+    def check_rate_limit(request: Request):
+        ip = get_client_ip(request)
+        max_req, window = RATE_LIMITS.get(limit_name, RATE_LIMITS['default'])
         
-    Returns:
-        RateLimiter依赖
-    """
-    limit_string = RATE_LIMITS.get(limit_type, RATE_LIMITS['default'])
-    times, seconds = parse_limit_string(limit_string)
-    return RateLimiter(times=times, seconds=seconds)
-
-
-def parse_limit_string(limit_string: str) -> tuple:
-    """
-    解析限流字符串
-    
-    Args:
-        limit_string: 如 "5/minute", "10/hour"
+        allowed, retry_after = _limiter.is_allowed(f"{ip}:{limit_name}", max_req, window)
         
-    Returns:
-        (次数, 秒数)
-    """
-    parts = limit_string.split('/')
-    times = int(parts[0])
-    period = parts[1]
-    
-    # 转换为秒数
-    period_seconds = {
-        'second': 1,
-        'minute': 60,
-        'hour': 3600,
-        'day': 86400,
-    }
-    
-    seconds = period_seconds.get(period.rstrip('s'), 60)  # 默认分钟
-    return times, seconds
+        if not allowed:
+            raise HTTPException(
+                status_code=429,
+                detail=f'请求过于频繁，请{retry_after}秒后再试'
+            )
+    return check_rate_limit
 
 
 # 便捷函数
@@ -103,3 +136,8 @@ def score_limit():
 def default_limit():
     """默认限流: 60次/分钟"""
     return rate_limit('default')
+
+
+async def init_rate_limiter():
+    """初始化限流器（无需操作，纯内存）"""
+    print("✅ 内存限流器已启用")

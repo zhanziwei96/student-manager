@@ -22,7 +22,7 @@ class SQLiteStudentRepository(StudentRepository):
     def _row_to_entity(self, row: sqlite3.Row) -> Student:
         """将数据行转换为领域实体"""
         return Student(
-            id=row['id'],
+            id=None,  # 学生表没有自增ID，使用student_id作为主键
             student_id=StudentId(row['student_id']),
             name=row['name'],
             class_name=row['class_name'],

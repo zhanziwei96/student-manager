@@ -11,8 +11,8 @@ class Database:
     
     def __init__(self, db_path: str = None):
         if db_path is None:
-            # 默认路径：backend/data/class_system.db
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            # 默认路径：项目根目录/data/class_system.db
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
             self.db_path = os.path.join(base_dir, 'data', 'class_system.db')
         else:
             self.db_path = db_path
