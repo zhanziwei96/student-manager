@@ -1,120 +1,77 @@
 """
-限流保护模块 - 纯内存版本
-不依赖 Redis，使用简单的内存字典实现
+限流保护模块 - FastAPI-Limiter + Redis版本
+支持分布式部署和持久化限流计数
 """
-import time
-from typing import Optional, Tuple
-from collections import defaultdict
-from fastapi import Request, HTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
+import os
+from fastapi import Request
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
+import redis.asyncio as redis
 
 
-class SimpleRateLimiter:
-    """
-    简单的内存限流器
-    """
-    
-    def __init__(self):
-        # 存储请求记录: {key: [(timestamp, count), ...]}
-        self.requests = defaultdict(list)
-        self.blocked = {}  # {key: unblock_timestamp}
-    
-    def is_allowed(self, key: str, max_requests: int, window_seconds: int) -> Tuple[bool, int]:
-        """
-        检查请求是否允许
-        
-        Returns:
-            (allowed: bool, retry_after: int)
-        """
-        now = time.time()
-        
-        # 检查是否被封锁
-        if key in self.blocked:
-            if now < self.blocked[key]:
-                return False, int(self.blocked[key] - now)
-            else:
-                del self.blocked[key]
-        
-        # 清理过期记录
-        cutoff = now - window_seconds
-        self.requests[key] = [
-            (ts, cnt) for ts, cnt in self.requests[key] 
-            if ts > cutoff
-        ]
-        
-        # 计算当前窗口内的请求数
-        count = sum(cnt for ts, cnt in self.requests[key])
-        
-        if count >= max_requests:
-            # 封锁一段时间（窗口期的2倍）
-            block_until = now + window_seconds * 2
-            self.blocked[key] = block_until
-            return False, int(window_seconds * 2)
-        
-        # 记录本次请求
-        self.requests[key].append((now, 1))
-        return True, 0
-
-
-# 全局限流器实例
-_limiter = SimpleRateLimiter()
-
-# 限流规则: {endpoint: (max_requests, window_seconds)}
+# 限流规则配置（次数/时间窗口）
+# 格式: (次数, 秒数)
 RATE_LIMITS = {
     'login': (5, 60),        # 登录: 5次/分钟
     'checkin': (10, 60),     # 签到: 10次/分钟
     'score_change': (10, 60), # 分数修改: 10次/分钟
+    'user_search': (10, 60), # 用户查询: 10次/分钟
     'default': (60, 60),     # 默认: 60次/分钟
 }
 
 
-def get_client_ip(request: Request) -> str:
-    """获取客户端IP"""
-    forwarded = request.headers.get('X-Forwarded-For')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.client.host
-
-
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    """全局限流中间件"""
+async def init_rate_limiter(redis_url: str = None):
+    """
+    初始化FastAPI-Limiter
     
-    async def dispatch(self, request: Request, call_next):
-        if not request.url.path.startswith('/api/'):
-            return await call_next(request)
+    Args:
+        redis_url: Redis连接URL，默认从环境变量获取或本地Redis
+    """
+    if redis_url is None:
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+    
+    try:
+        # 创建Redis连接
+        redis_connection = redis.from_url(
+            redis_url,
+            encoding="utf-8",
+            decode_responses=True
+        )
         
-        ip = get_client_ip(request)
-        allowed, retry_after = _limiter.is_allowed(f"{ip}:global", 100, 60)
+        # 测试连接
+        await redis_connection.ping()
         
-        if not allowed:
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
-                status_code=429,
-                content={'success': False, 'message': '请求过于频繁，请稍后再试'}
-            )
+        # 初始化FastAPI-Limiter
+        await FastAPILimiter.init(redis_connection)
         
-        return await call_next(request)
+        print(f"✅ Redis限流器已启用: {redis_url}")
+        
+    except Exception as e:
+        print(f"❌ Redis连接失败: {e}")
+        print("⚠️ 请确保Redis已安装并运行:")
+        print("   Ubuntu/Debian: sudo apt-get install redis-server")
+        print("   macOS: brew install redis && brew services start redis")
+        print("   Docker: docker run -d -p 6379:6379 redis:latest")
+        raise
 
 
 def rate_limit(limit_name: str = 'default'):
     """
-    限流装饰器 - 用于FastAPI依赖注入
+    限流装饰器 - FastAPI依赖注入
     
     Usage:
         @app.post("/api/login", dependencies=[Depends(rate_limit('login'))])
+        async def login(...):
+            ...
+    
+    Args:
+        limit_name: 限流类型，对应 RATE_LIMITS 中的key
+        
+    Returns:
+        RateLimiter依赖
     """
-    def check_rate_limit(request: Request):
-        ip = get_client_ip(request)
-        max_req, window = RATE_LIMITS.get(limit_name, RATE_LIMITS['default'])
-        
-        allowed, retry_after = _limiter.is_allowed(f"{ip}:{limit_name}", max_req, window)
-        
-        if not allowed:
-            raise HTTPException(
-                status_code=429,
-                detail=f'请求过于频繁，请{retry_after}秒后再试'
-            )
-    return check_rate_limit
+    times, seconds = RATE_LIMITS.get(limit_name, RATE_LIMITS['default'])
+    return RateLimiter(times=times, seconds=seconds)
 
 
 # 便捷函数
@@ -136,8 +93,3 @@ def score_limit():
 def default_limit():
     """默认限流: 60次/分钟"""
     return rate_limit('default')
-
-
-async def init_rate_limiter():
-    """初始化限流器（无需操作，纯内存）"""
-    print("✅ 内存限流器已启用")

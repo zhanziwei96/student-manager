@@ -11,6 +11,10 @@ itsdangerous>=2.1.0
 # CORS
 python-multipart>=0.0.6
 
+# 限流 (Redis)
+fastapi-limiter>=0.1.5
+redis>=5.0.0
+
 # 数据库
 openpyxl>=3.1.0
 

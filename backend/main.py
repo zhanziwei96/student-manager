@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from infrastructure.persistence.database import Database
-from infrastructure.security.rate_limiter import init_rate_limiter, RateLimitMiddleware
+from infrastructure.security.rate_limiter import init_rate_limiter
 from interface.api import student_controller, user_controller, checkin_controller, class_session_controller
 
 
@@ -30,8 +30,9 @@ async def lifespan(app: FastAPI):
     print("班级管理系统 FastAPI + DDD架构")
     print("=" * 50)
     
-    # 初始化限流器（使用内存存储）
-    await init_rate_limiter()
+    # 初始化限流器（Redis）
+    redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+    await init_rate_limiter(redis_url)
     
     print(f"\n后端API: http://localhost:8000")
     print(f"API文档: http://localhost:8000/docs")
@@ -81,9 +82,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
-    # 限流中间件
-    app.add_middleware(RateLimitMiddleware)
     
     # 初始化数据库
     db = Database()
