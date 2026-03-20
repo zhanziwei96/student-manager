@@ -13,7 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from infrastructure.persistence.database import Database
 from infrastructure.security.rate_limiter import init_rate_limiter
-from interface.api import student_controller, user_controller, checkin_controller, class_session_controller
+from interface.api import student_controller, user_controller, checkin_controller, class_session_controller, audit_log_controller
 
 
 # 静态文件目录
@@ -92,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(user_controller.router)
     app.include_router(checkin_controller.router)
     app.include_router(class_session_controller.router)
+    app.include_router(audit_log_controller.router)
     
     # 静态文件服务（生产环境）
     if os.path.exists(STATIC_DIR):
