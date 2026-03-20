@@ -13,7 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from infrastructure.persistence.database import Database
 from infrastructure.security.rate_limiter import init_rate_limiter
-from interface.api import student_controller, user_controller, checkin_controller, class_session_controller, audit_log_controller
+from interface.api import student_controller, user_controller, checkin_controller, class_session_controller, audit_log_controller, health_controller
 
 
 # 静态文件目录
@@ -88,6 +88,9 @@ def create_app() -> FastAPI:
     db.init_tables()
     
     # 注册API路由
+    # 健康检查端点（无需认证，放在第一位）
+    app.include_router(health_controller.router)
+    
     app.include_router(student_controller.router)
     app.include_router(user_controller.router)
     app.include_router(checkin_controller.router)
