@@ -1,29 +1,36 @@
 """
-签到API控制器
+签到API控制器 - FastAPI版本
 """
-from flask import Blueprint, request, jsonify, session
-from functools import wraps
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Request, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from infrastructure.persistence.database import Database
 from infrastructure.persistence.repositories.sqlite_checkin_repository import SQLiteCheckinRepository
 from infrastructure.persistence.repositories.sqlite_student_repository import SQLiteStudentRepository
-from infrastructure.security.rate_limiter import rate_limit
+from infrastructure.persistence.repositories.sqlite_user_repository import SQLiteUserRepository
+from infrastructure.security.rate_limiter import checkin_limit
+from infrastructure.security.session import require_login, is_admin
 from application.services.checkin_app_service import CheckinAppService
 from application.services.privacy_service import PrivacyService
 
 
-checkin_bp = Blueprint('checkin', __name__)
+router = APIRouter(prefix="/api", tags=["checkin"])
 
 
-def login_required(f):
-    """登录验证装饰器"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': '请先登录'}), 401
-        return f(*args, **kwargs)
-    return decorated_function
+# ============ Pydantic模型 ============
 
+class StudentCheckinRequest(BaseModel):
+    student_id: str = Field(..., min_length=1, description="学号")
+    name: str = Field(..., min_length=1, description="姓名")
+
+
+class TeacherCheckinRequest(BaseModel):
+    student_name: Optional[str] = Field(None, description="学生姓名")
+    student_id: Optional[str] = Field(None, description="学生学号")
+
+
+# ============ 依赖注入 ============
 
 def get_checkin_service():
     """获取签到应用服务"""
@@ -33,66 +40,68 @@ def get_checkin_service():
     return CheckinAppService(checkin_repo, student_repo)
 
 
-@checkin_bp.route('/api/checkin', methods=['POST'])
-@rate_limit('checkin')
-def student_checkin():
-    """学生自主签到 (限流: 10次/分钟)"""
+# ============ API端点 ============
+
+@router.post(
+    "/checkin", 
+    response_model=dict,
+    dependencies=[Depends(checkin_limit())]
+)
+async def student_checkin(
+    request: Request,
+    data: StudentCheckinRequest,
+    service: CheckinAppService = Depends(get_checkin_service)
+):
+    """学生自主签到（限流: 10次/分钟）"""
     try:
-        data = request.json
-        student_id = data.get('student_id', '').strip()
-        name = data.get('name', '').strip()
-        
-        if not student_id:
-            return jsonify({'success': False, 'message': '学号不能为空'}), 400
-        
-        if not name:
-            return jsonify({'success': False, 'message': '姓名不能为空'}), 400
-        
-        service = get_checkin_service()
-        success, message, checkin = service.student_checkin(student_id, name)
+        success, message, checkin = service.student_checkin(
+            data.student_id.strip(),
+            data.name.strip()
+        )
         
         if success:
-            return jsonify({
+            return {
                 'success': True,
                 'message': message,
                 'data': checkin.to_dict() if checkin else None
-            })
+            }
         else:
-            return jsonify({'success': False, 'message': message}), 400
+            raise HTTPException(status_code=400, detail=message)
             
+    except HTTPException:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@checkin_bp.route('/api/teacher-checkin', methods=['POST'])
-@login_required
-def teacher_checkin():
+@router.post("/teacher-checkin", response_model=dict)
+async def teacher_checkin(
+    request: Request,
+    data: TeacherCheckinRequest,
+    service: CheckinAppService = Depends(get_checkin_service)
+):
     """老师代签到"""
+    require_login(request)
+    
     try:
-        data = request.json
-        student_name = data.get('student_name', '').strip()
-        student_id = data.get('student_id', '').strip()
-        
-        service = get_checkin_service()
-        
         # 优先使用学号
-        if student_id:
+        if data.student_id:
             success, message, checkin, student = service.teacher_checkin(
-                student_id,
-                session['user_id'],
+                data.student_id.strip(),
+                request.session.get('user_id'),
                 is_student_id=True
             )
-        elif student_name:
+        elif data.student_name:
             success, message, checkin, student = service.teacher_checkin(
-                student_name,
-                session['user_id'],
+                data.student_name.strip(),
+                request.session.get('user_id'),
                 is_student_id=False
             )
         else:
-            return jsonify({'success': False, 'message': '请提供学生学号或姓名'}), 400
+            raise HTTPException(status_code=400, detail='请提供学生学号或姓名')
         
         if success:
-            return jsonify({
+            return {
                 'success': True,
                 'message': message,
                 'data': {
@@ -100,42 +109,49 @@ def teacher_checkin():
                     'student_name': student.name if student else None,
                     'checkin': checkin.to_dict() if checkin else None
                 }
-            })
+            }
         else:
-            return jsonify({'success': False, 'message': message}), 400
+            raise HTTPException(status_code=400, detail=message)
             
+    except HTTPException:
+        raise
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@checkin_bp.route('/api/checkin/records', methods=['GET'])
-@login_required
-def get_checkin_records():
+@router.get("/checkin/records", response_model=dict)
+async def get_checkin_records(
+    request: Request,
+    student_id: Optional[str] = Query(None),
+    date: Optional[str] = Query(None),
+    class_name: Optional[str] = Query(None)
+):
     """获取签到记录（带数据脱敏）"""
+    require_login(request)
+    
     try:
-        # 查询参数
-        student_id = request.args.get('student_id', '').strip()
-        date = request.args.get('date', '').strip()
-        class_name = request.args.get('class_name', '').strip()
+        db = Database()
+        service = CheckinAppService(
+            SQLiteCheckinRepository(db),
+            SQLiteStudentRepository(db)
+        )
         
-        service = get_checkin_service()
         records = service.get_checkin_records(
-            student_id=student_id if student_id else None,
-            class_name=class_name if class_name else None,
-            date=date if date else None,
+            student_id=student_id,
+            class_name=class_name,
+            date=date,
             limit=200
         )
         
         # 数据脱敏处理
         privacy = PrivacyService()
-        is_admin = session.get('is_admin', False)
-        current_user_id = session.get('user_id')
+        is_admin = request.session.get('is_admin', False)
+        current_user_id = request.session.get('user_id')
         
-        # 如果是老师，获取其管理的班级
+        # 获取老师管理的班级
         assigned_classes = None
         if not is_admin:
-            from infrastructure.persistence.repositories.sqlite_user_repository import SQLiteUserRepository
-            user_repo = SQLiteUserRepository(Database())
+            user_repo = SQLiteUserRepository(db)
             user = user_repo.find_by_id(current_user_id)
             if user and user.assigned_classes:
                 assigned_classes = user.assigned_classes
@@ -143,7 +159,6 @@ def get_checkin_records():
         result = []
         for record in records:
             record_dict = record.to_dict()
-            # 应用数据脱敏
             record_dict = privacy.mask_checkin_record(
                 record_dict,
                 is_admin,
@@ -151,56 +166,62 @@ def get_checkin_records():
             )
             result.append(record_dict)
         
-        return jsonify({
+        return {
             'success': True,
             'data': result
-        })
+        }
         
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@checkin_bp.route('/api/checkin/stats', methods=['GET'])
-@login_required
-def get_checkin_stats():
+@router.get("/checkin/stats", response_model=dict)
+async def get_checkin_stats(
+    request: Request,
+    student_id: str = Query(..., description="学生学号"),
+    month: Optional[str] = Query(None, description="月份(YYYY-MM格式)")
+):
     """获取签到统计"""
+    require_login(request)
+    
     try:
-        student_id = request.args.get('student_id', '').strip()
-        month = request.args.get('month', '').strip()  # YYYY-MM格式
-        
-        if not student_id:
-            return jsonify({'success': False, 'message': '请提供学生学号'}), 400
-        
-        service = get_checkin_service()
+        db = Database()
+        service = CheckinAppService(
+            SQLiteCheckinRepository(db),
+            SQLiteStudentRepository(db)
+        )
         stats = service.get_student_checkin_stats(student_id, month)
         
-        return jsonify({
+        return {
             'success': True,
             'data': stats
-        })
+        }
         
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@checkin_bp.route('/api/checkin/today', methods=['GET'])
-@login_required
-def get_today_checkins():
+@router.get("/checkin/today", response_model=dict)
+async def get_today_checkins(
+    request: Request,
+    class_name: str = Query(..., description="班级名称")
+):
     """获取今日班级签到情况"""
+    require_login(request)
+    
     try:
-        class_name = request.args.get('class_name', '').strip()
-        
-        if not class_name:
-            return jsonify({'success': False, 'message': '请提供班级名称'}), 400
-        
-        service = get_checkin_service()
+        db = Database()
+        service = CheckinAppService(
+            SQLiteCheckinRepository(db),
+            SQLiteStudentRepository(db)
+        )
         records = service.get_class_today_checkins(class_name)
         
-        return jsonify({
+        return {
             'success': True,
             'data': [r.to_dict() for r in records],
             'count': len(records)
-        })
+        }
         
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
