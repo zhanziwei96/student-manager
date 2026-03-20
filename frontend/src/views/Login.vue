@@ -176,9 +176,16 @@ const handleLogin = async () => {
     })
     
     if (res.success) {
-      Cookies.set('user_id', res.user.id, { expires: rememberMe.value ? 7 : 1 })
-      Cookies.set('username', res.user.username, { expires: rememberMe.value ? 7 : 1 })
-      Cookies.set('name', res.user.name, { expires: rememberMe.value ? 7 : 1 })
+      // 设置Cookie安全属性（sameSite防止CSRF，path确保全局可访问）
+      const cookieOptions = { 
+        expires: rememberMe.value ? 7 : 1,
+        sameSite: 'strict',  // 禁止跨站携带，防止CSRF
+        path: '/'            // 全局路径可访问
+        // 生产环境建议添加: secure: true （仅HTTPS传输）
+      }
+      Cookies.set('user_id', res.user.id, cookieOptions)
+      Cookies.set('username', res.user.username, cookieOptions)
+      Cookies.set('name', res.user.name, cookieOptions)
       ElMessage.success('登录成功')
       router.push('/admin')
     } else {

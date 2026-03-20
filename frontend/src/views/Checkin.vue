@@ -340,8 +340,8 @@ const handleCheckin = async () => {
       name: res.student_name,
       time: new Date().toISOString()
     }
-    // 保存签到状态到 localStorage
-    saveCheckinStatus(form.student_id, res.student_name)
+    // 保存匿名签到标志（防止重复签到，不存储学生敏感信息）
+    saveCheckinStatus()
     loadRecords()
     loadClassSession()
   } else {
@@ -403,8 +403,8 @@ const handleReset = async () => {
   if (res.success) {
     hasCheckedIn.value = false
     checkedInInfo.value = { name: '', time: '' }
-    // 清除 localStorage 中的签到状态
-    localStorage.removeItem(CHECKIN_STATUS_KEY)
+    // 清除签到标志
+    clearCheckinStatus()
     ElMessage.success('重置成功')
     showResetDialog.value = false
     await api.logout()
@@ -479,44 +479,36 @@ onMounted(() => {
 })
 
 // 检查 localStorage 中的签到状态
-const CHECKIN_STATUS_KEY = 'checkin_status'
+const CHECKIN_STATUS_KEY = 'has_checked_in_today'
 
 const checkLocalStorage = () => {
-  const checkinStatus = localStorage.getItem(CHECKIN_STATUS_KEY)
-  if (checkinStatus) {
-    try {
-      const status = JSON.parse(checkinStatus)
-      const today = new Date().toDateString()
-      // 优先使用保存的 date 字段，兼容旧数据
-      const checkinDate = status.date || new Date(status.timestamp).toDateString()
-      
-      if (today === checkinDate) {
-        // 今天已签到
-        hasCheckedIn.value = true
-        checkedInInfo.value = {
-          name: status.studentName,
-          time: status.timestamp
-        }
-      } else {
-        // 不是今天的签到，清除状态
-        localStorage.removeItem(CHECKIN_STATUS_KEY)
+  const savedDate = localStorage.getItem(CHECKIN_STATUS_KEY)
+  if (savedDate) {
+    const today = new Date().toDateString()
+    if (today === savedDate) {
+      // 今天已签到（匿名标志，不显示具体学生信息）
+      hasCheckedIn.value = true
+      checkedInInfo.value = {
+        name: '已签到',
+        time: new Date().toISOString()
       }
-    } catch (e) {
+    } else {
+      // 不是今天的签到，清除状态
       localStorage.removeItem(CHECKIN_STATUS_KEY)
     }
   }
 }
 
 // 保存签到状态到 localStorage
-const saveCheckinStatus = (studentId, studentName) => {
-  const now = new Date()
-  const status = {
-    studentId: studentId,
-    studentName: studentName,
-    timestamp: now.toISOString(),
-    date: now.toDateString()  // 保存本地日期，避免时区问题
-  }
-  localStorage.setItem(CHECKIN_STATUS_KEY, JSON.stringify(status))
+// 保存匿名签到标志（只存日期，不存学生敏感信息）
+const saveCheckinStatus = () => {
+  const today = new Date().toDateString()
+  localStorage.setItem(CHECKIN_STATUS_KEY, today)
+}
+
+// 清除签到标志
+const clearCheckinStatus = () => {
+  localStorage.removeItem(CHECKIN_STATUS_KEY)
 }
 </script>
 

@@ -11,6 +11,7 @@ from infrastructure.persistence.repositories.sqlite_student_repository import SQ
 from infrastructure.persistence.repositories.sqlite_user_repository import SQLiteUserRepository
 from infrastructure.security.rate_limiter import checkin_limit
 from infrastructure.security.session import require_login, is_admin
+from infrastructure.security.xss_protection import sanitize_checkin_record, escape_html
 from application.services.checkin_app_service import CheckinAppService
 from application.services.privacy_service import PrivacyService
 
@@ -60,10 +61,11 @@ async def student_checkin(
         )
         
         if success:
+            # XSS防护：对签到记录进行HTML转义
             return {
                 'success': True,
                 'message': message,
-                'data': checkin.to_dict() if checkin else None
+                'data': sanitize_checkin_record(checkin.to_dict()) if checkin else None
             }
         else:
             raise HTTPException(status_code=400, detail=message)
@@ -101,13 +103,14 @@ async def teacher_checkin(
             raise HTTPException(status_code=400, detail='请提供学生学号或姓名')
         
         if success:
+            # XSS防护：对返回数据进行HTML转义
             return {
                 'success': True,
                 'message': message,
                 'data': {
                     'student_id': student.student_id.value if student else None,
-                    'student_name': student.name if student else None,
-                    'checkin': checkin.to_dict() if checkin else None
+                    'student_name': escape_html(student.name) if student else None,
+                    'checkin': sanitize_checkin_record(checkin.to_dict()) if checkin else None
                 }
             }
         else:
@@ -159,11 +162,14 @@ async def get_checkin_records(
         result = []
         for record in records:
             record_dict = record.to_dict()
+            # 先进行隐私脱敏
             record_dict = privacy.mask_checkin_record(
                 record_dict,
                 is_admin,
                 assigned_classes
             )
+            # XSS防护：HTML转义
+            record_dict = sanitize_checkin_record(record_dict)
             result.append(record_dict)
         
         return {
@@ -217,9 +223,12 @@ async def get_today_checkins(
         )
         records = service.get_class_today_checkins(class_name)
         
+        # XSS防护：对签到记录进行HTML转义
+        records_data = [sanitize_checkin_record(r.to_dict()) for r in records]
+        
         return {
             'success': True,
-            'data': [r.to_dict() for r in records],
+            'data': records_data,
             'count': len(records)
         }
         

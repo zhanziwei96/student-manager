@@ -10,6 +10,7 @@ from infrastructure.persistence.repositories.sqlite_student_repository import SQ
 from infrastructure.persistence.repositories.sqlite_score_log_repository import SQLiteScoreLogRepository
 from infrastructure.security.rate_limiter import score_limit
 from infrastructure.security.session import require_login, is_admin, get_session_user_id
+from infrastructure.security.xss_protection import sanitize_student_list, sanitize_student_data
 from application.services.student_app_service import StudentAppService
 from application.dto.student_dto import CreateStudentDTO, UpdateScoreDTO
 
@@ -67,9 +68,12 @@ async def get_students(
     else:
         students = service.get_all_students()
     
+    # XSS防护：对学生数据进行HTML转义
+    student_data = [sanitize_student_data(s.__dict__) for s in students]
+    
     return {
         'success': True,
-        'data': [s.__dict__ for s in students]
+        'data': student_data
     }
 
 
@@ -84,9 +88,10 @@ async def get_student(
     
     student = service.get_student_by_id(student_id)
     if student:
+        # XSS防护：对学生数据进行HTML转义
         return {
             'success': True,
-            'data': student.__dict__
+            'data': sanitize_student_data(student.__dict__)
         }
     raise HTTPException(status_code=404, detail='学生不存在')
 

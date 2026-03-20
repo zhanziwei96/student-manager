@@ -198,7 +198,11 @@ async def login(
         )
         
         if user:
-            # 设置session
+            # 防止会话固定攻击：清除旧session，创建新session
+            old_session_data = dict(request.session)
+            request.session.clear()
+            
+            # 写入新session数据（Starlette会自动生成新的session ID）
             request.session['user_id'] = user.id
             request.session['username'] = user.username
             request.session['is_admin'] = user.is_admin()
