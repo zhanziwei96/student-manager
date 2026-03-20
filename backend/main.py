@@ -30,9 +30,8 @@ async def lifespan(app: FastAPI):
     print("班级管理系统 FastAPI + DDD架构")
     print("=" * 50)
     
-    # 初始化限流器
-    redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-    await init_rate_limiter(redis_url)
+    # 初始化限流器（使用内存存储）
+    await init_rate_limiter()
     
     print(f"\n后端API: http://localhost:8000")
     print(f"API文档: http://localhost:8000/docs")
