@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => ({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:8000',  // FastAPI端口
         changeOrigin: true
       }
     }
