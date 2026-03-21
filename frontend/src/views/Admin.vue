@@ -315,16 +315,16 @@
       </n-alert>
       <n-form :model="newTeacher" label-placement="left" label-width="100px">
         <n-form-item label="用户名" required>
-          <n-input v-model:value="newTeacher.username" placeholder="请输入用户名（登录用）" />
+          <n-input v-model:value="newTeacher.username" placeholder="请输入用户名（建议使用拼音，如：zhangsan）" />
         </n-form-item>
         <n-form-item label="姓名" required>
-          <n-input v-model:value="newTeacher.name" placeholder="请输入教师姓名" />
+          <n-input v-model:value="newTeacher.name" placeholder="请输入教师姓名（如：张三）" />
         </n-form-item>
         <n-form-item label="负责班级">
           <n-select v-model:value="newTeacher.assigned_classes" placeholder="选择负责班级（可多选）" :options="classOptions" multiple clearable />
         </n-form-item>
         <n-form-item label="默认密码">
-          <n-input :value="newTeacher.name ? generateTeacherPassword(newTeacher.name) : '填写姓名后自动生成'" disabled />
+          <n-input :value="newTeacher.username ? generateTeacherPassword(newTeacher.username) : '填写用户名后自动生成'" disabled />
         </n-form-item>
       </n-form>
       <template #footer>
@@ -707,13 +707,11 @@ const handleAddStudent = async () => {
   }
 }
 
-// 生成默认密码（教师名字每个字的拼音首字母 + 123）
-const generateTeacherPassword = (name) => {
-  // 简单的拼音首字母提取（实际项目中应该使用 pinyin 库）
-  // 这里使用名字的每个字的第一个字符
-  const chars = name.split('').filter(c => /[\u4e00-\u9fa5a-zA-Z]/.test(c))
-  const initials = chars.map(c => c.toLowerCase()[0]).join('')
-  return initials + '123'
+// 生成默认密码（用户名前3位 + 123）
+const generateTeacherPassword = (username) => {
+  // 取用户名前3个字符（小写），不足3位则取全部
+  const prefix = username.slice(0, 3).toLowerCase()
+  return prefix + '123'
 }
 
 const handleAddTeacher = async () => {
@@ -722,7 +720,7 @@ const handleAddTeacher = async () => {
     return
   }
   
-  const password = generateTeacherPassword(newTeacher.value.name)
+  const password = generateTeacherPassword(newTeacher.value.username)
   
   const res = await api.createUser({
     username: newTeacher.value.username,
@@ -778,7 +776,7 @@ const handleUpdateTeacher = async () => {
 
 // 重置教师密码
 const handleResetTeacherPassword = async (teacher) => {
-  const newPassword = generateTeacherPassword(teacher.name)
+  const newPassword = generateTeacherPassword(teacher.username)
   
   dialog.warning({
     title: '重置密码',
