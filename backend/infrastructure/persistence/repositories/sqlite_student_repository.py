@@ -123,8 +123,8 @@ class SQLiteStudentRepository(StudentRepository):
     def exists(self, student_id: StudentId) -> bool:
         return self.find_by_id(student_id) is not None
     
-    def set_password(self, student_id: str, password_hash: str, salt: str) -> None:
-        """设置学生密码"""
+    def save_password(self, student_id: str, password_hash: str, salt: str) -> None:
+        """保存学生密码（纯数据操作，无业务逻辑）"""
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -133,34 +133,8 @@ class SQLiteStudentRepository(StudentRepository):
                 WHERE student_id = ?
             ''', (password_hash, salt, student_id))
     
-    def reset_password(self, student_id: str, new_password: str) -> bool:
-        """重置学生密码，返回是否成功"""
-        import hashlib
-        import secrets
-        
-        # 检查学生是否存在
-        with self.db.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM students WHERE student_id = ?", (student_id,))
-            if not cursor.fetchone():
-                return False
-            
-            # 生成新密码
-            salt = secrets.token_hex(16)
-            password_hash = hashlib.sha256(f"{new_password}{salt}".encode()).hexdigest()
-            
-            cursor.execute('''
-                UPDATE students 
-                SET password_hash = ?, salt = ?
-                WHERE student_id = ?
-            ''', (password_hash, salt, student_id))
-            
-            return True
-    
-    def verify_password(self, student_id: str, password: str) -> bool:
-        """验证学生密码"""
-        import hashlib
-        
+    def find_password(self, student_id: str) -> Optional[tuple]:
+        """查找学生密码信息（纯数据操作）"""
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -170,7 +144,6 @@ class SQLiteStudentRepository(StudentRepository):
             row = cursor.fetchone()
             
             if not row or not row['password_hash']:
-                return False
+                return None
             
-            password_hash = hashlib.sha256(f"{password}{row['salt']}".encode()).hexdigest()
-            return password_hash == row['password_hash']
+            return (row['password_hash'], row['salt'])

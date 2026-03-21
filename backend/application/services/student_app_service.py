@@ -3,13 +3,12 @@
 协调学生相关的用例
 """
 import logging
-import hashlib
-import secrets
 from typing import List, Optional
 from domain.entities.student import Student
 from domain.entities.score_log import ScoreLog
 from domain.value_objects.student_id import StudentId
 from domain.value_objects.score import Score
+from domain.value_objects.password import Password
 from domain.repositories.student_repository import StudentRepository
 from application.dto.student_dto import (
     CreateStudentDTO, 
@@ -17,16 +16,6 @@ from application.dto.student_dto import (
     StudentResponseDTO
 )
 from infrastructure.config import ScoreConfig
-
-
-def generate_salt() -> str:
-    """生成随机盐值"""
-    return secrets.token_hex(16)
-
-
-def hash_password(password: str, salt: str) -> str:
-    """密码哈希"""
-    return hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
 
 
 class StudentAppService:
@@ -66,10 +55,9 @@ class StudentAppService:
         # 保存
         self.student_repo.save(student)
         
-        # 设置初始密码（学号作为密码）
-        salt = generate_salt()
-        password_hash = hash_password(str(student_id), salt)
-        self.student_repo.set_password(str(student_id), password_hash, salt)
+        # 设置初始密码（使用领域层Password值对象）
+        password = Password.create(str(student_id))
+        self.student_repo.save_password(str(student_id), password.hash, password.salt)
         
         # 返回DTO
         return self._to_response_dto(student)
@@ -138,6 +126,48 @@ class StudentAppService:
     def delete_student(self, student_id: str) -> None:
         """删除学生"""
         self.student_repo.delete(StudentId(student_id))
+    
+    def reset_student_password(self, student_id: str, new_password: str) -> bool:
+        """重置学生密码
+        
+        Args:
+            student_id: 学号
+            new_password: 新密码（明文）
+            
+        Returns:
+            是否成功
+        """
+        # 检查学生是否存在
+        if not self.student_repo.exists(StudentId(student_id)):
+            return False
+        
+        # 使用领域层Password值对象创建新密码
+        password = Password.create(new_password)
+        
+        # 持久化（仓储只负责数据存取）
+        self.student_repo.save_password(student_id, password.hash, password.salt)
+        
+        return True
+    
+    def verify_student_password(self, student_id: str, password: str) -> bool:
+        """验证学生密码
+        
+        Args:
+            student_id: 学号
+            password: 明文密码
+            
+        Returns:
+            是否匹配
+        """
+        # 从仓储获取密码信息（纯数据）
+        password_info = self.student_repo.find_password(student_id)
+        if not password_info:
+            return False
+        
+        # 使用领域层Password值对象验证
+        stored_hash, salt = password_info
+        password_obj = Password.from_hash(stored_hash, salt)
+        return password_obj.verify(password)
     
     def _to_response_dto(self, student: Student) -> StudentResponseDTO:
         """将领域实体转换为响应DTO"""

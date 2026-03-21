@@ -257,14 +257,15 @@ async def reset_student_password(
     request: Request,
     student_id: str,
     data: dict = Body(...),
-    repo: SQLiteStudentRepository = Depends(get_student_repo)
+    service: StudentAppService = Depends(get_student_service)
 ):
     """管理员重置学生密码（初始密码为学号）"""
     require_admin(request)
     
     new_password = data.get('password', student_id)  # 默认使用学号作为新密码
     
-    success = repo.reset_password(student_id, new_password)
+    # 通过Application Service协调用例（DDD分层）
+    success = service.reset_student_password(student_id, new_password)
     
     if not success:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')

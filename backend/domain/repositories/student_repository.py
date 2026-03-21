@@ -45,3 +45,27 @@ class StudentRepository(ABC):
     def exists(self, student_id: StudentId) -> bool:
         """检查学生是否存在"""
         pass
+    
+    # 学生账号相关（数据持久化，业务逻辑在领域层）
+    @abstractmethod
+    def save_password(self, student_id: str, password_hash: str, salt: str) -> None:
+        """保存学生密码（纯数据操作）
+        
+        Args:
+            student_id: 学号
+            password_hash: 密码哈希值
+            salt: 盐值
+        """
+        pass
+    
+    @abstractmethod
+    def find_password(self, student_id: str) -> Optional[tuple]:
+        """查找学生密码信息
+        
+        Args:
+            student_id: 学号
+            
+        Returns:
+            (password_hash, salt) 元组，或 None
+        """
+        pass
