@@ -178,6 +178,19 @@
           <div class="action-title">新增教师</div>
           <div class="action-desc">创建教师账号</div>
         </n-card>
+
+        <n-card class="action-card" hoverable @click="showManageTeachers = true">
+          <div class="action-icon" style="background: linear-gradient(135deg, #06b6d4, #22d3ee);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <div class="action-title">教师管理</div>
+          <div class="action-desc">管理教师班级分配</div>
+        </n-card>
       </div>
 
       <!-- 学生列表 -->
@@ -320,6 +333,55 @@
       </template>
     </n-modal>
 
+    <!-- 教师管理对话框 -->
+    <n-modal v-model:show="showManageTeachers" title="教师管理" preset="card" style="width: 800px; max-height: 80vh;">
+      <div class="teacher-list-header" style="margin-bottom: 16px;">
+        <n-space>
+          <n-tag type="info">共 {{ teachers.length }} 位教师</n-tag>
+          <n-tag type="success">{{ teachers.filter(t => t.is_active).length }} 位在职</n-tag>
+          <n-tag type="error">{{ teachers.filter(t => !t.is_active).length }} 位禁用</n-tag>
+        </n-space>
+      </div>
+      
+      <n-data-table
+        :columns="teacherColumns"
+        :data="teachers"
+        :pagination="{ pageSize: 10 }"
+        :bordered="false"
+        size="small"
+        striped
+      />
+      
+      <template #footer>
+        <n-button @click="showManageTeachers = false">关闭</n-button>
+      </template>
+    </n-modal>
+
+    <!-- 编辑教师对话框 -->
+    <n-modal v-model:show="showEditTeacher" title="编辑教师" preset="card" style="width: 500px;">
+      <n-form :model="editingTeacher" label-placement="left" label-width="100px">
+        <n-form-item label="用户名">
+          <n-input v-model:value="editingTeacher.username" disabled />
+        </n-form-item>
+        <n-form-item label="姓名">
+          <n-input v-model:value="editingTeacher.name" disabled />
+        </n-form-item>
+        <n-form-item label="负责班级">
+          <n-select v-model:value="editingTeacher.assigned_classes" placeholder="选择负责班级（可多选）" :options="classOptions" multiple clearable />
+        </n-form-item>
+        <n-form-item label="账号状态">
+          <n-switch v-model:value="editingTeacher.is_active">
+            <template #checked>启用</template>
+            <template #unchecked>禁用</template>
+          </n-switch>
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-button @click="showEditTeacher = false">取消</n-button>
+        <n-button type="primary" @click="handleUpdateTeacher">保存修改</n-button>
+      </template>
+    </n-modal>
+
     <!-- 调整分数对话框 -->
     <n-modal v-model:show="scoreDialogVisible" title="调整分数" preset="card" style="width: 450px;">
       <div class="student-info" style="margin-bottom: 16px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
@@ -391,7 +453,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import * as api from '@/api'
 import { NIcon } from 'naive-ui'
-import { CreateOutline, TrashOutline } from '@vicons/ionicons5'
+import { CreateOutline, TrashOutline, KeyOutline, BanOutline, CheckmarkCircleOutline } from '@vicons/ionicons5'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -411,6 +473,8 @@ const showAddStudent = ref(false)
 const showImport = ref(false)
 const showResetScore = ref(false)
 const showAddTeacher = ref(false)
+const showManageTeachers = ref(false)
+const showEditTeacher = ref(false)
 const scoreDialogVisible = ref(false)
 const deleteDialogVisible = ref(false)
 const changePasswordVisible = ref(false)
@@ -420,6 +484,10 @@ const newStudent = ref({ student_id: '', name: '', class_name: '' })
 
 // 添加教师
 const newTeacher = ref({ username: '', name: '', assigned_classes: [] })
+
+// 教师管理
+const teachers = ref([])
+const editingTeacher = ref({ id: null, username: '', name: '', assigned_classes: [], is_active: true })
 
 // 导入
 const importFile = ref(null)
@@ -479,6 +547,71 @@ const passwordForm = ref({ old: '', new: '', confirm: '' })
 const userOptions = [
   { label: '修改密码', key: 'changePassword' },
   { label: '退出登录', key: 'logout' }
+]
+
+// 教师表格列定义
+const teacherColumns = [
+  { title: '用户名', key: 'username', width: 120 },
+  { title: '姓名', key: 'name', width: 100 },
+  { 
+    title: '负责班级', 
+    key: 'assigned_classes', 
+    width: 200,
+    render(row) {
+      if (!row.assigned_classes || row.assigned_classes.length === 0) {
+        return h('span', { style: 'color: #64748b;' }, '未分配')
+      }
+      return h('div', { style: 'display: flex; flex-wrap: wrap; gap: 4px;' }, 
+        row.assigned_classes.map(cls => 
+          h('span', { 
+            style: 'background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 2px 8px; border-radius: 4px; font-size: 12px;' 
+          }, cls)
+        )
+      )
+    }
+  },
+  { 
+    title: '状态', 
+    key: 'is_active', 
+    width: 80,
+    render(row) {
+      return h('span', { 
+        style: row.is_active ? 'color: #34d399;' : 'color: #f87171;'
+      }, row.is_active ? '启用' : '禁用')
+    }
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 180,
+    render(row) {
+      return h('div', { style: 'display: flex; gap: 8px;' }, [
+        h('button', { 
+          class: 'icon-btn edit',
+          title: '编辑',
+          onClick: () => openEditTeacher(row)
+        }, [
+          h(NIcon, { size: 16, color: '#818cf8' }, { default: () => h(CreateOutline) })
+        ]),
+        h('button', {
+          class: 'icon-btn reset',
+          title: '重置密码',
+          onClick: () => handleResetTeacherPassword(row)
+        }, [
+          h(NIcon, { size: 16, color: '#f59e0b' }, { default: () => h(KeyOutline) })
+        ]),
+        h('button', {
+          class: row.is_active ? 'icon-btn disable' : 'icon-btn enable',
+          title: row.is_active ? '禁用' : '启用',
+          onClick: () => handleToggleTeacherStatus(row)
+        }, [
+          h(NIcon, { size: 16, color: row.is_active ? '#ef4444' : '#10b981' }, { 
+            default: () => row.is_active ? h(BanOutline) : h(CheckmarkCircleOutline) 
+          })
+        ])
+      ])
+    }
+  }
 ]
 
 // 表格列定义
@@ -603,7 +736,81 @@ const handleAddTeacher = async () => {
     message.success(`教师创建成功，默认密码：${password}`)
     newTeacher.value = { username: '', name: '', assigned_classes: [] }
     showAddTeacher.value = false
+    loadTeachers()
   }
+}
+
+// 加载教师列表
+const loadTeachers = async () => {
+  // 模拟数据，实际应该从API获取
+  teachers.value = [
+    { id: 1, username: 'teacher1', name: '张老师', assigned_classes: ['2025中药制药1班'], is_active: true },
+    { id: 2, username: 'teacher2', name: '李老师', assigned_classes: ['2025中药制药2班', '2025中药学2班'], is_active: true },
+    { id: 3, username: 'teacher3', name: '王老师', assigned_classes: [], is_active: false },
+  ]
+}
+
+// 打开编辑教师对话框
+const openEditTeacher = (teacher) => {
+  editingTeacher.value = { 
+    id: teacher.id,
+    username: teacher.username,
+    name: teacher.name,
+    assigned_classes: [...teacher.assigned_classes],
+    is_active: teacher.is_active
+  }
+  showEditTeacher.value = true
+}
+
+// 更新教师信息
+const handleUpdateTeacher = async () => {
+  const res = await api.updateUser(editingTeacher.value.id, {
+    assigned_classes: editingTeacher.value.assigned_classes,
+    is_active: editingTeacher.value.is_active
+  })
+  
+  if (res.success) {
+    message.success('教师信息更新成功')
+    showEditTeacher.value = false
+    loadTeachers()
+  }
+}
+
+// 重置教师密码
+const handleResetTeacherPassword = async (teacher) => {
+  const newPassword = generateTeacherPassword(teacher.name)
+  
+  dialog.warning({
+    title: '重置密码',
+    content: `确定要重置 ${teacher.name} 的密码吗？新密码将为：${newPassword}`,
+    positiveText: '确认重置',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const res = await api.resetUserPassword(teacher.id, { password: newPassword })
+      if (res.success) {
+        message.success(`密码已重置，新密码：${newPassword}`)
+      }
+    }
+  })
+}
+
+// 切换教师账号状态
+const handleToggleTeacherStatus = async (teacher) => {
+  const action = teacher.is_active ? '禁用' : '启用'
+  
+  dialog.warning({
+    title: `${action}账号`,
+    content: `确定要${action} ${teacher.name} 的账号吗？`,
+    positiveText: '确认',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const res = await api.updateUser(teacher.id, { is_active: !teacher.is_active })
+      if (res.success) {
+        message.success(`账号已${action}`)
+        loadTeachers()
+      }
+    }
+  })
 }
 
 const handleUpload = ({ file }) => {
@@ -820,6 +1027,7 @@ const handleLogout = async () => {
 onMounted(() => {
   loadStudents()
   loadClassSession()
+  loadTeachers()
   api.getDbInfo().then(res => {
     if (res.success) dbInfo.value = res.data
   })
@@ -1321,8 +1529,48 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
+.icon-btn.reset {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.icon-btn.reset:hover {
+  background: rgba(245, 158, 11, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.icon-btn.enable {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.icon-btn.enable:hover {
+  background: rgba(16, 185, 129, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.icon-btn.disable {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.icon-btn.disable:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
 .icon-btn:active {
   transform: scale(0.95);
+}
+
+.teacher-list-header {
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .tip {
