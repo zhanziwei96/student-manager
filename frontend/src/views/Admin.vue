@@ -420,7 +420,7 @@ const columns = [
           h('svg', { 
             viewBox: '0 0 24 24', 
             fill: 'none', 
-            stroke: 'currentColor',
+            stroke: '#818cf8',
             'stroke-width': 2,
             style: 'width: 16px; height: 16px;'
           }, [
@@ -436,7 +436,7 @@ const columns = [
           h('svg', { 
             viewBox: '0 0 24 24', 
             fill: 'none', 
-            stroke: 'currentColor',
+            stroke: '#f87171',
             'stroke-width': 2,
             style: 'width: 16px; height: 16px;'
           }, [
@@ -1042,9 +1042,10 @@ onMounted(() => {
 /* 图标按钮样式 */
 .action-buttons {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
   justify-content: center;
+  padding: 0 8px;
 }
 
 .icon-btn {
