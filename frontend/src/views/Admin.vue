@@ -308,7 +308,7 @@
           <n-input v-model:value="newTeacher.name" placeholder="请输入教师姓名" />
         </n-form-item>
         <n-form-item label="负责班级">
-          <n-select v-model:value="newTeacher.assigned_class" placeholder="选择负责班级" :options="classOptions" clearable />
+          <n-select v-model:value="newTeacher.assigned_classes" placeholder="选择负责班级（可多选）" :options="classOptions" multiple clearable />
         </n-form-item>
         <n-form-item label="默认密码">
           <n-input :value="newTeacher.name ? generateTeacherPassword(newTeacher.name) : '填写姓名后自动生成'" disabled />
@@ -419,7 +419,7 @@ const changePasswordVisible = ref(false)
 const newStudent = ref({ student_id: '', name: '', class_name: '' })
 
 // 添加教师
-const newTeacher = ref({ username: '', name: '', assigned_class: '' })
+const newTeacher = ref({ username: '', name: '', assigned_classes: [] })
 
 // 导入
 const importFile = ref(null)
@@ -595,13 +595,13 @@ const handleAddTeacher = async () => {
     username: newTeacher.value.username,
     name: newTeacher.value.name,
     role: 'teacher',
-    assigned_class: newTeacher.value.assigned_class,
+    assigned_classes: newTeacher.value.assigned_classes,
     password: password
   })
   
   if (res.success) {
     message.success(`教师创建成功，默认密码：${password}`)
-    newTeacher.value = { username: '', name: '', assigned_class: '' }
+    newTeacher.value = { username: '', name: '', assigned_classes: [] }
     showAddTeacher.value = false
   }
 }

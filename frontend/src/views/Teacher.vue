@@ -245,6 +245,9 @@
         </n-form-item>
         <n-form-item label="班级">
           <n-select v-model:value="newStudent.class_name" placeholder="选择班级" :options="classOptions" clearable />
+          <span v-if="newStudent.class_name && !isMyClass(newStudent.class_name)" style="color: #f87171; font-size: 12px; margin-top: 4px; display: block;">
+            警告：该班级不在您的负责范围内
+          </span>
         </n-form-item>
       </n-form>
       <template #footer>
@@ -400,6 +403,11 @@ const userOptions = [
 
 // 模拟教师负责的班级（实际应该从后端获取）
 const myClasses = ref(['2025中药制药1班', '2025中药制药2班'])
+
+// 计算属性：教师是否负责某个班级
+const isMyClass = (className) => {
+  return myClasses.value.includes(className)
+}
 
 // 表格列定义（教师版：只有编辑，没有删除）
 const columns = [
