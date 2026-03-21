@@ -3,6 +3,8 @@
 协调学生相关的用例
 """
 import logging
+import hashlib
+import secrets
 from typing import List, Optional
 from domain.entities.student import Student
 from domain.entities.score_log import ScoreLog
@@ -15,6 +17,16 @@ from application.dto.student_dto import (
     StudentResponseDTO
 )
 from infrastructure.config import ScoreConfig
+
+
+def generate_salt() -> str:
+    """生成随机盐值"""
+    return secrets.token_hex(16)
+
+
+def hash_password(password: str, salt: str) -> str:
+    """密码哈希"""
+    return hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
 
 
 class StudentAppService:
@@ -53,6 +65,11 @@ class StudentAppService:
         
         # 保存
         self.student_repo.save(student)
+        
+        # 设置初始密码（学号作为密码）
+        salt = generate_salt()
+        password_hash = hash_password(str(student_id), salt)
+        self.student_repo.set_password(str(student_id), password_hash, salt)
         
         # 返回DTO
         return self._to_response_dto(student)

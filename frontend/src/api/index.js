@@ -20,6 +20,7 @@ export const updateScore = (id, data) => request.post(`/students/${id}/score`, d
 export const importStudents = (data) => request.post('/students/import', data, {
   headers: { 'Content-Type': 'multipart/form-data' }
 })
+export const resetStudentPassword = (id, data) => request.post(`/admin/students/${id}/reset-password`, data)
 
 // 班级管理
 export const deleteClass = (className) => request.delete(`/class/${encodeURIComponent(className)}`)

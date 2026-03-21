@@ -2,7 +2,7 @@
 学生API控制器 - FastAPI版本
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Request, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, Request, HTTPException, Query, UploadFile, File, Body
 from pydantic import BaseModel, Field
 
 from infrastructure.persistence.database import Database
@@ -48,6 +48,12 @@ def get_student_service():
     repo = SQLiteStudentRepository(db)
     log_repo = SQLiteScoreLogRepository(db)
     return StudentAppService(repo, log_repo)
+
+
+def get_student_repo():
+    """获取学生仓储"""
+    db = Database()
+    return SQLiteStudentRepository(db)
 
 
 def get_current_user_id(request: Request) -> int:
@@ -244,6 +250,33 @@ async def delete_student(
     except Exception as e:
         logger.error(f"删除学生失败: {e}", exc_info=True)
         raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
+
+
+@router.post("/admin/students/{student_id}/reset-password", response_model=dict)
+async def reset_student_password(
+    request: Request,
+    student_id: str,
+    data: dict = Body(...),
+    repo: SQLiteStudentRepository = Depends(get_student_repo)
+):
+    """管理员重置学生密码（初始密码为学号）"""
+    require_admin(request)
+    
+    new_password = data.get('password', student_id)  # 默认使用学号作为新密码
+    
+    success = repo.reset_password(student_id, new_password)
+    
+    if not success:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
+    
+    return {
+        'success': True,
+        'message': '密码重置成功',
+        'data': {
+            'student_id': student_id,
+            'new_password': new_password
+        }
+    }
 
 
 @router.get("/score/logs", response_model=dict)

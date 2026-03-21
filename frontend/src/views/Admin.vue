@@ -256,15 +256,27 @@
 
     <!-- 添加学生对话框 -->
     <n-modal v-model:show="showAddStudent" title="添加学生" preset="card" style="width: 500px;">
+      <n-alert type="info" :show-icon="true" style="margin-bottom: 16px;">
+        <template #header>
+          账号信息
+        </template>
+        <div v-if="newStudent.student_id">
+          <p><strong>用户名：</strong>{{ newStudent.student_id }}</p>
+          <p><strong>初始密码：</strong>{{ newStudent.student_id }}（与学号相同）</p>
+        </div>
+        <div v-else>
+          填写学号后将自动显示账号信息
+        </div>
+      </n-alert>
       <n-form :model="newStudent" label-placement="left" label-width="80px">
         <n-form-item label="学号" required>
-          <n-input v-model:value="newStudent.student_id" placeholder="请输入学号" />
+          <n-input v-model:value="newStudent.student_id" placeholder="请输入学号（作为登录账号）" />
         </n-form-item>
         <n-form-item label="姓名" required>
           <n-input v-model:value="newStudent.name" placeholder="请输入姓名" />
         </n-form-item>
         <n-form-item label="班级">
-          <n-input v-model:value="newStudent.class_name" placeholder="班级（可选）" />
+          <n-select v-model:value="newStudent.class_name" placeholder="选择班级" :options="classOptions" clearable />
         </n-form-item>
       </n-form>
       <template #footer>
@@ -637,7 +649,7 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 100,
+    width: 140,
     render(row) {
       return h('div', { class: 'action-buttons' }, [
         h('button', { 
@@ -646,6 +658,13 @@ const columns = [
           onClick: () => openScoreDialog(row)
         }, [
           h(NIcon, { size: 18, color: '#818cf8' }, { default: () => h(CreateOutline) })
+        ]),
+        h('button', {
+          class: 'icon-btn reset',
+          title: '重置密码',
+          onClick: () => handleResetStudentPassword(row)
+        }, [
+          h(NIcon, { size: 18, color: '#f59e0b' }, { default: () => h(KeyOutline) })
         ]),
         h('button', {
           class: 'icon-btn delete',
@@ -886,6 +905,24 @@ const handleDeleteStudent = (student) => {
   pendingDelete.value = { type: 'student', data: student }
   deletePassword.value = ''
   deleteDialogVisible.value = true
+}
+
+// 重置学生密码
+const handleResetStudentPassword = async (student) => {
+  const newPassword = student.student_id  // 默认重置为学号
+  
+  dialog.warning({
+    title: '重置学生密码',
+    content: `确定要重置 "${student.name}" 的密码吗？新密码将为：${newPassword}`,
+    positiveText: '确认重置',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const res = await api.resetStudentPassword(student.student_id, { password: newPassword })
+      if (res.success) {
+        message.success(`密码已重置，新密码：${newPassword}`)
+      }
+    }
+  })
 }
 
 const handleDeleteClass = (className) => {
