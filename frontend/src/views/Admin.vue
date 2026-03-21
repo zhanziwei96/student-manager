@@ -616,6 +616,7 @@ const teacherColumns = [
         }, [
           h(NIcon, { size: 16, color: '#ef4444' }, { default: () => h(TrashOutline) })
         ])
+      ])
     }
   }
 ]
