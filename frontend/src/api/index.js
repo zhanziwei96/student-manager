@@ -8,6 +8,7 @@ export const changePassword = (data) => request.post('/change-password', data)
 export const createUser = (data) => request.post('/admin/users', data)
 export const getUsers = (params) => request.get('/admin/users', { params })
 export const updateUser = (id, data) => request.put(`/admin/users/${id}`, data)
+export const deleteUser = (id) => request.delete(`/admin/users/${id}`)
 export const resetUserPassword = (id, data) => request.post(`/admin/users/${id}/reset-password`, data)
 
 // 学生管理

@@ -583,7 +583,7 @@ const teacherColumns = [
   {
     title: '操作',
     key: 'actions',
-    width: 180,
+    width: 200,
     render(row) {
       return h('div', { style: 'display: flex; gap: 8px;' }, [
         h('button', { 
@@ -608,8 +608,14 @@ const teacherColumns = [
           h(NIcon, { size: 16, color: row.is_active ? '#ef4444' : '#10b981' }, { 
             default: () => row.is_active ? h(BanOutline) : h(CheckmarkCircleOutline) 
           })
+        ]),
+        h('button', {
+          class: 'icon-btn delete',
+          title: '删除教师',
+          onClick: () => handleDeleteTeacher(row)
+        }, [
+          h(NIcon, { size: 16, color: '#ef4444' }, { default: () => h(TrashOutline) })
         ])
-      ])
     }
   }
 ]
@@ -740,12 +746,10 @@ const handleAddTeacher = async () => {
 
 // 加载教师列表
 const loadTeachers = async () => {
-  // 模拟数据，实际应该从API获取
-  teachers.value = [
-    { id: 1, username: 'teacher1', name: '张老师', assigned_classes: ['2025中药制药1班'], is_active: true },
-    { id: 2, username: 'teacher2', name: '李老师', assigned_classes: ['2025中药制药2班', '2025中药学2班'], is_active: true },
-    { id: 3, username: 'teacher3', name: '王老师', assigned_classes: [], is_active: false },
-  ]
+  const res = await api.getUsers({ role: 'teacher' })
+  if (res.success) {
+    teachers.value = res.data
+  }
 }
 
 // 打开编辑教师对话框
@@ -805,6 +809,23 @@ const handleToggleTeacherStatus = async (teacher) => {
       const res = await api.updateUser(teacher.id, { is_active: !teacher.is_active })
       if (res.success) {
         message.success(`账号已${action}`)
+        loadTeachers()
+      }
+    }
+  })
+}
+
+// 删除教师
+const handleDeleteTeacher = async (teacher) => {
+  dialog.error({
+    title: '删除教师',
+    content: `确定要删除教师 "${teacher.name}" 吗？此操作不可撤销！`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const res = await api.deleteUser(teacher.id)
+      if (res.success) {
+        message.success('教师已删除')
         loadTeachers()
       }
     }
