@@ -153,14 +153,13 @@ class Database:
         with self.connection() as conn:
             cursor = conn.cursor()
             
-            # 学生表
+            # 学生表 - 使用 student_id 作为主键
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS students (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    student_id TEXT UNIQUE NOT NULL,
+                    student_id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     class_name TEXT DEFAULT '未分班',
-                    score REAL DEFAULT 70,
+                    score REAL DEFAULT 70.0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -172,14 +171,14 @@ class Database:
                     username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     salt TEXT NOT NULL,
-                    name TEXT NOT NULL,
+                    name TEXT,
                     role TEXT DEFAULT 'teacher',
-                    assigned_classes TEXT,
-                    status TEXT DEFAULT 'active',
+                    assigned_class TEXT,
+                    is_active INTEGER DEFAULT 1,
                     login_fail_count INTEGER DEFAULT 0,
                     locked_until TIMESTAMP,
                     last_login_ip TEXT,
-                    last_login_at TIMESTAMP,
+                    last_login TIMESTAMP,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -189,6 +188,9 @@ class Database:
                 CREATE TABLE IF NOT EXISTS checkin_records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     student_id TEXT NOT NULL,
+                    student_name TEXT,
+                    class_name TEXT,
+                    checkin_type TEXT DEFAULT 'self',
                     checkin_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')

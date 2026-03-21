@@ -21,24 +21,49 @@ class SQLiteAuditLogRepository(AuditLogRepository):
         """将数据库行转换为实体"""
         return AuditLog(
             id=row['id'],
-            user_id=row['user_id'],
-            user_name=row['user_name'],
-            role=row['role'],
-            action=row['action'],
-            resource=row['resource'],
-            resource_id=row['resource_id'],
-            method=row['method'],
-            params=row['params'],
-            ip_address=row['ip_address'],
-            user_agent=row['user_agent'],
-            status_code=row['status_code'],
-            response_msg=row['response_msg'],
-            created_at=row['created_at']
+            user_id=row.get('user_id'),
+            user_name=row.get('user_name'),
+            role=row.get('role'),
+            action=row.get('action', ''),
+            resource=row.get('resource', ''),
+            resource_id=row.get('resource_id'),
+            method=row.get('method'),
+            params=row.get('params'),
+            ip_address=row.get('ip_address'),
+            user_agent=row.get('user_agent'),
+            status_code=row.get('status_code'),
+            response_msg=row.get('response_msg'),
+            created_at=row.get('created_at')
         )
     
     def save(self, log: AuditLog) -> AuditLog:
         """保存审计日志"""
         with self._db.connection() as conn:
+            # 检查表是否存在
+            cursor = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='audit_logs'"
+            )
+            if not cursor.fetchone():
+                # 创建审计日志表
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS audit_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER,
+                        user_name TEXT,
+                        role TEXT,
+                        action TEXT,
+                        resource TEXT,
+                        resource_id TEXT,
+                        method TEXT,
+                        params TEXT,
+                        ip_address TEXT,
+                        user_agent TEXT,
+                        status_code INTEGER,
+                        response_msg TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+            
             cursor = conn.execute(
                 """INSERT INTO audit_logs
                     (user_id, user_name, role, action, resource, resource_id,
@@ -181,56 +206,67 @@ class SQLiteAuditLogRepository(AuditLogRepository):
                 where_clause += " AND user_id = ?"
                 params.append(user_id)
             
-            # 操作类型统计
-            cursor = conn.execute(f'''
-                SELECT action, COUNT(*) as count 
-                FROM audit_logs 
-                WHERE {where_clause}
-                GROUP BY action
-            ''', params)
-            action_stats = {row['action']: row['count'] for row in cursor.fetchall()}
-            
-            # 资源访问统计
-            cursor = conn.execute(f'''
-                SELECT resource, COUNT(*) as count 
-                FROM audit_logs 
-                WHERE {where_clause}
-                GROUP BY resource
-            ''', params)
-            resource_stats = {row['resource']: row['count'] for row in cursor.fetchall()}
-            
-            # 状态码统计
-            cursor = conn.execute(f'''
-                SELECT status_code, COUNT(*) as count 
-                FROM audit_logs 
-                WHERE {where_clause}
-                GROUP BY status_code
-            ''', params)
-            status_stats = {row['status_code']: row['count'] for row in cursor.fetchall()}
-            
-            # 活跃用户统计
-            cursor = conn.execute(f'''
-                SELECT user_name, COUNT(*) as count 
-                FROM audit_logs 
-                WHERE {where_clause} AND user_id IS NOT NULL
-                GROUP BY user_id
-                ORDER BY count DESC
-                LIMIT 10
-            ''', params)
-            top_users = [{'user_name': row['user_name'], 'count': row['count']} 
-                        for row in cursor.fetchall()]
-            
-            # 总记录数
-            cursor = conn.execute(f'''
-                SELECT COUNT(*) as count FROM audit_logs WHERE {where_clause}
-            ''', params)
-            total_count = cursor.fetchone()['count']
-            
-            return {
-                'period_days': days,
-                'total_count': total_count,
-                'action_stats': action_stats,
-                'resource_stats': resource_stats,
-                'status_stats': status_stats,
-                'top_active_users': top_users
-            }
+            try:
+                # 操作类型统计
+                cursor = conn.execute(f'''
+                    SELECT action, COUNT(*) as count 
+                    FROM audit_logs 
+                    WHERE {where_clause}
+                    GROUP BY action
+                ''', params)
+                action_stats = {row['action']: row['count'] for row in cursor.fetchall()}
+                
+                # 资源访问统计
+                cursor = conn.execute(f'''
+                    SELECT resource, COUNT(*) as count 
+                    FROM audit_logs 
+                    WHERE {where_clause}
+                    GROUP BY resource
+                ''', params)
+                resource_stats = {row['resource']: row['count'] for row in cursor.fetchall()}
+                
+                # 状态码统计
+                cursor = conn.execute(f'''
+                    SELECT status_code, COUNT(*) as count 
+                    FROM audit_logs 
+                    WHERE {where_clause}
+                    GROUP BY status_code
+                ''', params)
+                status_stats = {row['status_code']: row['count'] for row in cursor.fetchall()}
+                
+                # 活跃用户统计
+                cursor = conn.execute(f'''
+                    SELECT user_name, COUNT(*) as count 
+                    FROM audit_logs 
+                    WHERE {where_clause} AND user_id IS NOT NULL
+                    GROUP BY user_id
+                    ORDER BY count DESC
+                    LIMIT 10
+                ''', params)
+                top_users = [{'user_name': row['user_name'], 'count': row['count']} 
+                            for row in cursor.fetchall()]
+                
+                # 总记录数
+                cursor = conn.execute(f'''
+                    SELECT COUNT(*) as count FROM audit_logs WHERE {where_clause}
+                ''', params)
+                total_count = cursor.fetchone()['count']
+                
+                return {
+                    'period_days': days,
+                    'total_count': total_count,
+                    'action_stats': action_stats,
+                    'resource_stats': resource_stats,
+                    'status_stats': status_stats,
+                    'top_active_users': top_users
+                }
+            except sqlite3.Error:
+                # 如果表不存在或出错，返回空统计
+                return {
+                    'period_days': days,
+                    'total_count': 0,
+                    'action_stats': {},
+                    'resource_stats': {},
+                    'status_stats': {},
+                    'top_active_users': []
+                }

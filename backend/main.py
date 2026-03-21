@@ -3,6 +3,15 @@
 前后端完全分离，后端只提供API
 """
 import os
+
+# 根据环境变量加载对应配置
+ENV = os.getenv('ENV', 'production').lower()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if ENV == 'testing':
+    os.environ['ENV_FILE'] = os.path.join(BASE_DIR, '.env.testing')
+elif ENV == 'development':
+    os.environ['ENV_FILE'] = os.path.join(BASE_DIR, '.env.development')
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -15,11 +24,16 @@ from infrastructure.persistence.database import Database
 from infrastructure.security.rate_limiter import init_rate_limiter
 from infrastructure.cache import init_cache_client
 from infrastructure.cache.cache_warmup import warmup_cache
-from infrastructure.config import get_settings, AppConfig, AuthConfig, CacheConfig, HttpStatus
+from infrastructure.config import get_settings, init_settings, AppConfig, AuthConfig, CacheConfig, HttpStatus
 from interface.api import student_controller, user_controller, checkin_controller, class_session_controller, audit_log_controller, health_controller, cache_controller, database_controller, backup_controller
 
-# 获取应用配置
-settings = get_settings()
+# 获取应用配置（如果是测试/开发环境，加载对应配置）
+if ENV == 'testing':
+    settings = init_settings(os.path.join(BASE_DIR, '.env.testing'))
+elif ENV == 'development':
+    settings = init_settings(os.path.join(BASE_DIR, '.env.development'))
+else:
+    settings = get_settings()
 
 
 # 静态文件目录

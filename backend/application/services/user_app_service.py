@@ -72,12 +72,12 @@ class UserAppService:
         if not user:
             return None
         
-        # 检查账号状态
-        if not user.is_active():
-            raise ValueError("账号已被禁用")
-        
+        # 检查账号状态（先检查锁定，再检查是否激活）
         if user.is_locked():
             raise ValueError("账号已被锁定，请稍后再试")
+        
+        if not user.is_active():
+            raise ValueError("账号已被禁用")
         
         # 验证密码
         if not user.password.verify(password):

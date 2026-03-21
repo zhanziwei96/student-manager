@@ -191,11 +191,12 @@ class MigrationManager:
             'warnings': []
         }
         
+        # 根据实际数据库结构定义必需的表和列
         required_tables = {
-            'students': ['id', 'student_id', 'name', 'class_name', 'score', 'created_at'],
-            'users': ['id', 'username', 'password_hash', 'salt', 'name', 'role', 'status', 'created_at'],
-            'checkin_records': ['id', 'student_id', 'checkin_time'],
-            'score_logs': ['id', 'student_id', 'old_score', 'new_score', 'delta', 'created_at'],
+            'students': ['student_id', 'name', 'class_name', 'score', 'created_at'],
+            'users': ['id', 'username', 'password_hash', 'salt', 'name', 'role', 'assigned_class', 'is_active', 'created_at'],
+            'checkin_records': ['id', 'student_id', 'student_name', 'class_name', 'checkin_type', 'checkin_time'],
+            'score_logs': ['id', 'student_id', 'old_score', 'new_score', 'delta', 'reason', 'operator', 'created_at'],
         }
         
         with self.get_connection() as conn:

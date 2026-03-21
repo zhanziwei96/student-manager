@@ -3,18 +3,19 @@
 -- Phase 1: 基础防护 - 数据库改造
 -- ============================================
 
--- 1. 用户表扩展
-ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'teacher';
-ALTER TABLE users ADD COLUMN assigned_class TEXT;  -- 老师绑定的班级（逗号分隔多个班级）
-ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1;
-ALTER TABLE users ADD COLUMN last_login_ip TEXT;
-ALTER TABLE users ADD COLUMN login_fail_count INTEGER DEFAULT 0;
-ALTER TABLE users ADD COLUMN locked_until TIMESTAMP;
+-- 1. 用户表扩展（使用现有的 assigned_class 列名）
+-- 注意：如果列已存在，SQLite 会报错，请先检查
+-- ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'teacher';
+-- ALTER TABLE users ADD COLUMN assigned_class TEXT;  -- 老师绑定的班级
+-- ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1;
+-- ALTER TABLE users ADD COLUMN last_login_ip TEXT;
+-- ALTER TABLE users ADD COLUMN login_fail_count INTEGER DEFAULT 0;
+-- ALTER TABLE users ADD COLUMN locked_until TIMESTAMP;
 
 -- 2. 为现有用户设置默认角色
--- admin 用户设置为 admin 角色，其他设置为 teacher
-UPDATE users SET role = 'admin' WHERE is_admin = 1;
-UPDATE users SET role = 'teacher' WHERE is_admin = 0 OR is_admin IS NULL;
+-- 设置 username='admin' 的用户为 admin 角色
+UPDATE users SET role = 'admin' WHERE username = 'admin';
+UPDATE users SET role = 'teacher' WHERE role IS NULL OR role = '';
 
 -- 3. 权限审计日志表
 CREATE TABLE IF NOT EXISTS audit_logs (

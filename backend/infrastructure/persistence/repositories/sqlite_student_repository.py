@@ -19,11 +19,11 @@ class SQLiteStudentRepository(StudentRepository):
     def _row_to_entity(self, row: sqlite3.Row) -> Student:
         """将数据行转换为领域实体"""
         return Student(
-            id=None,  # 学生表没有自增ID，使用student_id作为主键
+            id=None,  # 学生表使用 student_id 作为主键，没有自增ID
             student_id=StudentId(row['student_id']),
             name=row['name'],
-            class_name=row['class_name'],
-            score=Score(row['score']),
+            class_name=row['class_name'] or '未分班',
+            score=Score(float(row['score']) if row['score'] is not None else 70.0),
             created_at=row['created_at']
         )
     
@@ -48,7 +48,8 @@ class SQLiteStudentRepository(StudentRepository):
     def find_all(self) -> List[Student]:
         with self.db.connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM students ORDER BY created_at DESC")
+            # 按 created_at 降序，相同时间按 student_id 升序确保稳定排序
+            cursor.execute("SELECT * FROM students ORDER BY created_at DESC, student_id ASC")
             rows = cursor.fetchall()
             
             return [self._row_to_entity(row) for row in rows]
@@ -76,33 +77,40 @@ class SQLiteStudentRepository(StudentRepository):
             return [self._row_to_entity(row) for row in rows]
     
     def save(self, student: Student) -> None:
+        from datetime import datetime
+        
         with self.db.connection() as conn:
             cursor = conn.cursor()
             
-            if student.id:
+            # 检查是否已存在
+            cursor.execute("SELECT 1 FROM students WHERE student_id = ?", (str(student.student_id),))
+            exists = cursor.fetchone() is not None
+            
+            if exists:
                 # 更新
                 cursor.execute('''
                     UPDATE students 
                     SET name = ?, class_name = ?, score = ?
-                    WHERE id = ?
+                    WHERE student_id = ?
                 ''', (
                     student.name,
                     student.class_name,
                     float(student.score),
-                    student.id
+                    str(student.student_id)
                 ))
             else:
-                # 新增
+                # 新增 - 使用微秒级时间戳确保排序稳定
+                created_at = datetime.now().isoformat(timespec='microseconds')
                 cursor.execute('''
-                    INSERT INTO students (student_id, name, class_name, score)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO students (student_id, name, class_name, score, created_at)
+                    VALUES (?, ?, ?, ?, ?)
                 ''', (
                     str(student.student_id),
                     student.name,
                     student.class_name,
-                    float(student.score)
+                    float(student.score),
+                    created_at
                 ))
-                student.id = cursor.lastrowid
     
     def delete(self, student_id: StudentId) -> None:
         with self.db.connection() as conn:

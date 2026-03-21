@@ -7,7 +7,13 @@
     
     settings = get_settings()
     redis_url = settings.redis.url
+
+测试环境：
+    export ENV=testing  # 自动加载 backend/.env.testing
+    或
+    export ENV_FILE=/path/to/.env.custom  # 加载指定配置
 """
+import os
 from infrastructure.config.settings import (
     # Settings 配置类
     AppSettings,
@@ -35,6 +41,7 @@ from infrastructure.config.settings import (
     get_settings,
     reload_settings,
     init_settings,
+    get_test_settings,
     get_db_settings,
     get_redis_settings,
     get_cache_settings,
@@ -70,6 +77,7 @@ __all__ = [
     'get_settings',
     'reload_settings',
     'init_settings',
+    'get_test_settings',
     'get_db_settings',
     'get_redis_settings',
     'get_cache_settings',

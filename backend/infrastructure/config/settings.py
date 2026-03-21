@@ -125,6 +125,9 @@ class RateLimitSettings(BaseSettings):
     # 是否启用限流
     enabled: bool = Field(default=True, description="是否启用限流")
     
+    # 限流倍数因子（测试时可设置为更大值如 10 或 100）
+    multiplier: int = Field(default=1, description="限流倍数因子，用于测试环境放宽限制")
+    
     # 各接口限流配置（次数/窗口秒数）
     login_max_requests: int = Field(default=5, description="登录接口限流次数")
     login_window_seconds: int = Field(default=60, description="登录接口限流窗口")
@@ -205,15 +208,42 @@ class ScoreSettings(BaseSettings):
     late_penalty: float = Field(default=-0.2, description="迟到惩罚分数")
 
 
+def _get_env_file_path() -> str:
+    """获取环境配置文件路径"""
+    # 如果设置了 ENV_FILE，直接使用
+    env_file = os.getenv('ENV_FILE')
+    if env_file:
+        return env_file
+    # 否则根据 ENV 环境变量选择
+    env = os.getenv('ENV', 'production').lower()
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if env == 'testing':
+        return os.path.join(base_dir, '.env.testing')
+    elif env == 'development':
+        return os.path.join(base_dir, '.env.development')
+    return '.env'
+
+
 class AppSettings(BaseSettings):
     """
     应用主配置类
     聚合所有子配置
+    
+    根据环境自动加载对应的配置文件:
+    - export ENV=testing  -> 加载 .env.testing
+    - export ENV=development -> 加载 .env.development
+    - 默认 -> 加载 .env
+    
+    或者通过 ENV_FILE 指定配置文件:
+    - export ENV_FILE=/path/to/.env.custom
     """
+    # 动态选择配置文件（使用工厂函数）
+    # 使用 '__' 作为嵌套配置的分隔符，如 DATABASE__PATH 映射到 database.path
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_get_env_file_path(),
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
+        env_nested_delimiter='__'
     )
     
     # 应用基础配置
@@ -309,8 +339,10 @@ class CacheConfig:
 
 
 class RateLimitConfig:
-    """限流配置"""
+    """限流配置 - 注意：在模块导入时初始化，如需动态配置请直接使用 get_settings().rate_limit"""
     _settings = RateLimitSettings()
+    ENABLED = _settings.enabled
+    MULTIPLIER = _settings.multiplier
     LOGIN_MAX_REQUESTS = _settings.login_max_requests
     LOGIN_WINDOW_SECONDS = _settings.login_window_seconds
     CHECKIN_MAX_REQUESTS = _settings.checkin_max_requests
@@ -396,6 +428,29 @@ def init_settings(env_file: Optional[str] = None) -> AppSettings:
         _settings = AppSettings(_env_file=env_file)
     else:
         _settings = AppSettings()
+    return _settings
+
+
+def get_test_settings() -> AppSettings:
+    """获取测试环境配置
+    
+    自动加载 backend/.env.testing 配置文件
+    包含测试优化的配置：
+    - 使用测试数据库
+    - 放宽限流限制
+    - 启用调试模式
+    """
+    global _settings
+    if _settings is None:
+        # 获取 backend 目录下的 .env.testing
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        test_env_file = os.path.join(base_dir, '.env.testing')
+        
+        if os.path.exists(test_env_file):
+            _settings = AppSettings(_env_file=test_env_file)
+        else:
+            # 如果测试配置文件不存在，使用默认配置
+            _settings = AppSettings()
     return _settings
 
 

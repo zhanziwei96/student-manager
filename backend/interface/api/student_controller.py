@@ -275,8 +275,7 @@ async def get_stats(
     request: Request,
     nocache: bool = Query(False, description="跳过缓存")
 ):
-    """获取统计数据"""
-    require_login(request)
+    """获取统计数据（公开接口，无需登录）"""
     
     # 尝试从缓存获取
     cache = get_cache_client()

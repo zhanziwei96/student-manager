@@ -8,7 +8,7 @@ from pyrate_limiter import Limiter as PyRateLimiter, Rate
 import redis.asyncio as redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 from infrastructure.logging import logger
-from infrastructure.config import get_settings, RateLimitConfig, RATE_LIMITS
+from infrastructure.config import get_settings
 
 # 全局限流器实例
 _limiter_instance = None
@@ -89,13 +89,15 @@ def rate_limit(limit_name: str = 'default'):
     Returns:
         RateLimiter依赖
     """
-    # 使用配置常量
+    # 动态获取配置，并应用倍数因子（测试时可设置更大值）
+    settings = get_settings().rate_limit
+    multiplier = settings.multiplier
     config_map = {
-        'login': (RateLimitConfig.LOGIN_MAX_REQUESTS, RateLimitConfig.LOGIN_WINDOW_SECONDS),
-        'checkin': (RateLimitConfig.CHECKIN_MAX_REQUESTS, RateLimitConfig.CHECKIN_WINDOW_SECONDS),
-        'score_change': (RateLimitConfig.SCORE_CHANGE_MAX_REQUESTS, RateLimitConfig.SCORE_CHANGE_WINDOW_SECONDS),
-        'user_search': (RateLimitConfig.USER_SEARCH_MAX_REQUESTS, RateLimitConfig.USER_SEARCH_WINDOW_SECONDS),
-        'default': (RateLimitConfig.DEFAULT_MAX_REQUESTS, RateLimitConfig.DEFAULT_WINDOW_SECONDS),
+        'login': (settings.login_max_requests * multiplier, settings.login_window_seconds),
+        'checkin': (settings.checkin_max_requests * multiplier, settings.checkin_window_seconds),
+        'score_change': (settings.score_change_max_requests * multiplier, settings.score_change_window_seconds),
+        'user_search': (settings.user_search_max_requests * multiplier, settings.user_search_window_seconds),
+        'default': (settings.default_max_requests * multiplier, settings.default_window_seconds),
     }
     times, seconds = config_map.get(limit_name, config_map['default'])
     

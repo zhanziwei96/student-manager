@@ -93,33 +93,25 @@ RECOMMENDED_INDEXES: List[IndexDefinition] = [
     ),
     # 活跃状态查询
     IndexDefinition(
-        name="idx_users_is_active",
+        name="idx_users_status",
         table="users",
-        columns=["is_active"],
-        index_type=IndexType.SINGLE,
-        where_clause=None
-    ),
-    # 管理员状态查询
-    IndexDefinition(
-        name="idx_users_is_admin",
-        table="users",
-        columns=["is_admin"],
+        columns=["status"],
         index_type=IndexType.SINGLE,
         where_clause=None
     ),
     # 登录时间索引（清理过期会话）
     IndexDefinition(
-        name="idx_users_last_login",
+        name="idx_users_last_login_at",
         table="users",
-        columns=["last_login DESC"],
+        columns=["last_login_at DESC"],
         index_type=IndexType.SINGLE,
         where_clause=None
     ),
     # 复合索引：角色+活跃状态
     IndexDefinition(
-        name="idx_users_role_active",
+        name="idx_users_role_status",
         table="users",
-        columns=["role", "is_active"],
+        columns=["role", "status"],
         index_type=IndexType.COMPOSITE,
         where_clause=None
     ),

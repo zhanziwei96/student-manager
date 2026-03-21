@@ -22,12 +22,12 @@ class SQLiteScoreLogRepository:
         return ScoreLog(
             id=row['id'],
             student_id=row['student_id'],
-            student_name=row['student_name'],
-            class_name=row['class_name'],
-            delta=row['delta'],
-            reason=row['reason'],
-            operator_id=row.get('operator_id'),
-            operator_name=row.get('operator_name', '系统'),
+            student_name='',  # 数据库中没有此列，从应用层填充
+            class_name='',     # 数据库中没有此列，从应用层填充
+            delta=row['delta'] if row['delta'] is not None else 0.0,
+            reason=row['reason'] or '',
+            operator_id=None,  # 数据库中没有此列
+            operator_name=row['operator'] or '系统',
             created_at=row['created_at']
         )
     
@@ -36,12 +36,10 @@ class SQLiteScoreLogRepository:
         with self._db.connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO score_logs
-                    (student_id, student_name, class_name, delta, reason,
-                     operator_id, operator_name, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (student_id, old_score, new_score, delta, reason, operator, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    log.student_id, log.student_name, log.class_name,
-                    log.delta, log.reason, log.operator_id,
+                    log.student_id, None, None, log.delta, log.reason,
                     log.operator_name, log.created_at
                 )
             )
@@ -79,10 +77,6 @@ class SQLiteScoreLogRepository:
         if student_id:
             query += " AND student_id = ?"
             params.append(student_id)
-        
-        if class_name:
-            query += " AND class_name = ?"
-            params.append(class_name)
         
         if start_date:
             query += " AND date(created_at) >= ?"

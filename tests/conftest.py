@@ -1,3 +1,11 @@
+import sys
+import os
+
+# 添加 backend 到 Python 路径（必须在任何其他导入之前）
+backend_path = "/home/yufeng/student-manager/backend"
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
 """
 Pytest 全局配置和 Fixtures
 """
@@ -5,9 +13,138 @@ import pytest
 import requests
 import redis
 import sqlite3
-import os
 from typing import Optional, Generator
 from contextlib import contextmanager
+
+# ========== Infrastructure 层 Fixtures ==========
+
+class MockDatabase:
+    """模拟 Database 类，使用共享的 SQLite 连接
+    
+    SQLite :memory: 数据库每个连接都是独立的，
+    这个类包装一个共享连接，让 Repository 可以正常使用。
+    """
+    
+    def __init__(self, connection):
+        self._conn = connection
+    
+    def connection(self):
+        """返回一个上下文管理器，yield 共享连接"""
+        class SharedConnection:
+            def __init__(self, conn):
+                self._conn = conn
+            def __enter__(self):
+                return self._conn
+            def __exit__(self, *args):
+                pass  # 不关闭共享连接
+        return SharedConnection(self._conn)
+    
+    def transaction(self):
+        """事务上下文管理器"""
+        class SharedTransaction:
+            def __init__(self, conn):
+                self._conn = conn
+            def __enter__(self):
+                return self._conn
+            def __exit__(self, exc_type, *args):
+                if exc_type is None:
+                    self._conn.commit()
+                else:
+                    self._conn.rollback()
+        return SharedTransaction(self._conn)
+
+
+@pytest.fixture
+def db():
+    """内存数据库 fixture（用于单元测试）"""
+    import sqlite3
+    
+    # 创建一个共享连接用于内存数据库
+    shared_conn = sqlite3.connect(":memory:")
+    shared_conn.row_factory = sqlite3.Row
+    
+    # 创建表
+    cursor = shared_conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS students (
+            student_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            class_name TEXT DEFAULT '未分班',
+            score REAL DEFAULT 70.0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            salt TEXT NOT NULL,
+            name TEXT,
+            role TEXT DEFAULT 'teacher',
+            assigned_class TEXT,
+            is_active INTEGER DEFAULT 1,
+            login_fail_count INTEGER DEFAULT 0,
+            locked_until TIMESTAMP,
+            last_login_ip TEXT,
+            last_login TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS checkin_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id TEXT NOT NULL,
+            student_name TEXT,
+            class_name TEXT,
+            checkin_type TEXT DEFAULT 'self',
+            checkin_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS score_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id TEXT NOT NULL,
+            old_score REAL,
+            new_score REAL,
+            delta REAL,
+            reason TEXT,
+            operator TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    shared_conn.commit()
+    
+    return MockDatabase(shared_conn)
+
+
+@pytest.fixture
+def student_repo(db):
+    """学生仓储 fixture"""
+    from infrastructure.persistence.repositories.sqlite_student_repository import SQLiteStudentRepository
+    return SQLiteStudentRepository(db)
+
+
+@pytest.fixture
+def user_repo(db):
+    """用户仓储 fixture"""
+    from infrastructure.persistence.repositories.sqlite_user_repository import SQLiteUserRepository
+    return SQLiteUserRepository(db)
+
+
+@pytest.fixture
+def checkin_repo(db):
+    """签到仓储 fixture"""
+    from infrastructure.persistence.repositories.sqlite_checkin_repository import SQLiteCheckinRepository
+    return SQLiteCheckinRepository(db)
+
+
+@pytest.fixture
+def score_log_repo(db):
+    """分数日志仓储 fixture"""
+    from infrastructure.persistence.repositories.sqlite_score_log_repository import SQLiteScoreLogRepository
+    return SQLiteScoreLogRepository(db)
+
 
 # 服务配置
 BASE_URL = "http://localhost:8000"
@@ -43,6 +180,7 @@ class ServiceChecker:
         """检查后端服务是否可用"""
         if cls._backend_available is None:
             try:
+                import requests
                 response = requests.get(f"{BASE_URL}/health", timeout=2)
                 cls._backend_available = response.status_code == 200
             except Exception:
@@ -54,6 +192,7 @@ class ServiceChecker:
         """检查前端服务是否可用"""
         if cls._frontend_available is None:
             try:
+                import requests
                 response = requests.get(FRONTEND_URL, timeout=2)
                 cls._frontend_available = response.status_code == 200
             except Exception:
@@ -65,272 +204,13 @@ class ServiceChecker:
         """检查 Redis 是否可用"""
         if cls._redis_available is None:
             try:
+                import redis
                 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, socket_connect_timeout=2)
                 r.ping()
                 cls._redis_available = True
             except Exception:
                 cls._redis_available = False
         return cls._redis_available
-
-
-class TestDataManager:
-    """测试数据管理器"""
-    
-    def __init__(self):
-        self.db_path = DB_PATH
-        self.created_students = []
-        self.created_users = []
-        self.created_checkins = []
-    
-    def setup_test_data(self) -> dict:
-        """
-        初始化测试数据
-        返回创建的数据信息
-        """
-        print("\n[测试数据] 开始初始化...")
-        
-        # 1. 创建测试用户（通过API）
-        self._create_test_users()
-        
-        # 2. 创建测试学生（直接操作数据库，绕过认证）
-        self._create_test_students()
-        
-        print("[测试数据] 初始化完成")
-        return {
-            "users": TEST_DATA["users"],
-            "students": TEST_DATA["students"],
-            "class_name": TEST_DATA["class_name"]
-        }
-    
-    def _create_test_users(self):
-        """创建测试用户"""
-        # 先尝试登录，如果不存在则通过管理员创建
-        session = requests.Session()
-        
-        # 尝试用 admin 登录来创建测试用户
-        try:
-            login_resp = session.post(
-                f"{BASE_URL}/api/login",
-                json={"username": "admin", "password": "admin123"},
-                timeout=5
-            )
-            
-            if login_resp.status_code == 200:
-                # 创建测试用户
-                for user in TEST_DATA["users"]:
-                    try:
-                        resp = session.post(
-                            f"{BASE_URL}/api/admin/users",
-                            json=user,
-                            timeout=5
-                        )
-                        if resp.status_code in [200, 201]:
-                            self.created_users.append(user["username"])
-                            print(f"  ✓ 创建用户: {user['username']}")
-                        elif resp.status_code == 400 and "已存在" in resp.text:
-                            print(f"  ⊘ 用户已存在: {user['username']}")
-                            self.created_users.append(user["username"])
-                    except Exception as e:
-                        print(f"  ✗ 创建用户失败 {user['username']}: {e}")
-        except Exception as e:
-            print(f"  ⚠ 无法登录admin创建测试用户: {e}")
-    
-    def _create_test_students(self):
-        """直接操作数据库创建测试学生"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            for student in TEST_DATA["students"]:
-                try:
-                    cursor.execute(
-                        """
-                        INSERT OR IGNORE INTO students (student_id, name, class_name, score, created_at)
-                        VALUES (?, ?, ?, ?, datetime('now'))
-                        """,
-                        (student["student_id"], student["name"], 
-                         student["class_name"], student["score"])
-                    )
-                    if cursor.rowcount > 0:
-                        self.created_students.append(student["student_id"])
-                        print(f"  ✓ 创建学生: {student['name']} ({student['student_id']})")
-                    else:
-                        print(f"  ⊘ 学生已存在: {student['name']} ({student['student_id']})")
-                        self.created_students.append(student["student_id"])
-                except Exception as e:
-                    print(f"  ✗ 创建学生失败 {student['student_id']}: {e}")
-            
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"  ⚠ 数据库操作失败: {e}")
-    
-    def cleanup_test_data(self):
-        """清理测试数据"""
-        print("\n[测试数据] 开始清理...")
-        
-        # 1. 删除测试学生
-        self._delete_test_students()
-        
-        # 2. 删除测试用户
-        self._delete_test_users()
-        
-        # 3. 删除测试签到记录
-        self._delete_test_checkins()
-        
-        # 4. 清理 Redis 缓存
-        self._clear_redis_cache()
-        
-        print("[测试数据] 清理完成")
-    
-    def _delete_test_students(self):
-        """删除测试学生"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            for student_id in self.created_students:
-                cursor.execute(
-                    "DELETE FROM students WHERE student_id = ?",
-                    (student_id,)
-                )
-                if cursor.rowcount > 0:
-                    print(f"  ✓ 删除学生: {student_id}")
-            
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"  ⚠ 删除学生失败: {e}")
-    
-    def _delete_test_users(self):
-        """删除测试用户"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            for username in self.created_users:
-                cursor.execute(
-                    "DELETE FROM users WHERE username = ?",
-                    (username,)
-                )
-                if cursor.rowcount > 0:
-                    print(f"  ✓ 删除用户: {username}")
-            
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"  ⚠ 删除用户失败: {e}")
-    
-    def _delete_test_checkins(self):
-        """删除测试签到记录"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # 删除测试学生的签到记录
-            for student_id in TEST_DATA["students"]:
-                cursor.execute(
-                    "DELETE FROM checkin_records WHERE student_id = ?",
-                    (student_id["student_id"],)
-                )
-            
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"  ⚠ 删除签到记录失败: {e}")
-    
-    def _clear_redis_cache(self):
-        """清理 Redis 缓存"""
-        try:
-            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-            # 删除与测试相关的缓存
-            for key in r.scan_iter(match="*test*"):
-                r.delete(key)
-            for key in r.scan_iter(match="*TEST*"):
-                r.delete(key)
-            print("  ✓ 清理 Redis 测试缓存")
-        except Exception as e:
-            print(f"  ⚠ 清理 Redis 缓存失败: {e}")
-
-
-@pytest.fixture(scope="session")
-def base_url() -> str:
-    """后端基础 URL"""
-    return BASE_URL
-
-
-@pytest.fixture(scope="session")
-def frontend_url() -> str:
-    """前端基础 URL"""
-    return FRONTEND_URL
-
-
-@pytest.fixture(scope="session")
-def api_client():
-    """API 客户端（带 Session）"""
-    session = requests.Session()
-    session.headers.update({
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    })
-    return session
-
-
-@pytest.fixture(scope="session")
-def test_data_manager():
-    """测试数据管理器"""
-    return TestDataManager()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_and_teardown_test_data():
-    """
-    自动初始化和清理测试数据
-    在整个测试会话开始前初始化，结束后清理
-    """
-    manager = TestDataManager()
-    
-    # 检查服务是否可用
-    if not ServiceChecker.is_backend_available():
-        print("\n⚠️ 后端服务未运行，跳过测试数据初始化")
-        yield None
-        return
-    
-    # 初始化测试数据
-    manager.setup_test_data()
-    
-    yield manager
-    
-    # 清理测试数据
-    manager.cleanup_test_data()
-
-
-@pytest.fixture(scope="function")
-def authenticated_client(api_client):
-    """已认证的 API 客户端（使用测试账号）"""
-    try:
-        # 使用测试管理员账号登录
-        response = api_client.post(
-            f"{BASE_URL}/api/login",
-            json={"username": "test_admin", "password": "test123"},
-            timeout=5
-        )
-        
-        if response.status_code == 200:
-            return api_client
-        else:
-            # 尝试用默认 admin 登录
-            response = api_client.post(
-                f"{BASE_URL}/api/login",
-                json={"username": "admin", "password": "admin123"},
-                timeout=5
-            )
-            if response.status_code == 200:
-                return api_client
-    except Exception:
-        pass
-    
-    pytest.skip("无法登录，跳过需要认证的测试")
 
 
 # pytest 标记
@@ -359,30 +239,3 @@ redis_required = pytest.mark.skipif(
     not ServiceChecker.is_redis_available(),
     reason="Redis 未运行，跳过测试"
 )
-
-
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """测试结束后打印汇总报告"""
-    terminalreporter.write_sep("=", "冒烟测试汇总")
-    
-    passed = len(terminalreporter.stats.get("passed", []))
-    failed = len(terminalreporter.stats.get("failed", []))
-    skipped = len(terminalreporter.stats.get("skipped", []))
-    total = passed + failed + skipped
-    
-    terminalreporter.write_line(f"\n总测试数: {total}")
-    terminalreporter.write_line(f"通过: {passed} ✓")
-    terminalreporter.write_line(f"失败: {failed} ✗")
-    terminalreporter.write_line(f"跳过: {skipped} ⊘")
-    
-    if failed == 0 and passed > 0:
-        terminalreporter.write_line("\n🎉 所有冒烟测试通过！核心流程正常。")
-    elif failed > 0:
-        terminalreporter.write_line("\n⚠️  部分测试失败，请检查服务状态。")
-        terminalreporter.write_line("\n排查建议:")
-        terminalreporter.write_line("1. 检查后端: curl http://localhost:8000/health")
-        terminalreporter.write_line("2. 检查前端: curl http://localhost:3000")
-        terminalreporter.write_line("3. 检查 Redis: redis-cli ping")
-        terminalreporter.write_line("4. 查看日志: tail -f backend/backend.log")
-    else:
-        terminalreporter.write_line("\n⚠️  所有测试都被跳过，请确保服务已启动。")

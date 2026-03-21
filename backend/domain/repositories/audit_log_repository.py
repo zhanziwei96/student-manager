@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 
 from domain.entities.audit_log import AuditLog
-from infrastructure.config import PaginationConfig
+# Domain 层硬编码默认值（不依赖 Infrastructure 层）
+DEFAULT_MAX_AUDIT_LOGS = 100
 
 
 class AuditLogRepository(ABC):
@@ -34,7 +35,7 @@ class AuditLogRepository(ABC):
         ip_address: Optional[str] = None,
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
-        limit: int = PaginationConfig.MAX_AUDIT_LOGS,
+        limit: int = DEFAULT_MAX_AUDIT_LOGS,
         offset: int = 0
     ) -> List[AuditLog]:
         """

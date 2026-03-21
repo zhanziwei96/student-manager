@@ -18,38 +18,52 @@ class SQLiteUserRepository(UserRepository):
     
     def _row_to_entity(self, row: sqlite3.Row) -> User:
         """将数据行转换为领域实体"""
-        # 解析绑定的班级（JSON数组存储）
+        from datetime import datetime
+        
+        # 解析绑定的班级
         assigned_classes = []
-        assigned_class_value = row['assigned_class'] if 'assigned_class' in row.keys() else None
+        assigned_class_value = row['assigned_class']
         if assigned_class_value:
             try:
                 assigned_classes = json.loads(assigned_class_value)
             except:
-                assigned_classes = assigned_class_value.split(',') if assigned_class_value else []
+                assigned_classes = [c.strip() for c in assigned_class_value.split(',') if c.strip()]
         
-        # 状态字段兼容性处理
-        is_active = row['is_active'] if 'is_active' in row.keys() else 1
-        status_value = 'active' if is_active == 1 else 'inactive'
+        # 时间字段转换（字符串 -> datetime）
+        def parse_datetime(value):
+            if value:
+                try:
+                    return datetime.fromisoformat(str(value).replace('Z', '+00:00').replace('+00:00', ''))
+                except:
+                    return None
+            return None
         
-        # 角色字段
-        role_value = row['role'] if 'role' in row.keys() else 'teacher'
+        locked_until = parse_datetime(row['locked_until'])
+        last_login_at = parse_datetime(row['last_login'])
+        created_at = parse_datetime(row['created_at'])
+        
+        # 状态字段处理
+        if locked_until and locked_until > datetime.now():
+            status = UserStatus.LOCKED
+        else:
+            status = UserStatus.ACTIVE if row['is_active'] else UserStatus.INACTIVE
         
         return User(
             id=row['id'],
             username=row['username'],
-            name=row['name'],
+            name=row['name'] or row['username'],
             password=Password(
                 hash_value=row['password_hash'],
                 salt=row['salt']
             ),
-            role=UserRole(role_value),
+            role=UserRole(row['role'] or 'teacher'),
             assigned_classes=assigned_classes,
-            status=UserStatus(status_value),
-            login_fail_count=row['login_fail_count'] if 'login_fail_count' in row.keys() else 0,
-            locked_until=row['locked_until'] if 'locked_until' in row.keys() else None,
-            last_login_ip=row['last_login_ip'] if 'last_login_ip' in row.keys() else None,
-            last_login_at=row['last_login'] if 'last_login' in row.keys() else None,
-            created_at=row['created_at']
+            status=status,
+            login_fail_count=row['login_fail_count'] or 0,
+            locked_until=locked_until,
+            last_login_ip=row['last_login_ip'],
+            last_login_at=last_login_at,
+            created_at=created_at
         )
     
     def find_by_id(self, user_id: int) -> Optional[User]:
@@ -85,7 +99,7 @@ class SQLiteUserRepository(UserRepository):
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM users WHERE assigned_class LIKE ?",
-                (f'%"{class_name}"%',)
+                (f'%{class_name}%',)
             )
             rows = cursor.fetchall()
             
@@ -95,11 +109,11 @@ class SQLiteUserRepository(UserRepository):
         with self.db.connection() as conn:
             cursor = conn.cursor()
             
-            # 将班级列表转换为JSON字符串
-            assigned_class_str = json.dumps(user.assigned_classes) if user.assigned_classes else ''
+            # 将班级列表转换为逗号分隔字符串
+            assigned_class_str = ','.join(user.assigned_classes) if user.assigned_classes else None
             
-            # 状态转换为整数
-            is_active = 1 if user.status.value == 'active' else 0
+            # 状态值转换为整数
+            is_active = 1 if user.status == UserStatus.ACTIVE else 0
             
             if user.id:
                 # 更新
@@ -124,11 +138,12 @@ class SQLiteUserRepository(UserRepository):
                     user.id
                 ))
             else:
-                # 新增
+                # 新增 - 保存所有字段
                 cursor.execute('''
                     INSERT INTO users 
-                    (username, password_hash, salt, name, role, assigned_class, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (username, password_hash, salt, name, role, assigned_class, is_active,
+                     login_fail_count, locked_until, last_login_ip, last_login)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     user.username,
                     user.password.hash_value,
@@ -136,7 +151,11 @@ class SQLiteUserRepository(UserRepository):
                     user.name,
                     user.role.value,
                     assigned_class_str,
-                    is_active
+                    is_active,
+                    user.login_fail_count,
+                    user.locked_until,
+                    user.last_login_ip,
+                    user.last_login_at
                 ))
                 user.id = cursor.lastrowid
     
