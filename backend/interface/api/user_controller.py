@@ -226,7 +226,16 @@ async def login(
             raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
             
     except ValueError as e:
-        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail=str(e))
+        error_msg = str(e)
+        # 密码错误返回 401（认证失败），账号禁用/锁定返回 403（禁止访问）
+        if "密码错误" in error_msg:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=HttpStatus.UNAUTHORIZED,
+                content={'success': False, 'message': error_msg}
+            )
+        else:
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail=error_msg)
 
 
 @router.post("/logout", response_model=dict)
