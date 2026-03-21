@@ -39,12 +39,28 @@ class CacheMiddleware(BaseHTTPMiddleware):
         self.ttl = ttl
         self.enabled = enabled
         self.exclude_paths = exclude_paths or [
+            # 健康检查端点（不需要缓存）
             '/health',
             '/ready',
             '/live',
             '/api/health',
             '/api/ready',
             '/api/live',
+            # 敏感数据接口（需要认证，不应缓存）
+            '/api/students',           # 学生列表（敏感）
+            '/api/stats',              # 统计数据（敏感）
+            '/api/me',                 # 当前用户信息（敏感）
+            '/api/admin',              # 管理员接口（敏感）
+            '/api/logs',               # 审计日志（敏感）
+            '/api/backup',             # 备份管理（敏感）
+            '/api/database',           # 数据库管理（敏感）
+            '/api/cache',              # 缓存管理（敏感）
+            '/api/checkin/records',    # 签到记录（敏感）
+            '/api/checkin/stats',      # 签到统计（敏感）
+            '/api/checkin/today',      # 今日签到（敏感）
+            '/api/score/logs',         # 分数日志（敏感）
+            '/api/class-session',      # 课堂会话（实时数据，不缓存）
+            '/api/class-session/students',  # 课堂学生列表（实时数据）
         ]
         self.exclude_params = exclude_params or ['nocache', 'refresh']
         self.cache_status_codes = cache_status_codes or [200]
