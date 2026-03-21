@@ -1042,10 +1042,10 @@ onMounted(() => {
 /* 图标按钮样式 */
 .action-buttons {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: center;
   justify-content: center;
-  padding: 0 8px;
+  padding: 0 12px;
 }
 
 .icon-btn {
