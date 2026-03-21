@@ -51,7 +51,7 @@ async def init_rate_limiter(redis_url: str = None):
         _limiter_instance = None
 
 
-def _default_identifier(request: Request):
+async def _default_identifier(request: Request):
     """默认标识符 - 使用IP地址"""
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:

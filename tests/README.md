@@ -26,9 +26,6 @@ tests/
 cd /home/yufeng/student-manage-v3-security/student-manager
 
 # 安装测试依赖
-pip install pytest pytest-asyncio requests redis
-
-# 或使用 requirements 文件（后续创建）
 pip install -r tests/requirements-test.txt
 ```
 
@@ -45,7 +42,27 @@ curl http://localhost:3000
 redis-cli ping
 ```
 
-### 3. 运行冒烟测试
+### 3. 初始化测试数据（可选）
+
+测试框架会自动管理测试数据，但也可以手动控制：
+
+```bash
+# 初始化测试数据
+python tests/test_data_manager.py setup
+
+# 清理测试数据
+python tests/test_data_manager.py cleanup
+
+# 重置测试数据（清理+初始化）
+python tests/test_data_manager.py reset
+```
+
+**测试数据包含**：
+- 测试用户：`test_admin` (管理员), `test_teacher` (教师)
+- 测试学生：`TEST001`, `TEST002`, `TEST003`
+- 测试班级：`测试1班`, `测试2班`
+
+### 4. 运行冒烟测试
 
 ```bash
 # 运行所有冒烟测试
@@ -133,6 +150,41 @@ python -m pytest tests/smoke/ -v -m redis
 ```
 ========================== 9 skipped ==========================
 ⚠️  所有测试都被跳过，请确保服务已启动。
+```
+
+---
+
+## 测试数据管理
+
+### 自动管理
+测试框架会在测试会话开始前自动初始化测试数据，结束后自动清理。
+
+### 手动管理
+```bash
+# 初始化测试数据
+python tests/test_data_manager.py setup
+
+# 清理测试数据
+python tests/test_data_manager.py cleanup
+
+# 重置测试数据
+python tests/test_data_manager.py reset
+```
+
+### 测试数据结构
+```python
+TEST_DATA = {
+    "users": [
+        {"username": "test_admin", "password": "test123", "name": "测试管理员", "role": "admin"},
+        {"username": "test_teacher", "password": "test123", "name": "测试教师", "role": "teacher"},
+    ],
+    "students": [
+        {"student_id": "TEST001", "name": "测试学生1", "class_name": "测试1班", "score": 80},
+        {"student_id": "TEST002", "name": "测试学生2", "class_name": "测试1班", "score": 85},
+        {"student_id": "TEST003", "name": "测试学生3", "class_name": "测试2班", "score": 90},
+    ],
+    "class_name": "测试1班"
+}
 ```
 
 ---
