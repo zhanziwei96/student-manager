@@ -60,68 +60,73 @@
           <p>登录您的管理账户</p>
         </div>
 
-        <form @submit.prevent="handleLogin" class="form-body">
-          <div class="input-group" :class="{ focused: focused === 'username' }">
-            <label>用户名</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              <input
-                v-model="form.username"
-                type="text"
-                placeholder="请输入用户名"
-                @focus="focused = 'username'"
-                @blur="focused = null"
-                ref="usernameInput"
-              />
-            </div>
-          </div>
+        <n-form @submit.prevent="handleLogin" class="form-body" :show-label="false">
+          <n-form-item>
+            <n-input
+              v-model:value="form.username"
+              placeholder="请输入用户名"
+              size="large"
+              :input-props="{ ref: (el) => { if(el) usernameInput = el } }"
+            >
+              <template #prefix>
+                <n-icon size="20" color="#818cf8">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </n-icon>
+              </template>
+            </n-input>
+          </n-form-item>
 
-          <div class="input-group" :class="{ focused: focused === 'password' }">
-            <label>密码</label>
-            <div class="input-wrapper">
-              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <input
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="请输入密码"
-                @focus="focused = 'password'"
-                @blur="focused = null"
-              />
-              <button type="button" class="toggle-btn" @click="showPassword = !showPassword">
-                <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </svg>
-              </button>
-            </div>
-          </div>
+          <n-form-item>
+            <n-input
+              v-model:value="form.password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="请输入密码"
+              size="large"
+              show-password-on="click"
+            >
+              <template #prefix>
+                <n-icon size="20" color="#818cf8">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </n-icon>
+              </template>
+              <template #suffix>
+                <n-button text type="default" @click="showPassword = !showPassword" style="padding: 0;">
+                  <n-icon size="18" color="#64748b">
+                    <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  </n-icon>
+                </n-button>
+              </template>
+            </n-input>
+          </n-form-item>
 
           <div class="form-options">
-            <label class="remember">
-              <input type="checkbox" v-model="rememberMe" />
-              <span class="checkmark"></span>
-              <span class="label-text">记住我</span>
-            </label>
+            <n-checkbox v-model:checked="rememberMe">记住我</n-checkbox>
           </div>
 
-          <button type="submit" class="submit-btn" :disabled="loading">
-            <span class="btn-text" v-if="!loading">登录</span>
-            <span class="btn-loader" v-else></span>
-            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </button>
-        </form>
+          <n-button
+            type="primary"
+            size="large"
+            block
+            :loading="loading"
+            @click="handleLogin"
+            style="margin-top: 8px;"
+          >
+            登录
+          </n-button>
+        </n-form>
 
         <div class="form-footer">
           <p>默认账号 <span class="highlight">admin / admin123</span></p>
@@ -144,7 +149,6 @@ const message = useMessage()
 const showPassword = ref(false)
 const rememberMe = ref(false)
 const loading = ref(false)
-const focused = ref(null)
 const usernameInput = ref(null)
 
 const form = reactive({
