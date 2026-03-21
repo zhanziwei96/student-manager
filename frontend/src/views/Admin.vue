@@ -1042,8 +1042,9 @@ onMounted(() => {
 /* 图标按钮样式 */
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
+  justify-content: center;
 }
 
 .icon-btn {
@@ -1056,7 +1057,12 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.25s ease;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+.icon-btn svg {
+  stroke: currentColor;
 }
 
 .icon-btn.edit {
