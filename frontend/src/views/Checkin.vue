@@ -1,837 +1,644 @@
 <template>
   <div class="checkin-page">
-    <!-- 顶部导航 -->
-    <div class="checkin-header">
-      <div class="logo" @click="$router.push('/')">
-        <el-icon size="24"><School /></el-icon>
-        <span>班级管理系统</span>
-      </div>
-      <div class="header-actions">
-        <el-button v-if="isTeacher" type="primary" @click="$router.push('/admin')">
-          <el-icon><Management /></el-icon>
-          管理后台
-        </el-button>
-      </div>
+    <!-- 背景装饰 -->
+    <div class="bg-decoration">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
     </div>
-    
-    <div class="checkin-container">
-      <!-- 老师面板 -->
-      <el-card v-if="isTeacher" class="teacher-panel">
-        <div class="teacher-info">
-          <el-avatar :size="40" :icon="UserFilled" />
-          <div class="teacher-detail">
-            <div class="teacher-name">{{ teacherName }}</div>
-            <div class="teacher-role">教师</div>
-          </div>
+
+    <!-- 导航 -->
+    <nav class="checkin-nav">
+      <div class="nav-brand" @click="$router.push('/')">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+          </svg>
         </div>
-        <el-divider />
-        <el-button type="primary" size="large" @click="showTeacherCheckin = true" style="width: 100%">
-          <el-icon><EditPen /></el-icon>
-          帮学生代签到
-        </el-button>
-      </el-card>
+        <span>ClassHub</span>
+      </div>
       
-      <!-- 班级状态 -->
-      <template v-if="classSession.active">
-        <el-card class="class-status">
-          <div class="status-header">
-            <div class="status-title">
-              <el-icon size="20" color="#52c41a"><CircleCheckFilled /></el-icon>
-              <span>当前上课：{{ classSession.class_name }}</span>
-            </div>
-            <el-button type="primary" text @click="refreshStatus" :loading="refreshing">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
+      <div class="nav-info">
+        <div class="info-item">
+          <div class="info-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
           </div>
-          
-          <div class="stats-bar">
-            <div class="stat-item">
-              <div class="stat-label">应到</div>
-              <div class="stat-value">{{ classStats.total }}人</div>
-            </div>
-            <el-divider direction="vertical" />
-            <div class="stat-item success">
-              <div class="stat-label">已签</div>
-              <div class="stat-value">{{ classStats.checked_in }}人</div>
-            </div>
-            <el-divider direction="vertical" />
-            <div class="stat-item warning">
-              <div class="stat-label">未签</div>
-              <div class="stat-value">{{ classStats.not_checked_in }}人</div>
-            </div>
-            <el-divider direction="vertical" />
-            <div class="stat-item primary">
-              <div class="stat-label">签到率</div>
-              <div class="stat-value">{{ classStats.rate }}%</div>
-            </div>
-          </div>
-          
-          <!-- 学生状态列表 -->
-          <div class="student-list">
-            <div 
-              v-for="student in classStudents" 
-              :key="student.student_id"
-              class="student-item"
-              :class="{ 'checked': student.checked_in }"
+          <span>{{ currentTime }}</span>
+        </div>
+        <n-tag :type="classSession.active ? 'success' : 'error'" round size="small">
+          {{ classSession.active ? '上课中' : '未开始上课' }}
+        </n-tag>
+      </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="checkin-main">
+      <!-- 页面标题 -->
+      <div class="page-header">
+        <h1>学生签到</h1>
+        <p v-if="classSession.active">当前班级：{{ classSession.class_name }}</p>
+        <p v-else>请等待老师开始上课后再签到</p>
+      </div>
+
+      <!-- 签到区域 -->
+      <n-card class="checkin-card" :class="{ active: classSession.active }">
+        <div class="checkin-form">
+          <div class="input-section">
+            <label>学号</label>
+            <n-input 
+              v-model:value="checkinForm.student_id" 
+              placeholder="请输入学号"
+              size="large"
+              :disabled="!classSession.active || checkingIn"
+              @keyup.enter="handleCheckin"
             >
-              <el-icon v-if="student.checked_in" size="16" color="#52c41a"><CircleCheckFilled /></el-icon>
-              <el-icon v-else size="16" color="#909399"><CircleCheck /></el-icon>
-              <span class="student-name">{{ student.name }}</span>
-              <span v-if="student.checked_in" class="checkin-time">
-                {{ formatTime(student.checkin_time) }}
-              </span>
-            </div>
+              <template #prefix>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                </svg>
+              </template>
+            </n-input>
           </div>
-        </el-card>
-      </template>
-      
-      <!-- 未上课提示 -->
-      <el-card v-else class="no-class">
-        <el-empty description="暂无课程">
-          <template #image>
-            <el-icon size="64" color="#dcdfe6"><Calendar /></el-icon>
-          </template>
-          <template #description>
-            <div style="text-align: center; color: #666;">
-              <div style="font-size: 16px; margin-bottom: 8px;">请等待老师开始上课</div>
-              <div style="font-size: 13px; color: #999;">上课后即可进行签到</div>
-            </div>
-          </template>
-          <el-button type="primary" @click="refreshStatus" :loading="refreshing">
-            <el-icon><Refresh /></el-icon>
-            刷新状态
-          </el-button>
-        </el-empty>
-      </el-card>
-      
-      <!-- 签到表单 -->
-      <el-card v-if="!hasCheckedIn" class="checkin-form">
+          
+          <div class="input-section">
+            <label>姓名</label>
+            <n-input 
+              v-model:value="checkinForm.name" 
+              placeholder="请输入姓名"
+              size="large"
+              :disabled="!classSession.active || checkingIn"
+              @keyup.enter="handleCheckin"
+            >
+              <template #prefix>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </template>
+            </n-input>
+          </div>
+          
+          <n-button 
+            type="primary" 
+            size="large" 
+            :loading="checkingIn"
+            :disabled="!classSession.active || !checkinForm.student_id || !checkinForm.name"
+            @click="handleCheckin"
+            class="checkin-btn"
+          >
+            <template #icon>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </template>
+            确认签到
+          </n-button>
+        </div>
+      </n-card>
+
+      <!-- 已签到人员 -->
+      <n-card class="checked-in-card">
         <template #header>
-          <div class="form-header">
-            <el-icon size="20" color="#667eea"><EditPen /></el-icon>
-            <span>学生签到</span>
+          <div class="card-header">
+            <div class="header-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span>今日签到</span>
+            </div>
+            <n-tag type="success" size="small" round>{{ checkedInStudents.length }} 人已签到</n-tag>
           </div>
         </template>
-        
-        <el-form
-          ref="formRef"
-          :model="form"
-          :rules="rules"
-          label-position="top"
-          size="large"
-        >
-          <el-form-item label="学号" prop="student_id">
-            <el-input
-              v-model="form.student_id"
-              placeholder="请输入学号"
-              clearable
-              :prefix-icon="User"
-            />
-          </el-form-item>
-          
-          <el-form-item label="姓名" prop="name">
-            <el-input
-              v-model="form.name"
-              placeholder="请输入姓名"
-              clearable
-              :prefix-icon="UserFilled"
-              @keyup.enter="handleCheckin"
-            />
-          </el-form-item>
-          
-          <el-form-item>
-            <el-button
-              type="primary"
-              size="large"
-              :loading="loading"
-              @click="handleCheckin"
-              style="width: 100%; height: 48px;"
-            >
-              <template v-if="loading">
-                <el-icon class="is-loading"><Loading /></el-icon>
-                签到中...
-              </template>
-              <template v-else>
-                立即签到
-              </template>
-            </el-button>
-          </el-form-item>
-        </el-form>
-        
 
-      </el-card>
-      
-      <!-- 已签到提示 -->
-      <el-card v-else class="checked-in">
-        <el-result
-          icon="success"
-          title="签到成功"
-          :sub-title="`欢迎 ${checkedInInfo.name}，今日已完成签到`"
-        >
-          <template #icon>
-            <div class="success-icon">
-              <el-icon size="80" color="#52c41a"><CircleCheckFilled /></el-icon>
+        <div class="student-tags">
+          <div 
+            v-for="student in checkedInStudents" 
+            :key="student.student_id" 
+            class="student-tag"
+          >
+            <div class="tag-avatar">{{ student.name.charAt(0) }}</div>
+            <div class="tag-info">
+              <span class="tag-name">{{ student.name }}</span>
+              <span class="tag-class">{{ student.class_name }}</span>
             </div>
-          </template>
-          <template #extra>
-            <div class="checkin-detail">
-              <div class="detail-item">
-                <span class="label">签到时间</span>
-                <span class="value">{{ formatFullTime(checkedInInfo.time) }}</span>
+            <n-tag type="success" size="tiny" round>已签到</n-tag>
+          </div>
+          
+          <n-empty v-if="checkedInStudents.length === 0" description="暂无签到记录" />
+        </div>
+      </n-card>
+
+      <!-- 我的签到记录 -->
+      <n-card class="my-records-card" v-if="myCheckinRecords.length > 0">
+        <template #header>
+          <div class="card-header">
+            <div class="header-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>我的签到记录</span>
+            </div>
+          </div>
+        </template>
+
+        <div class="records-list">
+          <div 
+            v-for="record in myCheckinRecords" 
+            :key="record.id" 
+            class="record-item"
+            :class="{ success: record.success, fail: !record.success }"
+          >
+            <div class="record-status">
+              <div class="status-icon" :class="{ success: record.success, fail: !record.success }">
+                <svg v-if="record.success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
               </div>
             </div>
-            <el-button @click="resetCheckin" text type="primary">
-              <el-icon><RefreshLeft /></el-icon>
-              重新签到（需密码）
-            </el-button>
-          </template>
-        </el-result>
-      </el-card>
-      
-      <!-- 最近签到 -->
-      <el-card class="recent-records">
-        <template #header>
-          <div class="records-header">
-            <span>最近签到</span>
-            <el-button text type="primary" @click="loadRecords">
-              <el-icon><Refresh /></el-icon>
-            </el-button>
-          </div>
-        </template>
-        
-        <div v-if="recentRecords.length > 0" class="records-list">
-          <div 
-            v-for="record in recentRecords" 
-            :key="record.record_id"
-            class="record-item"
-          >
-            <div class="record-info">
-              <span class="record-name">{{ record.student_name || record.student_id }}</span>
-              <el-tag size="small" :type="record.checkin_type === '网页签到' ? 'success' : 'warning'">
-                {{ record.checkin_type }}
-              </el-tag>
+            
+            <div class="record-content">
+              <div class="record-title">{{ record.message }}</div>
+              <div class="record-time">{{ formatTime(record.timestamp) }}</div>
             </div>
-            <span class="record-time">{{ formatTime(record.checkin_time) }}</span>
           </div>
         </div>
-        <el-empty v-else description="暂无签到记录" />
-      </el-card>
-    </div>
-    
-    <!-- 老师代签到对话框 -->
-    <el-dialog v-model="showTeacherCheckin" title="帮学生代签到" width="400px">
-      <el-form>
-        <el-form-item label="学生姓名">
-          <el-input v-model="teacherCheckinName" placeholder="输入学生姓名" />
-        </el-form-item>
-      </el-form>
-      <div v-if="multipleStudents.length > 0" class="student-select">
-        <p>找到多个同名学生，请选择：</p>
-        <el-radio-group v-model="selectedStudentId">
-          <el-radio 
-            v-for="s in multipleStudents" 
-            :key="s.student_id"
-            :label="s.student_id"
-          >
-            {{ s.name }} ({{ s.class_name || '未分班' }}) - {{ s.student_id }}
-          </el-radio>
-        </el-radio-group>
-      </div>
-      <template #footer>
-        <el-button @click="showTeacherCheckin = false">取消</el-button>
-        <el-button type="primary" @click="handleTeacherCheckin">确认代签</el-button>
-      </template>
-    </el-dialog>
-    
-    <!-- 重置签到密码对话框 -->
-    <el-dialog v-model="showResetDialog" title="重新签到" width="400px">
-      <p style="margin-bottom: 16px; color: #666;">请输入管理员密码以重置签到状态</p>
-      <el-input v-model="resetPassword" type="password" placeholder="管理员密码" show-password />
-      <template #footer>
-        <el-button @click="showResetDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleReset">确认</el-button>
-      </template>
-    </el-dialog>
+      </n-card>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import {
-  School, Management, UserFilled, EditPen, CircleCheckFilled,
-  CircleCheck, Refresh, Calendar, User, Loading,
-  InfoFilled, RefreshLeft
-} from '@element-plus/icons-vue'
-import Cookies from 'js-cookie'
-import * as api from '../api'
-import '../styles/cyber-theme.css'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { checkin, getClassSession, getClassSessionStudents } from '@/api'
 
-const router = useRouter()
+const message = useMessage()
 
-const formRef = ref()
-const loading = ref(false)
-const refreshing = ref(false)
-const hasCheckedIn = ref(false)
-const checkedInInfo = ref({ name: '', time: '' })
-
-// 老师相关
-const isTeacher = ref(false)
-const teacherName = ref('')
-const showTeacherCheckin = ref(false)
-const teacherCheckinName = ref('')
-const multipleStudents = ref([])
-const selectedStudentId = ref('')
-
-// 班级状态
+// 数据
 const classSession = ref({ active: false })
-const classStudents = ref([])
-const classStats = ref({ total: 0, checked_in: 0, not_checked_in: 0, rate: 0 })
+const checkedInStudents = ref([])
+const checkinForm = ref({ student_id: '', name: '' })
+const checkingIn = ref(false)
+const myCheckinRecords = ref([])
 
-// 最近记录
-const recentRecords = ref([])
+// 时间显示
+const currentTime = ref('')
+let timeInterval = null
 
-// 重置对话框
-const showResetDialog = ref(false)
-const resetPassword = ref('')
-
-const form = reactive({
-  student_id: '',
-  name: ''
-})
-
-const rules = {
-  student_id: [{ required: true, message: '请输入学号', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }]
+const updateTime = () => {
+  const now = new Date()
+  currentTime.value = now.toLocaleTimeString('zh-CN', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
 }
 
-// 检查登录状态
-const checkLogin = async () => {
-  const userId = Cookies.get('user_id')
-  if (userId) {
-    const res = await api.getUserInfo()
+// 加载上课状态
+const loadClassSession = async () => {
+  try {
+    const res = await getClassSession()
     if (res.success) {
-      isTeacher.value = true
-      teacherName.value = res.user.name
+      classSession.value = res.data
+      if (res.data.active) {
+        loadCheckedInStudents()
+      }
     }
+  } catch (error) {
+    // 静默失败
+  }
+}
+
+// 加载已签到学生
+const loadCheckedInStudents = async () => {
+  try {
+    const res = await getClassSessionStudents()
+    if (res.success) {
+      checkedInStudents.value = res.data.students.filter(s => s.checked_in)
+    }
+  } catch (error) {
+    // 静默失败
   }
 }
 
 // 签到
 const handleCheckin = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  
-  loading.value = true
-  
-  const res = await api.checkin({
-    student_id: form.student_id,
-    name: form.name
-  })
-  
-  loading.value = false
-  
-  if (res.success) {
-    ElMessage.success(`签到成功！欢迎 ${res.student_name}`)
-    hasCheckedIn.value = true
-    checkedInInfo.value = {
-      name: res.student_name,
-      time: new Date().toISOString()
-    }
-    // 保存匿名签到标志（防止重复签到，不存储学生敏感信息）
-    saveCheckinStatus()
-    loadRecords()
-    loadClassSession()
-  } else {
-    ElMessage.error(res.message)
-  }
-}
-
-// 老师代签到
-const handleTeacherCheckin = async () => {
-  if (!teacherCheckinName.value) {
-    ElMessage.warning('请输入学生姓名')
+  if (!checkinForm.value.student_id || !checkinForm.value.name) {
+    message.warning('请填写学号和姓名')
     return
   }
+
+  checkingIn.value = true
   
-  // 如果选择了具体学生
-  if (selectedStudentId.value) {
-    const res = await api.teacherCheckin({ student_id: selectedStudentId.value })
-    if (res.success) {
-      ElMessage.success(`代签到成功：${res.student_name}`)
-      closeTeacherCheckin()
-      loadRecords()
-      loadClassSession()
-    } else {
-      ElMessage.error(res.message)
-    }
-    return
-  }
-  
-  // 先按姓名查找
-  const res = await api.teacherCheckin({ student_name: teacherCheckinName.value })
-  
-  if (res.success) {
-    ElMessage.success(`代签到成功：${res.student_name}`)
-    closeTeacherCheckin()
-    loadRecords()
-    loadClassSession()
-  } else if (res.multiple_students) {
-    multipleStudents.value = res.students
-  } else {
-    ElMessage.error(res.message)
-  }
-}
-
-const closeTeacherCheckin = () => {
-  showTeacherCheckin.value = false
-  teacherCheckinName.value = ''
-  multipleStudents.value = []
-  selectedStudentId.value = ''
-}
-
-// 重置签到
-const resetCheckin = () => {
-  showResetDialog.value = true
-  resetPassword.value = ''
-}
-
-const handleReset = async () => {
-  const res = await api.login({ username: 'admin', password: resetPassword.value })
-  if (res.success) {
-    hasCheckedIn.value = false
-    checkedInInfo.value = { name: '', time: '' }
-    // 清除签到标志
-    clearCheckinStatus()
-    ElMessage.success('重置成功')
-    showResetDialog.value = false
-    await api.logout()
-  } else {
-    ElMessage.error('密码错误')
-  }
-}
-
-// 加载班级状态
-const loadClassSession = async () => {
   try {
-    const res = await api.getClassSession()
-    if (res.success && res.data.active) {
-      classSession.value = res.data
-      const studentsRes = await api.getClassSessionStudents()
-      if (studentsRes.success) {
-        classStudents.value = studentsRes.data.students
-        const { total, checked_in, not_checked_in } = studentsRes.data
-        classStats.value = {
-          total,
-          checked_in,
-          not_checked_in,
-          rate: total > 0 ? Math.round((checked_in / total) * 100) : 0
-        }
-      }
+    const res = await checkin({
+      student_id: checkinForm.value.student_id,
+      name: checkinForm.value.name
+    })
+    
+    // 添加到我的记录
+    myCheckinRecords.value.unshift({
+      id: Date.now(),
+      success: res.success,
+      message: res.success ? '签到成功！' : (res.message || '签到失败'),
+      timestamp: new Date().toISOString()
+    })
+    
+    // 只保留最近5条记录
+    if (myCheckinRecords.value.length > 5) {
+      myCheckinRecords.value = myCheckinRecords.value.slice(0, 5)
+    }
+    
+    if (res.success) {
+      message.success(res.message)
+      checkinForm.value = { student_id: '', name: '' }
+      loadCheckedInStudents()
     } else {
-      classSession.value = { active: false }
-      classStudents.value = []
-      classStats.value = { total: 0, checked_in: 0, not_checked_in: 0, rate: 0 }
+      message.error(res.message || '签到失败')
     }
   } catch (error) {
-    classSession.value = { active: false }
+    message.error('网络错误，请稍后重试')
+    
+    myCheckinRecords.value.unshift({
+      id: Date.now(),
+      success: false,
+      message: '网络错误，请稍后重试',
+      timestamp: new Date().toISOString()
+    })
+  } finally {
+    checkingIn.value = false
   }
-}
-
-// 加载签到记录
-const loadRecords = async () => {
-  const today = new Date().toISOString().split('T')[0]
-  const res = await api.getCheckinRecords({ date: today })
-  if (res.success) {
-    recentRecords.value = res.data.slice(0, 10)
-  }
-}
-
-// 手动刷新
-const refreshStatus = async () => {
-  refreshing.value = true
-  await loadClassSession()
-  await loadRecords()
-  refreshing.value = false
 }
 
 const formatTime = (time) => {
   if (!time) return ''
-  // 把后端返回的 UTC 时间转换为本地时间
   const utcTime = time.endsWith('Z') ? time : time + 'Z'
-  return new Date(utcTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  return new Date(utcTime).toLocaleString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
-const formatFullTime = (time) => {
-  if (!time) return ''
-  // 把后端返回的 UTC 时间转换为本地时间
-  const utcTime = time.endsWith('Z') ? time : time + 'Z'
-  return new Date(utcTime).toLocaleString('zh-CN')
-}
+let refreshInterval = null
 
 onMounted(() => {
-  checkLogin()
+  updateTime()
+  timeInterval = setInterval(updateTime, 1000)
   loadClassSession()
-  loadRecords()
-  checkLocalStorage()
+  
+  // 每5秒刷新一次状态
+  refreshInterval = setInterval(() => {
+    loadClassSession()
+  }, 5000)
 })
 
-// 检查 localStorage 中的签到状态
-const CHECKIN_STATUS_KEY = 'has_checked_in_today'
-
-const checkLocalStorage = () => {
-  const savedDate = localStorage.getItem(CHECKIN_STATUS_KEY)
-  if (savedDate) {
-    const today = new Date().toDateString()
-    if (today === savedDate) {
-      // 今天已签到（匿名标志，不显示具体学生信息）
-      hasCheckedIn.value = true
-      checkedInInfo.value = {
-        name: '已签到',
-        time: new Date().toISOString()
-      }
-    } else {
-      // 不是今天的签到，清除状态
-      localStorage.removeItem(CHECKIN_STATUS_KEY)
-    }
-  }
-}
-
-// 保存签到状态到 localStorage
-// 保存匿名签到标志（只存日期，不存学生敏感信息）
-const saveCheckinStatus = () => {
-  const today = new Date().toDateString()
-  localStorage.setItem(CHECKIN_STATUS_KEY, today)
-}
-
-// 清除签到标志
-const clearCheckinStatus = () => {
-  localStorage.removeItem(CHECKIN_STATUS_KEY)
-}
+onUnmounted(() => {
+  if (timeInterval) clearInterval(timeInterval)
+  if (refreshInterval) clearInterval(refreshInterval)
+})
 </script>
 
 <style scoped>
 .checkin-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 50%, #0d0d14 100%);
+  position: relative;
 }
 
-.checkin-header {
+/* 背景装饰 */
+.bg-decoration {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+}
+
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #6366f1, transparent);
+  top: -100px;
+  right: -100px;
+}
+
+.orb-2 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #06b6d4, transparent);
+  bottom: 10%;
+  left: -50px;
+}
+
+/* 导航 */
+.checkin-nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  background: white;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  padding: 16px 32px;
+  background: rgba(19, 19, 31, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 10;
 }
 
-.logo {
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 10px;
+}
+
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.info-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #667eea;
-  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
 }
 
-.checkin-container {
+.info-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.info-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 主内容 */
+.checkin-main {
   max-width: 600px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 48px 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.page-header p {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+}
+
+/* 签到卡片 */
+.checkin-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-bottom: 24px;
+}
+
+.checkin-card.active {
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  background: rgba(99, 102, 241, 0.05) !important;
+}
+
+.checkin-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.teacher-panel {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.teacher-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.teacher-detail {
-  flex: 1;
-}
-
-.teacher-name {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.teacher-role {
-  font-size: 13px;
-  opacity: 0.8;
-}
-
-:deep(.teacher-panel .el-divider) {
-  border-color: rgba(255,255,255,0.2);
-  margin: 16px 0;
-}
-
-.class-status {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.status-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.status-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.stats-bar {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-item.success .stat-value {
-  color: #52c41a;
-}
-
-.stat-item.warning .stat-value {
-  color: #faad14;
-}
-
-.stat-item.primary .stat-value {
-  color: #1890ff;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.student-list {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.student-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.student-item.checked {
-  background: #f6ffed;
-}
-
-.student-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.checkin-time {
-  font-size: 11px;
-  color: #999;
-}
-
-.no-class {
-  padding: 40px 20px;
-}
-
-.checkin-form {
-  border-radius: 12px;
-}
-
-.form-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.form-tips {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 16px;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  color: #666;
-  font-size: 13px;
-}
-
-.checked-in {
-  border-radius: 12px;
-}
-
-.success-icon {
-  animation: scaleIn 0.5s ease;
-}
-
-@keyframes scaleIn {
-  from {
-    transform: scale(0);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.checkin-detail {
-  margin-bottom: 20px;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-.detail-item .label {
-  color: #999;
-}
-
-.detail-item .value {
-  color: #333;
-  font-weight: 500;
-}
-
-.recent-records {
-  border-radius: 12px;
-}
-
-.records-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.records-list {
+.input-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.input-section label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.checkin-btn {
+  margin-top: 8px;
+  height: 48px;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+}
+
+.checkin-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+
+/* 已签到卡片 */
+.checked-in-card,
+.my-records-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.checked-in-card {
+  margin-bottom: 24px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  font-weight: 600;
+}
+
+.student-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.student-tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+}
+
+.tag-avatar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.tag-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.tag-name {
+  font-weight: 500;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.tag-class {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 我的记录 */
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .record-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid transparent;
 }
 
-.record-info {
+.record-item.success {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.record-item.fail {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.status-icon {
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  border-radius: 10px;
 }
 
-.record-name {
+.status-icon.success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.status-icon.fail {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.status-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.record-content {
+  flex: 1;
+}
+
+.record-title {
   font-weight: 500;
+  color: white;
+  font-size: 0.95rem;
 }
 
 .record-time {
-  font-size: 12px;
-  color: #999;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 4px;
 }
 
-.student-select {
-  margin-top: 16px;
-  padding: 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
-}
-
-.student-select p {
-  margin-bottom: 12px;
-  color: #666;
-}
-
-:deep(.el-radio-group) {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+/* 响应式 */
 @media (max-width: 640px) {
-  .checkin-container {
-    padding: 16px;
+  .checkin-nav {
+    padding: 12px 16px;
   }
   
-  .student-list {
-    grid-template-columns: repeat(2, 1fr);
+  .nav-brand span {
+    display: none;
   }
   
-  .stats-bar {
-    flex-wrap: wrap;
-    gap: 16px;
+  .checkin-main {
+    padding: 32px 16px;
   }
-}
-
-/* 输入框样式优化 - 深色背景下的可读性 */
-:deep(.el-input__wrapper) {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
-}
-
-:deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4) inset !important;
-}
-
-:deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #667eea inset !important;
-}
-
-:deep(.el-input__inner) {
-  color: white !important;
-  font-weight: 500;
-}
-
-:deep(.el-input__inner::placeholder) {
-  color: rgba(255, 255, 255, 0.5) !important;
-}
-
-:deep(.el-input__prefix-inner) {
-  color: rgba(255, 255, 255, 0.6) !important;
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
 }
 </style>

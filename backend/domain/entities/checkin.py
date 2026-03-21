@@ -6,6 +6,8 @@ from datetime import datetime
 from typing import Optional
 from enum import Enum
 
+from infrastructure.config import ScoreConfig
+
 
 class CheckinType(Enum):
     """签到类型"""
@@ -36,7 +38,7 @@ class Checkin:
     checkin_type: CheckinType = CheckinType.SELF
     checkin_date: str = field(default_factory=lambda: datetime.now().strftime('%Y-%m-%d'))
     checkin_time: str = field(default_factory=lambda: datetime.now().strftime('%H:%M:%S'))
-    score_delta: float = 0.0
+    score_delta: float = ScoreConfig.CHECKIN_SCORE_DELTA
     created_by: Optional[int] = None
     id: Optional[int] = None
     

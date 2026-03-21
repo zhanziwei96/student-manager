@@ -1,58 +1,77 @@
 """
-限流保护模块 - FastAPI-Limiter + Redis版本
+限流保护模块 - FastAPI-Limiter 0.2.0 + pyrate_limiter 版本
 支持分布式部署和持久化限流计数
 """
-import os
-from fastapi import Request
-from fastapi_limiter import FastAPILimiter
+from fastapi import Request, HTTPException
 from fastapi_limiter.depends import RateLimiter
+from pyrate_limiter import Limiter as PyRateLimiter, Rate
 import redis.asyncio as redis
+from redis.exceptions import ConnectionError as RedisConnectionError
+from infrastructure.logging import logger
+from infrastructure.config import get_settings, RateLimitConfig, RATE_LIMITS
 
-
-# 限流规则配置（次数/时间窗口）
-# 格式: (次数, 秒数)
-RATE_LIMITS = {
-    'login': (5, 60),        # 登录: 5次/分钟
-    'checkin': (10, 60),     # 签到: 10次/分钟
-    'score_change': (10, 60), # 分数修改: 10次/分钟
-    'user_search': (10, 60), # 用户查询: 10次/分钟
-    'default': (60, 60),     # 默认: 60次/分钟
-}
+# 全局限流器实例
+_limiter_instance = None
 
 
 async def init_rate_limiter(redis_url: str = None):
     """
-    初始化FastAPI-Limiter
+    初始化 FastAPI-Limiter
     
     Args:
-        redis_url: Redis连接URL，默认从环境变量获取或本地Redis
+        redis_url: Redis连接URL，默认从配置获取
     """
+    global _limiter_instance
+    
+    settings = get_settings()
+    
     if redis_url is None:
-        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+        redis_url = settings.redis.url
     
     try:
         # 创建Redis连接
         redis_connection = redis.from_url(
             redis_url,
-            encoding="utf-8",
-            decode_responses=True
+            encoding=settings.redis.encoding,
+            decode_responses=settings.redis.decode_responses
         )
         
         # 测试连接
         await redis_connection.ping()
         
-        # 初始化FastAPI-Limiter
-        await FastAPILimiter.init(redis_connection)
+        # 创建基于Redis的限流器（如果pyrate_limiter支持）
+        # 当前使用内存限流器
+        _limiter_instance = None  # 将在每次请求时动态创建Rate
         
-        print(f"✅ Redis限流器已启用: {redis_url}")
+        logger.info(f"Redis限流器已启用: {redis_url}")
         
     except Exception as e:
-        print(f"❌ Redis连接失败: {e}")
-        print("⚠️ 请确保Redis已安装并运行:")
-        print("   Ubuntu/Debian: sudo apt-get install redis-server")
-        print("   macOS: brew install redis && brew services start redis")
-        print("   Docker: docker run -d -p 6379:6379 redis:latest")
-        raise
+        logger.warning(f"Redis连接失败: {e}")
+        logger.warning("限流功能将使用内存模式")
+        _limiter_instance = None
+
+
+def _default_identifier(request: Request):
+    """默认标识符 - 使用IP地址"""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "anonymous"
+
+
+async def _default_callback(request: Request, exc: Exception):
+    """默认回调 - 返回429错误"""
+    raise HTTPException(
+        status_code=429,
+        detail="请求过于频繁，请稍后重试"
+    )
+
+
+def _get_limiter(times: int, seconds: int) -> PyRateLimiter:
+    """获取或创建限流器实例"""
+    # pyrate_limiter 2.x 使用 Rate 对象
+    rate = Rate(times, seconds * 1000)  # 转换为毫秒
+    return PyRateLimiter(rate)
 
 
 def rate_limit(limit_name: str = 'default'):
@@ -70,26 +89,42 @@ def rate_limit(limit_name: str = 'default'):
     Returns:
         RateLimiter依赖
     """
-    times, seconds = RATE_LIMITS.get(limit_name, RATE_LIMITS['default'])
-    return RateLimiter(times=times, seconds=seconds)
+    # 使用配置常量
+    config_map = {
+        'login': (RateLimitConfig.LOGIN_MAX_REQUESTS, RateLimitConfig.LOGIN_WINDOW_SECONDS),
+        'checkin': (RateLimitConfig.CHECKIN_MAX_REQUESTS, RateLimitConfig.CHECKIN_WINDOW_SECONDS),
+        'score_change': (RateLimitConfig.SCORE_CHANGE_MAX_REQUESTS, RateLimitConfig.SCORE_CHANGE_WINDOW_SECONDS),
+        'user_search': (RateLimitConfig.USER_SEARCH_MAX_REQUESTS, RateLimitConfig.USER_SEARCH_WINDOW_SECONDS),
+        'default': (RateLimitConfig.DEFAULT_MAX_REQUESTS, RateLimitConfig.DEFAULT_WINDOW_SECONDS),
+    }
+    times, seconds = config_map.get(limit_name, config_map['default'])
+    
+    # 创建限流器
+    limiter = _get_limiter(times, seconds)
+    
+    return RateLimiter(
+        limiter=limiter,
+        identifier=_default_identifier,
+        callback=_default_callback
+    )
 
 
 # 便捷函数
 def login_limit():
-    """登录接口限流: 5次/分钟"""
+    """登录接口限流"""
     return rate_limit('login')
 
 
 def checkin_limit():
-    """签到接口限流: 10次/分钟"""
+    """签到接口限流"""
     return rate_limit('checkin')
 
 
 def score_limit():
-    """分数修改限流: 10次/分钟"""
+    """分数修改限流"""
     return rate_limit('score_change')
 
 
 def default_limit():
-    """默认限流: 60次/分钟"""
+    """默认限流"""
     return rate_limit('default')

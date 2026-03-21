@@ -1,49 +1,57 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Cookies from 'js-cookie'
+import { useUserStore } from '@/stores/user'
 
 const routes = [
   {
     path: '/',
     name: 'PublicHome',
-    component: () => import('../views/PublicHome.vue')
+    component: () => import('@/views/PublicHome.vue')
   },
   {
     path: '/home',
     name: 'Home',
-    component: () => import('../views/Home.vue')
+    component: () => import('@/views/Home.vue')
   },
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue')
+    component: () => import('@/views/Login.vue'),
+    meta: { guest: true }
   },
   {
     path: '/admin',
     name: 'Admin',
-    component: () => import('../views/Admin.vue'),
+    component: () => import('@/views/Admin.vue'),
     meta: { requiresAuth: true }
   },
   {
     path: '/checkin',
     name: 'Checkin',
-    component: () => import('../views/Checkin.vue')
+    component: () => import('@/views/Checkin.vue')
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior: () => ({ top: 0 })
 })
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  const userId = Cookies.get('user_id')
+  const userStore = useUserStore()
   
-  if (to.meta.requiresAuth && !userId) {
-    next('/login')
-  } else {
-    next()
+  // 需要登录但未登录
+  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+    return next('/login')
   }
+  
+  // 已登录用户访问登录页
+  if (to.meta.guest && userStore.isLoggedIn) {
+    return next('/admin')
+  }
+  
+  next()
 })
 
 export default router

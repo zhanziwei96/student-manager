@@ -9,6 +9,8 @@ from infrastructure.persistence.database import Database
 from infrastructure.persistence.repositories.sqlite_audit_log_repository import SQLiteAuditLogRepository
 from infrastructure.security.session import require_admin, require_login
 from application.services.audit_log_app_service import AuditLogAppService
+from infrastructure.logging import logger
+from infrastructure.config import PaginationConfig, LogConfig, HttpStatus
 
 
 router = APIRouter(prefix="/api/audit", tags=["audit"])
@@ -71,7 +73,7 @@ async def get_audit_logs(
     status_code: Optional[int] = Query(None, description="状态码"),
     ip_address: Optional[str] = Query(None, description="IP地址"),
     days: Optional[int] = Query(None, description="最近N天"),
-    limit: int = Query(100, ge=1, le=1000, description="每页数量"),
+    limit: int = Query(PaginationConfig.AUDIT_LOG_PAGE_SIZE, ge=1, le=PaginationConfig.AUDIT_LOG_MAX_PAGE_SIZE, description="每页数量"),
     offset: int = Query(0, ge=0, description="偏移量"),
     service: AuditLogAppService = Depends(get_audit_log_service)
 ):
@@ -112,14 +114,17 @@ async def get_audit_logs(
             'offset': offset
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"查询审计日志失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.get("/logs/my", response_model=dict)
 async def get_my_logs(
     request: Request,
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(PaginationConfig.MY_LOGS_PAGE_SIZE, ge=1, le=PaginationConfig.MY_LOGS_MAX_PAGE_SIZE),
     service: AuditLogAppService = Depends(get_audit_log_service)
 ):
     """
@@ -135,14 +140,17 @@ async def get_my_logs(
             'data': [log.to_dict() for log in logs]
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"查询审计日志失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.get("/stats", response_model=dict)
 async def get_audit_stats(
     request: Request,
-    days: int = Query(7, ge=1, le=90, description="统计天数"),
+    days: int = Query(7, ge=1, le=LogConfig.AUDIT_LOG_RETENTION_DAYS, description="统计天数"),
     user_id: Optional[int] = Query(None, description="指定用户ID"),
     service: AuditLogAppService = Depends(get_audit_log_service)
 ):
@@ -161,8 +169,11 @@ async def get_audit_stats(
             'data': stats
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"查询审计日志失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.get("/actions", response_model=dict)

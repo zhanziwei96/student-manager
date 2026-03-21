@@ -8,6 +8,7 @@ from typing import List, Optional, Dict, Any
 from domain.entities.audit_log import AuditLog
 from domain.repositories.audit_log_repository import AuditLogRepository
 from infrastructure.persistence.database import Database
+from infrastructure.config import PaginationConfig
 
 
 class SQLiteAuditLogRepository(AuditLogRepository):
@@ -37,7 +38,7 @@ class SQLiteAuditLogRepository(AuditLogRepository):
     
     def save(self, log: AuditLog) -> AuditLog:
         """保存审计日志"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO audit_logs
                     (user_id, user_name, role, action, resource, resource_id,
@@ -50,12 +51,11 @@ class SQLiteAuditLogRepository(AuditLogRepository):
                 )
             )
             log.id = cursor.lastrowid
-            conn.commit()
             return log
     
     def find_by_id(self, log_id: int) -> Optional[AuditLog]:
         """根据ID查找日志"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 "SELECT * FROM audit_logs WHERE id = ?",
                 (log_id,)
@@ -75,7 +75,7 @@ class SQLiteAuditLogRepository(AuditLogRepository):
         ip_address: Optional[str] = None,
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
-        limit: int = 100,
+        limit: int = PaginationConfig.MAX_AUDIT_LOGS,
         offset: int = 0
     ) -> List[AuditLog]:
         """条件查询日志"""
@@ -125,7 +125,7 @@ class SQLiteAuditLogRepository(AuditLogRepository):
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
         
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(query, params)
             return [self._row_to_entity(row) for row in cursor.fetchall()]
     
@@ -161,7 +161,7 @@ class SQLiteAuditLogRepository(AuditLogRepository):
             query += " AND created_at <= ?"
             params.append(end_time)
         
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(query, params)
             row = cursor.fetchone()
             return row['count'] if row else 0
@@ -172,7 +172,7 @@ class SQLiteAuditLogRepository(AuditLogRepository):
         user_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """获取审计统计"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             # 基础查询条件
             where_clause = f"created_at >= datetime('now', '-{days} days')"
             params = []

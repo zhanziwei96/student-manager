@@ -2,6 +2,7 @@
 学生应用服务
 协调学生相关的用例
 """
+import logging
 from typing import List, Optional
 from domain.entities.student import Student
 from domain.entities.score_log import ScoreLog
@@ -13,6 +14,7 @@ from application.dto.student_dto import (
     UpdateScoreDTO, 
     StudentResponseDTO
 )
+from infrastructure.config import ScoreConfig
 
 
 class StudentAppService:
@@ -46,7 +48,7 @@ class StudentAppService:
             student_id=student_id,
             name=dto.name,
             class_name=dto.class_name or "未分班",
-            score=Score(70)  # 默认分数70
+            score=Score(ScoreConfig.DEFAULT_SCORE)  # 使用配置默认值
         )
         
         # 保存
@@ -92,8 +94,9 @@ class StudentAppService:
         
         # 处理领域事件
         events = student.events
+        logger = logging.getLogger(__name__)
         for event in events:
-            print(f"[Event] Score changed: {event}")
+            logger.info(f"[Event] Score changed: {event}")
         student.clear_events()
         
         return self._to_response_dto(student)

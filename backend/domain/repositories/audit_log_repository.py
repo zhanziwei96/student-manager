@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 
 from domain.entities.audit_log import AuditLog
+from infrastructure.config import PaginationConfig
 
 
 class AuditLogRepository(ABC):
@@ -33,7 +34,7 @@ class AuditLogRepository(ABC):
         ip_address: Optional[str] = None,
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
-        limit: int = 100,
+        limit: int = PaginationConfig.MAX_AUDIT_LOGS,
         offset: int = 0
     ) -> List[AuditLog]:
         """

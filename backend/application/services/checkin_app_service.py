@@ -8,6 +8,7 @@ from domain.entities.checkin import Checkin, CheckinType
 from domain.entities.student import Student
 from domain.repositories.checkin_repository import CheckinRepository
 from domain.repositories.student_repository import StudentRepository
+from infrastructure.config import PaginationConfig
 
 
 class CheckinAppService:
@@ -136,7 +137,7 @@ class CheckinAppService:
         date: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: int = 100
+        limit: int = PaginationConfig.MAX_CHECKIN_RECORDS
     ) -> List[Checkin]:
         """获取签到记录"""
         return self._checkin_repo.find_by_filters(

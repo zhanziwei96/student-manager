@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from datetime import datetime
 from domain.entities.checkin import Checkin
+from infrastructure.config import PaginationConfig
 
 
 class CheckinRepository(ABC):
@@ -28,7 +29,7 @@ class CheckinRepository(ABC):
         date: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: int = 100
+        limit: int = PaginationConfig.MAX_CHECKIN_RECORDS
     ) -> List[Checkin]:
         """
         根据条件查询签到记录

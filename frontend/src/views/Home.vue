@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     <!-- 顶部导航 -->
-    <nav class="nav-bar">
+    <nav class="top-nav">
       <div class="nav-brand" @click="$router.push('/')">
         <div class="brand-logo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -40,7 +40,7 @@
           <p>实时掌握班级动态，洞察学习趋势</p>
         </div>
         
-        <button class="refresh-btn" @click="loadStats" :class="{ 'spinning': loading }">
+        <button class="refresh-btn" @click="loadStats" :class="{ spinning: loading }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"/>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -77,7 +77,7 @@
             </div>
             
             <div class="stat-value">
-              <span class="number" ref="countUp">{{ stat.value }}</span>
+              <span class="number">{{ stat.value }}</span>
               <span class="unit" v-if="stat.unit">{{ stat.unit }}</span>
             </div>
           </div>
@@ -88,47 +88,26 @@
 
       <!-- 学生查询 -->
       <section class="search-section">
-        <div class="dashboard-card search-card">
-          <div class="card-header">
-            <div class="header-title">
-              <div class="title-icon search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="M21 21l-4.35-4.35"/>
-                </svg>
-              </div>
-              <h3>学生查询</h3>
-            </div>
-          </div>
-          
+        <n-card class="search-card" title="学生查询">
           <div class="search-form">
             <div class="search-inputs">
               <div class="input-group">
                 <label>学号</label>
-                <input 
-                  v-model="searchForm.student_id" 
-                  type="text" 
-                  placeholder="请输入学号"
-                  @keyup.enter="handleSearch"
-                />
+                <n-input v-model:value="searchForm.student_id" placeholder="请输入学号" @keyup.enter="handleSearch" />
               </div>
               <div class="input-group">
                 <label>姓名</label>
-                <input 
-                  v-model="searchForm.name" 
-                  type="text" 
-                  placeholder="请输入姓名"
-                  @keyup.enter="handleSearch"
-                />
+                <n-input v-model:value="searchForm.name" placeholder="请输入姓名" @keyup.enter="handleSearch" />
               </div>
-              <button class="search-btn" @click="handleSearch" :disabled="searchLoading">
-                <svg v-if="!searchLoading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="M21 21l-4.35-4.35"/>
-                </svg>
-                <span v-else class="spinner"></span>
-                <span>查询</span>
-              </button>
+              <n-button type="primary" size="large" @click="handleSearch" :loading="searchLoading">
+                <template #icon>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                </template>
+                查询
+              </n-button>
             </div>
           </div>
           
@@ -136,7 +115,7 @@
           <div v-if="searchResult" class="search-result">
             <div class="result-header">
               <div class="student-info">
-                <div class="student-avatar-large">{{ searchResult.student.name.charAt(0) }}</div>
+                <div class="student-avatar">{{ searchResult.student.name.charAt(0) }}</div>
                 <div class="student-detail">
                   <div class="student-name">{{ searchResult.student.name }}</div>
                   <div class="student-class">{{ searchResult.student.class_name }}</div>
@@ -167,12 +146,7 @@
             <div class="score-logs" v-if="searchResult.score_logs && searchResult.score_logs.length > 0">
               <h4>分数变更记录</h4>
               <div class="logs-list">
-                <div 
-                  v-for="(log, index) in searchResult.score_logs" 
-                  :key="log.log_id"
-                  class="log-item"
-                  :class="{ 'positive': log.score_change > 0, 'negative': log.score_change < 0 }"
-                >
+                <div v-for="(log, index) in searchResult.score_logs" :key="log.log_id" class="log-item" :class="{ positive: log.score_change > 0, negative: log.score_change < 0 }">
                   <div class="log-change">
                     <span class="change-value">{{ log.score_change > 0 ? '+' : '' }}{{ log.score_change }}</span>
                   </div>
@@ -181,108 +155,60 @@
                 </div>
               </div>
             </div>
-            <div v-else class="no-logs">
-              <p>暂无分数变更记录</p>
-            </div>
+            <n-empty v-else description="暂无分数变更记录" />
           </div>
           
-          <div v-if="searchError" class="search-error">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <p>{{ searchError }}</p>
-          </div>
-        </div>
+          <n-alert v-if="searchError" type="error" :show-icon="true" style="margin-top: 16px;">
+            {{ searchError }}
+          </n-alert>
+        </n-card>
       </section>
 
       <!-- 排行榜与今日签到 -->
       <section class="dashboard-grid">
         <!-- 分数排行榜 -->
-        <div class="dashboard-card ranking-card">
-          <div class="card-header">
-            <div class="header-title">
-              <div class="title-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-              </div>
-              <h3>分数排行榜</h3>
-            </div>
-            
-            <span class="header-badge">Top {{ topStudents.length }}</span>
-          </div>
+        <n-card class="ranking-card" title="分数排行榜">
+          <template #header-extra>
+            <n-tag type="info" size="small">Top {{ topStudents.length }}</n-tag>
+          </template>
           
           <div class="ranking-list">
-            <transition-group name="list">
-              <div 
-                v-for="(student, index) in topStudents" 
-                :key="student.student_id"
-                class="ranking-item"
-                :class="{ 'top-3': index < 3 }"
-              >
-                <div class="rank-badge" :class="`rank-${index + 1}`">
-                  <span v-if="index < 3">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                  </span>
-                  <span v-else>{{ index + 1 }}</span>
-                </div>
-                
-                <div class="student-avatar">
-                  {{ student.name.charAt(0) }}
-                </div>
-                
-                <div class="student-info">
-                  <div class="student-name">{{ student.name }}</div>
-                  <div class="student-class">{{ student.class_name }}</div>
-                </div>
-                
-                <div class="student-score">
-                  <span class="score-value">{{ student.score }}</span>
-                  <span class="score-label">分</span>
-                </div>
+            <div v-for="(student, index) in topStudents" :key="student.student_id" class="ranking-item" :class="{ 'top-3': index < 3 }">
+              <div class="rank-badge" :class="`rank-${index + 1}`">
+                <svg v-if="index < 3" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                <span v-else>{{ index + 1 }}</span>
               </div>
-            </transition-group>
-            
-            <div v-if="topStudents.length === 0" class="empty-state">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
-              <p>暂无数据</p>
+              
+              <div class="student-avatar">{{ student.name.charAt(0) }}</div>
+              
+              <div class="student-info">
+                <div class="student-name">{{ student.name }}</div>
+                <div class="student-class">{{ student.class_name }}</div>
+              </div>
+              
+              <div class="student-score">
+                <span class="score-value">{{ student.score }}</span>
+                <span class="score-unit">分</span>
+              </div>
             </div>
+            
+            <n-empty v-if="topStudents.length === 0" description="暂无数据" />
           </div>
-        </div>
+        </n-card>
 
         <!-- 今日签到 -->
-        <div class="dashboard-card checkin-card">
-          <div class="card-header">
-            <div class="header-title">
-              <div class="title-icon success">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </div>
-              <h3>今日签到</h3>
-            </div>
-            
-            <span class="header-badge success">实时</span>
-          </div>
+        <n-card class="checkin-card" title="今日签到">
+          <template #header-extra>
+            <n-tag type="success" size="small" round>实时</n-tag>
+          </template>
           
           <div class="checkin-stats">
             <div class="progress-ring">
               <svg viewBox="0 0 100 100">
                 <circle class="ring-bg" cx="50" cy="50" r="42"/>
-                <circle 
-                  class="ring-progress" 
-                  cx="50" 
-                  cy="50" 
-                  r="42"
-                  :style="{ strokeDashoffset: ringOffset }"
-                />
+                <circle class="ring-progress" cx="50" cy="50" r="42" :style="{ strokeDashoffset: ringOffset }"/>
               </svg>
               
               <div class="ring-content">
@@ -318,7 +244,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </n-card>
       </section>
     </main>
   </div>
@@ -326,8 +252,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getStats, queryStudent } from '../api'
-import { ElMessage } from 'element-plus'
+import { getStats, queryStudent } from '@/api'
 
 const loading = ref(false)
 const totalStudents = ref(0)
@@ -380,7 +305,7 @@ const searchError = ref('')
 
 const handleSearch = async () => {
   if (!searchForm.value.student_id || !searchForm.value.name) {
-    ElMessage.warning('请输入学号和姓名')
+    window.$message?.warning('请输入学号和姓名')
     return
   }
   
@@ -428,7 +353,7 @@ const loadStats = async () => {
       topStudents.value = (res.data.top_students || []).slice(0, 10)
     }
   } catch (error) {
-    ElMessage.error('获取统计数据失败')
+    window.$message?.error('获取统计数据失败')
   } finally {
     loading.value = false
   }
@@ -446,14 +371,14 @@ onMounted(() => {
 }
 
 /* 导航 */
-.nav-bar {
+.top-nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 32px;
-  background: rgba(15, 15, 25, 0.8);
+  background: rgba(19, 19, 31, 0.8);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -488,7 +413,6 @@ onMounted(() => {
 }
 
 .brand-text {
-  font-family: 'Orbitron', sans-serif;
   font-size: 1.25rem;
   font-weight: 700;
   color: white;
@@ -653,9 +577,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 245, 212, 0.1);
+  background: rgba(6, 182, 212, 0.1);
   border-radius: 8px;
-  color: #00f5d4;
+  color: #06b6d4;
 }
 
 .stat-trend svg {
@@ -670,7 +594,6 @@ onMounted(() => {
 }
 
 .stat-value .number {
-  font-family: 'Orbitron', monospace;
   font-size: 2.25rem;
   font-weight: 700;
   color: white;
@@ -694,11 +617,11 @@ onMounted(() => {
 }
 
 .stat-glow.cyan {
-  background: linear-gradient(90deg, #00f5d4, #00bbf9);
+  background: linear-gradient(90deg, #06b6d4, #22d3ee);
 }
 
 .stat-glow.amber {
-  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }
 
 /* Dashboard Grid */
@@ -708,97 +631,190 @@ onMounted(() => {
   gap: 24px;
 }
 
-.dashboard-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  overflow: hidden;
+.search-card,
+.ranking-card,
+.checkin-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-.card-header {
+.search-inputs {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-group label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-result {
+  margin-top: 24px;
+  padding: 24px;
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+}
+
+.result-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 20px;
 }
 
-.header-title {
+.student-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
-.title-icon {
-  width: 40px;
-  height: 40px;
+.student-avatar {
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.1));
-  border-radius: 10px;
-  color: #fbbf24;
-}
-
-.title-icon.success {
-  background: linear-gradient(135deg, rgba(0, 217, 163, 0.2), rgba(0, 217, 163, 0.1));
-  color: #00d9a3;
-}
-
-.title-icon svg {
-  width: 20px;
-  height: 20px;
-}
-
-.header-title h3 {
-  font-size: 1.1rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 14px;
+  font-size: 24px;
   font-weight: 600;
   color: white;
 }
 
-.header-badge {
-  padding: 4px 12px;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.2);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: #fbbf24;
+.student-detail .student-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
 }
 
-.header-badge.success {
-  background: rgba(0, 217, 163, 0.1);
-  border-color: rgba(0, 217, 163, 0.2);
-  color: #00d9a3;
+.student-detail .student-class {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+}
+
+.score-display {
+  text-align: center;
+}
+
+.score-display .current-score {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #06b6d4;
+}
+
+.score-display .score-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.rank-info {
+  display: flex;
+  gap: 32px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 20px;
+}
+
+.rank-item {
+  text-align: center;
+}
+
+.rank-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+}
+
+.rank-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+}
+
+.score-logs h4 {
+  color: white;
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.log-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.log-item.positive .change-value {
+  color: #34d399;
+}
+
+.log-item.negative .change-value {
+  color: #f87171;
+}
+
+.log-change {
+  min-width: 50px;
+}
+
+.change-value {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.log-reason {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.log-time {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 /* 排行榜 */
 .ranking-list {
-  padding: 16px;
-  max-height: 480px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .ranking-item {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  margin-bottom: 8px;
   transition: all 0.3s ease;
 }
 
 .ranking-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border-color: rgba(99, 102, 241, 0.2);
-  transform: translateX(4px);
 }
 
 .ranking-item.top-3 {
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.05), transparent);
-  border-color: rgba(251, 191, 36, 0.1);
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.1), transparent);
+  border-color: rgba(251, 191, 36, 0.2);
 }
 
 .rank-badge {
@@ -837,30 +853,23 @@ onMounted(() => {
   height: 16px;
 }
 
-.student-avatar {
+.ranking-item .student-avatar {
   width: 40px;
   height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 10px;
-  font-weight: 600;
-  color: white;
-  font-size: 0.9rem;
+  font-size: 16px;
 }
 
-.student-info {
+.ranking-item .student-info {
   flex: 1;
 }
 
-.student-name {
+.ranking-item .student-name {
   font-weight: 500;
   color: white;
   margin-bottom: 2px;
 }
 
-.student-class {
+.ranking-item .student-class {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.4);
 }
@@ -871,21 +880,20 @@ onMounted(() => {
   gap: 2px;
 }
 
-.score-value {
-  font-family: 'Orbitron', monospace;
+.student-score .score-value {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #00f5d4;
+  color: #06b6d4;
 }
 
-.score-label {
+.student-score .score-unit {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.4);
 }
 
 /* 今日签到 */
 .checkin-stats {
-  padding: 32px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -923,7 +931,7 @@ onMounted(() => {
   content: '';
   position: absolute;
   inset: 0;
-  background: conic-gradient(from 0deg, #6366f1, #00f5d4, #6366f1);
+  background: conic-gradient(from 0deg, #6366f1, #06b6d4, #6366f1);
   border-radius: 50%;
   opacity: 0.1;
   filter: blur(20px);
@@ -939,10 +947,9 @@ onMounted(() => {
 
 .ring-value {
   display: block;
-  font-family: 'Orbitron', monospace;
   font-size: 2.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #6366f1, #00f5d4);
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -974,8 +981,8 @@ onMounted(() => {
 }
 
 .detail-icon.success {
-  background: linear-gradient(135deg, rgba(0, 217, 163, 0.2), rgba(0, 217, 163, 0.1));
-  color: #00d9a3;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+  color: #34d399;
 }
 
 .detail-icon.pending {
@@ -994,7 +1001,6 @@ onMounted(() => {
 }
 
 .detail-value {
-  font-family: 'Orbitron', monospace;
   font-size: 1.5rem;
   font-weight: 700;
   color: white;
@@ -1002,39 +1008,7 @@ onMounted(() => {
 
 .detail-label {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.empty-state svg {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-/* 列表动画 */
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.4s ease;
-}
-
-.list-enter-from {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* 响应式 */
@@ -1047,357 +1021,10 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
   
-  .nav-bar {
-    padding: 16px;
-  }
-  
-  .main-content {
-    padding: 24px 16px;
-  }
-}
-
-@media (max-width: 640px) {
-  .nav-links .nav-link span {
-    display: none;
-  }
-  
-  .nav-links .nav-link {
-    padding: 10px;
-  }
-  
   .hero-section {
     flex-direction: column;
     gap: 16px;
-    text-align: center;
-  }
-  
-  .checkin-detail {
-    flex-direction: column;
-    gap: 16px;
-  }
-}
-
-/* SVG gradient for progress ring - defined in CSS */
-.progress-ring {
-  --gradient-start: #6366f1;
-  --gradient-end: #00f5d4;
-}
-
-.ring-progress {
-  stroke: url(#ringGradient);
-}
-
-/* 搜索区域 */
-.search-section {
-  margin-bottom: 32px;
-}
-
-.search-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-.title-icon.search {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.1));
-  color: #818cf8;
-}
-
-.search-form {
-  padding: 24px;
-}
-
-.search-inputs {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-width: 150px;
-}
-
-.input-group label {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.input-group input {
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: white;
-  font-size: 1rem;
-  outline: none;
-  transition: all 0.3s ease;
-}
-
-.input-group input:focus {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(99, 102, 241, 0.5);
-}
-
-.input-group input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.search-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border: none;
-  border-radius: 10px;
-  color: white;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.search-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
-}
-
-.search-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.search-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-/* 搜索结果 */
-.search-result {
-  padding: 0 24px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 0;
-}
-
-.student-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.student-avatar-large {
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 14px;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: white;
-}
-
-.student-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.student-name {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: white;
-}
-
-.student-class {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.score-display {
-  text-align: center;
-}
-
-.current-score {
-  font-family: 'Orbitron', monospace;
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #00f5d4, #00bbf9);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.score-label {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.rank-info {
-  display: flex;
-  gap: 32px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  margin-bottom: 20px;
-}
-
-.rank-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-}
-
-.rank-value {
-  font-family: 'Orbitron', monospace;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: white;
-}
-
-.rank-label {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-/* 分数变更记录 */
-.score-logs h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  margin-bottom: 16px;
-}
-
-.logs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.log-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
-  border-left: 3px solid transparent;
-}
-
-.log-item.positive {
-  border-left-color: #00d9a3;
-}
-
-.log-item.negative {
-  border-left-color: #ef4444;
-}
-
-.log-change {
-  min-width: 50px;
-}
-
-.change-value {
-  font-family: 'Orbitron', monospace;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.log-item.positive .change-value {
-  color: #00d9a3;
-}
-
-.log-item.negative .change-value {
-  color: #ef4444;
-}
-
-.log-reason {
-  flex: 1;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.log-time {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.no-logs {
-  text-align: center;
-  padding: 40px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.no-logs p {
-  font-size: 0.9rem;
-}
-
-.search-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 40px;
-  color: #ef4444;
-}
-
-.search-error svg {
-  width: 48px;
-  height: 48px;
-}
-
-.search-error p {
-  font-size: 0.95rem;
-}
-
-@media (max-width: 640px) {
-  .search-inputs {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .search-btn {
-    justify-content: center;
-  }
-  
-  .result-header {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-  
-  .rank-info {
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .log-item {
-    flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
   }
 }
 </style>

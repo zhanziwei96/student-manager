@@ -10,6 +10,7 @@ from infrastructure.persistence.database import Database
 from infrastructure.persistence.repositories.sqlite_student_repository import SQLiteStudentRepository
 from infrastructure.persistence.repositories.sqlite_checkin_repository import SQLiteCheckinRepository
 from infrastructure.security.session import require_login, is_admin
+from infrastructure.logging import logger
 
 
 router = APIRouter(prefix="/api", tags=["class_session"])
@@ -45,6 +46,7 @@ async def get_class_session(request: Request):
         }
         
     except Exception as e:
+        logger.error(f"获取课堂会话失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -86,6 +88,7 @@ async def set_class_session(
         }
         
     except Exception as e:
+        logger.error(f"设置课堂会话失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -153,4 +156,5 @@ async def get_class_session_students(request: Request):
         }
         
     except Exception as e:
+        logger.error(f"获取课堂学生列表失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

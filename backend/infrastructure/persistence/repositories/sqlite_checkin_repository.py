@@ -5,9 +5,12 @@ import sqlite3
 from datetime import datetime
 from typing import List, Optional
 
+from infrastructure.config import ScoreConfig
+
 from domain.entities.checkin import Checkin, CheckinType
 from domain.repositories.checkin_repository import CheckinRepository
 from infrastructure.persistence.database import Database
+from infrastructure.config import PaginationConfig
 
 
 class SQLiteCheckinRepository(CheckinRepository):
@@ -26,13 +29,13 @@ class SQLiteCheckinRepository(CheckinRepository):
             checkin_type=CheckinType(row['checkin_type']) if row['checkin_type'] else CheckinType.SELF,
             checkin_date=row['checkin_date'],
             checkin_time=row['checkin_time'],
-            score_delta=row.get('score_delta', 0.0),
+            score_delta=row.get('score_delta', ScoreConfig.CHECKIN_SCORE_DELTA),
             created_by=row.get('created_by')
         )
     
     def find_by_id(self, checkin_id: int) -> Optional[Checkin]:
         """根据ID查找签到记录"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 "SELECT * FROM checkin_records WHERE id = ?",
                 (checkin_id,)
@@ -42,7 +45,7 @@ class SQLiteCheckinRepository(CheckinRepository):
     
     def find_by_student_and_date(self, student_id: str, date: str) -> Optional[Checkin]:
         """查找学生某天的签到记录"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 """SELECT * FROM checkin_records 
                    WHERE student_id = ? AND checkin_date = ?
@@ -59,7 +62,7 @@ class SQLiteCheckinRepository(CheckinRepository):
         date: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: int = 100
+        limit: int = PaginationConfig.MAX_CHECKIN_RECORDS
     ) -> List[Checkin]:
         """根据条件查询签到记录"""
         query = "SELECT * FROM checkin_records WHERE 1=1"
@@ -88,7 +91,7 @@ class SQLiteCheckinRepository(CheckinRepository):
         query += " ORDER BY checkin_date DESC, checkin_time DESC LIMIT ?"
         params.append(limit)
         
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(query, params)
             return [self._row_to_entity(row) for row in cursor.fetchall()]
     
@@ -99,7 +102,7 @@ class SQLiteCheckinRepository(CheckinRepository):
     
     def save(self, checkin: Checkin) -> Checkin:
         """保存签到记录"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             if checkin.id:
                 # 更新
                 conn.execute(
@@ -129,7 +132,6 @@ class SQLiteCheckinRepository(CheckinRepository):
                 )
                 checkin.id = cursor.lastrowid
             
-            conn.commit()
             return checkin
     
     def count_by_student_and_date_range(
@@ -139,7 +141,7 @@ class SQLiteCheckinRepository(CheckinRepository):
         end_date: str
     ) -> int:
         """统计学生在日期范围内的签到次数"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 """SELECT COUNT(*) as count FROM checkin_records
                    WHERE student_id = ? AND checkin_date >= ? AND checkin_date <= ?""",
@@ -150,7 +152,7 @@ class SQLiteCheckinRepository(CheckinRepository):
     
     def count_by_class_and_date(self, class_name: str, date: str) -> int:
         """统计班级某天的签到人数"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 """SELECT COUNT(DISTINCT student_id) as count FROM checkin_records
                    WHERE class_name = ? AND checkin_date = ?""",

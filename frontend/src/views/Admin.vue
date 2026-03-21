@@ -1,86 +1,77 @@
 <template>
-  <el-container class="admin-container">
+  <div class="admin-layout">
     <!-- 顶部导航 -->
-    <el-header class="admin-header">
+    <header class="admin-header">
       <div class="header-left">
         <div class="logo">
-          <el-icon size="28"><School /></el-icon>
-          <h1>班级管理系统</h1>
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+            </svg>
+          </div>
+          <h1>ClassHub</h1>
         </div>
-        <el-tag 
-          :type="dbInfo.env === 'testing' ? 'warning' : 'success'"
-          effect="dark"
-          class="env-tag"
-        >
+        <n-tag :type="dbInfo.env === 'testing' ? 'warning' : 'success'" size="small" round>
           {{ dbInfo.name || '生产环境' }}
-        </el-tag>
+        </n-tag>
       </div>
       <div class="header-right">
-        <el-button type="primary" @click="$router.push('/checkin')" class="checkin-btn">
-          <el-icon><EditPen /></el-icon>
-          学生签到
-        </el-button>
-        <el-dropdown>
-          <span class="user-info">
-            <el-avatar :size="32" :icon="UserFilled" />
-            <span class="username">{{ userName }}</span>
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="openChangePasswordDialog">
-                <el-icon><Lock /></el-icon>修改密码
-              </el-dropdown-item>
-              <el-dropdown-item divided @click="handleLogout">
-                <el-icon><SwitchButton /></el-icon>退出登录
-              </el-dropdown-item>
-            </el-dropdown-menu>
+        <n-button type="primary" @click="$router.push('/checkin')" class="checkin-btn">
+          <template #icon>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
           </template>
-        </el-dropdown>
+          学生签到
+        </n-button>
+        <n-dropdown :options="userOptions" @select="handleUserAction">
+          <div class="user-info">
+            <div class="user-avatar">{{ userName.charAt(0) }}</div>
+            <span class="username">{{ userName }}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </n-dropdown>
       </div>
-    </el-header>
-    
-    <el-main class="admin-main">
+    </header>
+
+    <!-- 主内容 -->
+    <main class="admin-main">
       <!-- 上课控制卡片 -->
-      <el-card class="control-card" :class="{ 'active': classSession.active }">
+      <n-card class="control-card" :class="{ active: classSession.active }">
         <template #header>
           <div class="card-header">
             <div class="header-title">
-              <el-icon size="20"><VideoPlay v-if="!classSession.active" /><VideoPause v-else /></el-icon>
+              <svg v-if="!classSession.active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <rect x="6" y="4" width="4" height="16"/>
+                <rect x="14" y="4" width="4" height="16"/>
+              </svg>
               <span>{{ classSession.active ? '上课中' : '上课控制' }}</span>
             </div>
-            <el-tag v-if="classSession.active" type="success" effect="dark">
+            <n-tag v-if="classSession.active" type="success" round>
               {{ classSession.class_name }}
-            </el-tag>
+            </n-tag>
           </div>
         </template>
-        
+
         <div v-if="!classSession.active" class="class-selector">
-          <el-select 
-            v-model="selectedClass" 
-            placeholder="选择上课班级" 
-            size="large"
-            clearable
-            style="width: 280px;"
-          >
-            <el-option
-              v-for="cls in classList"
-              :key="cls"
-              :label="cls"
-              :value="cls"
-            />
-          </el-select>
-          <el-button 
-            type="success" 
-            size="large" 
-            @click="startClass"
-            :disabled="!selectedClass"
-          >
-            <el-icon><VideoPlay /></el-icon>
+          <n-select v-model:value="selectedClass" placeholder="选择上课班级" style="width: 280px;" :options="classOptions" />
+          <n-button type="success" size="large" @click="startClass" :disabled="!selectedClass">
+            <template #icon>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+            </template>
             开始上课
-          </el-button>
+          </n-button>
         </div>
-        
+
         <div v-else class="class-info">
           <div class="stats-row">
             <div class="stat-item">
@@ -101,285 +92,250 @@
             </div>
           </div>
           <div class="class-actions">
-            <el-button @click="refreshClassStatus" :icon="Refresh">刷新状态</el-button>
-            <el-button type="danger" @click="endClass" :icon="CircleCloseFilled">结束上课</el-button>
+            <n-button @click="refreshClassStatus">
+              <template #icon>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+              </template>
+              刷新状态
+            </n-button>
+            <n-button type="error" @click="endClass">
+              <template #icon>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+              </template>
+              结束上课
+            </n-button>
           </div>
         </div>
-      </el-card>
-      
-      <!-- 快捷操作区 -->
-      <el-row :gutter="20" class="quick-actions">
-        <el-col :span="8">
-          <el-card class="action-card" shadow="hover" @click="showAddStudent = true">
-            <el-icon class="action-icon" color="#409EFF"><User /></el-icon>
-            <div class="action-title">添加学生</div>
-            <div class="action-desc">单个添加学生信息</div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card class="action-card" shadow="hover" @click="showImport = true">
-            <el-icon class="action-icon" color="#67C23A"><Upload /></el-icon>
-            <div class="action-title">导入班级</div>
-            <div class="action-desc">批量导入Excel文件</div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card class="action-card" shadow="hover" @click="showResetScore = true">
-            <el-icon class="action-icon" color="#E6A23C"><Refresh /></el-icon>
-            <div class="action-title">重置分数</div>
-            <div class="action-desc">重置所有学生分数</div>
-          </el-card>
-        </el-col>
-      </el-row>
-      
+      </n-card>
+
+      <!-- 快捷操作 -->
+      <div class="quick-actions">
+        <n-card class="action-card" hoverable @click="showAddStudent = true">
+          <div class="action-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="action-title">添加学生</div>
+          <div class="action-desc">单个添加学生信息</div>
+        </n-card>
+
+        <n-card class="action-card" hoverable @click="showImport = true">
+          <div class="action-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="action-title">导入班级</div>
+          <div class="action-desc">批量导入Excel文件</div>
+        </n-card>
+
+        <n-card class="action-card" hoverable @click="showResetScore = true">
+          <div class="action-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+          </div>
+          <div class="action-title">重置分数</div>
+          <div class="action-desc">重置所有学生分数</div>
+        </n-card>
+      </div>
+
       <!-- 学生列表 -->
-      <el-card class="student-list-card">
+      <n-card class="student-list-card">
         <template #header>
-          <div class="card-header">
+          <div class="list-header">
             <div class="header-title">
-              <span>👥 学生列表</span>
-              <el-tag type="info" effect="plain">共 {{ students.length }} 人</el-tag>
+              <span>学生列表</span>
+              <n-tag type="info" size="small">共 {{ students.length }} 人</n-tag>
             </div>
             <div class="header-actions">
-              <el-input
-                v-model="searchQuery"
-                placeholder="搜索学号或姓名"
-                clearable
-                style="width: 200px;"
-                :prefix-icon="Search"
-              />
-              <el-button-group>
-                <el-button @click="expandAll">全部展开</el-button>
-                <el-button @click="collapseAll">全部折叠</el-button>
-                <el-button type="primary" @click="loadStudents" :icon="Refresh">刷新</el-button>
-              </el-button-group>
+              <n-input v-model:value="searchQuery" placeholder="搜索学号或姓名" style="width: 200px;" clearable>
+                <template #prefix>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                </template>
+              </n-input>
+              <n-button-group>
+                <n-button @click="expandAll">全部展开</n-button>
+                <n-button @click="collapseAll">全部折叠</n-button>
+                <n-button type="primary" @click="loadStudents">
+                  <template #icon>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                      <polyline points="23 4 23 10 17 10"/>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                  </template>
+                  刷新
+                </n-button>
+              </n-button-group>
             </div>
           </div>
         </template>
-        
+
         <div class="class-groups">
-          <el-collapse v-model="activeGroups">
-            <el-collapse-item
-              v-for="group in groupedStudents"
-              :key="group.className"
-              :name="group.className"
-            >
-              <template #title>
-                <div class="collapse-title">
-                  <span class="class-name">{{ group.className }}</span>
-                  <el-tag size="small" type="info">{{ group.students.length }} 人</el-tag>
-                  <el-button 
-                    type="danger" 
-                    link 
-                    size="small" 
-                    @click.stop="handleDeleteClass(group.className)"
-                  >
-                    删除班级
-                  </el-button>
-                </div>
+          <n-collapse v-model:expanded-names="activeGroups">
+            <n-collapse-item v-for="group in groupedStudents" :key="group.className" :name="group.className" :title="group.className">
+              <template #header-extra>
+                <n-tag size="small" type="info" style="margin-right: 12px;">{{ group.students.length }} 人</n-tag>
+                <n-button text type="error" size="small" @click.stop="handleDeleteClass(group.className)">
+                  删除班级
+                </n-button>
               </template>
-              
-              <el-table :data="group.students" stripe class="student-table" style="width: 100%">
-                <el-table-column prop="student_id" label="学号" class-name="col-student-id">
-                  <template #default="scope">
-                    <span class="student-id-badge">{{ scope.row.student_id }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="name" label="姓名" class-name="col-name">
-                  <template #default="scope">
-                    <span class="student-name-badge">{{ scope.row.name }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="score" label="分数" class-name="col-score">
-                  <template #default="scope">
-                    <span :class="['score-badge', getScoreClass(scope.row.score)]">
-                      {{ scope.row.score }}
-                    </span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" class-name="col-action" fixed="right">
-                  <template #default="scope">
-                    <el-button
-                      type="primary"
-                      size="small"
-                      :icon="Edit"
-                      @click="openScoreDialog(scope.row)"
-                    />
-                    <el-button
-                      class="delete-btn-icon"
-                      size="small"
-                      :icon="Delete"
-                      @click="handleDeleteStudent(scope.row)"
-                    />
-                  </template>
-                </el-table-column>
-              </el-table>
-            </el-collapse-item>
-          </el-collapse>
-          
-          <el-empty v-if="groupedStudents.length === 0" description="暂无学生数据" />
+
+              <n-data-table :columns="columns" :data="group.students" :pagination="false" :bordered="false" size="small" />
+            </n-collapse-item>
+          </n-collapse>
+
+          <n-empty v-if="groupedStudents.length === 0" description="暂无学生数据" />
         </div>
-      </el-card>
-    </el-main>
-    
+      </n-card>
+    </main>
+
     <!-- 添加学生对话框 -->
-    <el-dialog v-model="showAddStudent" title="添加学生" width="500px">
-      <el-form :model="newStudent" label-width="80px">
-        <el-form-item label="学号" required>
-          <el-input v-model="newStudent.student_id" placeholder="请输入学号" />
-        </el-form-item>
-        <el-form-item label="姓名" required>
-          <el-input v-model="newStudent.name" placeholder="请输入姓名" />
-        </el-form-item>
-        <el-form-item label="班级">
-          <el-input v-model="newStudent.class_name" placeholder="班级（可选）" />
-        </el-form-item>
-      </el-form>
+    <n-modal v-model:show="showAddStudent" title="添加学生" preset="card" style="width: 500px;">
+      <n-form :model="newStudent" label-placement="left" label-width="80px">
+        <n-form-item label="学号" required>
+          <n-input v-model:value="newStudent.student_id" placeholder="请输入学号" />
+        </n-form-item>
+        <n-form-item label="姓名" required>
+          <n-input v-model:value="newStudent.name" placeholder="请输入姓名" />
+        </n-form-item>
+        <n-form-item label="班级">
+          <n-input v-model:value="newStudent.class_name" placeholder="班级（可选）" />
+        </n-form-item>
+      </n-form>
       <template #footer>
-        <el-button @click="showAddStudent = false">取消</el-button>
-        <el-button type="primary" @click="handleAddStudent">确认添加</el-button>
+        <n-button @click="showAddStudent = false">取消</n-button>
+        <n-button type="primary" @click="handleAddStudent">确认添加</n-button>
       </template>
-    </el-dialog>
-    
+    </n-modal>
+
     <!-- 导入班级对话框 -->
-    <el-dialog v-model="showImport" title="导入班级" width="500px">
-      <el-form label-width="100px">
-        <el-form-item label="Excel文件">
-          <el-upload
-            action="/api/students/import"
-            :auto-upload="false"
-            :on-change="handleFileChange"
-            :limit="1"
-            accept=".xlsx,.xls"
-          >
-            <el-button type="primary">选择文件</el-button>
-          </el-upload>
-        </el-form-item>
-        <el-form-item label="默认班级">
-          <el-input v-model="importClassName" placeholder="如果Excel中没有班级列，将使用此值" />
-        </el-form-item>
-      </el-form>
+    <n-modal v-model:show="showImport" title="导入班级" preset="card" style="width: 500px;">
+      <n-upload :custom-request="handleUpload" accept=".xlsx,.xls" :max="1">
+        <n-button>选择文件</n-button>
+      </n-upload>
+      <n-form style="margin-top: 16px;">
+        <n-form-item label="默认班级">
+          <n-input v-model:value="importClassName" placeholder="如果Excel中没有班级列，将使用此值" />
+        </n-form-item>
+      </n-form>
       <template #footer>
-        <el-button @click="showImport = false">取消</el-button>
-        <el-button type="primary" @click="handleImport" :loading="importLoading">导入</el-button>
+        <n-button @click="showImport = false">取消</n-button>
+        <n-button type="primary" @click="handleImport" :loading="importLoading">导入</n-button>
       </template>
-    </el-dialog>
-    
+    </n-modal>
+
     <!-- 重置分数对话框 -->
-    <el-dialog v-model="showResetScore" title="重置所有分数" width="400px">
-      <el-alert
-        title="警告"
-        description="此操作将重置所有学生的分数，且无法撤销！"
-        type="warning"
-        show-icon
-        :closable="false"
-        style="margin-bottom: 20px;"
-      />
-      <el-form label-width="100px">
-        <el-form-item label="默认分数">
-          <el-input-number v-model="resetScoreValue" :min="0" :max="100" />
-        </el-form-item>
-        <el-form-item label="管理员密码" required>
-          <el-input v-model="resetPassword" type="password" show-password />
-        </el-form-item>
-      </el-form>
+    <n-modal v-model:show="showResetScore" title="重置所有分数" preset="card" style="width: 400px;">
+      <n-alert type="warning" title="警告" :show-icon="true" style="margin-bottom: 16px;">
+        此操作将重置所有学生的分数，且无法撤销！
+      </n-alert>
+      <n-form label-placement="left" label-width="100px">
+        <n-form-item label="默认分数">
+          <n-input-number v-model:value="resetScoreValue" :min="0" :max="100" />
+        </n-form-item>
+        <n-form-item label="管理员密码" required>
+          <n-input v-model:value="resetPassword" type="password" show-password-on="mousedown" />
+        </n-form-item>
+      </n-form>
       <template #footer>
-        <el-button @click="showResetScore = false">取消</el-button>
-        <el-button type="danger" @click="handleResetScores">确认重置</el-button>
+        <n-button @click="showResetScore = false">取消</n-button>
+        <n-button type="error" @click="handleResetScores">确认重置</n-button>
       </template>
-    </el-dialog>
-    
+    </n-modal>
+
     <!-- 调整分数对话框 -->
-    <el-dialog v-model="scoreDialogVisible" title="调整分数" width="450px">
-      <div class="student-info">
+    <n-modal v-model:show="scoreDialogVisible" title="调整分数" preset="card" style="width: 450px;">
+      <div class="student-info" style="margin-bottom: 16px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
         <span>学生：{{ selectedStudent.name }}</span>
-        <span>学号：{{ selectedStudent.student_id }}</span>
+        <span style="margin-left: 24px;">学号：{{ selectedStudent.student_id }}</span>
       </div>
-      <el-form label-width="80px">
-        <el-form-item label="分数变更">
-          <el-input-number v-model="scoreChange" :min="-100" :max="100" />
-          <span class="tip">正数加分，负数扣分</span>
-        </el-form-item>
-        <el-form-item label="快捷标签">
-          <div class="score-tags">
-            <el-tag 
-              v-for="tag in scoreTags" 
-              :key="tag.label"
-              :type="tag.score > 0 ? 'success' : 'danger'"
-              class="score-tag"
-              @click="applyScoreTag(tag)"
-              style="cursor: pointer; margin-right: 8px; margin-bottom: 8px;"
-            >
+      <n-form label-placement="left" label-width="80px">
+        <n-form-item label="分数变更">
+          <n-input-number v-model:value="scoreChange" :min="-100" :max="100" />
+          <span class="tip" style="margin-left: 12px; color: var(--text-muted); font-size: 13px;">正数加分，负数扣分</span>
+        </n-form-item>
+        <n-form-item label="快捷标签">
+          <n-space>
+            <n-tag v-for="tag in scoreTags" :key="tag.label" :type="tag.score > 0 ? 'success' : 'error'" style="cursor: pointer;" @click="applyScoreTag(tag)">
               {{ tag.label }} {{ tag.score > 0 ? '+' : '' }}{{ tag.score }}分
-            </el-tag>
-          </div>
-        </el-form-item>
-        <el-form-item label="变更原因">
-          <el-input v-model="scoreReason" type="textarea" rows="3" placeholder="请输入分数变更原因" />
-        </el-form-item>
-      </el-form>
+            </n-tag>
+          </n-space>
+        </n-form-item>
+        <n-form-item label="变更原因">
+          <n-input v-model:value="scoreReason" type="textarea" :rows="3" placeholder="请输入分数变更原因" />
+        </n-form-item>
+      </n-form>
       <template #footer>
-        <el-button @click="scoreDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleUpdateScore">确认调整</el-button>
+        <n-button @click="scoreDialogVisible = false">取消</n-button>
+        <n-button type="primary" @click="handleUpdateScore">确认调整</n-button>
       </template>
-    </el-dialog>
-    
+    </n-modal>
+
     <!-- 删除确认对话框 -->
-    <el-dialog v-model="deleteDialogVisible" title="安全验证" width="400px">
-      <el-alert
-        :title="deleteMessage"
-        type="warning"
-        show-icon
-        :closable="false"
-        style="margin-bottom: 20px;"
-      />
-      <el-form>
-        <el-form-item label="请输入管理员密码">
-          <el-input v-model="deletePassword" type="password" show-password />
-        </el-form-item>
-      </el-form>
+    <n-modal v-model:show="deleteDialogVisible" title="安全验证" preset="card" style="width: 400px;">
+      <n-alert type="warning" :show-icon="true" style="margin-bottom: 16px;">
+        {{ deleteMessage }}
+      </n-alert>
+      <n-form>
+        <n-form-item label="请输入管理员密码">
+          <n-input v-model:value="deletePassword" type="password" show-password-on="mousedown" />
+        </n-form-item>
+      </n-form>
       <template #footer>
-        <el-button @click="deleteDialogVisible = false">取消</el-button>
-        <el-button type="danger" @click="handleConfirmDelete">确认删除</el-button>
+        <n-button @click="deleteDialogVisible = false">取消</n-button>
+        <n-button type="error" @click="handleConfirmDelete">确认删除</n-button>
       </template>
-    </el-dialog>
-    
+    </n-modal>
+
     <!-- 修改密码对话框 -->
-    <el-dialog v-model="changePasswordVisible" title="修改密码" width="400px">
-      <el-form label-width="100px">
-        <el-form-item label="原密码" required>
-          <el-input v-model="passwordForm.old" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="新密码" required>
-          <el-input v-model="passwordForm.new" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="确认密码" required>
-          <el-input v-model="passwordForm.confirm" type="password" show-password />
-        </el-form-item>
-      </el-form>
+    <n-modal v-model:show="changePasswordVisible" title="修改密码" preset="card" style="width: 400px;">
+      <n-form label-placement="left" label-width="100px">
+        <n-form-item label="原密码" required>
+          <n-input v-model:value="passwordForm.old" type="password" show-password-on="mousedown" />
+        </n-form-item>
+        <n-form-item label="新密码" required>
+          <n-input v-model:value="passwordForm.new" type="password" show-password-on="mousedown" />
+        </n-form-item>
+        <n-form-item label="确认密码" required>
+          <n-input v-model:value="passwordForm.confirm" type="password" show-password-on="mousedown" />
+        </n-form-item>
+      </n-form>
       <template #footer>
-        <el-button @click="changePasswordVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleChangePassword">确认修改</el-button>
+        <n-button @click="changePasswordVisible = false">取消</n-button>
+        <n-button type="primary" @click="handleChangePassword">确认修改</n-button>
       </template>
-    </el-dialog>
-  </el-container>
+    </n-modal>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  School, User, UserFilled, ArrowDown, Lock, SwitchButton,
-  VideoPlay, VideoPause, Refresh, CircleCloseFilled,
-  Upload, Edit, Delete, Search, EditPen
-} from '@element-plus/icons-vue'
-import Cookies from 'js-cookie'
-import * as api from '../api'
-import '../styles/cyber-theme.css'
+import { useUserStore } from '@/stores/user'
+import * as api from '@/api'
 
 const router = useRouter()
-const userName = ref(Cookies.get('name') || '老师')
+const userStore = useUserStore()
+const message = useMessage()
+const dialog = useDialog()
+
+const userName = ref(userStore.userName || '老师')
 
 // 数据
 const students = ref([])
@@ -417,19 +373,12 @@ const selectedStudent = ref({})
 const scoreChange = ref(0)
 const scoreReason = ref('')
 
-// 分数变更快捷标签
 const scoreTags = [
   { label: '回答问题', score: 2 },
   { label: '违反课堂纪律', score: -2 },
   { label: '旷课', score: -5 },
   { label: '未交作业', score: -2 }
 ]
-
-// 应用分数标签
-const applyScoreTag = (tag) => {
-  scoreChange.value = tag.score
-  scoreReason.value = tag.label
-}
 
 // 删除确认
 const deleteMessage = ref('')
@@ -439,10 +388,50 @@ const pendingDelete = ref({ type: '', data: null })
 // 修改密码
 const passwordForm = ref({ old: '', new: '', confirm: '' })
 
-// 计算属性
+// 用户下拉选项
+const userOptions = [
+  { label: '修改密码', key: 'changePassword' },
+  { label: '退出登录', key: 'logout' }
+]
+
+// 表格列定义
+const columns = [
+  { title: '学号', key: 'student_id', width: 120 },
+  { title: '姓名', key: 'name', width: 100 },
+  { 
+    title: '分数', 
+    key: 'score', 
+    width: 100,
+    render(row) {
+      return h('span', { class: 'score-badge' }, row.score)
+    }
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 120,
+    render(row) {
+      return h('div', { style: 'display: flex; gap: 8px;' }, [
+        h('button', { 
+          class: 'action-btn edit',
+          onClick: () => openScoreDialog(row)
+        }, '编辑'),
+        h('button', {
+          class: 'action-btn delete',
+          onClick: () => handleDeleteStudent(row)
+        }, '删除')
+      ])
+    }
+  }
+]
+
 const classList = computed(() => {
   const classes = new Set(students.value.map(s => s.class_name).filter(Boolean))
   return Array.from(classes).sort()
+})
+
+const classOptions = computed(() => {
+  return classList.value.map(cls => ({ label: cls, value: cls }))
 })
 
 const groupedStudents = computed(() => {
@@ -468,38 +457,36 @@ const groupedStudents = computed(() => {
   }))
 })
 
-// 方法
 const loadStudents = async () => {
   const res = await api.getStudents()
   if (res.success) {
     students.value = res.data
-    // 默认所有班级折叠
     activeGroups.value = []
   }
 }
 
 const handleAddStudent = async () => {
   if (!newStudent.value.student_id || !newStudent.value.name) {
-    ElMessage.warning('请填写学号和姓名')
+    message.warning('请填写学号和姓名')
     return
   }
   
   const res = await api.addStudent(newStudent.value)
   if (res.success) {
-    ElMessage.success('添加成功')
+    message.success('添加成功')
     newStudent.value = { student_id: '', name: '', class_name: '' }
     showAddStudent.value = false
     loadStudents()
   }
 }
 
-const handleFileChange = (file) => {
-  importFile.value = file.raw
+const handleUpload = ({ file }) => {
+  importFile.value = file.file
 }
 
 const handleImport = async () => {
   if (!importFile.value) {
-    ElMessage.warning('请选择文件')
+    message.warning('请选择文件')
     return
   }
   
@@ -512,7 +499,7 @@ const handleImport = async () => {
   importLoading.value = false
   
   if (res.success) {
-    ElMessage.success(res.message)
+    message.success(res.message)
     showImport.value = false
     loadStudents()
   }
@@ -520,20 +507,19 @@ const handleImport = async () => {
 
 const handleResetScores = async () => {
   if (!resetPassword.value) {
-    ElMessage.warning('请输入管理员密码')
+    message.warning('请输入管理员密码')
     return
   }
   
-  // 验证密码
   const authRes = await api.login({ username: 'admin', password: resetPassword.value })
   if (!authRes.success) {
-    ElMessage.error('密码错误')
+    message.error('密码错误')
     return
   }
   
   const res = await api.resetAllScores({ default_score: resetScoreValue.value })
   if (res.success) {
-    ElMessage.success(res.message)
+    message.success(res.message)
     showResetScore.value = false
     resetPassword.value = ''
     loadStudents()
@@ -558,26 +544,26 @@ const handleDeleteClass = (className) => {
 
 const handleConfirmDelete = async () => {
   if (!deletePassword.value) {
-    ElMessage.warning('请输入密码')
+    message.warning('请输入密码')
     return
   }
   
   const authRes = await api.login({ username: 'admin', password: deletePassword.value })
   if (!authRes.success) {
-    ElMessage.error('密码错误')
+    message.error('密码错误')
     return
   }
   
   if (pendingDelete.value.type === 'student') {
     const res = await api.deleteStudent(pendingDelete.value.data.student_id)
     if (res.success) {
-      ElMessage.success('删除成功')
+      message.success('删除成功')
       loadStudents()
     }
   } else if (pendingDelete.value.type === 'class') {
     const res = await api.deleteClass(pendingDelete.value.data)
     if (res.success) {
-      ElMessage.success(res.message)
+      message.success(res.message)
       loadStudents()
     }
   }
@@ -599,30 +585,22 @@ const handleUpdateScore = async () => {
     reason: scoreReason.value
   })
   if (res.success) {
-    ElMessage.success(res.message)
+    message.success(res.message)
     scoreDialogVisible.value = false
     loadStudents()
   }
 }
 
-const getScoreType = (score) => {
-  if (score >= 80) return 'success'
-  if (score >= 60) return 'warning'
-  return 'danger'
-}
-
-// 新增：获取分数样式类名
-const getScoreClass = (score) => {
-  if (score >= 80) return 'score-high'
-  if (score >= 60) return 'score-medium'
-  return 'score-low'
+const applyScoreTag = (tag) => {
+  scoreChange.value = tag.score
+  scoreReason.value = tag.label
 }
 
 const startClass = async () => {
   if (!selectedClass.value) return
   const res = await api.setClassSession({ class_name: selectedClass.value })
   if (res.success) {
-    ElMessage.success(res.message)
+    message.success(res.message)
     loadClassSession()
   }
 }
@@ -630,7 +608,7 @@ const startClass = async () => {
 const endClass = async () => {
   const res = await api.setClassSession({ class_name: '' })
   if (res.success) {
-    ElMessage.success(res.message)
+    message.success(res.message)
     loadClassSession()
   }
 }
@@ -650,14 +628,11 @@ const loadClassSession = async () => {
             not_checked_in,
             rate: total > 0 ? Math.round((checked_in / total) * 100) : 0
           }
-        } else {
-          ElMessage.warning(studentsRes.message || '获取学生列表失败')
         }
       }
     }
   } catch (error) {
-    ElMessage.error('刷新状态失败，请重试')
-    console.error('loadClassSession error:', error)
+    message.error('刷新状态失败')
   }
 }
 
@@ -673,22 +648,26 @@ const collapseAll = () => {
   activeGroups.value = []
 }
 
-const openChangePasswordDialog = () => {
-  passwordForm.value = { old: '', new: '', confirm: '' }
-  changePasswordVisible.value = true
+const handleUserAction = (key) => {
+  if (key === 'changePassword') {
+    passwordForm.value = { old: '', new: '', confirm: '' }
+    changePasswordVisible.value = true
+  } else if (key === 'logout') {
+    handleLogout()
+  }
 }
 
 const handleChangePassword = async () => {
   if (!passwordForm.value.old || !passwordForm.value.new) {
-    ElMessage.warning('请填写密码')
+    message.warning('请填写密码')
     return
   }
   if (passwordForm.value.new !== passwordForm.value.confirm) {
-    ElMessage.warning('两次输入的密码不一致')
+    message.warning('两次输入的密码不一致')
     return
   }
   if (passwordForm.value.new.length < 6) {
-    ElMessage.warning('新密码长度至少为6位')
+    message.warning('新密码长度至少为6位')
     return
   }
   
@@ -698,34 +677,21 @@ const handleChangePassword = async () => {
   })
   
   if (res.success) {
-    ElMessage.success('密码修改成功，请重新登录')
+    message.success('密码修改成功，请重新登录')
     changePasswordVisible.value = false
     handleLogout()
   } else {
-    ElMessage.error(res.message)
+    message.error(res.message)
   }
 }
 
 const handleLogout = async () => {
   await api.logout()
-  Cookies.remove('user_id')
-  Cookies.remove('username')
-  Cookies.remove('name')
+  userStore.clearUser()
   router.push('/login')
 }
 
-// 检查是否已登录
-const checkAuth = () => {
-  const userId = Cookies.get('user_id')
-  if (!userId) {
-    router.push('/login')
-    return false
-  }
-  return true
-}
-
 onMounted(() => {
-  if (!checkAuth()) return
   loadStudents()
   loadClassSession()
   api.getDbInfo().then(res => {
@@ -735,20 +701,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-container {
+.admin-layout {
   min-height: 100vh;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 50%, #0d0d14 100%);
 }
 
 .admin-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  height: 64px;
-  padding: 0 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  padding: 0 32px;
+  height: 72px;
+  background: rgba(19, 19, 31, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header-left {
@@ -763,14 +732,30 @@ onMounted(() => {
   gap: 12px;
 }
 
-.logo h1 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 10px;
 }
 
-.env-tag {
-  font-size: 12px;
+.logo-icon svg {
+  width: 22px;
+  height: 22px;
+  color: white;
+}
+
+.logo h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  background: linear-gradient(135deg, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .header-right {
@@ -780,23 +765,36 @@ onMounted(() => {
 }
 
 .checkin-btn {
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.3);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 2px 8px;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  background: rgba(255,255,255,0.1);
-  transition: background 0.3s;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
 }
 
 .user-info:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .username {
@@ -804,21 +802,20 @@ onMounted(() => {
 }
 
 .admin-main {
-  padding: 24px;
+  padding: 32px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
 .control-card {
   margin-bottom: 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .control-card.active {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-  border: 1px solid #91d5ff;
+  background: rgba(99, 102, 241, 0.1) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
 }
 
 .card-header {
@@ -830,9 +827,10 @@ onMounted(() => {
 .header-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 16px;
   font-weight: 600;
+  color: white;
 }
 
 .class-selector {
@@ -849,40 +847,54 @@ onMounted(() => {
   display: flex;
   justify-content: space-around;
   margin-bottom: 24px;
+  gap: 16px;
 }
 
 .stat-item {
   text-align: center;
-  padding: 16px 32px;
-  border-radius: 8px;
-  background: #f5f7fa;
-  transition: all 0.3s;
+  padding: 20px 40px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stat-item.success {
-  background: #f6ffed;
-  color: #52c41a;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.stat-item.success .stat-value {
+  color: #34d399;
 }
 
 .stat-item.danger {
-  background: #fff2f0;
-  color: #ff4d4f;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.stat-item.danger .stat-value {
+  color: #f87171;
 }
 
 .stat-item.primary {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.stat-item.primary .stat-value {
+  color: #818cf8;
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
+  color: white;
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #666;
+  color: #94a3b8;
 }
 
 .class-actions {
@@ -892,212 +904,119 @@ onMounted(() => {
 }
 
 .quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   margin-bottom: 24px;
 }
 
 .action-card {
   text-align: center;
-  padding: 24px;
+  padding: 32px 24px;
   cursor: pointer;
-  transition: all 0.3s;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.3s ease;
 }
 
 .action-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
 }
 
 .action-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  margin: 0 auto 16px;
+}
+
+.action-icon svg {
+  width: 28px;
+  height: 28px;
+  color: white;
 }
 
 .action-title {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 4px;
+  color: white;
+  margin-bottom: 6px;
 }
 
 .action-desc {
   font-size: 13px;
-  color: #999;
+  color: #94a3b8;
 }
 
 .student-list-card {
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-
-.class-groups {
-  padding: 8px 0;
-}
-
-.collapse-title {
-  display: flex;
-  align-items: center;
   gap: 12px;
 }
 
-.class-name {
+.score-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 6px;
+  color: #818cf8;
   font-weight: 600;
-  font-size: 15px;
 }
 
-.student-info {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
+.action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.unit {
-  margin-left: 8px;
-  color: #666;
+.action-btn.edit {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+}
+
+.action-btn.edit:hover {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+.action-btn.delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.3);
 }
 
 .tip {
-  margin-left: 12px;
-  color: #999;
+  color: #64748b;
   font-size: 13px;
 }
-
-:deep(.el-collapse-item__header) {
-  padding: 0 16px;
-  font-size: 15px;
-}
-
-:deep(.el-collapse-item__content) {
-  padding: 16px;
-}
-
-:deep(.el-table) {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* ===== 学号样式 - 禁止换行 ===== */
-.student-id-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  color: #4b5563;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  font-weight: 600;
-  font-size: 13px;
-  white-space: nowrap;
-  letter-spacing: 0.3px;
-}
-
-/* ===== 姓名样式 ===== */
-.student-name-badge {
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  display: inline-flex;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  align-items: center;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  justify-content: center;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  padding: 2px 8px;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  background: transparent;/* 背景已移除 */
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  /* 边框已移除 */
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  border-radius: 6px;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  color: #374151;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  font-weight: 600;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  font-size: 13px;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-}
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-
-/* ===== 分数标签样式 ===== */
-.score-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 13px;
-  min-width: 40px;
-}
-
-.score-high {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.score-medium {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.score-low {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-/* ===== 删除按钮 - 图标+柔和色 ===== */
-.delete-btn-icon {
-  background: #fee2e2 !important;
-  border: none !important;
-  color: #991b1b !important;
-  width: 28px !important;
-  height: 28px !important;
-  padding: 0 !important;
-  border-radius: 6px !important;
-  transition: all 0.2s ease !important;
-}
-
-.delete-btn-icon:hover {
-  background: #fecaca !important;
-  color: #7f1d1d !important;
-  transform: scale(1.05);
-}
-
-/* ===== 斑马纹颜色调整 ===== */
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
-  background: #f8fafc !important;
-}
-
-/* ===== 行高调整 ===== */
-:deep(.el-table .el-table__cell) {
-  padding: 4px 0 !important;
-  height: auto; min-height: 36px;
-}
-
-/* ===== 悬停效果 ===== */
-:deep(.el-table__row:hover td) {
-  background: #f1f5f9 !important;
-}
-
-/* ===== 表格行悬停时增强效果 ===== */
-:deep(.el-table__row:hover) .student-id-badge {
-  background: #f9fafb;
-  border-color: #9ca3af;
-}
-
-:deep(.el-table__row:hover) .student-name-badge {
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  background: #ffedd5;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-  border-color: #fdba74;
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
-}
-/* ===== 班级标签 - 简化样式 ===== */.class-tag-simple {  display: inline-flex;  align-items: center;  padding: 2px 8px;  background: #ede9fe;  color: #5b21b6;  border-radius: 6px;  font-weight: 600;  font-size: 13px;  border: 1px solid #c4b5fd;}
 </style>

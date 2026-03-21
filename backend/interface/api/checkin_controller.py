@@ -12,6 +12,8 @@ from infrastructure.persistence.repositories.sqlite_user_repository import SQLit
 from infrastructure.security.rate_limiter import checkin_limit
 from infrastructure.security.session import require_login, is_admin
 from infrastructure.security.xss_protection import sanitize_checkin_record, escape_html
+from infrastructure.logging import logger
+from infrastructure.config import AuthConfig, HttpStatus, PaginationConfig
 from application.services.checkin_app_service import CheckinAppService
 from application.services.privacy_service import PrivacyService
 
@@ -22,8 +24,8 @@ router = APIRouter(prefix="/api", tags=["checkin"])
 # ============ Pydantic模型 ============
 
 class StudentCheckinRequest(BaseModel):
-    student_id: str = Field(..., min_length=1, description="学号")
-    name: str = Field(..., min_length=1, description="姓名")
+    student_id: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH, description="学号")
+    name: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH, description="姓名")
 
 
 class TeacherCheckinRequest(BaseModel):
@@ -68,12 +70,13 @@ async def student_checkin(
                 'data': sanitize_checkin_record(checkin.to_dict()) if checkin else None
             }
         else:
-            raise HTTPException(status_code=400, detail=message)
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=message)
             
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"学生签到失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.post("/teacher-checkin", response_model=dict)
@@ -100,7 +103,7 @@ async def teacher_checkin(
                 is_student_id=False
             )
         else:
-            raise HTTPException(status_code=400, detail='请提供学生学号或姓名')
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='请提供学生学号或姓名')
         
         if success:
             # XSS防护：对返回数据进行HTML转义
@@ -114,12 +117,13 @@ async def teacher_checkin(
                 }
             }
         else:
-            raise HTTPException(status_code=400, detail=message)
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=message)
             
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"老师代签失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.get("/checkin/records", response_model=dict)
@@ -143,7 +147,7 @@ async def get_checkin_records(
             student_id=student_id,
             class_name=class_name,
             date=date,
-            limit=200
+            limit=PaginationConfig.MAX_CHECKIN_RECORDS
         )
         
         # 数据脱敏处理
@@ -178,7 +182,8 @@ async def get_checkin_records(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"获取签到记录失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.get("/checkin/stats", response_model=dict)
@@ -204,7 +209,8 @@ async def get_checkin_stats(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"获取签到统计失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.get("/checkin/today", response_model=dict)
@@ -233,4 +239,5 @@ async def get_today_checkins(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"获取今日签到列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))

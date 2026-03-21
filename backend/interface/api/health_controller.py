@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends
 from datetime import datetime
 
 from infrastructure.persistence.database import Database
+from infrastructure.cache.cache_client import get_cache_client
+from infrastructure.config import HttpStatus
 
 
 router = APIRouter(tags=["health"])
@@ -39,7 +41,7 @@ async def health_check():
     # 检查数据库连接
     try:
         db = Database()
-        with db.get_connection() as conn:
+        with db.connection() as conn:
             cursor = conn.execute("SELECT 1")
             cursor.fetchone()
         health_info["checks"]["database"] = {
@@ -53,11 +55,11 @@ async def health_check():
             "message": f"数据库连接失败: {str(e)}"
         }
     
-    # 检查Redis连接（如果使用）
+    # 检查Redis连接
     try:
-        from fastapi_limiter import FastAPILimiter
-        if FastAPILimiter.redis:
-            await FastAPILimiter.redis.ping()
+        cache = get_cache_client()
+        if cache.is_connected:
+            await cache.ping()
             health_info["checks"]["redis"] = {
                 "status": "up",
                 "message": "Redis连接正常"
@@ -76,7 +78,7 @@ async def health_check():
     # 如果有任何检查失败，返回503状态码
     if health_info["status"] == "unhealthy":
         from fastapi import HTTPException
-        raise HTTPException(status_code=503, detail=health_info)
+        raise HTTPException(status_code=HttpStatus.SERVICE_UNAVAILABLE, detail=health_info)
     
     return health_info
 
@@ -90,7 +92,7 @@ async def readiness_check():
     """
     try:
         db = Database()
-        with db.get_connection() as conn:
+        with db.connection() as conn:
             cursor = conn.execute("SELECT COUNT(*) FROM students")
             cursor.fetchone()
         
@@ -102,7 +104,7 @@ async def readiness_check():
     except Exception as e:
         from fastapi import HTTPException
         raise HTTPException(
-            status_code=503,
+            status_code=HttpStatus.SERVICE_UNAVAILABLE,
             detail={
                 "status": "not_ready",
                 "timestamp": datetime.now().isoformat(),

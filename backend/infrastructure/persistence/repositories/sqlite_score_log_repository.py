@@ -5,6 +5,8 @@ import sqlite3
 from typing import List, Optional
 from datetime import datetime
 
+from infrastructure.config import PaginationConfig
+
 from domain.entities.score_log import ScoreLog
 from infrastructure.persistence.database import Database
 
@@ -31,7 +33,7 @@ class SQLiteScoreLogRepository:
     
     def save(self, log: ScoreLog) -> ScoreLog:
         """保存日志"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO score_logs
                     (student_id, student_name, class_name, delta, reason,
@@ -44,16 +46,15 @@ class SQLiteScoreLogRepository:
                 )
             )
             log.id = cursor.lastrowid
-            conn.commit()
             return log
     
     def find_by_student(
         self,
         student_id: str,
-        limit: int = 50
+        limit: int = PaginationConfig.SCORE_LOG_DEFAULT_LIMIT
     ) -> List[ScoreLog]:
         """查询学生的分数日志"""
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(
                 """SELECT * FROM score_logs
                    WHERE student_id = ?
@@ -69,7 +70,7 @@ class SQLiteScoreLogRepository:
         class_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: int = 100
+        limit: int = PaginationConfig.SCORE_LOG_MAX_LIMIT
     ) -> List[ScoreLog]:
         """条件查询日志"""
         query = "SELECT * FROM score_logs WHERE 1=1"
@@ -94,6 +95,6 @@ class SQLiteScoreLogRepository:
         query += " ORDER BY created_at DESC LIMIT ?"
         params.append(limit)
         
-        with self._db.get_connection() as conn:
+        with self._db.connection() as conn:
             cursor = conn.execute(query, params)
             return [self._row_to_entity(row) for row in cursor.fetchall()]

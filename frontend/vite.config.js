@@ -1,70 +1,133 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { resolve } from 'path'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig(({ mode }) => ({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    // 自动导入 API
+    AutoImport({
+      imports: [
+        'vue',
+        'vue-router',
+        'pinia',
+        {
+          'naive-ui': [
+            'useDialog',
+            'useMessage',
+            'useNotification',
+            'useLoadingBar'
+          ]
+        }
+      ],
+      dts: 'src/auto-imports.d.ts',
+      eslintrc: {
+        enabled: true
+      }
+    }),
+    // 自动导入组件
+    Components({
+      resolvers: [NaiveUiResolver()],
+      dts: 'src/components.d.ts',
+      dirs: ['src/components'],
+      deep: true
+    })
+  ],
+  
+  // 路径别名
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      '@components': resolve(__dirname, 'src/components'),
+      '@views': resolve(__dirname, 'src/views'),
+      '@api': resolve(__dirname, 'src/api'),
+      '@utils': resolve(__dirname, 'src/utils'),
+      '@styles': resolve(__dirname, 'src/styles')
+    }
+  },
   
   // 生产构建配置
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    // 启用代码压缩
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,  // 移除 console.log
-        drop_debugger: true  // 移除 debugger
+        drop_console: true,
+        drop_debugger: true
       }
     },
-    // 代码分割配置
     rollupOptions: {
       output: {
-        // 分包策略
-        manualChunks: {
-          'element-plus': ['element-plus'],
-          'vue-vendor': ['vue', 'vue-router'],
-          'utils': ['axios', 'js-cookie']
+        manualChunks: (id) => {
+          if (id.includes('naive-ui')) {
+            return 'naive-ui'
+          }
+          if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+            return 'vue-vendor'
+          }
+          if (id.includes('axios') || id.includes('js-cookie')) {
+            return 'utils'
+          }
         },
-        // 静态资源命名
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.')
-          const ext = info[info.length - 1]
-          if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(assetInfo.name)) {
+          const name = assetInfo.name || ''
+          if (/\.(png|jpe?g|gif|svg|webp|ico)$/i.test(name)) {
             return 'assets/img/[name]-[hash][extname]'
           }
-          if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
+          if (/\.(woff2?|eot|ttf|otf)$/i.test(name)) {
             return 'assets/fonts/[name]-[hash][extname]'
           }
           return 'assets/[ext]/[name]-[hash][extname]'
         }
       }
     },
-    // 小于 4KB 的资源内联为 base64
     assetsInlineLimit: 4096,
-    // 启用 CSS 代码分割
     cssCodeSplit: true,
-    // 启用 source map（生产环境建议关闭）
-    sourcemap: false
+    sourcemap: mode === 'development',
+    reportCompressedSize: false
   },
   
-  // 路径配置
-  base: '/',  // 部署在根路径
+  base: '/',
   
-  // 开发服务器配置（仅开发环境使用）
   server: {
     port: 3000,
+    strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',  // FastAPI端口
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true
+      }
+    },
+    hmr: {
+      overlay: true
+    }
+  },
+  
+  preview: {
+    port: 4173,
+    strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
         changeOrigin: true
       }
     }
   },
   
-  // 依赖预构建优化
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'element-plus', '@element-plus/icons-vue', 'axios', 'js-cookie']
+    include: [
+      'naive-ui'
+    ]
+  },
+  
+  css: {
+    devSourcemap: true
   }
 }))

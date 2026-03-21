@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from domain.entities.audit_log import AuditLog
 from domain.repositories.audit_log_repository import AuditLogRepository
+from infrastructure.config import PaginationConfig
 
 
 class AuditLogAppService:
@@ -82,7 +83,7 @@ class AuditLogAppService:
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
         days: Optional[int] = None,
-        limit: int = 100,
+        limit: int = PaginationConfig.MAX_AUDIT_LOGS,
         offset: int = 0
     ) -> List[AuditLog]:
         """
@@ -145,7 +146,7 @@ class AuditLogAppService:
     def get_recent_activity(
         self,
         user_id: int,
-        limit: int = 50
+        limit: int = PaginationConfig.MY_LOGS_PAGE_SIZE
     ) -> List[AuditLog]:
         """获取用户近期活动"""
         return self._repo.find_by_filters(

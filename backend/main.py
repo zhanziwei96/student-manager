@@ -13,7 +13,13 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from infrastructure.persistence.database import Database
 from infrastructure.security.rate_limiter import init_rate_limiter
-from interface.api import student_controller, user_controller, checkin_controller, class_session_controller, audit_log_controller, health_controller
+from infrastructure.cache import init_cache_client
+from infrastructure.cache.cache_warmup import warmup_cache
+from infrastructure.config import get_settings, AppConfig, AuthConfig, CacheConfig, HttpStatus
+from interface.api import student_controller, user_controller, checkin_controller, class_session_controller, audit_log_controller, health_controller, cache_controller, database_controller, backup_controller
+
+# 获取应用配置
+settings = get_settings()
 
 
 # 静态文件目录
@@ -30,9 +36,14 @@ async def lifespan(app: FastAPI):
     print("班级管理系统 FastAPI + DDD架构")
     print("=" * 50)
     
-    # 初始化限流器（Redis）
-    redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-    await init_rate_limiter(redis_url)
+    # 初始化限流器
+    await init_rate_limiter(settings.redis.url)
+    
+    # 初始化缓存客户端（Redis）
+    await init_cache_client(settings.redis.url)
+    
+    # 缓存预热
+    await warmup_cache()
     
     print(f"\n后端API: http://localhost:8000")
     print(f"API文档: http://localhost:8000/docs")
@@ -60,32 +71,42 @@ def create_app() -> FastAPI:
     """
     # 创建FastAPI应用
     app = FastAPI(
-        title="班级管理系统",
+        title=settings.name,
         description="FastAPI + DDD架构",
-        version="2.0.0",
+        version=settings.version,
+        debug=settings.debug,
         lifespan=lifespan
     )
     
     # Session配置
-    secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     app.add_middleware(
         SessionMiddleware,
-        secret_key=secret_key,
-        max_age=3600 * 24,  # 24小时
+        secret_key=settings.security.secret_key,
+        max_age=settings.security.session_max_age,
     )
     
-    # CORS配置（开发环境）
+    # CORS配置
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=settings.security.cors_origins,
+        allow_credentials=settings.security.cors_allow_credentials,
+        allow_methods=settings.security.cors_allow_methods,
+        allow_headers=settings.security.cors_allow_headers,
+    )
+    
+    # 缓存中间件
+    from infrastructure.cache import CacheMiddleware
+    app.add_middleware(
+        CacheMiddleware,
+        ttl=settings.cache.ttl,
+        enabled=settings.cache.enabled
     )
     
     # 初始化数据库
     db = Database()
     db.init_tables()
+    db.run_migrations()  # 运行数据库迁移
+    db.init_indexes()  # 创建索引
     
     # 注册API路由
     # 健康检查端点（无需认证，放在第一位）
@@ -96,6 +117,9 @@ def create_app() -> FastAPI:
     app.include_router(checkin_controller.router)
     app.include_router(class_session_controller.router)
     app.include_router(audit_log_controller.router)
+    app.include_router(cache_controller.router)
+    app.include_router(database_controller.router)
+    app.include_router(backup_controller.router)
     
     # 静态文件服务（生产环境）
     if os.path.exists(STATIC_DIR):
@@ -164,8 +188,8 @@ if __name__ == "__main__":
     # 启动服务
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=settings.host,
+        port=settings.port,
         reload=is_dev,
         workers=1 if is_dev else None
     )

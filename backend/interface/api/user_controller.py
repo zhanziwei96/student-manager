@@ -9,6 +9,8 @@ from infrastructure.persistence.database import Database
 from infrastructure.persistence.repositories.sqlite_user_repository import SQLiteUserRepository
 from infrastructure.security.rate_limiter import login_limit
 from infrastructure.security.session import require_login, require_admin, get_session_user_id, is_admin
+from infrastructure.logging import logger
+from infrastructure.config import AuthConfig, HttpStatus
 from application.services.user_app_service import UserAppService
 from application.dto.user_dto import CreateUserDTO, UpdateUserDTO
 
@@ -19,14 +21,14 @@ router = APIRouter(prefix="/api", tags=["users"])
 # ============ Pydantic模型 ============
 
 class LoginRequest(BaseModel):
-    username: str = Field(..., min_length=1)
-    password: str = Field(..., min_length=1)
+    username: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH)
+    password: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH)
 
 
 class CreateUserRequest(BaseModel):
-    username: str = Field(..., min_length=3)
-    password: str = Field(..., min_length=6)
-    name: str = Field(..., min_length=1)
+    username: str = Field(..., min_length=AuthConfig.USERNAME_MIN_LENGTH)
+    password: str = Field(..., min_length=AuthConfig.PASSWORD_MIN_LENGTH)
+    name: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH)
     role: str = Field(default="teacher")
     assigned_classes: List[str] = Field(default_factory=list)
 
@@ -39,12 +41,12 @@ class UpdateUserRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    new_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=AuthConfig.PASSWORD_MIN_LENGTH)
 
 
 class ChangePasswordRequest(BaseModel):
-    old_password: str = Field(..., min_length=1)
-    new_password: str = Field(..., min_length=6)
+    old_password: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH)
+    new_password: str = Field(..., min_length=AuthConfig.PASSWORD_MIN_LENGTH)
 
 
 # ============ 依赖注入 ============
@@ -98,7 +100,7 @@ async def create_user(
             'data': user.__dict__
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
 
 
 @router.put("/admin/users/{user_id}", response_model=dict)
@@ -126,7 +128,7 @@ async def update_user(
             'data': user.__dict__
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/admin/users/{user_id}", response_model=dict)
@@ -160,7 +162,8 @@ async def reset_password(
         service.reset_password(user_id, data.new_password.strip())
         return {'success': True, 'message': '密码重置成功'}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"密码重置失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.post("/admin/users/{user_id}/unlock", response_model=dict)
@@ -176,7 +179,8 @@ async def unlock_user(
         service.unlock_user(user_id)
         return {'success': True, 'message': '账号已解锁'}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"解锁用户失败: {e}", exc_info=True)
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
 @router.post(
@@ -219,10 +223,10 @@ async def login(
                 }
             }
         else:
-            raise HTTPException(status_code=401, detail='用户名或密码错误')
+            raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
             
     except ValueError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail=str(e))
 
 
 @router.post("/logout", response_model=dict)
@@ -250,7 +254,7 @@ async def change_password(
     if success:
         return {'success': True, 'message': '密码修改成功'}
     else:
-        raise HTTPException(status_code=400, detail='旧密码错误')
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='旧密码错误')
 
 
 @router.get("/me", response_model=dict)
@@ -273,4 +277,4 @@ async def get_current_user(
                 'is_admin': user.is_admin
             }
         }
-    raise HTTPException(status_code=404, detail='用户不存在')
+    raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='用户不存在')
