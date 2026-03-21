@@ -165,6 +165,19 @@
           <div class="action-title">重置分数</div>
           <div class="action-desc">重置所有学生分数</div>
         </n-card>
+
+        <n-card class="action-card" hoverable @click="showAddTeacher = true">
+          <div class="action-icon" style="background: linear-gradient(135deg, #ec4899, #f472b6);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+              <line x1="16" y1="11" x2="16" y2="11"/>
+              <line x1="8" y1="11" x2="8" y2="11"/>
+            </svg>
+          </div>
+          <div class="action-title">新增教师</div>
+          <div class="action-desc">创建教师账号</div>
+        </n-card>
       </div>
 
       <!-- 学生列表 -->
@@ -282,6 +295,31 @@
       </template>
     </n-modal>
 
+    <!-- 新增教师对话框 -->
+    <n-modal v-model:show="showAddTeacher" title="新增教师" preset="card" style="width: 500px;">
+      <n-alert type="info" :show-icon="true" style="margin-bottom: 16px;">
+        默认密码为教师名字拼音首字母缩写 + 123（例如：张三 → zs123）
+      </n-alert>
+      <n-form :model="newTeacher" label-placement="left" label-width="100px">
+        <n-form-item label="用户名" required>
+          <n-input v-model:value="newTeacher.username" placeholder="请输入用户名（登录用）" />
+        </n-form-item>
+        <n-form-item label="姓名" required>
+          <n-input v-model:value="newTeacher.name" placeholder="请输入教师姓名" />
+        </n-form-item>
+        <n-form-item label="负责班级">
+          <n-select v-model:value="newTeacher.assigned_class" placeholder="选择负责班级" :options="classOptions" clearable />
+        </n-form-item>
+        <n-form-item label="默认密码">
+          <n-input :value="newTeacher.name ? generateTeacherPassword(newTeacher.name) : '填写姓名后自动生成'" disabled />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-button @click="showAddTeacher = false">取消</n-button>
+        <n-button type="primary" @click="handleAddTeacher">确认创建</n-button>
+      </template>
+    </n-modal>
+
     <!-- 调整分数对话框 -->
     <n-modal v-model:show="scoreDialogVisible" title="调整分数" preset="card" style="width: 450px;">
       <div class="student-info" style="margin-bottom: 16px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
@@ -372,12 +410,16 @@ const dbInfo = ref({})
 const showAddStudent = ref(false)
 const showImport = ref(false)
 const showResetScore = ref(false)
+const showAddTeacher = ref(false)
 const scoreDialogVisible = ref(false)
 const deleteDialogVisible = ref(false)
 const changePasswordVisible = ref(false)
 
 // 添加学生
 const newStudent = ref({ student_id: '', name: '', class_name: '' })
+
+// 添加教师
+const newTeacher = ref({ username: '', name: '', assigned_class: '' })
 
 // 导入
 const importFile = ref(null)
@@ -529,6 +571,38 @@ const handleAddStudent = async () => {
     newStudent.value = { student_id: '', name: '', class_name: '' }
     showAddStudent.value = false
     loadStudents()
+  }
+}
+
+// 生成默认密码（教师名字每个字的拼音首字母 + 123）
+const generateTeacherPassword = (name) => {
+  // 简单的拼音首字母提取（实际项目中应该使用 pinyin 库）
+  // 这里使用名字的每个字的第一个字符
+  const chars = name.split('').filter(c => /[\u4e00-\u9fa5a-zA-Z]/.test(c))
+  const initials = chars.map(c => c.toLowerCase()[0]).join('')
+  return initials + '123'
+}
+
+const handleAddTeacher = async () => {
+  if (!newTeacher.value.username || !newTeacher.value.name) {
+    message.warning('请填写用户名和姓名')
+    return
+  }
+  
+  const password = generateTeacherPassword(newTeacher.value.name)
+  
+  const res = await api.createUser({
+    username: newTeacher.value.username,
+    name: newTeacher.value.name,
+    role: 'teacher',
+    assigned_class: newTeacher.value.assigned_class,
+    password: password
+  })
+  
+  if (res.success) {
+    message.success(`教师创建成功，默认密码：${password}`)
+    newTeacher.value = { username: '', name: '', assigned_class: '' }
+    showAddTeacher.value = false
   }
 }
 

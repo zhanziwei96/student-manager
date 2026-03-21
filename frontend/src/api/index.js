@@ -5,6 +5,7 @@ export const login = (data) => request.post('/login', data)
 export const logout = () => request.post('/logout')
 export const getUserInfo = () => request.get('/me')
 export const changePassword = (data) => request.post('/change-password', data)
+export const createUser = (data) => request.post('/admin/users', data)
 
 // 学生管理
 export const getStudents = () => request.get('/students')
