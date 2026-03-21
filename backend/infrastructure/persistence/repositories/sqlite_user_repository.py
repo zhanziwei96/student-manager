@@ -52,10 +52,10 @@ class SQLiteUserRepository(UserRepository):
             id=row['id'],
             username=row['username'],
             name=row['name'] or row['username'],
-            password=Password(
+            password=Password.from_hash(
                 hash_value=row['password_hash'],
                 salt=row['salt']
-            ),
+            ) if row['password_hash'] else None,
             role=UserRole(row['role'] or 'teacher'),
             assigned_classes=assigned_classes,
             status=status,

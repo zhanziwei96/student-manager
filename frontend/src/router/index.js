@@ -31,6 +31,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/student',
+    name: 'Student',
+    component: () => import('@/views/Student.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/checkin',
     name: 'Checkin',
     component: () => import('@/views/Checkin.vue')
