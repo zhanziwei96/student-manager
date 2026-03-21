@@ -69,15 +69,40 @@ python -c "from infrastructure.config import get_settings; print(get_settings().
 - 正确: Domain 层硬编码常量
 - 错误: Domain 层使用 `ScoreConfig`
 
+### 8. 使用 print 而不是 logging
+**错误**: 直接使用 `print()` 输出日志信息
+
+```python
+# ❌ 错误
+print(f"数据库路径: {db_path}")
+print("服务启动")
+```
+
+**正确**: 使用项目统一的日志模块
+
+```python
+# ✅ 正确
+from infrastructure.logging import logger
+logger.info(f"数据库路径: {db_path}")
+
+# 或使用便捷函数
+from infrastructure.logging import info, error, warning, debug
+info("服务启动")
+error("数据库连接失败")
+warning("配置未找到，使用默认值")
+```
+
+**日志文件位置**: `backend/logs/YYYY-MM-DD.log`
+
 ---
 
 ## 测试类错误
 
-### 8. 测试数据库冲突
+### 9. 测试数据库冲突
 - 集成测试使用临时文件数据库
 - 用户名使用 UUID 避免冲突
 
-### 9. 测试路径问题
+### 10. 测试路径问题
 ```bash
 # 在项目根目录运行
 pytest tests/ -v

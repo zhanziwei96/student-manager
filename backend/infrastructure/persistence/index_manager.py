@@ -95,7 +95,7 @@ RECOMMENDED_INDEXES: List[IndexDefinition] = [
     IndexDefinition(
         name="idx_users_status",
         table="users",
-        columns=["status"],
+        columns=["is_active"],
         index_type=IndexType.SINGLE,
         where_clause=None
     ),
@@ -103,7 +103,7 @@ RECOMMENDED_INDEXES: List[IndexDefinition] = [
     IndexDefinition(
         name="idx_users_last_login_at",
         table="users",
-        columns=["last_login_at DESC"],
+        columns=["last_login DESC"],
         index_type=IndexType.SINGLE,
         where_clause=None
     ),
@@ -111,7 +111,7 @@ RECOMMENDED_INDEXES: List[IndexDefinition] = [
     IndexDefinition(
         name="idx_users_role_status",
         table="users",
-        columns=["role", "status"],
+        columns=["role", "is_active"],
         index_type=IndexType.COMPOSITE,
         where_clause=None
     ),
@@ -179,7 +179,7 @@ RECOMMENDED_INDEXES: List[IndexDefinition] = [
     IndexDefinition(
         name="idx_score_logs_operation_time",
         table="score_logs",
-        columns=["operation_time DESC"],
+        columns=["created_at DESC"],
         index_type=IndexType.SINGLE,
         where_clause=None
     ),

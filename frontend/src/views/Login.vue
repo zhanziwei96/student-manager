@@ -173,6 +173,45 @@ const getParticleStyle = (n) => {
   }
 }
 
+// 人性化错误消息映射
+const getFriendlyErrorMessage = (rawMessage) => {
+  if (!rawMessage) return '登录失败，请稍后重试'
+  
+  // 密码错误
+  const passwordMatch = rawMessage.match(/密码错误.*还剩\s*(\d+)\s*次机会/)
+  if (passwordMatch) {
+    const times = passwordMatch[1]
+    return `密码不正确，您还有 ${times} 次尝试机会`
+  }
+  
+  // 账号锁定
+  if (rawMessage.includes('账号已被锁定') || rawMessage.includes('锁定')) {
+    return '账号已暂时锁定，请30分钟后重试，或联系管理员解锁'
+  }
+  
+  // 账号禁用
+  if (rawMessage.includes('账号已被禁用') || rawMessage.includes('禁用')) {
+    return '您的账号已被禁用，请联系管理员处理'
+  }
+  
+  // 用户不存在
+  if (rawMessage.includes('用户不存在') || rawMessage.includes('用户名')) {
+    return '该用户名不存在，请检查输入或联系管理员'
+  }
+  
+  // 请求过于频繁
+  if (rawMessage.includes('频繁') || rawMessage.includes('rate limit')) {
+    return '操作太频繁啦，请稍等片刻再试'
+  }
+  
+  // 网络错误
+  if (rawMessage.includes('网络') || rawMessage.includes('Network')) {
+    return '网络连接异常，请检查网络后重试'
+  }
+  
+  return rawMessage
+}
+
 const handleLogin = async () => {
   if (loading.value) return
   
@@ -192,13 +231,16 @@ const handleLogin = async () => {
     
     if (res.success) {
       userStore.setUser(res.user.id, res.user.username, res.user.name)
-      message.success('登录成功')
+      message.success('🎉 登录成功，欢迎回来！')
       router.push('/admin')
     } else {
-      message.error(res.message || '登录失败')
+      const friendlyMsg = getFriendlyErrorMessage(res.message)
+      message.error(friendlyMsg, { duration: 5000, closable: true })
     }
   } catch (error) {
-    message.error('网络错误')
+    const rawMsg = error?.response?.data?.message || error?.message
+    const friendlyMsg = getFriendlyErrorMessage(rawMsg)
+    message.error(friendlyMsg, { duration: 5000, closable: true })
   } finally {
     loading.value = false
   }

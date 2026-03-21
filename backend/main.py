@@ -25,6 +25,7 @@ from infrastructure.security.rate_limiter import init_rate_limiter
 from infrastructure.cache import init_cache_client
 from infrastructure.cache.cache_warmup import warmup_cache
 from infrastructure.config import get_settings, init_settings, AppConfig, AuthConfig, CacheConfig, HttpStatus
+from infrastructure.logging import logger
 from interface.api import student_controller, user_controller, checkin_controller, class_session_controller, audit_log_controller, health_controller, cache_controller, database_controller, backup_controller
 
 # 获取应用配置（如果是测试/开发环境，加载对应配置）
@@ -46,9 +47,13 @@ async def lifespan(app: FastAPI):
     应用生命周期管理
     """
     # 启动时执行
-    print("=" * 50)
-    print("班级管理系统 FastAPI + DDD架构")
-    print("=" * 50)
+    logger.info("=" * 50)
+    logger.info("班级管理系统 FastAPI + DDD架构")
+    logger.info("=" * 50)
+    
+    # 打印数据库路径
+    db_path = os.path.abspath(settings.database.path)
+    logger.info(f"数据库路径: {db_path}")
     
     # 初始化限流器
     await init_rate_limiter(settings.redis.url)
@@ -59,21 +64,21 @@ async def lifespan(app: FastAPI):
     # 缓存预热
     await warmup_cache()
     
-    print(f"\n后端API: http://localhost:8000")
-    print(f"API文档: http://localhost:8000/docs")
-    print(f"前端页面: http://localhost:3000 (开发服务器)")
-    print("\n架构层次:")
-    print("  - Interface (API层)")
-    print("  - Application (应用层)")
-    print("  - Domain (领域层)")
-    print("  - Infrastructure (基础设施层)")
-    print("\n按 Ctrl+C 停止服务")
-    print("=" * 50)
+    logger.info(f"后端API: http://localhost:8000")
+    logger.info(f"API文档: http://localhost:8000/docs")
+    logger.info(f"前端页面: http://localhost:3000 (开发服务器)")
+    logger.info("架构层次:")
+    logger.info("  - Interface (API层)")
+    logger.info("  - Application (应用层)")
+    logger.info("  - Domain (领域层)")
+    logger.info("  - Infrastructure (基础设施层)")
+    logger.info("按 Ctrl+C 停止服务")
+    logger.info("=" * 50)
     
     yield
     
     # 关闭时执行
-    print("\n服务已停止")
+    logger.info("服务已停止")
 
 
 def create_app() -> FastAPI:
