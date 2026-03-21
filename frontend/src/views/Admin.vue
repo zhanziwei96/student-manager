@@ -211,7 +211,15 @@
                 </n-button>
               </template>
 
-              <n-data-table :columns="columns" :data="group.students" :pagination="false" :bordered="false" size="small" />
+              <n-data-table 
+                :columns="columns" 
+                :data="group.students" 
+                :pagination="false" 
+                :bordered="false" 
+                size="small"
+                striped
+                :row-class-name="getRowClassName"
+              />
             </n-collapse-item>
           </n-collapse>
 
@@ -392,6 +400,19 @@ const getRateColor = (rate) => {
   return '#ef4444' // 红色
 }
 
+// 根据分数返回样式类
+const getScoreClass = (score) => {
+  if (score >= 90) return 'score-excellent'
+  if (score >= 80) return 'score-good'
+  if (score >= 60) return 'score-pass'
+  return 'score-fail'
+}
+
+// 表格行样式
+const getRowClassName = (row, index) => {
+  return index % 2 === 0 ? 'row-even' : 'row-odd'
+}
+
 // 分数调整
 const selectedStudent = ref({})
 const scoreChange = ref(0)
@@ -427,7 +448,8 @@ const columns = [
     key: 'score', 
     width: 100,
     render(row) {
-      return h('span', { class: 'score-badge' }, row.score)
+      const scoreClass = getScoreClass(row.score)
+      return h('span', { class: `score-badge ${scoreClass}` }, row.score)
     }
   },
   {
@@ -1092,9 +1114,59 @@ onMounted(() => {
 .score-badge {
   display: inline-block;
   padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.2);
-  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 20px;
   color: #818cf8;
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.score-badge.score-excellent {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.score-badge.score-good {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}
+
+.score-badge.score-pass {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.score-badge.score-fail {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+/* 表格斑马纹和悬停效果 */
+:deep(.n-data-table .n-data-table-tbody .n-data-table-tr.row-even) {
+  background: transparent;
+}
+
+:deep(.n-data-table .n-data-table-tbody .n-data-table-tr.row-odd) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+:deep(.n-data-table .n-data-table-tbody .n-data-table-tr:hover) {
+  background: rgba(99, 102, 241, 0.08) !important;
+  transition: background 0.2s ease;
+}
+
+/* 表头固定样式 */
+:deep(.n-data-table .n-data-table-thead) {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+:deep(.n-data-table .n-data-table-th) {
+  background: rgba(19, 19, 31, 0.95) !important;
+  backdrop-filter: blur(8px);
   font-weight: 600;
 }
 
