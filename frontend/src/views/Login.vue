@@ -57,14 +57,47 @@
       <div class="form-section">
         <div class="form-header">
           <h2>欢迎回来</h2>
-          <p>登录您的管理账户</p>
+          <p>{{ formHeaderText }}</p>
         </div>
 
         <n-form @submit.prevent="handleLogin" class="form-body" :show-label="false">
+          <!-- 角色选择 -->
+          <n-form-item>
+            <n-radio-group v-model:value="form.role" size="large" class="role-selector">
+              <n-radio-button value="admin">
+                <n-icon size="18" style="margin-right: 6px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                  </svg>
+                </n-icon>
+                管理员
+              </n-radio-button>
+              <n-radio-button value="teacher">
+                <n-icon size="18" style="margin-right: 6px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </n-icon>
+                教师
+              </n-radio-button>
+              <n-radio-button value="student">
+                <n-icon size="18" style="margin-right: 6px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/>
+                  </svg>
+                </n-icon>
+                学生
+              </n-radio-button>
+            </n-radio-group>
+          </n-form-item>
+
           <n-form-item>
             <n-input
               v-model:value="form.username"
-              placeholder="请输入用户名"
+              :placeholder="usernamePlaceholder"
               size="large"
               :input-props="{ ref: (el) => { if(el) usernameInput = el } }"
             >
@@ -83,7 +116,7 @@
             <n-input
               v-model:value="form.password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="请输入密码"
+              :placeholder="passwordPlaceholder"
               size="large"
               show-password-on="click"
             >
@@ -129,7 +162,9 @@
         </n-form>
 
         <div class="form-footer">
-          <p>默认账号 <span class="highlight">admin / admin123</span></p>
+          <p>
+            {{ roleHint }}
+          </p>
         </div>
       </div>
     </div>
@@ -137,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { login } from '@/api'
@@ -153,7 +188,45 @@ const usernameInput = ref(null)
 
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  role: 'admin'
+})
+
+// 根据角色动态显示提示
+const usernamePlaceholder = computed(() => {
+  switch (form.role) {
+    case 'admin': return '请输入用户名'
+    case 'teacher': return '请输入用户名（姓名拼音首字母）'
+    case 'student': return '请输入用户名（学号）'
+    default: return '请输入用户名'
+  }
+})
+
+const passwordPlaceholder = computed(() => {
+  switch (form.role) {
+    case 'admin': return '请输入密码'
+    case 'teacher': return '请输入密码（用户名+123）'
+    case 'student': return '请输入密码（默认为学号）'
+    default: return '请输入密码'
+  }
+})
+
+const roleHint = computed(() => {
+  switch (form.role) {
+    case 'admin': return '默认账号：admin / admin123'
+    case 'teacher': return '账号格式：姓名拼音首字母，密码：账号+123'
+    case 'student': return '账号格式：学号，默认密码：学号'
+    default: return ''
+  }
+})
+
+const formHeaderText = computed(() => {
+  switch (form.role) {
+    case 'admin': return '登录管理员账户'
+    case 'teacher': return '登录教师账户'
+    case 'student': return '登录学生账户'
+    default: return '登录您的账户'
+  }
 })
 
 const features = [
@@ -230,13 +303,28 @@ const handleLogin = async () => {
   try {
     const res = await login({
       username: form.username.trim(),
-      password: form.password
+      password: form.password,
+      role: form.role
     })
     
     if (res.success) {
-      userStore.setUser(res.user.id, res.user.username, res.user.name)
+      // 验证返回的角色与选择的角色是否一致
+      if (res.user.role !== form.role) {
+        message.error('角色选择错误，请重新选择正确的角色类型', { duration: 5000, closable: true })
+        loading.value = false
+        return
+      }
+      
+      userStore.setUser(res.user.id, res.user.username, res.user.name, res.user.role)
       message.success('🎉 登录成功，欢迎回来！')
-      router.push('/admin')
+      
+      // 根据角色跳转到不同页面
+      const roleRoutes = {
+        admin: '/admin',
+        teacher: '/teacher',
+        student: '/student'
+      }
+      router.push(roleRoutes[form.role] || '/')
     } else {
       const friendlyMsg = getFriendlyErrorMessage(res.message)
       message.error(friendlyMsg, { duration: 5000, closable: true })
@@ -553,6 +641,21 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+/* 角色选择器 */
+.role-selector {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+}
+
+.role-selector :deep(.n-radio-button) {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  font-size: 14px;
 }
 
 .input-group {

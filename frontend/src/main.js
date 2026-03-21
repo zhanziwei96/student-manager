@@ -19,7 +19,3 @@ app.use(router)
 
 // 挂载应用
 app.mount('#app')
-
-// 设置全局消息实例（供 axios 拦截器使用）
-import { useMessage } from 'naive-ui'
-window.$message = useMessage()

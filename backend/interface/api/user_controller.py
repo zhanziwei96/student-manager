@@ -7,12 +7,14 @@ from pydantic import BaseModel, Field
 
 from infrastructure.persistence.database import Database
 from infrastructure.persistence.repositories.sqlite_user_repository import SQLiteUserRepository
+from infrastructure.persistence.repositories.sqlite_student_repository import SQLiteStudentRepository
 from infrastructure.security.rate_limiter import login_limit
 from infrastructure.security.session import require_login, require_admin, get_session_user_id, is_admin
 from infrastructure.logging import logger
 from infrastructure.config import AuthConfig, HttpStatus
 from application.services.user_app_service import UserAppService
 from application.dto.user_dto import CreateUserDTO, UpdateUserDTO
+from domain.value_objects.password import Password
 
 
 router = APIRouter(prefix="/api", tags=["users"])
@@ -23,6 +25,7 @@ router = APIRouter(prefix="/api", tags=["users"])
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH)
     password: str = Field(..., min_length=AuthConfig.NAME_MIN_LENGTH)
+    role: str = Field(default="admin")
 
 
 class CreateUserRequest(BaseModel):
@@ -193,6 +196,45 @@ async def unlock_user(
         raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=str(e))
 
 
+def authenticate_student(student_id: str, password: str) -> Optional[dict]:
+    """验证学生登录
+    
+    Args:
+        student_id: 学号
+        password: 明文密码
+        
+    Returns:
+        验证成功返回学生信息字典，失败返回None
+    """
+    db = Database()
+    repo = SQLiteStudentRepository(db)
+    
+    # 获取学生密码信息
+    password_info = repo.find_password(student_id)
+    if not password_info:
+        return None
+    
+    stored_hash, salt = password_info
+    password_obj = Password.from_hash(stored_hash, salt)
+    
+    if not password_obj.verify(password):
+        return None
+    
+    # 获取学生信息
+    from domain.value_objects.student_id import StudentId
+    student = repo.find_by_id(StudentId(student_id))
+    if not student:
+        return None
+    
+    return {
+        'id': str(student.student_id),
+        'username': str(student.student_id),
+        'name': student.name,
+        'role': 'student',
+        'class_name': student.class_name
+    }
+
+
 @router.post(
     "/login", 
     response_model=dict,
@@ -205,6 +247,32 @@ async def login(
 ):
     """用户登录（限流: 5次/分钟）"""
     try:
+        # 学生登录单独处理
+        if data.role == 'student':
+            student = authenticate_student(
+                data.username.strip(),
+                data.password.strip()
+            )
+            
+            if not student:
+                raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='学号或密码错误')
+            
+            # 防止会话固定攻击
+            request.session.clear()
+            
+            # 写入session
+            request.session['user_id'] = student['id']
+            request.session['username'] = student['username']
+            request.session['role'] = 'student'
+            request.session['is_admin'] = False
+            
+            return {
+                'success': True,
+                'message': '登录成功',
+                'user': student
+            }
+        
+        # 管理员/教师登录
         user = service.authenticate_user(
             data.username.strip(),
             data.password.strip(),
@@ -212,13 +280,20 @@ async def login(
         )
         
         if user:
+            # 验证角色是否匹配
+            if user.role.value != data.role:
+                raise HTTPException(
+                    status_code=HttpStatus.FORBIDDEN, 
+                    detail=f'该账号不是{data.role}账号，请选择正确的角色类型'
+                )
+            
             # 防止会话固定攻击：清除旧session，创建新session
-            old_session_data = dict(request.session)
             request.session.clear()
             
-            # 写入新session数据（Starlette会自动生成新的session ID）
+            # 写入新session数据
             request.session['user_id'] = user.id
             request.session['username'] = user.username
+            request.session['role'] = user.role.value
             request.session['is_admin'] = user.is_admin()
             
             return {
@@ -228,7 +303,7 @@ async def login(
                     'id': user.id,
                     'username': user.username,
                     'name': user.name,
-                    'role': user.role.value,
+                    'role': user.role,
                     'is_admin': user.is_admin()
                 }
             }
@@ -237,7 +312,7 @@ async def login(
             
     except ValueError as e:
         error_msg = str(e)
-        # 密码错误返回 401（认证失败），账号禁用/锁定返回 403（禁止访问）
+        # 密码错误返回 401，账号禁用/锁定返回 403
         if "密码错误" in error_msg:
             from fastapi.responses import JSONResponse
             return JSONResponse(
@@ -283,17 +358,40 @@ async def get_current_user(
 ):
     """获取当前登录用户信息"""
     user_id = require_login(request)
+    role = request.session.get('role')
     
-    user = service.get_user_by_id(user_id)
-    if user:
-        return {
-            'success': True,
-            'data': {
-                'id': user.id,
-                'username': user.username,
-                'name': user.name,
-                'role': user.role,
-                'is_admin': user.is_admin
+    # 学生角色从学生表查询
+    if role == 'student':
+        db = Database()
+        repo = SQLiteStudentRepository(db)
+        from domain.value_objects.student_id import StudentId
+        student = repo.find_by_id(StudentId(user_id))
+        if student:
+            return {
+                'success': True,
+                'data': {
+                    'id': str(student.student_id),
+                    'username': str(student.student_id),
+                    'name': student.name,
+                    'role': 'student',
+                    'is_admin': False,
+                    'assigned_classes': [student.class_name]
+                }
             }
-        }
+    else:
+        # 管理员/教师从用户表查询
+        user = service.get_user_by_id(user_id)
+        if user:
+            return {
+                'success': True,
+                'data': {
+                    'id': user.id,
+                    'username': user.username,
+                    'name': user.name,
+                    'role': user.role,
+                    'is_admin': user.role == 'admin',
+                    'assigned_classes': user.assigned_classes
+                }
+            }
+    
     raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='用户不存在')

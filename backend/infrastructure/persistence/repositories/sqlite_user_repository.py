@@ -125,7 +125,7 @@ class SQLiteUserRepository(UserRepository):
                         last_login_ip = ?, last_login = ?
                     WHERE id = ?
                 ''', (
-                    user.password.hash_value,
+                    user.password.hash,
                     user.password.salt,
                     user.name,
                     user.role.value,
@@ -146,7 +146,7 @@ class SQLiteUserRepository(UserRepository):
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     user.username,
-                    user.password.hash_value,
+                    user.password.hash,
                     user.password.salt,
                     user.name,
                     user.role.value,

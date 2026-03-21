@@ -4,6 +4,7 @@
       <n-dialog-provider>
         <n-notification-provider>
           <n-loading-bar-provider>
+            <GlobalMessage />
             <router-view v-slot="{ Component }">
               <transition name="fade" mode="out-in">
                 <component :is="Component" />
@@ -18,6 +19,7 @@
 
 <script setup>
 import { darkTheme } from 'naive-ui'
+import GlobalMessage from './components/GlobalMessage.vue'
 
 // 主题覆盖配置
 const themeOverrides = {

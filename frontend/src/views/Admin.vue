@@ -350,8 +350,8 @@
       <div class="teacher-list-header" style="margin-bottom: 16px;">
         <n-space>
           <n-tag type="info">共 {{ teachers.length }} 位教师</n-tag>
-          <n-tag type="success">{{ teachers.filter(t => t.is_active).length }} 位在职</n-tag>
-          <n-tag type="error">{{ teachers.filter(t => !t.is_active).length }} 位禁用</n-tag>
+          <n-tag type="success">{{ teachers.filter(t => t.status === 'active').length }} 位在职</n-tag>
+          <n-tag type="error">{{ teachers.filter(t => t.status !== 'active').length }} 位禁用</n-tag>
         </n-space>
       </div>
       
@@ -382,10 +382,7 @@
           <n-select v-model:value="editingTeacher.assigned_classes" placeholder="选择负责班级（可多选）" :options="classOptions" multiple clearable />
         </n-form-item>
         <n-form-item label="账号状态">
-          <n-switch v-model:value="editingTeacher.is_active">
-            <template #checked>启用</template>
-            <template #unchecked>禁用</template>
-          </n-switch>
+          <n-select v-model:value="editingTeacher.status" :options="[{label: '启用', value: 'active'}, {label: '禁用', value: 'inactive'}]" />
         </n-form-item>
       </n-form>
       <template #footer>
@@ -499,7 +496,7 @@ const newTeacher = ref({ username: '', name: '', assigned_classes: [] })
 
 // 教师管理
 const teachers = ref([])
-const editingTeacher = ref({ id: null, username: '', name: '', assigned_classes: [], is_active: true })
+const editingTeacher = ref({ id: null, username: '', name: '', assigned_classes: [], status: 'active' })
 
 // 导入
 const importFile = ref(null)
@@ -588,8 +585,8 @@ const teacherColumns = [
     width: 80,
     render(row) {
       return h('span', { 
-        style: row.is_active ? 'color: #34d399;' : 'color: #f87171;'
-      }, row.is_active ? '启用' : '禁用')
+        style: row.status === 'active' ? 'color: #34d399;' : 'color: #f87171;'
+      }, row.status === 'active' ? '启用' : '禁用')
     }
   },
   {
@@ -613,12 +610,12 @@ const teacherColumns = [
           h(NIcon, { size: 16, color: '#f59e0b' }, { default: () => h(KeyOutline) })
         ]),
         h('button', {
-          class: row.is_active ? 'icon-btn disable' : 'icon-btn enable',
-          title: row.is_active ? '禁用' : '启用',
+          class: row.status === 'active' ? 'icon-btn disable' : 'icon-btn enable',
+          title: row.status === 'active' ? '禁用' : '启用',
           onClick: () => handleToggleTeacherStatus(row)
         }, [
-          h(NIcon, { size: 16, color: row.is_active ? '#ef4444' : '#10b981' }, { 
-            default: () => row.is_active ? h(BanOutline) : h(CheckmarkCircleOutline) 
+          h(NIcon, { size: 16, color: row.status === 'active' ? '#ef4444' : '#10b981' }, { 
+            default: () => row.status === 'active' ? h(BanOutline) : h(CheckmarkCircleOutline) 
           })
         ]),
         h('button', {
@@ -766,9 +763,10 @@ const handleAddTeacher = async () => {
 
 // 加载教师列表
 const loadTeachers = async () => {
-  const res = await api.getUsers({ role: 'teacher' })
+  const res = await api.getUsers()
   if (res.success) {
-    teachers.value = res.data
+    // 前端过滤出教师角色
+    teachers.value = res.data.filter(u => u.role === 'teacher')
   }
 }
 
@@ -779,7 +777,7 @@ const openEditTeacher = (teacher) => {
     username: teacher.username,
     name: teacher.name,
     assigned_classes: [...teacher.assigned_classes],
-    is_active: teacher.is_active
+    status: teacher.status
   }
   showEditTeacher.value = true
 }
@@ -788,7 +786,7 @@ const openEditTeacher = (teacher) => {
 const handleUpdateTeacher = async () => {
   const res = await api.updateUser(editingTeacher.value.id, {
     assigned_classes: editingTeacher.value.assigned_classes,
-    is_active: editingTeacher.value.is_active
+    status: editingTeacher.value.status
   })
   
   if (res.success) {
@@ -808,7 +806,7 @@ const handleResetTeacherPassword = async (teacher) => {
     positiveText: '确认重置',
     negativeText: '取消',
     onPositiveClick: async () => {
-      const res = await api.resetUserPassword(teacher.id, { password: newPassword })
+      const res = await api.resetUserPassword(teacher.id, { new_password: newPassword })
       if (res.success) {
         message.success(`密码已重置，新密码：${newPassword}`)
       }
@@ -818,7 +816,7 @@ const handleResetTeacherPassword = async (teacher) => {
 
 // 切换教师账号状态
 const handleToggleTeacherStatus = async (teacher) => {
-  const action = teacher.is_active ? '禁用' : '启用'
+  const action = teacher.status === 'active' ? '禁用' : '启用'
   
   dialog.warning({
     title: `${action}账号`,
@@ -826,7 +824,7 @@ const handleToggleTeacherStatus = async (teacher) => {
     positiveText: '确认',
     negativeText: '取消',
     onPositiveClick: async () => {
-      const res = await api.updateUser(teacher.id, { is_active: !teacher.is_active })
+      const res = await api.updateUser(teacher.id, { status: teacher.status === 'active' ? 'inactive' : 'active' })
       if (res.success) {
         message.success(`账号已${action}`)
         loadTeachers()
@@ -1085,9 +1083,6 @@ onMounted(() => {
   loadStudents()
   loadClassSession()
   loadTeachers()
-  api.getDbInfo().then(res => {
-    if (res.success) dbInfo.value = res.data
-  })
 })
 </script>
 

@@ -56,8 +56,8 @@
             <div class="info-value score">{{ studentInfo.score }}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">班级排名</div>
-            <div class="info-value">{{ classRank }} / {{ classTotal }}</div>
+            <div class="info-label">全校排名</div>
+            <div class="info-value">{{ schoolRank }} / {{ schoolTotal }}</div>
           </div>
           <div class="info-item">
             <div class="info-label">签到状态</div>
@@ -180,9 +180,9 @@ const studentInfo = ref({
   score: 0
 })
 
-// 班级排名
-const classRank = ref(0)
-const classTotal = ref(0)
+// 全校排名
+const schoolRank = ref(0)
+const schoolTotal = ref(0)
 
 // 上课状态
 const classSession = ref({ active: false, class_name: '' })
@@ -218,7 +218,7 @@ const loadStudentInfo = async () => {
       studentInfo.value = student
       await loadScoreLogs(student.student_id)
       await loadCheckinRecords(student.student_id)
-      await loadClassRank(student.class_name)
+      await loadSchoolRank()
     }
   }
 }
@@ -244,16 +244,15 @@ const loadCheckinRecords = async (studentId) => {
   }
 }
 
-// 加载班级排名
-const loadClassRank = async (className) => {
-  if (!className) return
+// 加载全校排名
+const loadSchoolRank = async () => {
   const res = await api.getStudents()
   if (res.success) {
-    const classStudents = res.data.filter(s => s.class_name === className)
-    classStudents.sort((a, b) => b.score - a.score)
-    classTotal.value = classStudents.length
-    const rank = classStudents.findIndex(s => s.student_id === studentInfo.value.student_id)
-    classRank.value = rank + 1
+    // 按分数排序（高到低）
+    const allStudents = res.data.sort((a, b) => b.score - a.score)
+    schoolTotal.value = allStudents.length
+    const rank = allStudents.findIndex(s => s.student_id === studentInfo.value.student_id)
+    schoolRank.value = rank + 1
   }
 }
 

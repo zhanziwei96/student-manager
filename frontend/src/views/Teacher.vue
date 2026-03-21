@@ -401,8 +401,8 @@ const userOptions = [
   { label: '退出登录', key: 'logout' }
 ]
 
-// 模拟教师负责的班级（实际应该从后端获取）
-const myClasses = ref(['2025中药制药1班', '2025中药制药2班'])
+// 教师负责的班级（从后端获取）
+const myClasses = ref([])
 
 // 计算属性：教师是否负责某个班级
 const isMyClass = (className) => {
@@ -481,17 +481,16 @@ const classAverageScore = computed(() => {
   return (total / myStudents.value.length).toFixed(1)
 })
 
-// 计算属性：今日签到率（模拟数据，实际应该从后端获取）
-const todayCheckinRate = computed(() => {
-  // 这里应该调用 API 获取今日签到数据
-  return 85
-})
+// 今日签到率
+const todayCheckinRate = ref(0)
 
-const loadStudents = async () => {
+const loadStudents = async (keepExpanded = false) => {
   const res = await api.getStudents()
   if (res.success) {
     students.value = res.data
-    activeGroups.value = []
+    if (!keepExpanded) {
+      activeGroups.value = []
+    }
   }
 }
 
@@ -556,14 +555,14 @@ const handleUpdateScore = async () => {
   }
   
   const res = await api.updateScore(selectedStudent.value.student_id, {
-    change: scoreChange.value,
+    score_change: scoreChange.value,
     reason: scoreReason.value
   })
   
   if (res.success) {
     message.success('分数调整成功')
     scoreDialogVisible.value = false
-    loadStudents()
+    loadStudents(true)  // 保留展开状态
   }
 }
 
@@ -581,12 +580,14 @@ const endClass = async () => {
   if (res.success) {
     message.success('上课结束')
     classSession.value = { active: false }
+    todayCheckinRate.value = 0
   }
 }
 
 const refreshClassStatus = async () => {
   const res = await api.getClassSession()
   if (res.success && res.data.active) {
+    classSession.value = { active: true, class_name: res.data.class_name }
     const studentsRes = await api.getClassSessionStudents()
     if (studentsRes.success) {
       const total = studentsRes.data.length
@@ -597,7 +598,12 @@ const refreshClassStatus = async () => {
         not_checked_in: total - checkedIn,
         rate: total > 0 ? Math.round((checkedIn / total) * 100) : 0
       }
+      // 更新今日签到率
+      todayCheckinRate.value = classStats.value.rate
     }
+  } else {
+    classSession.value = { active: false }
+    todayCheckinRate.value = 0
   }
 }
 
@@ -643,7 +649,15 @@ const handleUserAction = async (key) => {
   }
 }
 
+const loadTeacherInfo = async () => {
+  const res = await api.getUserInfo()
+  if (res.success && res.data.assigned_classes) {
+    myClasses.value = res.data.assigned_classes
+  }
+}
+
 onMounted(() => {
+  loadTeacherInfo()
   loadStudents()
   refreshClassStatus()
 })

@@ -13,7 +13,7 @@ from infrastructure.security.session import require_login, is_admin, get_session
 from infrastructure.security.xss_protection import sanitize_student_list, sanitize_student_data
 from infrastructure.logging import logger
 from infrastructure.cache import get_cache_client, CacheKeyBuilder, evict_student_cache
-from infrastructure.config import AuthConfig, CacheConfig, HttpStatus, ScoreConfig, ImportExportConfig
+from infrastructure.config import AuthConfig, CacheConfig, HttpStatus, ScoreConfig, ImportExportConfig, PaginationConfig
 from application.services.student_app_service import StudentAppService
 from application.dto.student_dto import CreateStudentDTO, UpdateScoreDTO
 
@@ -340,7 +340,7 @@ async def get_stats(
         from datetime import datetime
         today = datetime.now().strftime('%Y-%m-%d')
         cursor = conn.execute(
-            "SELECT COUNT(DISTINCT student_id) as count FROM checkin_records WHERE checkin_date = ?",
+            "SELECT COUNT(DISTINCT student_id) as count FROM checkin_records WHERE date(checkin_time) = ?",
             (today,)
         )
         today_checkins = cursor.fetchone()['count']

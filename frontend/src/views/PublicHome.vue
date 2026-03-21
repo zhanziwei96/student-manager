@@ -23,7 +23,7 @@
       <div class="nav-links">
         <a href="#features" class="nav-link">功能</a>
         <a href="#about" class="nav-link">关于</a>
-        <button class="nav-btn primary" @click="$router.push('/login')">
+        <button class="nav-btn primary" @click="goToLogin">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
             <polyline points="10 17 15 12 10 7"/>
@@ -52,7 +52,7 @@
         </p>
         
         <div class="hero-actions">
-          <button class="btn-primary" @click="$router.push('/login')">
+          <button class="btn-primary" @click="goToLogin">
             <span>开始使用</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -60,7 +60,7 @@
             </svg>
           </button>
           
-          <button class="btn-secondary" @click="$router.push('/checkin')">
+          <button class="btn-secondary" @click="goToCheckin">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -288,7 +288,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getStats } from '@/api'
+
+const router = useRouter()
 
 const stats = ref({
   students: 0,
@@ -314,18 +317,26 @@ const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+const goToLogin = () => {
+  router.push('/login')
+}
+
+const goToCheckin = () => {
+  router.push('/checkin')
+}
+
 const loadStats = async () => {
   try {
     const res = await getStats()
     if (res.data) {
       stats.value = {
-        students: res.data.student_count || 0,
+        students: res.data.total_students || 0,
         classes: res.data.class_count || 0,
-        checkins: res.data.today_checkin || 0
+        checkins: res.data.today_checkins || 0
       }
     }
   } catch (error) {
-    // 静默失败
+    console.error('加载统计失败:', error)
   }
 }
 
@@ -501,6 +512,8 @@ onMounted(() => {
 .hero-content {
   max-width: 600px;
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-badge {
@@ -570,6 +583,8 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 10;
 }
 
 .btn-primary:hover {

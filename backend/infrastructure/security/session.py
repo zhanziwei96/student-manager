@@ -68,3 +68,21 @@ def require_admin(request: Request) -> int:
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail='需要管理员权限')
     return user_id
+
+
+def get_session_role(request: Request) -> Optional[str]:
+    """获取当前用户角色"""
+    return request.session.get('role')
+
+
+def require_role(request: Request, role: str) -> int:
+    """
+    要求指定角色权限，返回用户ID
+    无权限抛出403异常
+    """
+    user_id = require_login(request)
+    user_role = request.session.get('role')
+    if user_role != role:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail=f'需要{role}权限')
+    return user_id

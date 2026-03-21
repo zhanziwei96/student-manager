@@ -22,19 +22,19 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/Admin.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, role: 'admin' }
   },
   {
     path: '/teacher',
     name: 'Teacher',
     component: () => import('@/views/Teacher.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, role: 'teacher' }
   },
   {
     path: '/student',
     name: 'Student',
     component: () => import('@/views/Student.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, role: 'student' }
   },
   {
     path: '/checkin',
@@ -58,9 +58,27 @@ router.beforeEach((to, from, next) => {
     return next('/login')
   }
   
-  // 已登录用户访问登录页
-  if (to.meta.guest && userStore.isLoggedIn) {
-    return next('/admin')
+  // 已登录用户访问登录页，根据角色重定向
+  if (to.meta.guest && userStore.isLoggedIn && userStore.role) {
+    const roleRoutes = {
+      admin: '/admin',
+      teacher: '/teacher',
+      student: '/student'
+    }
+    return next(roleRoutes[userStore.role] || '/')
+  }
+  
+  // 角色权限检查
+  if (to.meta.requiresAuth && to.meta.role) {
+    if (userStore.role !== to.meta.role) {
+      // 用户角色与路由不匹配，重定向到对应角色的首页
+      const roleRoutes = {
+        admin: '/admin',
+        teacher: '/teacher',
+        student: '/student'
+      }
+      return next(roleRoutes[userStore.role] || '/login')
+    }
   }
   
   next()

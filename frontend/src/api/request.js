@@ -26,6 +26,14 @@ request.interceptors.response.use(
       const status = error.response.status
       const msg = error.response.data?.detail || error.response.data?.message || '请求失败'
       
+      // 获取请求路径
+      const requestUrl = error.config?.url || ''
+      
+      // 登录接口的 401 错误由登录页面自己处理
+      if (status === 401 && requestUrl.includes('/login')) {
+        return Promise.reject(error)
+      }
+      
       switch (status) {
         case 401:
           {

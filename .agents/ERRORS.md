@@ -123,3 +123,54 @@ pytest tests/ -v
 - [ ] 查看日志 `tail -20 backend/logs/*.log`
 - [ ] 检查进程 `ps aux | grep python`
 - [ ] 验证配置 `python -c "from config import get_settings; print(...)"`
+
+---
+
+## 重启服务正确步骤
+
+### 后端服务重启
+
+```bash
+# 1. 停止服务
+pkill -f "python main.py" 2>/dev/null || true
+
+# 2. 等待几秒确保完全停止（重要！）
+sleep 3
+
+# 3. 检查是否还有残留进程
+ps aux | grep "python.*main.py" | grep -v grep
+
+# 4. 如有残留，强制终止
+pkill -9 -f "python main.py" 2>/dev/null || true
+sleep 2
+
+# 5. 启动服务
+cd /home/yufeng/student-manager/backend
+DATABASE__PATH=./data/student_manage.db conda run -n student-manage python main.py &
+
+# 6. 等待几秒后验证
+sleep 5
+curl -s http://localhost:8000/health
+```
+
+### 前端服务重启
+
+```bash
+# 1. 停止服务
+pkill -f "pnpm dev" 2>/dev/null || true
+
+# 2. 等待几秒
+sleep 2
+
+# 3. 启动服务
+cd /home/yufeng/student-manager/frontend
+pnpm dev &
+
+# 4. 验证
+curl -s http://localhost:3000 > /dev/null && echo "前端运行中"
+```
+
+**关键要点**:
+- 必须等待几秒确保进程完全停止后再启动，它们要在不同的步骤里面，不要在同一步中操作
+- 不要连续快速执行停止和启动命令
+- 启动后必须验证健康检查接口再确认成功

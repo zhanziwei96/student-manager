@@ -120,6 +120,42 @@ sqlite3 /home/yufeng/student-manager/backend/data/student_manage.db
 - 分层架构: Interface → Application → Domain ← Infrastructure
 - Domain 层不能依赖 Infrastructure 层
 
+**⚠️ 更改后端代码时严禁违反 DDD 架构原则：**
+
+| 层级 | 职责 | 允许依赖 | 禁止行为 |
+|------|------|----------|----------|
+| **Domain** | 核心业务逻辑、实体、值对象 | Python 标准库 | ❌ 导入 Infrastructure 层<br>❌ 导入 Application 层<br>❌ 使用 `ScoreConfig` 等配置类<br>❌ 直接操作数据库 |
+| **Application** | 应用服务、协调用例 | Domain 层 | ❌ 导入 Infrastructure 层具体实现 |
+| **Interface** | API 控制器、DTO | Application, Domain, Infrastructure | ✅ 允许依赖所有层 |
+| **Infrastructure** | 数据库、缓存、外部服务 | Domain, Application | ❌ 包含业务逻辑 |
+
+**正确示例（Domain 层）：**
+```python
+# ✅ 硬编码常量
+default_score = 100.0
+
+# ✅ 使用 Python 标准库
+import secrets
+password = secrets.token_hex(16)
+```
+
+**错误示例（Domain 层）：**
+```python
+# ❌ 导入 Infrastructure 配置
+from infrastructure.config import ScoreConfig
+default_score = ScoreConfig.DEFAULT_SCORE
+
+# ❌ 直接操作数据库
+from infrastructure.persistence.database import Database
+db = Database()
+```
+
+**依赖方向图：**
+```
+Interface → Application → Domain ← Infrastructure
+              ↑_______________________↑
+```
+
 ### 数据库
 - SQLite 文件数据库
 - 配置项: `DATABASE__PATH`（注意双下划线）

@@ -34,7 +34,7 @@ class UserAppService:
             raise ValueError(f"用户名 {dto.username} 已存在")
         
         # 创建密码值对象
-        password = Password.create_from_plain(dto.password)
+        password = Password.create(dto.password)
         
         # 解析角色
         try:
@@ -118,7 +118,7 @@ class UserAppService:
         if not user:
             raise ValueError("用户不存在")
         
-        user.password = Password.create_from_plain(new_password)
+        user.password = Password.create(new_password)
         user.unlock()  # 同时解锁账号
         self.user_repo.save(user)
     
@@ -151,7 +151,7 @@ class UserAppService:
             return False
         
         # 设置新密码
-        user.password = Password.create_from_plain(new_password)
+        user.password = Password.create(new_password)
         self.user_repo.save(user)
         return True
     
