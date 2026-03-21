@@ -1111,7 +1111,8 @@ onMounted(() => {
   gap: 12px;
 }
 
-.score-badge {
+/* 分数徽章样式 - 使用 :deep 确保应用到表格内部 */
+:deep(.score-badge) {
   display: inline-block;
   padding: 4px 12px;
   background: rgba(99, 102, 241, 0.15);
@@ -1123,24 +1124,24 @@ onMounted(() => {
   text-align: center;
 }
 
-.score-badge.score-excellent {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+:deep(.score-badge.score-excellent) {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
 }
 
-.score-badge.score-good {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+:deep(.score-badge.score-good) {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: #818cf8 !important;
 }
 
-.score-badge.score-pass {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+:deep(.score-badge.score-pass) {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
 }
 
-.score-badge.score-fail {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+:deep(.score-badge.score-fail) {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
 }
 
 /* 表格斑马纹和悬停效果 */
