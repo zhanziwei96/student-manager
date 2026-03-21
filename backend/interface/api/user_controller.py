@@ -63,12 +63,22 @@ def get_user_service():
 @router.get("/admin/users", response_model=dict)
 async def get_users(
     request: Request,
+    role: Optional[str] = None,
     service: UserAppService = Depends(get_user_service)
 ):
-    """获取所有用户（管理员）"""
+    """获取所有用户（管理员）
+    
+    Args:
+        role: 可选，按角色过滤（teacher/admin）
+    """
     require_admin(request)
     
     users = service.get_all_users()
+    
+    # 按角色过滤
+    if role:
+        users = [u for u in users if u.role.value == role]
+    
     return {
         'success': True,
         'data': [u.__dict__ for u in users]
