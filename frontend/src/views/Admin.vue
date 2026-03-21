@@ -329,6 +329,8 @@ import { ref, computed, onMounted, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import * as api from '@/api'
+import { NIcon } from 'naive-ui'
+import { CreateOutline, TrashOutline } from '@vicons/ionicons5'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -417,32 +419,14 @@ const columns = [
           title: '编辑分数',
           onClick: () => openScoreDialog(row)
         }, [
-          h('svg', { 
-            viewBox: '0 0 24 24', 
-            fill: 'none', 
-            stroke: '#818cf8',
-            'stroke-width': 2,
-            style: 'width: 16px; height: 16px;'
-          }, [
-            h('path', { d: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }),
-            h('path', { d: 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' })
-          ])
+          h(NIcon, { size: 18, color: '#818cf8' }, { default: () => h(CreateOutline) })
         ]),
         h('button', {
           class: 'icon-btn delete',
           title: '删除学生',
           onClick: () => handleDeleteStudent(row)
         }, [
-          h('svg', { 
-            viewBox: '0 0 24 24', 
-            fill: 'none', 
-            stroke: '#f87171',
-            'stroke-width': 2,
-            style: 'width: 16px; height: 16px;'
-          }, [
-            h('polyline', { points: '3 6 5 6 21 6' }),
-            h('path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' })
-          ])
+          h(NIcon, { size: 18, color: '#f87171' }, { default: () => h(TrashOutline) })
         ])
       ])
     }

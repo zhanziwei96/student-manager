@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.ts,.tsx --fix"
   },
   "dependencies": {
+    "@vicons/ionicons5": "^0.13.0",
     "axios": "^1.8.4",
     "js-cookie": "^3.0.5",
     "naive-ui": "^2.44.1",
