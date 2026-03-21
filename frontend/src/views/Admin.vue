@@ -73,21 +73,36 @@
         </div>
 
         <div v-else class="class-info">
-          <div class="stats-row">
-            <div class="stat-item">
-              <div class="stat-value">{{ classStats.total }}</div>
+          <div class="stats-row-enhanced">
+            <!-- 应到人数 -->
+            <div class="stat-box">
+              <div class="stat-number">{{ classStats.total }}</div>
               <div class="stat-label">应到人数</div>
             </div>
-            <div class="stat-item success">
-              <div class="stat-value">{{ classStats.checked_in }}</div>
+            <!-- 已签到 -->
+            <div class="stat-box success">
+              <div class="stat-number">{{ classStats.checked_in }}</div>
               <div class="stat-label">已签到</div>
+              <div class="stat-indicator success-dot"></div>
             </div>
-            <div class="stat-item danger">
-              <div class="stat-value">{{ classStats.not_checked_in }}</div>
+            <!-- 未签到 -->
+            <div class="stat-box danger">
+              <div class="stat-number">{{ classStats.not_checked_in }}</div>
               <div class="stat-label">未签到</div>
+              <div class="stat-indicator danger-dot"></div>
             </div>
-            <div class="stat-item primary">
-              <div class="stat-value">{{ classStats.rate }}%</div>
+            <!-- 签到率 - 环形进度条 -->
+            <div class="stat-box rate-box">
+              <n-progress
+                type="circle"
+                :percentage="classStats.rate"
+                :stroke-width="10"
+                :width="100"
+                :color="getRateColor(classStats.rate)"
+                :track-color="'rgba(255, 255, 255, 0.1)'"
+              >
+                <div class="rate-text">{{ classStats.rate }}%</div>
+              </n-progress>
               <div class="stat-label">签到率</div>
             </div>
           </div>
@@ -369,6 +384,13 @@ const resetPassword = ref('')
 const classSession = ref({ active: false })
 const selectedClass = ref('')
 const classStats = ref({ total: 0, checked_in: 0, not_checked_in: 0, rate: 0 })
+
+// 根据签到率返回颜色
+const getRateColor = (rate) => {
+  if (rate >= 90) return '#10b981' // 绿色
+  if (rate >= 60) return '#f59e0b' // 橙色
+  return '#ef4444' // 红色
+}
 
 // 分数调整
 const selectedStudent = ref({})
@@ -851,6 +873,7 @@ onMounted(() => {
   text-align: center;
 }
 
+/* 旧版样式兼容 */
 .stats-row {
   display: flex;
   justify-content: space-around;
@@ -858,6 +881,90 @@ onMounted(() => {
   gap: 16px;
 }
 
+/* 新版增强样式 */
+.stats-row-enhanced {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 32px;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 32px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 120px;
+  position: relative;
+}
+
+.stat-box.success {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.stat-box.danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.stat-number {
+  font-size: 40px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.stat-box.success .stat-number {
+  color: #34d399;
+}
+
+.stat-box.danger .stat-number {
+  color: #f87171;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.stat-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.success-dot {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.danger-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.rate-box {
+  padding: 16px 24px;
+}
+
+.rate-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+/* 旧版兼容 */
 .stat-item {
   text-align: center;
   padding: 20px 40px;
@@ -898,11 +1005,6 @@ onMounted(() => {
   font-weight: 700;
   color: white;
   margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #94a3b8;
 }
 
 .class-actions {
