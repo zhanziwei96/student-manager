@@ -1,41 +1,49 @@
-# 数据库迁移速查
+# 数据库迁移说明
 
-## 旧数据库 → 新结构
+## 迁移状态
 
-```bash
-# 1. 备份
-cp backend/data/class_system.db \
-   backend/data/class_system.db.backup.$(date +%Y%m%d)
+✅ **迁移已完成** - 数据已从旧系统迁移到新架构
 
-# 2. 执行迁移
-sqlite3 backend/data/class_system.db < migrations/migrate_v1_to_v2.sql
+## 迁移详情
 
-# 3. 验证
-sqlite3 backend/data/class_system.db ".schema users"
-```
+### 迁移时间
+2026-03-22
 
-## 结构差异
+### 迁移内容
 
 | 表 | 主要变更 |
 |---|---------|
-| `users` | `is_admin` → `role`，新增安全字段 |
-| `students` | `score` INTEGER → REAL |
-| `checkin_records` | `record_id` → `id`，新增 student_name/class_name |
-| `score_logs` | 完全重构，记录 old_score/new_score/delta |
+| `users` | `is_admin` → `role` 字符串，新增安全字段（login_fail_count, locked_until 等） |
+| `students` | `score` INTEGER → REAL，支持小数分数 |
+| `checkin_records` | 新增 `student_name`、`class_name`、`checkin_type` 字段 |
+| `score_logs` | 完全重构，记录 old_score/new_score/delta/reason/operator |
+| `class_session` | 新增上课状态表 |
 
-## 迁移后处理
+### 数据迁移统计
 
-```sql
--- 1. 分配教师班级
-UPDATE users SET assigned_class = '软件1班' WHERE username = 'xxx';
+- 学生：462 名
+- 用户：2 名（admin, teacher）
+- 分数日志：586 条
+- 签到记录：3 条
 
--- 2. 检查数据
-SELECT COUNT(*) FROM users;
-SELECT COUNT(*) FROM students;
-SELECT username, role FROM users WHERE role='admin';
+## 当前数据库
+
+```bash
+# 数据库路径
+/home/yufeng/student-manager/backend/data/class_system.db
+
+# 连接数据库
+sqlite3 /home/yufeng/student-manager/backend/data/class_system.db
+
+# 查看表结构
+.tables
+.schema users
+.schema students
 ```
 
-## 回滚
+## 备份恢复
+
+如需从备份恢复：
 
 ```bash
 # 停止服务
@@ -49,6 +57,11 @@ mv backend/data/class_system.db.backup.YYYYMMDD backend/data/class_system.db
 python backend/main.py
 ```
 
+## 历史迁移脚本
+
+旧迁移脚本位于 `migrations/` 目录，仅用于参考：
+- `migrate_v1_to_v2.sql` - v1 到 v2 的表结构变更
+
 ---
 
-详细说明见 [migrations/README.md](../migrations/README.md)
+**注意**: 当前系统使用 SQLModel 自动管理表结构，无需手动执行迁移脚本。

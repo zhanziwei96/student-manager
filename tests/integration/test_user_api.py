@@ -1,445 +1,234 @@
 """
-用户管理 API 集成测试
+用户管理 API 集成测试（管理员功能）
 """
 import pytest
-import uuid
+from sqlmodel import Session
 
 
-@pytest.mark.asyncio
-async def test_admin_create_user_success(client, test_app):
-    """
-    测试管理员成功创建用户
+class TestUserListAPI:
+    """用户列表 API 测试"""
     
-    验证点：
-    1. 返回 HTTP 200
-    2. 响应包含创建的用户信息
-    3. 新用户可登录
-    """
-    # Arrange - 创建管理员并登录
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
-    
-    db = test_app.state.test_db
-    admin = User(
-        username=f"admin_{uuid.uuid4().hex[:8]}",
-        name="管理员",
-        password=Password.create_from_plain("admin123"),
-        role=UserRole.ADMIN
-    )
-    
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (admin.username, admin.password.hash_value, admin.password.salt,
-              admin.name, admin.role.value, 1))
-        admin.id = cursor.lastrowid
-    
-    # 管理员登录
-    login_response = await client.post("/api/login", json={
-        "username": admin.username,
-        "password": "admin123"
-    })
-    assert login_response.status_code == 200
-    
-    # Act - 创建新用户
-    new_username = f"newteacher_{uuid.uuid4().hex[:8]}"
-    response = await client.post("/api/admin/users", json={
-        "username": new_username,
-        "password": "password123",
-        "name": "新教师",
-        "role": "teacher",
-        "assigned_classes": ["软件1班"]
-    })
-    
-    # Assert
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert data["data"]["username"] == new_username
-    assert data["data"]["role"] == "teacher"
-    
-    # 验证新用户可登录
-    login_new = await client.post("/api/login", json={
-        "username": new_username,
-        "password": "password123"
-    })
-    assert login_new.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_teacher_cannot_create_user(client, test_app):
-    """
-    测试普通教师无法创建用户（权限控制）
-    
-    验证点：
-    1. 教师访问管理员接口返回 403
-    """
-    # Arrange - 创建教师并登录
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
-    
-    db = test_app.state.test_db
-    teacher = User(
-        username=f"teacher_{uuid.uuid4().hex[:8]}",
-        name="教师",
-        password=Password.create_from_plain("teacher123"),
-        role=UserRole.TEACHER
-    )
-    
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (teacher.username, teacher.password.hash_value, teacher.password.salt,
-              teacher.name, teacher.role.value, 1))
-    
-    # 教师登录
-    login_response = await client.post("/api/login", json={
-        "username": teacher.username,
-        "password": "teacher123"
-    })
-    assert login_response.status_code == 200
-    
-    # Act - 尝试创建用户
-    response = await client.post("/api/admin/users", json={
-        "username": "newuser",
-        "password": "password123",
-        "name": "新用户",
-        "role": "teacher"
-    })
-    
-    # Assert
-    assert response.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_create_user_duplicate_username(client, test_app):
-    """
-    测试创建重复用户名
-    
-    验证点：
-    1. 返回 HTTP 400
-    2. 提示用户名已存在
-    """
-    # Arrange - 创建管理员并登录
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
-    
-    db = test_app.state.test_db
-    username = f"user_{uuid.uuid4().hex[:8]}"
-    
-    admin = User(
-        username=f"admin_{uuid.uuid4().hex[:8]}",
-        name="管理员",
-        password=Password.create_from_plain("admin123"),
-        role=UserRole.ADMIN
-    )
-    
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (admin.username, admin.password.hash_value, admin.password.salt,
-              admin.name, admin.role.value, 1))
-    
-    # 管理员登录
-    await client.post("/api/login", json={
-        "username": admin.username,
-        "password": "admin123"
-    })
-    
-    # 第一次创建
-    response1 = await client.post("/api/admin/users", json={
-        "username": username,
-        "password": "password123",
-        "name": "用户1",
-        "role": "teacher"
-    })
-    assert response1.status_code == 200
-    
-    # Act - 重复创建
-    response2 = await client.post("/api/admin/users", json={
-        "username": username,
-        "password": "password456",
-        "name": "用户2",
-        "role": "teacher"
-    })
-    
-    # Assert
-    assert response2.status_code == 400
-    assert "已存在" in response2.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_reset_password_success(client, test_app):
-    """
-    测试管理员重置密码
-    
-    验证点：
-    1. 重置成功后新密码可登录
-    2. 旧密码无法登录
-    """
-    # Arrange - 创建管理员和普通用户
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
-    
-    db = test_app.state.test_db
-    
-    admin = User(
-        username=f"admin_{uuid.uuid4().hex[:8]}",
-        name="管理员",
-        password=Password.create_from_plain("admin123"),
-        role=UserRole.ADMIN
-    )
-    
-    teacher = User(
-        username=f"teacher_{uuid.uuid4().hex[:8]}",
-        name="教师",
-        password=Password.create_from_plain("oldpassword"),
-        role=UserRole.TEACHER
-    )
-    
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (admin.username, admin.password.hash_value, admin.password.salt,
-              admin.name, admin.role.value, 1))
-        admin_id = cursor.lastrowid
+    def test_list_users_admin(self, admin_client, admin_user, teacher_user):
+        """管理员获取用户列表"""
+        response = admin_client.get("/api/admin/users")
         
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (teacher.username, teacher.password.hash_value, teacher.password.salt,
-              teacher.name, teacher.role.value, 1))
-        teacher_id = cursor.lastrowid
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 2
     
-    # 管理员登录
-    await client.post("/api/login", json={
-        "username": admin.username,
-        "password": "admin123"
-    })
-    
-    # Act - 重置密码
-    response = await client.post(f"/api/admin/users/{teacher_id}/reset-password", json={
-        "new_password": "newpassword123"
-    })
-    
-    # Assert
-    assert response.status_code == 200
-    assert "重置成功" in response.json()["message"]
-    
-    # 验证新密码可登录
-    login_new = await client.post("/api/login", json={
-        "username": teacher.username,
-        "password": "newpassword123"
-    })
-    assert login_new.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_delete_user_success(client, test_app):
-    """
-    测试删除用户
-    
-    验证点：
-    1. 删除成功返回 200
-    2. 删除后用户无法登录
-    """
-    # Arrange - 创建管理员和待删除用户
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
-    
-    db = test_app.state.test_db
-    
-    admin = User(
-        username=f"admin_{uuid.uuid4().hex[:8]}",
-        name="管理员",
-        password=Password.create_from_plain("admin123"),
-        role=UserRole.ADMIN
-    )
-    
-    teacher = User(
-        username=f"teacher_{uuid.uuid4().hex[:8]}",
-        name="教师",
-        password=Password.create_from_plain("teacher123"),
-        role=UserRole.TEACHER
-    )
-    
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (admin.username, admin.password.hash_value, admin.password.salt,
-              admin.name, admin.role.value, 1))
-        admin_id = cursor.lastrowid
+    def test_list_users_filter_by_role(self, admin_client, admin_user, teacher_user):
+        """按角色筛选用户"""
+        response = admin_client.get("/api/admin/users?role=teacher")
         
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (teacher.username, teacher.password.hash_value, teacher.password.salt,
-              teacher.name, teacher.role.value, 1))
-        teacher_id = cursor.lastrowid
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["data"]) == 1
+        assert data["data"][0]["username"] == "teacher1"
     
-    # 管理员登录
-    await client.post("/api/login", json={
-        "username": admin.username,
-        "password": "admin123"
-    })
+    def test_list_users_teacher_forbidden(self, teacher_client):
+        """教师无权访问用户列表"""
+        response = teacher_client.get("/api/admin/users")
+        
+        assert response.status_code == 403
     
-    # Act - 删除用户
-    response = await client.delete(f"/api/admin/users/{teacher_id}")
-    
-    # Assert
-    assert response.status_code == 200
-    assert "删除成功" in response.json()["message"]
+    def test_list_users_unauthorized(self, client):
+        """未授权访问"""
+        response = client.get("/api/admin/users")
+        
+        assert response.status_code == 401
 
 
-@pytest.mark.asyncio
-async def test_delete_self_forbidden(client, test_app):
-    """
-    测试管理员不能删除自己
+class TestUserCreateAPI:
+    """用户创建 API 测试"""
     
-    验证点：
-    1. 删除自己返回 400
-    """
-    # Arrange - 创建管理员
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
+    def test_create_user_success(self, admin_client):
+        """成功创建用户"""
+        response = admin_client.post("/api/admin/users", json={
+            "username": "newteacher",
+            "password": "password123",
+            "name": "新教师",
+            "role": "teacher",
+            "assigned_classes": ["三班", "四班"]
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "用户创建成功"
+        assert data["data"]["username"] == "newteacher"
+        assert data["data"]["role"] == "teacher"
     
-    db = test_app.state.test_db
+    def test_create_user_duplicate_username(self, admin_client, admin_user):
+        """用户名重复"""
+        response = admin_client.post("/api/admin/users", json={
+            "username": "admin",
+            "password": "password123",
+            "name": "重复用户",
+            "role": "teacher"
+        })
+        
+        assert response.status_code == 409
+        assert "用户名已存在" in response.json()["message"]
     
-    admin = User(
-        username=f"admin_{uuid.uuid4().hex[:8]}",
-        name="管理员",
-        password=Password.create_from_plain("admin123"),
-        role=UserRole.ADMIN
-    )
+    def test_create_user_validation_error(self, admin_client):
+        """参数验证错误"""
+        response = admin_client.post("/api/admin/users", json={
+            "username": "ab",  # 太短
+            "password": "123",  # 太短
+            "name": "测试"
+        })
+        
+        assert response.status_code == 422
     
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (admin.username, admin.password.hash_value, admin.password.salt,
-              admin.name, admin.role.value, 1))
-        admin_id = cursor.lastrowid
-    
-    # 管理员登录
-    await client.post("/api/login", json={
-        "username": admin.username,
-        "password": "admin123"
-    })
-    
-    # Act - 尝试删除自己
-    response = await client.delete(f"/api/admin/users/{admin_id}")
-    
-    # Assert
-    assert response.status_code == 400
-    assert "不能删除当前登录账号" in response.json()["detail"]
+    def test_create_user_default_role(self, admin_client):
+        """默认角色为教师"""
+        response = admin_client.post("/api/admin/users", json={
+            "username": "defaultteacher",
+            "password": "password123",
+            "name": "默认教师"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["role"] == "teacher"
 
 
-@pytest.mark.asyncio
-async def test_change_password_success(client, test_app):
-    """
-    测试用户修改自己的密码
+class TestUserUpdateAPI:
+    """用户更新 API 测试"""
     
-    验证点：
-    1. 修改成功后旧密码失效
-    2. 新密码可登录
-    """
-    # Arrange - 创建用户
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
+    def test_update_user_success(self, admin_client, teacher_user):
+        """成功更新用户"""
+        response = admin_client.put(f"/api/admin/users/{teacher_user.id}", json={
+            "name": "更新的教师名",
+            "assigned_classes": ["五班"]
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "用户更新成功"
+        assert data["data"]["name"] == "更新的教师名"
     
-    db = test_app.state.test_db
+    def test_update_user_not_found(self, admin_client):
+        """用户不存在"""
+        response = admin_client.put("/api/admin/users/9999", json={
+            "name": "不存在的用户"
+        })
+        
+        assert response.status_code == 404
     
-    user = User(
-        username=f"user_{uuid.uuid4().hex[:8]}",
-        name="用户",
-        password=Password.create_from_plain("oldpassword"),
-        role=UserRole.TEACHER
-    )
-    
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password_hash, salt, name, role, is_active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (user.username, user.password.hash_value, user.password.salt,
-              user.name, user.role.value, 1))
-        user_id = cursor.lastrowid
-    
-    # 登录
-    await client.post("/api/login", json={
-        "username": user.username,
-        "password": "oldpassword"
-    })
-    
-    # Act - 修改密码
-    response = await client.post("/api/change-password", json={
-        "old_password": "oldpassword",
-        "new_password": "newpassword123"
-    })
-    
-    # Assert
-    assert response.status_code == 200
-    assert "成功" in response.json()["message"]
+    def test_update_user_role(self, admin_client, teacher_user):
+        """更新用户角色"""
+        response = admin_client.put(f"/api/admin/users/{teacher_user.id}", json={
+            "role": "admin"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["role"] == "admin"
 
 
-@pytest.mark.asyncio
-async def test_get_all_users(client, test_app):
-    """
-    测试管理员获取用户列表
+class TestResetPasswordAPI:
+    """重置密码 API 测试"""
     
-    验证点：
-    1. 返回所有用户
-    2. 包含管理员和普通用户
-    """
+    def test_reset_password_success(self, admin_client, teacher_user, test_engine):
+        """成功重置密码"""
+        response = admin_client.post(f"/api/admin/users/{teacher_user.id}/reset-password", json={
+            "new_password": "resetpass123"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "密码重置成功"
+        
+        # 验证新密码可以登录
+        from backend.app.core.security import verify_password_hash
+        with Session(test_engine) as session:
+            session.add(teacher_user)
+            session.refresh(teacher_user)
+            assert verify_password_hash("resetpass123", teacher_user.password_hash, teacher_user.salt)
     
-    # Arrange - 创建管理员和多个用户
-    from domain.entities.user import User, UserRole
-    from domain.value_objects.password import Password
+    def test_reset_password_user_not_found(self, admin_client):
+        """用户不存在"""
+        response = admin_client.post("/api/admin/users/9999/reset-password", json={
+            "new_password": "newpass123"
+        })
+        
+        assert response.status_code == 404
     
-    db = test_app.state.test_db
+    def test_reset_password_validation_error(self, admin_client, teacher_user):
+        """密码太短"""
+        response = admin_client.post(f"/api/admin/users/{teacher_user.id}/reset-password", json={
+            "new_password": "123"  # 太短
+        })
+        
+        assert response.status_code == 422
+
+
+class TestDeleteUserAPI:
+    """删除用户 API 测试"""
     
-    admin = User(
-        username=f"admin_{uuid.uuid4().hex[:8]}",
-        name="管理员",
-        password=Password.create_from_plain("admin123"),
-        role=UserRole.ADMIN
-    )
+    def test_delete_user_success(self, admin_client, teacher_user):
+        """成功删除用户"""
+        response = admin_client.delete(f"/api/admin/users/{teacher_user.id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "用户删除成功"
+        
+        # 验证已删除
+        list_response = admin_client.get("/api/admin/users")
+        users = list_response.json()["data"]
+        assert not any(u["id"] == teacher_user.id for u in users)
     
-    teacher1 = User(
-        username=f"teacher1_{uuid.uuid4().hex[:8]}",
-        name="教师1",
-        password=Password.create_from_plain("teacher123"),
-        role=UserRole.TEACHER
-    )
+    def test_delete_user_not_found(self, admin_client):
+        """用户不存在"""
+        response = admin_client.delete("/api/admin/users/9999")
+        
+        assert response.status_code == 404
     
-    with db.connection() as conn:
-        cursor = conn.cursor()
-        for u in [admin, teacher1]:
-            cursor.execute('''
-                INSERT INTO users (username, password_hash, salt, name, role, is_active)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (u.username, u.password.hash_value, u.password.salt,
-                  u.name, u.role.value, 1))
+    def test_delete_self_forbidden(self, admin_client, admin_user):
+        """不能删除自己"""
+        response = admin_client.delete(f"/api/admin/users/{admin_user.id}")
+        
+        assert response.status_code == 400
+        assert "不能删除当前登录账号" in response.json()["message"]
     
-    # 管理员登录
-    await client.post("/api/login", json={
-        "username": admin.username,
-        "password": "admin123"
-    })
+    def test_delete_user_teacher_forbidden(self, teacher_client, admin_user):
+        """教师无权删除用户"""
+        response = teacher_client.delete(f"/api/admin/users/{admin_user.id}")
+        
+        assert response.status_code == 403
+
+
+class TestUserPermissions:
+    """用户权限测试"""
     
-    # Act
-    response = await client.get("/api/admin/users")
+    def test_teacher_cannot_create_user(self, teacher_client):
+        """教师不能创建用户"""
+        response = teacher_client.post("/api/admin/users", json={
+            "username": "newuser",
+            "password": "password123",
+            "name": "新用户"
+        })
+        
+        assert response.status_code == 403
     
-    # Assert
-    assert response.status_code == 200
+    def test_teacher_cannot_update_user(self, teacher_client, admin_user):
+        """教师不能更新用户"""
+        response = teacher_client.put(f"/api/admin/users/{admin_user.id}", json={
+            "name": "试图修改"
+        })
+        
+        assert response.status_code == 403
+    
+    def test_teacher_cannot_reset_password(self, teacher_client, admin_user):
+        """教师不能重置密码"""
+        response = teacher_client.post(f"/api/admin/users/{admin_user.id}/reset-password", json={
+            "new_password": "newpass123"
+        })
+        
+        assert response.status_code == 403

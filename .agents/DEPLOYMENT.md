@@ -4,11 +4,9 @@
 
 ```bash
 # 检查是否已部署
-curl http://localhost:8000/health
-curl http://localhost:3000
-redis-cli ping
+curl http://localhost:8000/api/health
 
-# 如果都正常，环境已就绪 ✅
+# 如果正常返回，环境已就绪 ✅
 ```
 
 ## 2. 首次部署
@@ -24,8 +22,8 @@ conda activate student-manage
 # 安装依赖
 pip install -r requirements.txt
 
-# 启动
-python main.py
+# 启动（生产环境）
+ENV=production python main.py
 ```
 
 ### 2.2 前端
@@ -35,36 +33,29 @@ pnpm install
 pnpm dev
 ```
 
-### 2.3 Redis
-```bash
-# Ubuntu
-sudo apt install redis-server
-sudo systemctl start redis-server
-
-# 验证
-redis-cli ping  # 应返回 PONG
-```
-
 ## 3. 一键启动
 
 ```bash
 # 使用 Makefile
 cd /home/yufeng/student-manager
-make dev    # 启动所有服务
-make stop   # 停止所有服务
-make logs   # 查看日志
+
+make dev-backend   # 终端1: 启动后端
+make dev-frontend  # 终端2: 启动前端
+
+make stop          # 停止所有服务
+make logs          # 查看日志
 ```
 
 ## 4. 验证部署
 
 ```bash
 # 1. 健康检查
-curl http://localhost:8000/health
+curl http://localhost:8000/api/health
 
 # 2. 登录测试
 curl -X POST http://localhost:8000/api/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
+  -d '{"username":"admin","password":"admin123","role":"admin"}'
 
 # 3. 前端访问
 open http://localhost:3000
@@ -76,7 +67,6 @@ open http://localhost:3000
 ```bash
 lsof -i :8000  # 后端端口
 lsof -i :3000  # 前端端口
-lsof -i :6379  # Redis 端口
 kill -9 <PID>
 ```
 
@@ -104,8 +94,9 @@ source /home/yufeng/miniconda3/bin/activate student-manage
 | 后端 | http://localhost:8000 | API 服务 |
 | 前端 | http://localhost:3000 | 用户界面 |
 | API 文档 | http://localhost:8000/docs | Swagger |
-| Redis | localhost:6379 | 缓存/限流 |
-| 数据库 | backend/data/*.db | SQLite |
+| 数据库 | backend/data/class_system.db | SQLite |
+
+**注意**: 后端服务不依赖 Redis，限流使用内存存储。
 
 ---
 

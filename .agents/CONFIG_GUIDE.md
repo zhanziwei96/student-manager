@@ -2,7 +2,7 @@
 
 ## 概述
 
-本系统采用分层配置管理架构，支持环境变量、`.env` 文件和代码默认值三种配置来源。
+本系统使用 Pydantic Settings 管理配置，支持环境变量、`.env` 文件和代码默认值三种配置来源。
 
 ## 配置架构
 
@@ -10,71 +10,61 @@
 
 配置按功能分为以下几类：
 
-| 配置类 | 说明 | 环境变量前缀 |
-|--------|------|-------------|
-| `AppSettings` | 应用基础配置 | - |
-| `DatabaseSettings` | 数据库配置 | `DB_` |
-| `RedisSettings` | Redis 配置 | `REDIS_` |
-| `CacheSettings` | 缓存配置 | `CACHE_` |
-| `SecuritySettings` | 安全配置 | `SECURITY_` |
-| `RateLimitSettings` | 限流配置 | `RATE_LIMIT_` |
-| `LogSettings` | 日志配置 | `LOG_` |
-| `PaginationSettings` | 分页配置 | `PAGINATION_` |
-| `ScoreSettings` | 分数配置 | `SCORE_` |
+| 配置类 | 说明 | 环境变量前缀 | 访问方式 |
+|--------|------|-------------|---------|
+| `AppSettings` | 应用基础配置 | - | `settings.app.*` |
+| `DatabaseSettings` | 数据库配置 | `DATABASE_` | `settings.database.*` |
+| `SecuritySettings` | 安全配置 | `SECURITY_` | `settings.security.*` |
+| `ScoreSettings` | 分数配置 | `SCORE_` | `settings.score.*` |
+| `PaginationSettings` | 分页配置 | `PAGINATION_` | `settings.pagination.*` |
 
 ### 2. 配置优先级
 
 配置优先级从高到低：
 
-1. 环境变量（如 `export REDIS_URL=redis://...`）
+1. 环境变量（如 `export DATABASE__PATH=/path/to/db`）
 2. `.env` 文件中的变量
 3. 代码中的默认值
+
+**注意**：使用双下划线 `__` 访问嵌套配置，如 `DATABASE__PATH` 对应 `settings.database.path`
 
 ## 使用方法
 
 ### 基本用法
 
 ```python
-from infrastructure.config import get_settings
+from app.core.config import get_settings
 
 settings = get_settings()
 
 # 访问配置
-redis_url = settings.redis.url
-db_path = settings.database.path
+db_path = settings.get_database_path()
 secret_key = settings.security.secret_key
-```
-
-### 便捷访问函数
-
-```python
-from infrastructure.config import (
-    get_db_settings,
-    get_redis_settings,
-    get_cache_settings,
-    get_security_settings,
-)
-
-db_config = get_db_settings()
-redis_config = get_redis_settings()
+min_score = settings.score.min_score
 ```
 
 ### 重新加载配置
 
 ```python
-from infrastructure.config import reload_settings
+from app.core.config import get_settings
 
-# 配置热更新
-settings = reload_settings()
+# 配置热更新（实际会重新读取环境变量）
+settings = get_settings()
 ```
 
 ### 指定环境文件
 
-```python
-from infrastructure.config import init_settings
+系统根据 `ENV` 环境变量自动选择配置文件：
 
-# 使用特定的环境文件
-settings = init_settings("/path/to/.env.production")
+```bash
+# 开发环境
+ENV=development python main.py
+
+# 测试环境
+ENV=testing python main.py
+
+# 生产环境（默认）
+ENV=production python main.py
 ```
 
 ## 环境变量
@@ -84,84 +74,79 @@ settings = init_settings("/path/to/.env.production")
 ```bash
 # 应用配置
 ENV=production                    # 运行环境
-DEBUG=false                       # 调试模式
-HOST=0.0.0.0                      # 服务器地址
-PORT=8000                         # 服务器端口
+APP__NAME=ClassHub                # 应用名称
+APP__DEBUG=false                  # 调试模式
+APP__HOST=0.0.0.0                 # 服务器地址
+APP__PORT=8000                    # 服务器端口
 
 # 数据库配置
-DB_PATH=/data/class_system.db     # 数据库文件路径
-DB_TIMEOUT=30                     # 连接超时
-
-# Redis 配置
-REDIS_URL=redis://localhost:6379  # Redis 连接 URL
-REDIS_POOL_SIZE=10                # 连接池大小
+DATABASE__PATH=/data/class_system.db  # 数据库文件路径
 
 # 安全配置
-SECURITY_SECRET_KEY=your-secret   # Session 密钥
-SECURITY_SESSION_MAX_AGE=86400    # Session 有效期（秒）
+SECURITY__SECRET_KEY=your-secret      # Session 密钥
+SECURITY__SESSION_MAX_AGE=86400       # Session 有效期（秒）
+SECURITY__MAX_LOGIN_FAILURES=10       # 最大登录失败次数
+SECURITY__LOCKOUT_DURATION_MINUTES=30 # 账号锁定时间
+SECURITY__CORS_ORIGINS=["http://localhost:3000"]  # CORS 来源
 
-# 缓存配置
-CACHE_ENABLED=true                # 是否启用缓存
-CACHE_TTL=60                      # 默认 TTL（秒）
+# 分数配置
+SCORE__MIN_SCORE=0                # 最低分数
+SCORE__MAX_SCORE=100              # 最高分数
+SCORE__DEFAULT_SCORE=70           # 默认分数
+
+# 分页配置
+PAGINATION__DEFAULT_PAGE_SIZE=20         # 默认每页数量
+PAGINATION__SCORE_LOG_DEFAULT_LIMIT=50   # 分数日志默认条数
 ```
 
-### 完整配置项
+## 多环境配置
 
-参考 `.env.example` 文件获取所有可配置项。
+### 环境文件
 
-## 配置文件
-
-### .env 文件
-
-在项目根目录创建 `.env` 文件：
-
-```bash
-cp .env.example .env
-```
-
-编辑 `.env` 文件修改配置：
-
-```bash
-# 修改密钥
-SECURITY_SECRET_KEY=my-secure-secret-key
-
-# 修改 Redis 地址
-REDIS_URL=redis://192.168.1.100:6379
-```
-
-### 多环境配置
-
-可以创建多个环境文件：
+创建多个环境文件：
 
 - `.env.development` - 开发环境
 - `.env.testing` - 测试环境
 - `.env.production` - 生产环境
 
-通过环境变量指定使用的配置文件：
+### 环境文件示例
 
 ```bash
-ENV=production python main.py
+# .env.production
+ENV=production
+SECURITY__SECRET_KEY=your-production-secret-key
+DATABASE__PATH=./data/class_system.db
 ```
 
-## 配置常量（兼容旧代码）
+## 兼容性常量
 
-为了保持兼容性，系统同时提供配置常量类：
+系统提供常量类用于业务逻辑：
 
 ```python
-from infrastructure.config import (
-    AppConfig,
-    AuthConfig,
-    ScoreConfig,
-    CacheConfig,
-    HttpStatus,
+from app.models.constants import (
+    UserRoleConst,      # 用户角色: ADMIN, TEACHER, STUDENT
+    SessionKeyConst,    # Session键: USER_ID, USERNAME, ROLE, IS_ADMIN
+    ApiResponseConst,   # API响应键: SUCCESS, DATA, MESSAGE
+    RoutePrefixConst,   # 路由前缀: API, ADMIN
+    MessageConst,       # 业务消息
 )
 
 # 使用常量
-version = AppConfig.VERSION
-default_score = ScoreConfig.DEFAULT_SCORE
+role = UserRoleConst.ADMIN
 ```
 
-**注意**：新代码建议使用 `get_settings()` 获取配置。
+HTTP 状态码常量：
+
+```python
+from app.core.config import HttpStatus
+
+HttpStatus.OK           # 200
+HttpStatus.BAD_REQUEST  # 400
+HttpStatus.UNAUTHORIZED # 401
+HttpStatus.FORBIDDEN    # 403
+HttpStatus.NOT_FOUND    # 404
+HttpStatus.CONFLICT     # 409
+```
 
 ## 最佳实践
 
@@ -171,40 +156,36 @@ default_score = ScoreConfig.DEFAULT_SCORE
 
 ```bash
 # 生产环境
-export SECURITY_SECRET_KEY=$(openssl rand -hex 32)
+export SECURITY__SECRET_KEY=$(openssl rand -hex 32)
 ```
 
-### 2. 不同环境配置
-
-开发环境可以使用 `.env` 文件，生产环境使用环境变量：
-
-```dockerfile
-# Dockerfile
-ENV ENV=production
-ENV SECURITY_SECRET_KEY=${SECRET_KEY}
-```
-
-### 3. 配置验证
+### 2. 配置验证
 
 系统使用 Pydantic 自动验证配置：
 
-```python
+```bash
 # 无效的配置会抛出异常
-CACHE_TTL=invalid  # 错误：必须是整数
+SCORE__MIN_SCORE=invalid  # 错误：必须是数值
 ```
 
-### 4. 配置文档
+### 3. 配置文档
 
 为自定义配置添加注释：
 
 ```python
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class MySettings(BaseSettings):
-    my_config: str = Field(
-        default="default_value",
-        description="配置项说明"
-    )
+class MyFeatureSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="MY_FEATURE_")
+    
+    enabled: bool = Field(default=True, description="功能开关")
+    timeout: int = Field(default=30, description="超时时间（秒）")
+
+# 在 Settings 类中添加
+class Settings(BaseSettings):
+    # ... 其他配置
+    my_feature: MyFeatureSettings = Field(default_factory=MyFeatureSettings)
 ```
 
 ## 故障排查
@@ -214,6 +195,7 @@ class MySettings(BaseSettings):
 1. 检查环境变量是否正确设置
 2. 检查 `.env` 文件是否存在且格式正确
 3. 检查配置项名称是否正确（区分大小写）
+4. 检查是否使用了双下划线 `__` 访问嵌套配置
 
 ### 配置验证失败
 
@@ -221,10 +203,10 @@ class MySettings(BaseSettings):
 
 ```bash
 # 正确
-CACHE_TTL=60
+SCORE__MIN_SCORE=0
 
 # 错误
-CACHE_TTL=sixty
+SCORE__MIN_SCORE=zero
 ```
 
 ### 调试配置
@@ -232,50 +214,26 @@ CACHE_TTL=sixty
 打印所有配置（注意不要暴露敏感信息）：
 
 ```python
-from infrastructure.config import get_settings
+from app.core.config import get_settings
 
 settings = get_settings()
 print(settings.model_dump())  # 打印所有配置
 ```
 
-## 迁移指南
+### 检查当前环境
 
-### 从旧配置迁移
-
-旧代码：
 ```python
-from infrastructure.config import CacheConfig
-
-ttl = CacheConfig.STUDENT_LIST_TTL_SECONDS
-```
-
-新代码：
-```python
-from infrastructure.config import get_settings
+from app.core.config import get_settings
 
 settings = get_settings()
-ttl = settings.cache.student_list_ttl
+print(f"当前环境: {settings.app.env}")
+print(f"是否开发环境: {settings.app.is_development}")
+print(f"是否生产环境: {settings.app.is_production}")
 ```
 
-### 自定义配置
+## 相关文件
 
-在 `infrastructure/config/settings.py` 中添加新的配置类：
-
-```python
-class MyFeatureSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="MY_FEATURE_")
-    
-    enabled: bool = Field(default=True)
-    timeout: int = Field(default=30)
-
-class AppSettings(BaseSettings):
-    # ... 其他配置
-    my_feature: MyFeatureSettings = Field(default_factory=MyFeatureSettings)
-```
-
-使用：
-```python
-settings = get_settings()
-if settings.my_feature.enabled:
-    timeout = settings.my_feature.timeout
-```
+- `backend/app/core/config.py` - 配置实现
+- `backend/.env.example` - 配置示例（如存在）
+- `backend/.env.production` - 生产环境配置
+- `backend/.env.testing` - 测试环境配置

@@ -1,0 +1,139 @@
+"""
+用户 CRUD 单元测试
+"""
+import pytest
+from datetime import datetime
+from sqlmodel import Session
+from app.crud import (
+    get_user, get_user_by_username, get_users, create_user,
+    update_user, record_login_success, record_login_failure,
+    reset_password, delete_user
+)
+from app.models import User
+from app.core.security import generate_password_hash, verify_password_hash
+
+
+class TestUserCRUD:
+    """测试用户 CRUD 操作"""
+    
+    def test_create_user(self, session: Session):
+        """测试创建用户"""
+        password_hash, salt = generate_password_hash("password123")
+        
+        user = create_user(
+            session,
+            username="new_teacher",
+            name="新教师",
+            password_hash=password_hash,
+            salt=salt,
+            role="teacher",
+            assigned_classes=["软件1班"]
+        )
+        
+        assert user.username == "new_teacher"
+        assert user.name == "新教师"
+        assert user.role == "teacher"
+        assert user.get_assigned_classes() == ["软件1班"]
+    
+    def test_get_user_by_id(self, session: Session):
+        """测试根据ID获取用户"""
+        password_hash, salt = generate_password_hash("password123")
+        user = create_user(session, "teacher1", "教师1", password_hash, salt)
+        
+        found = get_user(session, user.id)
+        assert found is not None
+        assert found.username == "teacher1"
+    
+    def test_get_user_by_username(self, session: Session):
+        """测试根据用户名获取用户"""
+        password_hash, salt = generate_password_hash("password123")
+        create_user(session, "teacher2", "教师2", password_hash, salt)
+        
+        found = get_user_by_username(session, "teacher2")
+        assert found is not None
+        assert found.name == "教师2"
+    
+    def test_get_user_not_found(self, session: Session):
+        """测试获取不存在的用户"""
+        user = get_user_by_username(session, "not_exist")
+        assert user is None
+    
+    def test_get_users(self, session: Session):
+        """测试获取所有用户"""
+        password_hash, salt = generate_password_hash("password123")
+        create_user(session, "admin1", "管理员", password_hash, salt, role="admin")
+        create_user(session, "teacher3", "教师3", password_hash, salt, role="teacher")
+        
+        users = get_users(session)
+        assert len(users) == 2
+    
+    def test_get_users_by_role(self, session: Session):
+        """测试按角色获取用户"""
+        password_hash, salt = generate_password_hash("password123")
+        create_user(session, "admin2", "管理员", password_hash, salt, role="admin")
+        create_user(session, "teacher4", "教师4", password_hash, salt, role="teacher")
+        
+        admins = get_users(session, role="admin")
+        assert len(admins) == 1
+        assert admins[0].role == "admin"
+    
+    def test_record_login_success(self, session: Session):
+        """测试记录登录成功"""
+        password_hash, salt = generate_password_hash("password123")
+        user = create_user(session, "teacher5", "教师5", password_hash, salt)
+        user.login_fail_count = 3  # 设置一些失败次数
+        
+        record_login_success(session, user, "127.0.0.1")
+        
+        assert user.login_fail_count == 0
+        assert user.last_login_ip == "127.0.0.1"
+        assert user.last_login is not None
+    
+    def test_record_login_failure(self, session: Session):
+        """测试记录登录失败"""
+        password_hash, salt = generate_password_hash("password123")
+        user = create_user(session, "teacher6", "教师6", password_hash, salt)
+        
+        # 连续失败9次
+        for i in range(9):
+            is_locked = record_login_failure(session, user)
+            assert is_locked is False
+        
+        assert user.login_fail_count == 9
+        
+        # 第10次失败应该锁定
+        is_locked = record_login_failure(session, user)
+        assert is_locked is True
+        assert user.locked_until is not None
+    
+    def test_reset_password(self, session: Session):
+        """测试重置密码"""
+        password_hash, salt = generate_password_hash("password123")
+        user = create_user(session, "teacher7", "教师7", password_hash, salt)
+        user.login_fail_count = 5
+        user.locked_until = datetime.now()
+        
+        new_hash, new_salt = generate_password_hash("newpassword")
+        reset_password(session, user, new_hash, new_salt)
+        
+        assert user.password_hash == new_hash
+        assert user.salt == new_salt
+        assert user.login_fail_count == 0
+        assert user.locked_until is None
+    
+    def test_delete_user(self, session: Session):
+        """测试删除用户"""
+        password_hash, salt = generate_password_hash("password123")
+        user = create_user(session, "teacher8", "教师8", password_hash, salt)
+        
+        success = delete_user(session, user.id)
+        assert success is True
+        
+        # 确认已删除
+        found = get_user(session, user.id)
+        assert found is None
+    
+    def test_delete_user_not_found(self, session: Session):
+        """测试删除不存在的用户"""
+        success = delete_user(session, 99999)
+        assert success is False

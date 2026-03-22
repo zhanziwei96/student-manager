@@ -182,7 +182,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { checkin, getClassSession, getClassSessionStudents } from '@/api'
+import { checkin, getClassSession, getCheckinRecords } from '@/api'
 
 const message = useMessage()
 
@@ -223,9 +223,9 @@ const loadClassSession = async () => {
 // 加载已签到学生
 const loadCheckedInStudents = async () => {
   try {
-    const res = await getClassSessionStudents()
+    const res = await getCheckinRecords()
     if (res.success) {
-      checkedInStudents.value = res.data.students.filter(s => s.checked_in)
+      checkedInStudents.value = res.data || []
     }
   } catch (error) {
     // 静默失败
@@ -244,7 +244,7 @@ const handleCheckin = async () => {
   try {
     const res = await checkin({
       student_id: checkinForm.value.student_id,
-      name: checkinForm.value.name
+      student_name: checkinForm.value.name
     })
     
     // 添加到我的记录

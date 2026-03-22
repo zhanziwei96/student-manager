@@ -206,26 +206,25 @@ const userOptions = [
 
 // 加载学生信息
 const loadStudentInfo = async () => {
-  // 从Cookie获取学号（学生登录时应该存储）
-  // 这里使用模拟数据，实际应该从后端获取
-  const username = userStore.username || '2513070101'
-  
-  // 调用API获取学生详情
-  const res = await api.getStudents()
-  if (res.success) {
-    const student = res.data.find(s => s.student_id === username)
-    if (student) {
-      studentInfo.value = student
-      await loadScoreLogs(student.student_id)
-      await loadCheckinRecords(student.student_id)
-      await loadSchoolRank()
+  // 调用 /api/me 获取当前学生信息（包含分数和排名）
+  const res = await api.getUserInfo()
+  if (res.success && res.data) {
+    studentInfo.value = {
+      student_id: res.data.username,
+      name: res.data.name,
+      class_name: res.data.assigned_classes?.[0] || '',
+      score: res.data.score || 0
     }
+    schoolRank.value = res.data.school_rank || 0
+    schoolTotal.value = res.data.total_students || 0
+    await loadScoreLogs(res.data.username)
+    await loadCheckinRecords(res.data.username)
   }
 }
 
 // 加载分数历史
 const loadScoreLogs = async (studentId) => {
-  const res = await api.getScoreLogs({ student_id: studentId })
+  const res = await api.getScoreLogs(studentId)
   if (res.success) {
     scoreLogs.value = res.data || []
   }
@@ -233,9 +232,10 @@ const loadScoreLogs = async (studentId) => {
 
 // 加载签到记录
 const loadCheckinRecords = async (studentId) => {
-  const res = await api.getCheckinRecords({ student_id: studentId })
+  const res = await api.getCheckinRecords()
   if (res.success) {
-    checkinRecords.value = res.data || []
+    // 过滤出当前学生的签到记录
+    checkinRecords.value = (res.data || []).filter(r => r.student_id === studentId)
     // 检查今天是否已签到
     const today = new Date().toDateString()
     todayCheckin.value = checkinRecords.value.some(r => 
@@ -244,17 +244,7 @@ const loadCheckinRecords = async (studentId) => {
   }
 }
 
-// 加载全校排名
-const loadSchoolRank = async () => {
-  const res = await api.getStudents()
-  if (res.success) {
-    // 按分数排序（高到低）
-    const allStudents = res.data.sort((a, b) => b.score - a.score)
-    schoolTotal.value = allStudents.length
-    const rank = allStudents.findIndex(s => s.student_id === studentInfo.value.student_id)
-    schoolRank.value = rank + 1
-  }
-}
+
 
 // 加载上课状态
 const loadClassSession = async () => {

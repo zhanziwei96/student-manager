@@ -2,297 +2,232 @@
 学生管理 API 集成测试
 """
 import pytest
-import uuid
 
 
-@pytest.mark.asyncio
-async def test_create_student_success(client, test_user):
-    """
-    测试成功创建学生
+class TestStudentListAPI:
+    """学生列表 API 测试"""
     
-    验证点：
-    1. 返回 HTTP 200
-    2. 响应包含创建的学生信息
-    3. 默认分数为 70
-    """
-    # Arrange - 先登录
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
+    def test_get_students_list_admin(self, admin_client, sample_students):
+        """管理员获取学生列表"""
+        response = admin_client.get("/api/students")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 6  # 包括三班学生
     
-    # 使用唯一的学号避免冲突
-    student_id = f"2024{uuid.uuid4().hex[:6]}"
+    def test_get_students_list_teacher(self, teacher_client, sample_students):
+        """教师获取学生列表（只能看到负责班级的学生）"""
+        response = teacher_client.get("/api/students")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        # 教师负责"一班"和"二班"，共5个学生（一班3个，二班2个），看不到三班学生
+        assert len(data["data"]) == 5
     
-    # Act
-    response = await client.post("/api/students", json={
-        "student_id": student_id,
-        "name": "张三",
-        "class_name": "软件1班"
-    })
+    def test_get_students_list_teacher_filter_by_class(self, teacher_client, sample_students):
+        """教师按班级筛选学生（只能筛选负责班级）"""
+        # 筛选一班（有权限）
+        response = teacher_client.get("/api/students?class_name=一班")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 3
+        
+        # 筛选二班（有权限）
+        response = teacher_client.get("/api/students?class_name=二班")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 2
     
-    # Assert
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert data["data"]["student_id"] == student_id
-    assert data["data"]["name"] == "张三"
-    assert data["data"]["class_name"] == "软件1班"
-    assert data["data"]["score"] == 70.0  # 默认分数
+    def test_get_students_unauthorized(self, client):
+        """未授权访问学生列表"""
+        response = client.get("/api/students")
+        
+        assert response.status_code == 401
+    
+    def test_get_students_by_class(self, admin_client, sample_students):
+        """按班级筛选学生"""
+        response = admin_client.get("/api/students?class_name=一班")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 3  # S001-S003
+    
+    def test_teacher_cannot_access_unassigned_class(self, teacher_client, sample_students):
+        """教师无法查看未负责班级的学生"""
+        response = teacher_client.get("/api/students?class_name=三班")
+        
+        assert response.status_code == 403
+        data = response.json()
+        assert data["success"] is False
+        assert "无权查看" in data["message"]
 
 
-@pytest.mark.asyncio
-async def test_create_student_duplicate_id(client, test_user):
-    """
-    测试创建重复学号学生
+class TestStudentCreateAPI:
+    """学生创建 API 测试"""
     
-    验证点：
-    1. 返回 HTTP 400
-    2. 提示学号已存在
-    """
-    # Arrange - 先登录
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
+    def test_create_student_success(self, admin_client):
+        """成功创建学生"""
+        response = admin_client.post("/api/students", json={
+            "student_id": "S100",
+            "name": "新学生",
+            "class_name": "三班"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "学生添加成功"
+        assert data["data"]["student_id"] == "S100"
+        assert data["data"]["class_name"] == "三班"
     
-    student_id = f"2024{uuid.uuid4().hex[:6]}"
+    def test_create_student_duplicate_id(self, admin_client, student_user):
+        """学号重复"""
+        response = admin_client.post("/api/students", json={
+            "student_id": "S001",
+            "name": "重复学生",
+            "class_name": "一班"
+        })
+        
+        assert response.status_code == 409
+        assert "学号已存在" in response.json()["message"]
     
-    # 第一次创建
-    response1 = await client.post("/api/students", json={
-        "student_id": student_id,
-        "name": "张三",
-        "class_name": "软件1班"
-    })
-    assert response1.status_code == 200
+    def test_create_student_default_class(self, admin_client):
+        """默认班级"""
+        response = admin_client.post("/api/students", json={
+            "student_id": "S101",
+            "name": "无班级学生"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["class_name"] == "未分班"
     
-    # Act - 重复创建
-    response2 = await client.post("/api/students", json={
-        "student_id": student_id,
-        "name": "李四",
-        "class_name": "软件2班"
-    })
-    
-    # Assert
-    assert response2.status_code == 400
-    assert "已存在" in response2.json()["detail"]
+    def test_create_student_validation_error(self, admin_client):
+        """参数验证错误"""
+        response = admin_client.post("/api/students", json={
+            "student_id": "",
+            "name": "无效学生"
+        })
+        
+        assert response.status_code == 422
 
 
-@pytest.mark.asyncio
-async def test_create_student_validation_error(client, test_user):
-    """
-    测试创建学生参数验证失败
+class TestStudentScoreAPI:
+    """学生分数 API 测试"""
     
-    验证点：
-    1. 学号太短返回 400 (Bad Request)
-    """
-    # Arrange - 先登录
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
+    def test_update_score_success(self, admin_client, student_user):
+        """成功更新分数"""
+        old_score = student_user.score
+        
+        response = admin_client.put(f"/api/students/{student_user.student_id}/score", json={
+            "score_change": 5.0,
+            "reason": "课堂表现优秀"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "分数更新成功"
+        assert data["data"]["score"] == old_score + 5.0
     
-    # Act - 学号太短
-    response = await client.post("/api/students", json={
-        "student_id": "A",
-        "name": "张三"
-    })
+    def test_update_score_negative(self, admin_client, student_user):
+        """扣分"""
+        old_score = student_user.score
+        
+        response = admin_client.put(f"/api/students/{student_user.student_id}/score", json={
+            "score_change": -3.0,
+            "reason": "迟到"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["score"] == old_score - 3.0
     
-    # Assert - 实际返回 400（业务验证）而非 422（Pydantic 验证）
-    assert response.status_code in [400, 422]
+    def test_update_score_student_not_found(self, admin_client):
+        """学生不存在"""
+        response = admin_client.put("/api/students/NONEXISTENT/score", json={
+            "score_change": 5.0,
+            "reason": "测试"
+        })
+        
+        assert response.status_code == 404
+    
+    def test_update_score_validation_error(self, admin_client, student_user):
+        """参数验证错误"""
+        response = admin_client.put(f"/api/students/{student_user.student_id}/score", json={
+            "score_change": 5.0
+            # 缺少 reason
+        })
+        
+        assert response.status_code == 422
+    
+    def test_get_score_logs(self, admin_client, student_user):
+        """获取分数历史"""
+        # 先更新几次分数
+        for i in range(3):
+            admin_client.put(f"/api/students/{student_user.student_id}/score", json={
+                "score_change": 1.0,
+                "reason": f"测试原因{i}"
+            })
+        
+        response = admin_client.get(f"/api/students/{student_user.student_id}/scores")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 3
 
 
-@pytest.mark.asyncio
-async def test_get_students_list(client, test_user):
-    """
-    测试获取学生列表
+class TestStudentDeleteAPI:
+    """学生删除 API 测试"""
     
-    验证点：
-    1. 返回 HTTP 200
-    2. 返回的学生列表包含创建的学生
-    """
-    # Arrange - 先登录并创建学生
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
+    def test_delete_student_success(self, admin_client, student_user):
+        """成功删除学生"""
+        response = admin_client.delete(f"/api/students/{student_user.student_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "学生删除成功"
+        
+        # 验证已删除
+        get_response = admin_client.get(f"/api/students")
+        students = get_response.json()["data"]
+        assert not any(s["student_id"] == student_user.student_id for s in students)
     
-    student_id = f"2024{uuid.uuid4().hex[:6]}"
-    await client.post("/api/students", json={
-        "student_id": student_id,
-        "name": "测试学生",
-        "class_name": "测试班级"
-    })
+    def test_delete_student_not_found(self, admin_client):
+        """学生不存在"""
+        response = admin_client.delete("/api/students/NONEXISTENT")
+        
+        assert response.status_code == 404
     
-    # Act
-    response = await client.get("/api/students")
-    
-    # Assert
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert isinstance(data["data"], list)
-    # 验证包含刚创建的学生
-    student_ids = [s["student_id"] for s in data["data"]]
-    assert student_id in student_ids
+    def test_delete_student_teacher_forbidden(self, teacher_client, student_user):
+        """教师无权删除学生"""
+        response = teacher_client.delete(f"/api/students/{student_user.student_id}")
+        
+        assert response.status_code == 403
 
 
-@pytest.mark.asyncio
-async def test_get_students_by_class(client, test_user):
-    """
-    测试按班级筛选学生
+class TestClassAPI:
+    """班级 API 测试"""
     
-    验证点：
-    1. 返回指定班级的学生
-    2. 不包含其他班级的学生
-    """
-    # Arrange - 先登录并创建两个班级的学生
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
+    def test_get_classes_list(self, admin_client, sample_students):
+        """获取班级列表"""
+        response = admin_client.get("/api/classes")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "一班" in data["data"]
+        assert "二班" in data["data"]
     
-    student_id1 = f"2024{uuid.uuid4().hex[:6]}"
-    student_id2 = f"2024{uuid.uuid4().hex[:6]}"
-    
-    await client.post("/api/students", json={
-        "student_id": student_id1,
-        "name": "软件1班学生",
-        "class_name": "软件1班"
-    })
-    await client.post("/api/students", json={
-        "student_id": student_id2,
-        "name": "软件2班学生",
-        "class_name": "软件2班"
-    })
-    
-    # Act - 查询软件1班
-    response = await client.get("/api/students?class_name=软件1班")
-    
-    # Assert
-    assert response.status_code == 200
-    data = response.json()
-    student_ids = [s["student_id"] for s in data["data"]]
-    assert student_id1 in student_ids
-    assert student_id2 not in student_ids
-
-
-@pytest.mark.asyncio
-async def test_update_score_success(client, test_user):
-    """
-    测试成功更新学生分数
-    
-    验证点：
-    1. 分数更新成功
-    2. 返回更新后的学生信息
-    """
-    # Arrange - 先登录并创建学生
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
-    
-    student_id = f"2024{uuid.uuid4().hex[:6]}"
-    create_response = await client.post("/api/students", json={
-        "student_id": student_id,
-        "name": "张三",
-        "class_name": "软件1班"
-    })
-    assert create_response.status_code == 200
-    initial_score = create_response.json()["data"]["score"]
-    
-    # Act - 加分
-    response = await client.post(f"/api/students/{student_id}/score", json={
-        "score_change": 10.0,
-        "reason": "课堂表现优秀"
-    })
-    
-    # Assert
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert data["data"]["score"] == initial_score + 10.0
-
-
-@pytest.mark.asyncio
-async def test_update_score_student_not_found(client, test_user):
-    """
-    测试更新不存在学生的分数
-    
-    验证点：
-    1. 返回 HTTP 400
-    2. 提示学生不存在
-    """
-    # Arrange - 先登录
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
-    
-    # Act
-    response = await client.post("/api/students/99999999/score", json={
-        "score_change": 10.0,
-        "reason": "测试"
-    })
-    
-    # Assert
-    assert response.status_code == 400
-    assert "不存在" in response.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_delete_student_success(client, test_user):
-    """
-    测试成功删除学生
-    
-    验证点：
-    1. 删除成功返回 200
-    2. 删除后无法查询到该学生
-    """
-    # Arrange - 先登录并创建学生
-    login_response = await client.post("/api/login", json={
-        "username": test_user["username"],
-        "password": test_user["password"]
-    })
-    assert login_response.status_code == 200
-    
-    student_id = f"2024{uuid.uuid4().hex[:6]}"
-    await client.post("/api/students", json={
-        "student_id": student_id,
-        "name": "待删除学生",
-        "class_name": "软件1班"
-    })
-    
-    # Act - 删除
-    delete_response = await client.delete(f"/api/students/{student_id}")
-    
-    # Assert
-    assert delete_response.status_code == 200
-    assert delete_response.json()["success"] is True
-    
-    # 验证已删除
-    get_response = await client.get(f"/api/students/{student_id}")
-    assert get_response.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_access_without_auth(client):
-    """
-    测试未认证访问受保护接口
-    
-    验证点：
-    1. 创建学生返回 401/302/403
-    2. 获取列表返回 401/302/403
-    """
-    # Act
-    response = await client.get("/api/students")
-    
-    # Assert
-    assert response.status_code in [302, 401, 403]
+    def test_get_classes_unauthorized(self, client):
+        """未授权访问班级列表"""
+        response = client.get("/api/classes")
+        
+        assert response.status_code == 401

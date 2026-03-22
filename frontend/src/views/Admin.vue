@@ -40,96 +40,6 @@
 
     <!-- 主内容 -->
     <main class="admin-main">
-      <!-- 上课控制卡片 -->
-      <n-card class="control-card" :class="{ active: classSession.active }">
-        <template #header>
-          <div class="card-header">
-            <div class="header-title">
-              <svg v-if="!classSession.active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
-                <polygon points="5 3 19 12 5 21 5 3"/>
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
-                <rect x="6" y="4" width="4" height="16"/>
-                <rect x="14" y="4" width="4" height="16"/>
-              </svg>
-              <span>{{ classSession.active ? '上课中' : '上课控制' }}</span>
-            </div>
-            <n-tag v-if="classSession.active" type="success" round>
-              {{ classSession.class_name }}
-            </n-tag>
-          </div>
-        </template>
-
-        <div v-if="!classSession.active" class="class-selector">
-          <n-select v-model:value="selectedClass" placeholder="选择上课班级" style="width: 280px;" :options="classOptions" />
-          <n-button type="success" size="large" @click="startClass" :disabled="!selectedClass">
-            <template #icon>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
-                <polygon points="5 3 19 12 5 21 5 3"/>
-              </svg>
-            </template>
-            开始上课
-          </n-button>
-        </div>
-
-        <div v-else class="class-info">
-          <div class="stats-row-enhanced">
-            <!-- 应到人数 -->
-            <div class="stat-box">
-              <div class="stat-number">{{ classStats.total }}</div>
-              <div class="stat-label">应到人数</div>
-            </div>
-            <!-- 已签到 -->
-            <div class="stat-box success">
-              <div class="stat-number">{{ classStats.checked_in }}</div>
-              <div class="stat-label">已签到</div>
-              <div class="stat-indicator success-dot"></div>
-            </div>
-            <!-- 未签到 -->
-            <div class="stat-box danger">
-              <div class="stat-number">{{ classStats.not_checked_in }}</div>
-              <div class="stat-label">未签到</div>
-              <div class="stat-indicator danger-dot"></div>
-            </div>
-            <!-- 签到率 - 环形进度条 -->
-            <div class="stat-box rate-box">
-              <n-progress
-                type="circle"
-                :percentage="classStats.rate"
-                :stroke-width="10"
-                :width="100"
-                :color="getRateColor(classStats.rate)"
-                :track-color="'rgba(255, 255, 255, 0.1)'"
-              >
-                <div class="rate-text">{{ classStats.rate }}%</div>
-              </n-progress>
-              <div class="stat-label">签到率</div>
-            </div>
-          </div>
-          <div class="class-actions">
-            <n-button @click="refreshClassStatus">
-              <template #icon>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                </svg>
-              </template>
-              刷新状态
-            </n-button>
-            <n-button type="error" @click="endClass">
-              <template #icon>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-              </template>
-              结束上课
-            </n-button>
-          </div>
-        </div>
-      </n-card>
-
       <!-- 快捷操作 -->
       <div class="quick-actions">
         <n-card class="action-card" hoverable @click="showAddStudent = true">
@@ -350,8 +260,8 @@
       <div class="teacher-list-header" style="margin-bottom: 16px;">
         <n-space>
           <n-tag type="info">共 {{ teachers.length }} 位教师</n-tag>
-          <n-tag type="success">{{ teachers.filter(t => t.status === 'active').length }} 位在职</n-tag>
-          <n-tag type="error">{{ teachers.filter(t => t.status !== 'active').length }} 位禁用</n-tag>
+          <n-tag type="success">{{ teachers.filter(t => t.is_active).length }} 位在职</n-tag>
+          <n-tag type="error">{{ teachers.filter(t => !t.is_active).length }} 位禁用</n-tag>
         </n-space>
       </div>
       
@@ -382,7 +292,7 @@
           <n-select v-model:value="editingTeacher.assigned_classes" placeholder="选择负责班级（可多选）" :options="classOptions" multiple clearable />
         </n-form-item>
         <n-form-item label="账号状态">
-          <n-select v-model:value="editingTeacher.status" :options="[{label: '启用', value: 'active'}, {label: '禁用', value: 'inactive'}]" />
+          <n-select v-model:value="editingTeacher.is_active" :options="[{label: '启用', value: true}, {label: '禁用', value: false}]" />
         </n-form-item>
       </n-form>
       <template #footer>
@@ -496,7 +406,7 @@ const newTeacher = ref({ username: '', name: '', assigned_classes: [] })
 
 // 教师管理
 const teachers = ref([])
-const editingTeacher = ref({ id: null, username: '', name: '', assigned_classes: [], status: 'active' })
+const editingTeacher = ref({ id: null, username: '', name: '', assigned_classes: [], is_active: true })
 
 // 导入
 const importFile = ref(null)
@@ -507,17 +417,7 @@ const importLoading = ref(false)
 const resetScoreValue = ref(70)
 const resetPassword = ref('')
 
-// 上课状态
-const classSession = ref({ active: false })
-const selectedClass = ref('')
-const classStats = ref({ total: 0, checked_in: 0, not_checked_in: 0, rate: 0 })
 
-// 根据签到率返回颜色
-const getRateColor = (rate) => {
-  if (rate >= 90) return '#10b981' // 绿色
-  if (rate >= 60) return '#f59e0b' // 橙色
-  return '#ef4444' // 红色
-}
 
 // 根据分数返回样式类
 const getScoreClass = (score) => {
@@ -525,6 +425,18 @@ const getScoreClass = (score) => {
   if (score >= 80) return 'score-good'
   if (score >= 60) return 'score-pass'
   return 'score-fail'
+}
+
+// 解析班级数据（后端返回JSON字符串）
+const parseClasses = (classes) => {
+  if (typeof classes === 'string') {
+    try {
+      return JSON.parse(classes)
+    } catch {
+      return []
+    }
+  }
+  return classes || []
 }
 
 // 表格行样式
@@ -559,7 +471,7 @@ const userOptions = [
 ]
 
 // 教师表格列定义
-const teacherColumns = [
+const teacherColumns = computed(() => [
   { title: '用户名', key: 'username', width: 120 },
   { title: '姓名', key: 'name', width: 100 },
   { 
@@ -567,11 +479,12 @@ const teacherColumns = [
     key: 'assigned_classes', 
     width: 200,
     render(row) {
-      if (!row.assigned_classes || row.assigned_classes.length === 0) {
+      const classes = parseClasses(row.assigned_classes)
+      if (!classes || classes.length === 0) {
         return h('span', { style: 'color: #64748b;' }, '未分配')
       }
       return h('div', { style: 'display: flex; flex-wrap: wrap; gap: 4px;' }, 
-        row.assigned_classes.map(cls => 
+        classes.map(cls => 
           h('span', { 
             style: 'background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 2px 8px; border-radius: 4px; font-size: 12px;' 
           }, cls)
@@ -585,8 +498,8 @@ const teacherColumns = [
     width: 80,
     render(row) {
       return h('span', { 
-        style: row.status === 'active' ? 'color: #34d399;' : 'color: #f87171;'
-      }, row.status === 'active' ? '启用' : '禁用')
+        style: row.is_active ? 'color: #34d399;' : 'color: #f87171;'
+      }, row.is_active ? '启用' : '禁用')
     }
   },
   {
@@ -600,35 +513,35 @@ const teacherColumns = [
           title: '编辑',
           onClick: () => openEditTeacher(row)
         }, [
-          h(NIcon, { size: 16, color: '#818cf8' }, { default: () => h(CreateOutline) })
+          h(CreateOutline, { style: { width: '16px', height: '16px', color: '#818cf8' } })
         ]),
         h('button', {
           class: 'icon-btn reset',
           title: '重置密码',
           onClick: () => handleResetTeacherPassword(row)
         }, [
-          h(NIcon, { size: 16, color: '#f59e0b' }, { default: () => h(KeyOutline) })
+          h(KeyOutline, { style: { width: '16px', height: '16px', color: '#f59e0b' } })
         ]),
         h('button', {
-          class: row.status === 'active' ? 'icon-btn disable' : 'icon-btn enable',
-          title: row.status === 'active' ? '禁用' : '启用',
+          class: row.is_active ? 'icon-btn disable' : 'icon-btn enable',
+          title: row.is_active ? '禁用' : '启用',
           onClick: () => handleToggleTeacherStatus(row)
         }, [
-          h(NIcon, { size: 16, color: row.status === 'active' ? '#ef4444' : '#10b981' }, { 
-            default: () => row.status === 'active' ? h(BanOutline) : h(CheckmarkCircleOutline) 
-          })
+          row.is_active 
+            ? h(BanOutline, { style: { width: '16px', height: '16px', color: '#ef4444' } })
+            : h(CheckmarkCircleOutline, { style: { width: '16px', height: '16px', color: '#10b981' } })
         ]),
         h('button', {
           class: 'icon-btn delete',
           title: '删除教师',
           onClick: () => handleDeleteTeacher(row)
         }, [
-          h(NIcon, { size: 16, color: '#ef4444' }, { default: () => h(TrashOutline) })
+          h(TrashOutline, { style: { width: '16px', height: '16px', color: '#ef4444' } })
         ])
       ])
     }
   }
-]
+])
 
 // 表格列定义
 const columns = [
@@ -776,8 +689,8 @@ const openEditTeacher = (teacher) => {
     id: teacher.id,
     username: teacher.username,
     name: teacher.name,
-    assigned_classes: [...teacher.assigned_classes],
-    status: teacher.status
+    assigned_classes: parseClasses(teacher.assigned_classes),
+    is_active: teacher.is_active
   }
   showEditTeacher.value = true
 }
@@ -786,7 +699,7 @@ const openEditTeacher = (teacher) => {
 const handleUpdateTeacher = async () => {
   const res = await api.updateUser(editingTeacher.value.id, {
     assigned_classes: editingTeacher.value.assigned_classes,
-    status: editingTeacher.value.status
+    is_active: editingTeacher.value.is_active
   })
   
   if (res.success) {
@@ -816,7 +729,7 @@ const handleResetTeacherPassword = async (teacher) => {
 
 // 切换教师账号状态
 const handleToggleTeacherStatus = async (teacher) => {
-  const action = teacher.status === 'active' ? '禁用' : '启用'
+  const action = teacher.is_active ? '禁用' : '启用'
   
   dialog.warning({
     title: `${action}账号`,
@@ -824,7 +737,7 @@ const handleToggleTeacherStatus = async (teacher) => {
     positiveText: '确认',
     negativeText: '取消',
     onPositiveClick: async () => {
-      const res = await api.updateUser(teacher.id, { status: teacher.status === 'active' ? 'inactive' : 'active' })
+      const res = await api.updateUser(teacher.id, { is_active: !teacher.is_active })
       if (res.success) {
         message.success(`账号已${action}`)
         loadTeachers()
@@ -915,7 +828,7 @@ const handleResetStudentPassword = async (student) => {
     positiveText: '确认重置',
     negativeText: '取消',
     onPositiveClick: async () => {
-      const res = await api.resetStudentPassword(student.student_id, { password: newPassword })
+      const res = await api.resetStudentPassword(student.student_id, { new_password: newPassword })
       if (res.success) {
         message.success(`密码已重置，新密码：${newPassword}`)
       }
@@ -984,50 +897,6 @@ const applyScoreTag = (tag) => {
   scoreReason.value = tag.label
 }
 
-const startClass = async () => {
-  if (!selectedClass.value) return
-  const res = await api.setClassSession({ class_name: selectedClass.value })
-  if (res.success) {
-    message.success(res.message)
-    loadClassSession()
-  }
-}
-
-const endClass = async () => {
-  const res = await api.setClassSession({ class_name: '' })
-  if (res.success) {
-    message.success(res.message)
-    loadClassSession()
-  }
-}
-
-const loadClassSession = async () => {
-  try {
-    const res = await api.getClassSession()
-    if (res.success) {
-      classSession.value = res.data
-      if (res.data.active) {
-        const studentsRes = await api.getClassSessionStudents()
-        if (studentsRes.success) {
-          const { total, checked_in, not_checked_in } = studentsRes.data
-          classStats.value = {
-            total,
-            checked_in,
-            not_checked_in,
-            rate: total > 0 ? Math.round((checked_in / total) * 100) : 0
-          }
-        }
-      }
-    }
-  } catch (error) {
-    message.error('刷新状态失败')
-  }
-}
-
-const refreshClassStatus = async () => {
-  await loadClassSession()
-}
-
 const expandAll = () => {
   activeGroups.value = groupedStudents.value.map(g => g.className)
 }
@@ -1081,7 +950,6 @@ const handleLogout = async () => {
 
 onMounted(() => {
   loadStudents()
-  loadClassSession()
   loadTeachers()
 })
 </script>

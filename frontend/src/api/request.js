@@ -24,7 +24,7 @@ request.interceptors.response.use(
     
     if (error.response) {
       const status = error.response.status
-      const msg = error.response.data?.detail || error.response.data?.message || '请求失败'
+      const msg = error.response.data?.message || '请求失败'
       
       // 获取请求路径
       const requestUrl = error.config?.url || ''

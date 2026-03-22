@@ -16,27 +16,26 @@ export const getStudents = () => request.get('/students')
 export const getStudentsWithCheckin = () => request.get('/students?with_checkin=true')
 export const addStudent = (data) => request.post('/students', data)
 export const deleteStudent = (id) => request.delete(`/students/${id}`)
-export const updateScore = (id, data) => request.post(`/students/${id}/score`, data)
+export const updateScore = (id, data) => request.put(`/students/${id}/score`, data)
 export const importStudents = (data) => request.post('/students/import', data, {
   headers: { 'Content-Type': 'multipart/form-data' }
 })
-export const resetStudentPassword = (id, data) => request.post(`/admin/students/${id}/reset-password`, data)
+export const resetStudentPassword = (id, data) => request.put(`/students/${id}/reset-password`, data)
 
 // 班级管理
 export const deleteClass = (className) => request.delete(`/class/${encodeURIComponent(className)}`)
 
 // 签到相关
 export const checkin = (data) => request.post('/checkin', data)
-export const getCheckinRecords = (params) => request.get('/checkin/records', { params })
+export const getCheckinRecords = () => request.get('/checkins/today')
 export const teacherCheckin = (data) => request.post('/teacher-checkin', data)
 
 // 上课状态
 export const getClassSession = () => request.get('/class-session')
-export const setClassSession = (data) => request.post('/class-session', data)
-export const getClassSessionStudents = () => request.get('/class-session/students')
+export const setClassSession = (data) => request.post('/class-session/start', data)
 
 // 分数日志
-export const getScoreLogs = (params) => request.get('/score/logs', { params })
+export const getScoreLogs = (studentId) => request.get(`/students/${studentId}/scores`)
 
 // 分数重置
 export const resetAllScores = (data) => request.post('/admin/reset-scores', data)
@@ -46,6 +45,9 @@ export const getDbInfo = () => request.get('/db-info')
 
 // 首页统计
 export const getStats = () => request.get('/stats')
+
+// 仪表盘数据（公开接口，无需登录）
+export const getDashboard = () => request.get('/dashboard')
 
 // 学生查询（查看自己的分数、排名和记录）
 export const queryStudent = (data) => request.post('/student/query', data)

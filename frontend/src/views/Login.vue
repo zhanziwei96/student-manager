@@ -254,7 +254,14 @@ const getParticleStyle = (n) => {
 const getFriendlyErrorMessage = (rawMessage) => {
   if (!rawMessage) return '登录失败，请稍后重试'
   
-  // 密码错误
+  // 用户名/密码错误（统一处理各种认证失败情况）
+  if (rawMessage.includes('用户名或密码错误') || 
+      rawMessage.includes('学号或密码错误') ||
+      rawMessage.includes('用户不存在')) {
+    return '用户名或密码错误'
+  }
+  
+  // 密码错误（带剩余次数）
   const passwordMatch = rawMessage.match(/密码错误.*还剩\s*(\d+)\s*次机会/)
   if (passwordMatch) {
     const times = passwordMatch[1]
@@ -269,11 +276,6 @@ const getFriendlyErrorMessage = (rawMessage) => {
   // 账号禁用
   if (rawMessage.includes('账号已被禁用') || rawMessage.includes('禁用')) {
     return '您的账号已被禁用，请联系管理员处理'
-  }
-  
-  // 用户不存在
-  if (rawMessage.includes('用户不存在') || rawMessage.includes('用户名')) {
-    return '该用户名不存在，请检查输入或联系管理员'
   }
   
   // 请求过于频繁
@@ -309,13 +311,13 @@ const handleLogin = async () => {
     
     if (res.success) {
       // 验证返回的角色与选择的角色是否一致
-      if (res.user.role !== form.role) {
+      if (res.data.role !== form.role) {
         message.error('角色选择错误，请重新选择正确的角色类型', { duration: 5000, closable: true })
         loading.value = false
         return
       }
       
-      userStore.setUser(res.user.id, res.user.username, res.user.name, res.user.role)
+      userStore.setUser(res.data.id, res.data.username, res.data.name, res.data.role)
       message.success('🎉 登录成功，欢迎回来！')
       
       // 根据角色跳转到不同页面

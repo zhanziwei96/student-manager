@@ -14,93 +14,139 @@ python -m pytest tests/
 
 ### 2. 数据库路径混淆
 ```bash
-# 错误 - 修改了错误的数据库
-sqlite3 ./data/student_manage.db "..."
-
 # 正确 - 先确认实际路径
-python -c "from infrastructure.config import get_settings; import os; print(os.path.abspath(get_settings().database.path))"
-# 通常是: /home/yufeng/student-manager/backend/data/student_manage.db
-```
-
-### 3. 配置不生效
-```python
-# 修改配置后，清除缓存
-import sys
-for mod in list(sys.modules.keys()):
-    if 'infrastructure.config' in mod:
-        del sys.modules[mod]
+python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
+# 通常是: /home/yufeng/student-manager/backend/data/class_system.db
 ```
 
 ---
 
 ## 配置类错误
 
-### 4. 嵌套配置格式错误
+### 3. 嵌套配置格式错误
 ```bash
 # 错误
-DB_PATH=xxx
+DATABASE_PATH=xxx
 
 # 正确 - 使用双下划线
-DATABASE__PATH=./data/student_manage.db
-RATE_LIMIT__MULTIPLIER=100
+DATABASE__PATH=./data/class_system.db
+SECURITY__MAX_LOGIN_FAILURES=10
 ```
 
-### 5. 环境变量未设置
+### 4. 环境变量未设置
 ```bash
 # 必须在导入前设置
 export ENV=testing
 python main.py
 
 # 验证
-python -c "from infrastructure.config import get_settings; print(get_settings().env)"
+python -c "from app.core.config import get_settings; print(get_settings().app.env)"
 ```
 
 ---
 
 ## 开发类错误
 
-### 6. 混淆 UI 框架
+### 5. 混淆 UI 框架
 - 项目使用 **Naive UI**，不是 Element Plus
 - `el-button` → `n-button`
 - `el-input` → `n-input`
 
-### 7. DDD 架构违规
-- Domain 层不能导入 Infrastructure 层
-- 正确: Domain 层硬编码常量
-- 错误: Domain 层使用 `ScoreConfig`
-
-### 8. 使用 print 而不是 logging
-**错误**: 直接使用 `print()` 输出日志信息
+### 6. 魔法字符串
+使用常量类避免拼写错误：
 
 ```python
-# ❌ 错误
-print(f"数据库路径: {db_path}")
-print("服务启动")
+from app.models.constants import (
+    UserRoleConst,      # ADMIN, TEACHER, STUDENT
+    SessionKeyConst,    # USER_ID, USERNAME, ROLE, IS_ADMIN
+    ApiResponseConst,   # SUCCESS, DATA, MESSAGE
+)
+
+# 正确
+role = UserRoleConst.ADMIN
+user_id = request.session.get(SessionKeyConst.USER_ID)
 ```
 
-**正确**: 使用项目统一的日志模块
+### 7. API 响应格式
+使用常量返回统一响应：
 
 ```python
-# ✅ 正确
-from infrastructure.logging import logger
-logger.info(f"数据库路径: {db_path}")
+from app.models.constants import ApiResponseConst, MessageConst
 
-# 或使用便捷函数
-from infrastructure.logging import info, error, warning, debug
-info("服务启动")
-error("数据库连接失败")
-warning("配置未找到，使用默认值")
+return {
+    ApiResponseConst.SUCCESS: True,
+    ApiResponseConst.MESSAGE: MessageConst.USER_CREATED,
+    ApiResponseConst.DATA: user.model_dump()
+}
 ```
 
-**日志文件位置**: `backend/logs/YYYY-MM-DD.log`
+---
+
+## 前端问题
+
+### 8. API 响应数据访问错误
+
+**问题**: 登录成功后 UI 仍显示"未登录"
+
+**原因**: 后端返回 `{success: true, data: {...}}`，但前端代码访问了 `res.user`
+
+**错误代码**:
+```javascript
+// Login.vue
+if (res.user.role !== form.role) {  // ❌ 应该是 res.data.role
+userStore.setUser(res.user.id, ...)  // ❌ 应该是 res.data.xxx
+```
+
+**正确代码**:
+```javascript
+if (res.data.role !== form.role) {
+userStore.setUser(res.data.id, res.data.username, res.data.name, res.data.role)
+```
+
+---
+
+### 9. 登录 401 错误显示样式问题（后端待修复）
+
+**问题**: 登录 401 错误显示 "Request failed with status code 401" 而不是 Naive UI 风格提示
+
+**原因**: 后端 `login.py` 中 `raise HTTPException` 直接抛出的错误没有走 `http_exception_handler` 统一转换格式，返回的是 FastAPI 默认的 `{detail: "..."}` 格式，而非项目统一的 `{success: false, message: "..."}`
+
+**影响范围**: 
+- 登录接口 401 错误
+- 登录接口 403 错误（账号锁定/禁用）
+
+**后端修复方案**: 
+需要在 `backend/app/api/routes/login.py` 中统一返回格式，例如：
+```python
+# 而不是 raise HTTPException(status_code=401, detail='用户名或密码错误')
+return {
+    ApiResponseConst.SUCCESS: False,
+    ApiResponseConst.MESSAGE: '用户名或密码错误'
+}
+```
+
+**前端暂不处理**，等待后端接口统一
+
+---
+
+### 10. API 响应格式说明
+
+**后端统一格式**:
+```json
+// 成功 (HTTP 2xx)
+{"success": true, "data": {...}, "message": "..."}
+
+// 错误 (HTTP 4xx/5xx)
+{"success": false, "message": "错误信息"}
+```
+
+**前端处理规范**:
+- 成功响应: 检查 `res.success`，数据在 `res.data`，消息在 `res.message`
+- 错误响应: 错误信息在 `error.response.data?.message`
 
 ---
 
 ## 测试类错误
-
-### 9. 测试数据库冲突
-- 集成测试使用临时文件数据库
-- 用户名使用 UUID 避免冲突
 
 ### 10. 测试路径问题
 ```bash
@@ -110,19 +156,22 @@ pytest tests/ -v
 # 不要 cd 到 tests 目录
 ```
 
+### 11. 集成测试数据库
+集成测试使用内存数据库，与生产数据库隔离。
+
 ---
 
 ## 检查清单
 
 执行命令前检查:
 - [ ] Conda 环境已激活 (`which python` 显示 miniconda 路径)
-- [ ] 服务已启动 (`curl http://localhost:8000/health`)
+- [ ] 服务已启动 (`curl http://localhost:8000/api/health`)
 - [ ] 数据库路径正确
 
 遇到错误时:
-- [ ] 查看日志 `tail -20 backend/logs/*.log`
+- [ ] 查看后端输出日志
 - [ ] 检查进程 `ps aux | grep python`
-- [ ] 验证配置 `python -c "from config import get_settings; print(...)"`
+- [ ] 验证配置 `python -c "from app.core.config import get_settings; print(get_settings().app.env)"`
 
 ---
 
@@ -141,16 +190,16 @@ sleep 3
 ps aux | grep "python.*main.py" | grep -v grep
 
 # 4. 如有残留，强制终止
-pkill -9 -f "python main.py" 2>/dev/null || true
+pkill -9 -f "python.*main.py" 2>/dev/null || true
 sleep 2
 
-# 5. 启动服务
+# 5. 启动服务（生产环境）
 cd /home/yufeng/student-manager/backend
-DATABASE__PATH=./data/student_manage.db conda run -n student-manage python main.py &
+conda run -n student-manage ENV=production python main.py &
 
 # 6. 等待几秒后验证
 sleep 5
-curl -s http://localhost:8000/health
+curl -s http://localhost:8000/api/health
 ```
 
 ### 前端服务重启
@@ -171,6 +220,6 @@ curl -s http://localhost:3000 > /dev/null && echo "前端运行中"
 ```
 
 **关键要点**:
-- 必须等待几秒确保进程完全停止后再启动，它们要在不同的步骤里面，不要在同一步中操作
+- 必须等待几秒确保进程完全停止后再启动
 - 不要连续快速执行停止和启动命令
 - 启动后必须验证健康检查接口再确认成功

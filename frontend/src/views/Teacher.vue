@@ -244,7 +244,13 @@
           <n-input v-model:value="newStudent.name" placeholder="请输入姓名" />
         </n-form-item>
         <n-form-item label="班级">
-          <n-select v-model:value="newStudent.class_name" placeholder="选择班级" :options="classOptions" clearable />
+          <n-select 
+            v-model:value="newStudent.class_name" 
+            placeholder="选择班级" 
+            :options="classOptions"
+            clearable 
+            :fallback-option="false"
+          />
           <span v-if="newStudent.class_name && !isMyClass(newStudent.class_name)" style="color: #f87171; font-size: 12px; margin-top: 4px; display: block;">
             警告：该班级不在您的负责范围内
           </span>
@@ -447,7 +453,7 @@ const myStudents = computed(() => {
 
 // 计算属性：班级选项（仅限教师的班级）
 const classOptions = computed(() => {
-  return myClasses.value.map(cls => ({ label: cls, value: cls }))
+  return (myClasses.value || []).map(cls => ({ label: cls, value: cls }))
 })
 
 // 计算属性：按班级分组的学生
@@ -588,18 +594,25 @@ const refreshClassStatus = async () => {
   const res = await api.getClassSession()
   if (res.success && res.data.active) {
     classSession.value = { active: true, class_name: res.data.class_name }
-    const studentsRes = await api.getClassSessionStudents()
-    if (studentsRes.success) {
-      const total = studentsRes.data.length
-      const checkedIn = studentsRes.data.filter(s => s.checked_in).length
+    // 从已有学生数据中计算当前班级的签到统计
+    const classStudents = students.value.filter(s => s.class_name === res.data.class_name)
+    const total = classStudents.length
+    // 获取今日签到记录
+    try {
+      const checkinRes = await api.getCheckinRecords()
+      const todayCheckins = checkinRes.data || []
+      const checkedIn = classStudents.filter(s => 
+        todayCheckins.some(c => c.student_id === s.student_id)
+      ).length
       classStats.value = {
         total,
         checked_in: checkedIn,
         not_checked_in: total - checkedIn,
         rate: total > 0 ? Math.round((checkedIn / total) * 100) : 0
       }
-      // 更新今日签到率
       todayCheckinRate.value = classStats.value.rate
+    } catch (error) {
+      console.error('获取签到记录失败:', error)
     }
   } else {
     classSession.value = { active: false }
@@ -652,7 +665,16 @@ const handleUserAction = async (key) => {
 const loadTeacherInfo = async () => {
   const res = await api.getUserInfo()
   if (res.success && res.data.assigned_classes) {
-    myClasses.value = res.data.assigned_classes
+    // 兼容处理：assigned_classes 可能是 JSON 字符串或数组
+    let classes = res.data.assigned_classes
+    if (typeof classes === 'string') {
+      try {
+        classes = JSON.parse(classes)
+      } catch {
+        classes = []
+      }
+    }
+    myClasses.value = classes || []
   }
 }
 

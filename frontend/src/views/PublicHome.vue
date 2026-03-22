@@ -23,12 +23,14 @@
       <div class="nav-links">
         <a href="#features" class="nav-link">功能</a>
         <a href="#about" class="nav-link">关于</a>
+        <a href="/stats" class="nav-link">统计</a>
         <button class="nav-btn primary" @click="goToLogin">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
             <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
           </svg>
-          <span>教师入口</span>
+          <span>登录入口</span>
         </button>
       </div>
     </nav>
@@ -331,7 +333,7 @@ const loadStats = async () => {
     if (res.data) {
       stats.value = {
         students: res.data.total_students || 0,
-        classes: res.data.class_count || 0,
+        classes: res.data.total_classes || 0,
         checkins: res.data.today_checkins || 0
       }
     }

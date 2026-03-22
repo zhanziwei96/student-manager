@@ -181,7 +181,8 @@ redis-cli ping
 
 ### 默认账户
 - **管理员**: `admin` / `admin123`
-- **教师**: `teacher1` / `teacher123`
+- **教师示例**: `zhanziwei` / `zha123` (账号为姓名拼音首字母，密码为账号+123)
+- **学生**: 学号作为账号，默认密码为学号
 
 **首次登录后请立即修改密码**
 
@@ -273,7 +274,8 @@ student-manager/
 - `GET /api/students` - 获取学生列表（支持缓存）
 - `POST /api/students` - 添加学生
 - `DELETE /api/students/{id}` - 删除学生
-- `POST /api/students/{id}/score` - 更新分数（限流 10/分钟）
+- `PUT /api/students/{id}/score` - 更新分数（限流 10/分钟）
+- `PUT /api/students/{id}/reset-password` - 重置学生密码
 - `POST /api/students/import` - Excel 批量导入
 
 ### 签到系统
@@ -400,4 +402,4 @@ MIT License
 ---
 
 **版本**: v3.0  
-**最后更新**: 2025-03-21
+**最后更新**: 2026-03-22

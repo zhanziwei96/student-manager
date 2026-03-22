@@ -8,9 +8,8 @@
 
 ```bash
 # 检查服务状态（优先执行）
-curl http://localhost:8000/health  # 后端
-curl http://localhost:3000         # 前端
-redis-cli ping                     # Redis
+curl http://localhost:8000/api/health  # 后端
+curl http://localhost:3000             # 前端
 
 # 如果都正常返回，环境已就绪 ✅
 ```
@@ -33,11 +32,6 @@ cd backend && pip install -r requirements.txt
 
 # 2. 前端依赖
 cd frontend && pnpm install
-
-# 3. Redis (Ubuntu)
-sudo apt install redis-server
-sudo systemctl start redis-server
-redis-cli ping  # 验证: 应返回 PONG
 ```
 
 #### 日常启动
@@ -64,8 +58,8 @@ make logs
 **方式2: 手动启动**
 
 ```bash
-# 终端1: 后端
-cd backend && conda activate student-manage && python main.py
+# 终端1: 后端（生产环境）
+cd backend && conda activate student-manage && ENV=production python main.py
 
 # 终端2: 前端
 cd frontend && pnpm dev
@@ -76,20 +70,20 @@ cd frontend && pnpm dev
 # 全部测试
 pytest tests/ -v
 
-# 仅冒烟测试（快速验证）
-pytest tests/integration/test_smoke.py -v
-
 # 仅单元测试
 pytest tests/unit -v
+
+# 仅集成测试
+pytest tests/integration -v
 ```
 
 ### 数据库操作
 ```bash
 # 检查数据库路径
-python -c "from infrastructure.config import get_settings; import os; print(os.path.abspath(get_settings().database.path))"
+python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
 
 # 连接数据库
-sqlite3 /home/yufeng/student-manager/backend/data/student_manage.db
+sqlite3 /home/yufeng/student-manager/backend/data/class_system.db
 
 # 查看表结构
 .schema users
@@ -104,60 +98,44 @@ sqlite3 /home/yufeng/student-manager/backend/data/student_manage.db
 |------|------|
 | 后端代码 | `/home/yufeng/student-manager/backend/` |
 | 前端代码 | `/home/yufeng/student-manager/frontend/` |
-| 数据库 | `/home/yufeng/student-manager/backend/data/` |
+| 数据库 | `/home/yufeng/student-manager/backend/data/class_system.db` |
 | 测试代码 | `/home/yufeng/student-manager/tests/` |
 | 迁移脚本 | `/home/yufeng/student-manager/migrations/` |
 
 ---
 
-## 4. 技术约束
+## 4. 技术架构
+
+### 当前架构（FastAPI + SQLModel）
+
+```
+backend/
+├── app/
+│   ├── api/           # API路由
+│   │   ├── deps.py    # 依赖注入
+│   │   └── routes/    # 路由处理器
+│   ├── core/          # 核心组件
+│   │   ├── config.py  # 配置管理
+│   │   ├── db.py      # 数据库连接
+│   │   └── security.py # 安全工具
+│   ├── crud/          # 数据库操作
+│   └── models/        # 数据模型
+└── main.py            # 应用入口
+```
+
+**架构特点：**
+- 使用 FastAPI 框架
+- SQLModel 作为 ORM（SQLAlchemy + Pydantic）
+- 分层结构：API → CRUD → Models
+- 依赖注入管理会话和权限
 
 ### 前端（Vue3 + Naive UI）
-- **必须使用 Naive UI**，不是 Element Plus
+- **使用 Naive UI**，不是 Element Plus
 - 深色主题: 背景 `#0a0a0f`，主色 `#6366f1`
-
-### 后端（FastAPI + DDD）
-- 分层架构: Interface → Application → Domain ← Infrastructure
-- Domain 层不能依赖 Infrastructure 层
-
-**⚠️ 更改后端代码时严禁违反 DDD 架构原则：**
-
-| 层级 | 职责 | 允许依赖 | 禁止行为 |
-|------|------|----------|----------|
-| **Domain** | 核心业务逻辑、实体、值对象 | Python 标准库 | ❌ 导入 Infrastructure 层<br>❌ 导入 Application 层<br>❌ 使用 `ScoreConfig` 等配置类<br>❌ 直接操作数据库 |
-| **Application** | 应用服务、协调用例 | Domain 层 | ❌ 导入 Infrastructure 层具体实现 |
-| **Interface** | API 控制器、DTO | Application, Domain, Infrastructure | ✅ 允许依赖所有层 |
-| **Infrastructure** | 数据库、缓存、外部服务 | Domain, Application | ❌ 包含业务逻辑 |
-
-**正确示例（Domain 层）：**
-```python
-# ✅ 硬编码常量
-default_score = 100.0
-
-# ✅ 使用 Python 标准库
-import secrets
-password = secrets.token_hex(16)
-```
-
-**错误示例（Domain 层）：**
-```python
-# ❌ 导入 Infrastructure 配置
-from infrastructure.config import ScoreConfig
-default_score = ScoreConfig.DEFAULT_SCORE
-
-# ❌ 直接操作数据库
-from infrastructure.persistence.database import Database
-db = Database()
-```
-
-**依赖方向图：**
-```
-Interface → Application → Domain ← Infrastructure
-              ↑_______________________↑
-```
 
 ### 数据库
 - SQLite 文件数据库
+- 数据库路径: `backend/data/class_system.db`
 - 配置项: `DATABASE__PATH`（注意双下划线）
 
 ---
@@ -166,15 +144,17 @@ Interface → Application → Domain ← Infrastructure
 
 ```
 tests/
-├── unit/                    # 单元测试（188个）
-│   ├── domain/             # 100个 - 实体、值对象
-│   ├── application/        # 33个 - 应用服务
-│   └── infrastructure/     # 55个 - Repository
-└── integration/            # 集成测试（24个）
-    ├── test_smoke.py       # 冒烟测试
-    ├── test_auth_api.py    # 认证
+├── unit/                    # 单元测试（43个）
+│   ├── crud/               # CRUD 测试
+│   ├── models/             # 模型测试
+│   └── test_security.py    # 安全测试
+└── integration/            # 集成测试（79个）
+    ├── test_auth_api.py    # 认证测试
     ├── test_student_api.py # 学生管理
-    └── test_user_api.py    # 用户管理
+    ├── test_user_api.py    # 用户管理
+    ├── test_checkin_api.py # 签到系统
+    ├── test_system_api.py  # 系统API
+    └── test_e2e_scenarios.py # 端到端场景
 ```
 
 ---
@@ -187,7 +167,6 @@ tests/
 | Conda | 最新 | `conda --version` |
 | Node.js | 20+ | `node --version` |
 | pnpm | 8+ | `pnpm --version` |
-| Redis | 7.0+ | `redis-cli ping` |
 
 **必须激活虚拟环境**:
 ```bash
@@ -205,7 +184,8 @@ conda activate student-manage
 ```
 修改/新增功能已完成，是否需要运行测试？
 - 运行全部测试: pytest tests/ -v
-- 仅冒烟测试: pytest tests/integration/test_smoke.py -v
+- 仅单元测试: pytest tests/unit -v
+- 仅集成测试: pytest tests/integration -v
 - 不需要测试
 ```
 
@@ -218,9 +198,10 @@ conda activate student-manage
 | [ERRORS.md](./ERRORS.md) | 常见错误记录 |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | 完整部署指南 |
 | [CONFIG_GUIDE.md](./CONFIG_GUIDE.md) | 配置管理说明 |
-| [migrations/README.md](../migrations/README.md) | 数据库迁移 |
+| [migrations/README.md](../migrations/README.md) | 数据库迁移（已完成） |
 | [tests/README.md](../tests/README.md) | 测试说明 |
 
 ---
 
-**最后更新**: 2026-03-21
+**最后更新**: 2026-03-22
+**架构版本**: FastAPI + SQLModel
