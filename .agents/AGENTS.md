@@ -127,7 +127,7 @@ backend/
 - 使用 FastAPI 框架
 - SQLModel 作为 ORM（SQLAlchemy + Pydantic）
 - 分层结构：API → CRUD → Models
-- 依赖注入管理会话和权限
+- JWT + HttpOnly Cookie 认证
 
 ### 前端（Vue3 + Naive UI）
 - **使用 Naive UI**，不是 Element Plus
@@ -144,17 +144,13 @@ backend/
 
 ```
 tests/
-├── unit/                    # 单元测试（43个）
-│   ├── crud/               # CRUD 测试
-│   ├── models/             # 模型测试
-│   └── test_security.py    # 安全测试
-└── integration/            # 集成测试（79个）
-    ├── test_auth_api.py    # 认证测试
-    ├── test_student_api.py # 学生管理
-    ├── test_user_api.py    # 用户管理
-    ├── test_checkin_api.py # 签到系统
-    ├── test_system_api.py  # 系统API
-    └── test_e2e_scenarios.py # 端到端场景
+├── unit/                    # 单元测试
+│   ├── test_jwt.py         # JWT 工具测试 (11个)
+│   ├── test_jwt_deps.py    # JWT 依赖测试 (8个)
+│   └── ...                 # 其他测试
+└── integration/            # 集成测试
+    ├── test_jwt_auth.py    # JWT 认证集成测试 (13个)
+    └── ...                 # 其他测试
 ```
 
 ---
@@ -203,5 +199,5 @@ conda activate student-manage
 
 ---
 
-**最后更新**: 2026-03-22
+**最后更新**: 2026-03-22 (JWT认证更新)
 **架构版本**: FastAPI + SQLModel

@@ -37,14 +37,6 @@ class DatabaseSettings(BaseSettings):
     timeout: int = Field(default=30, description="连接超时（秒）")
 
 
-class RedisSettings(BaseSettings):
-    """Redis配置 - 用于限流"""
-    model_config = SettingsConfigDict(env_prefix="REDIS_")
-    
-    url: str = Field(default="redis://localhost:6379", description="Redis连接URL")
-    pool_size: int = Field(default=10, description="连接池大小")
-
-
 class SecuritySettings(BaseSettings):
     """安全配置"""
     model_config = SettingsConfigDict(env_prefix="SECURITY_")
@@ -63,7 +55,7 @@ class RateLimitSettings(BaseSettings):
     """限流配置"""
     model_config = SettingsConfigDict(env_prefix="RATE_LIMIT_")
     
-    enabled: bool = Field(default=True, description="是否启用限流（需要Redis）")
+    enabled: bool = Field(default=True, description="是否启用限流（内存存储）")
     multiplier: int = Field(default=1, description="限流倍数因子")
     login_max_requests: int = Field(default=5, description="登录接口限流次数")
     login_window_seconds: int = Field(default=60, description="登录接口限流窗口")
@@ -108,7 +100,6 @@ class Settings(BaseSettings):
     # 应用基础配置
     app: AppSettings = Field(default_factory=AppSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
-    redis: RedisSettings = Field(default_factory=RedisSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
     log: LogSettings = Field(default_factory=LogSettings)
@@ -171,11 +162,6 @@ def init_settings(env_file: Optional[str] = None) -> Settings:
 def get_db_settings() -> DatabaseSettings:
     """获取数据库配置"""
     return get_settings().database
-
-
-def get_redis_settings() -> RedisSettings:
-    """获取Redis配置"""
-    return get_settings().redis
 
 
 def get_security_settings() -> SecuritySettings:

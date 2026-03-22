@@ -12,7 +12,7 @@
 - **🎯 上课模式**：实时显示班级签到状态，老师可代签
 - **🔍 学生查询**：学生可查询自己的分数、排名和变更记录
 - **💾 数据安全**：SQLite 数据库存储，支持数据备份和恢复
-- **⚡ 性能优化**：Redis 缓存 + 数据库索引 + 连接池
+- **⚡ 性能优化**：内存限流 + 数据库索引
 
 ## 🏗️ 技术架构
 
@@ -28,7 +28,7 @@
 - **FastAPI** - Python 异步 Web 框架
 - **Python 3.11+** - 编程语言
 - **SQLite** - 轻量级数据库
-- **Redis** - 缓存和限流
+- **JWT** - 认证（python-jose）
 - **Pydantic** - 数据验证
 - **DDD 架构** - 领域驱动设计
 
@@ -62,7 +62,6 @@ Interface → Application → Domain ← Infrastructure
 |------|----------|
 | Python | 3.11+ |
 | Node.js | 20+ |
-| Redis | 7.0+ |
 | pnpm | 8+ |
 
 ### 1. 克隆项目
@@ -103,22 +102,7 @@ pnpm dev
 
 前端服务将运行在 http://localhost:3000
 
-### 4. 启动 Redis
-
-```bash
-# Ubuntu/Debian
-sudo apt install redis-server
-sudo systemctl start redis-server
-
-# 或使用 Docker
-docker run -d -p 6379:6379 redis:7-alpine
-
-# 验证 Redis
-redis-cli ping
-# 应返回: PONG
-```
-
-### 5. 一键启动（推荐）
+### 4. 一键启动（推荐）
 
 ```bash
 # 在项目根目录
@@ -154,12 +138,8 @@ PORT=8000
 DB_PATH=./data/student_manage.db
 DB_TIMEOUT=30
 
-# Redis 配置
-REDIS_URL=redis://localhost:6379
-
 # 安全配置
-SECURITY_SECRET_KEY=your-secret-key-change-in-production
-SECURITY_SESSION_MAX_AGE=86400
+SECURITY_SECRET_KEY=your-secret-key-change-in-production  # JWT 密钥
 ```
 
 ### 环境检查
@@ -173,8 +153,8 @@ curl http://localhost:8000/health
 # 检查前端
 curl http://localhost:3000
 
-# 检查 Redis
-redis-cli ping
+# 验证配置
+python -c "from app.core.config import get_settings; print(get_settings().app.env)"
 ```
 
 ## 📖 使用指南
@@ -254,8 +234,8 @@ student-manager/
 
 ## 🔒 安全特性
 
-1. **密码加密**: PBKDF2 算法 + 随机盐值哈希存储
-2. **Session 认证**: 1 小时有效期，安全 Cookie 设置
+1. **密码加密**: bcrypt 算法（自动处理盐值）
+2. **JWT 认证**: Token 存储在 HttpOnly Cookie，24小时有效期
 3. **请求限流**: 登录 5次/分钟，签到/分数 10次/分钟
 4. **RBAC 权限**: 角色分级，班级数据隔离
 5. **审计日志**: 记录所有敏感操作
@@ -372,14 +352,8 @@ docker-compose logs -f
 # 查看后端状态
 ps aux | grep "python main.py"
 
-# 查看 Redis 状态
-redis-cli info
-
 # 查看数据库大小
 ls -lh data/
-
-# 清理缓存
-redis-cli FLUSHDB
 
 # 查看日志
 tail -f backend/logs/app.log
@@ -402,4 +376,4 @@ MIT License
 ---
 
 **版本**: v3.0  
-**最后更新**: 2026-03-22
+**最后更新**: 2026-03-22 (JWT认证更新)

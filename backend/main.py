@@ -18,12 +18,12 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import get_settings
 from app.core.db import init_db
 from app.core.logging import logger
-from app.core.exceptions import http_exception_handler
+from app.core.exceptions import http_exception_handler, validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 
 # 获取应用配置
 settings = get_settings()
@@ -94,13 +94,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
     
-    # Session配置
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.security.secret_key,
-        max_age=settings.security.session_max_age,
-    )
-    
     # CORS配置
     app.add_middleware(
         CORSMiddleware,
@@ -110,8 +103,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     
-    # 注册HTTPException处理器（统一错误响应格式）
+    # 注册异常处理器（统一错误响应格式）
     app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
     
     # 独立健康检查端点（用于监控，无需认证）
     from datetime import datetime

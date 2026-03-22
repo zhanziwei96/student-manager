@@ -134,7 +134,7 @@ class TestResetPasswordAPI:
     
     def test_reset_password_success(self, admin_client, teacher_user, test_engine):
         """成功重置密码"""
-        response = admin_client.post(f"/api/admin/users/{teacher_user.id}/reset-password", json={
+        response = admin_client.put(f"/api/admin/users/{teacher_user.id}/reset-password", json={
             "new_password": "resetpass123"
         })
         
@@ -144,15 +144,16 @@ class TestResetPasswordAPI:
         assert data["message"] == "密码重置成功"
         
         # 验证新密码可以登录
-        from backend.app.core.security import verify_password_hash
+        from app.core.security import verify_password_hash
         with Session(test_engine) as session:
             session.add(teacher_user)
             session.refresh(teacher_user)
-            assert verify_password_hash("resetpass123", teacher_user.password_hash, teacher_user.salt)
+            # bcrypt 模式下 salt 参数被忽略
+            assert verify_password_hash("resetpass123", teacher_user.password_hash, "")
     
     def test_reset_password_user_not_found(self, admin_client):
         """用户不存在"""
-        response = admin_client.post("/api/admin/users/9999/reset-password", json={
+        response = admin_client.put("/api/admin/users/9999/reset-password", json={
             "new_password": "newpass123"
         })
         
@@ -160,7 +161,7 @@ class TestResetPasswordAPI:
     
     def test_reset_password_validation_error(self, admin_client, teacher_user):
         """密码太短"""
-        response = admin_client.post(f"/api/admin/users/{teacher_user.id}/reset-password", json={
+        response = admin_client.put(f"/api/admin/users/{teacher_user.id}/reset-password", json={
             "new_password": "123"  # 太短
         })
         
@@ -227,7 +228,7 @@ class TestUserPermissions:
     
     def test_teacher_cannot_reset_password(self, teacher_client, admin_user):
         """教师不能重置密码"""
-        response = teacher_client.post(f"/api/admin/users/{admin_user.id}/reset-password", json={
+        response = teacher_client.put(f"/api/admin/users/{admin_user.id}/reset-password", json={
             "new_password": "newpass123"
         })
         

@@ -1,58 +1,63 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import Cookies from 'js-cookie'
-
-const COOKIE_OPTIONS = { path: '/', sameSite: 'strict' }
+import { getUserInfo } from '@/api'
 
 export const useUserStore = defineStore('user', () => {
-  // State - 从 Cookie 初始化
-  const userId = ref(Cookies.get('user_id') || null)
-  const username = ref(Cookies.get('username') || '')
-  const userName = ref(Cookies.get('name') || '')
-  const role = ref(Cookies.get('role') || '')
+  // State - 不存储在 Cookie，仅内存
+  const userInfo = ref(null)
+  const isLoading = ref(false)
 
   // Getters
-  const isLoggedIn = computed(() => !!userId.value)
-  const isAdmin = computed(() => role.value === 'admin')
-  const isTeacher = computed(() => role.value === 'teacher')
-  const isStudent = computed(() => role.value === 'student')
+  const isLoggedIn = computed(() => !!userInfo.value)
+  const isAdmin = computed(() => userInfo.value?.role === 'admin')
+  const isTeacher = computed(() => userInfo.value?.role === 'teacher')
+  const isStudent = computed(() => userInfo.value?.role === 'student')
+  const userId = computed(() => userInfo.value?.sub)
+  const username = computed(() => userInfo.value?.username || '')
+  const userName = computed(() => userInfo.value?.name || '')
+  const role = computed(() => userInfo.value?.role || '')
 
   // Actions
-  function setUser(id, name, displayName, userRole = '') {
-    userId.value = id
-    username.value = name
-    userName.value = displayName || name
-    role.value = userRole
-    
-    // 同步到 Cookie
-    Cookies.set('user_id', id, COOKIE_OPTIONS)
-    Cookies.set('username', name, COOKIE_OPTIONS)
-    Cookies.set('name', displayName || name, COOKIE_OPTIONS)
-    Cookies.set('role', userRole, COOKIE_OPTIONS)
+  async function fetchUserInfo() {
+    // 从后端获取用户信息
+    try {
+      isLoading.value = true
+      const res = await getUserInfo()
+      if (res.success && res.data) {
+        userInfo.value = res.data
+        return true
+      }
+      return false
+    } catch (error) {
+      userInfo.value = null
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  function setUser(data) {
+    // 登录成功后设置用户信息
+    userInfo.value = data
   }
 
   function clearUser() {
-    userId.value = null
-    username.value = ''
-    userName.value = ''
-    role.value = ''
-    
-    // 清除 Cookie
-    Cookies.remove('user_id', { path: '/' })
-    Cookies.remove('username', { path: '/' })
-    Cookies.remove('name', { path: '/' })
-    Cookies.remove('role', { path: '/' })
+    // 登出时清除用户信息
+    userInfo.value = null
   }
 
   return {
-    userId,
-    username,
-    userName,
-    role,
+    userInfo,
+    isLoading,
     isLoggedIn,
     isAdmin,
     isTeacher,
     isStudent,
+    userId,
+    username,
+    userName,
+    role,
+    fetchUserInfo,
     setUser,
     clearUser
   }

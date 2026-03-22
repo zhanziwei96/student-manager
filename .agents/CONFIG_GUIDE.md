@@ -15,6 +15,7 @@
 | `AppSettings` | 应用基础配置 | - | `settings.app.*` |
 | `DatabaseSettings` | 数据库配置 | `DATABASE_` | `settings.database.*` |
 | `SecuritySettings` | 安全配置 | `SECURITY_` | `settings.security.*` |
+| `JWTSettings` | JWT 认证配置 | `JWT_` | `settings.jwt.*` |
 | `ScoreSettings` | 分数配置 | `SCORE_` | `settings.score.*` |
 | `PaginationSettings` | 分页配置 | `PAGINATION_` | `settings.pagination.*` |
 
@@ -83,8 +84,10 @@ APP__PORT=8000                    # 服务器端口
 DATABASE__PATH=/data/class_system.db  # 数据库文件路径
 
 # 安全配置
-SECURITY__SECRET_KEY=your-secret      # Session 密钥
-SECURITY__SESSION_MAX_AGE=86400       # Session 有效期（秒）
+SECURITY__SECRET_KEY=your-secret      # JWT 密钥
+JWT__ACCESS_TOKEN_EXPIRE_MINUTES=1440 # JWT 有效期（分钟，默认24小时）
+JWT__ALGORITHM=HS256                  # JWT 算法
+JWT__COOKIE_NAME=access_token         # Cookie 名称
 SECURITY__MAX_LOGIN_FAILURES=10       # 最大登录失败次数
 SECURITY__LOCKOUT_DURATION_MINUTES=30 # 账号锁定时间
 SECURITY__CORS_ORIGINS=["http://localhost:3000"]  # CORS 来源
@@ -125,7 +128,6 @@ DATABASE__PATH=./data/class_system.db
 ```python
 from app.models.constants import (
     UserRoleConst,      # 用户角色: ADMIN, TEACHER, STUDENT
-    SessionKeyConst,    # Session键: USER_ID, USERNAME, ROLE, IS_ADMIN
     ApiResponseConst,   # API响应键: SUCCESS, DATA, MESSAGE
     RoutePrefixConst,   # 路由前缀: API, ADMIN
     MessageConst,       # 业务消息
@@ -134,6 +136,8 @@ from app.models.constants import (
 # 使用常量
 role = UserRoleConst.ADMIN
 ```
+
+**注意**: 旧版 `SessionKeyConst` 已弃用，JWT 认证使用 claims（sub, username, role, is_admin）
 
 HTTP 状态码常量：
 

@@ -5,15 +5,14 @@ uvicorn[standard]>=0.24.0
 # 数据验证
 pydantic>=2.5.0
 
-# Session支持
-itsdangerous>=2.1.0
+# Session支持（JWT替代）
+python-jose[cryptography]>=3.3.0
 
 # CORS
 python-multipart>=0.0.6
 
-# 限流 (Redis)
-fastapi-limiter>=0.1.5
-redis>=5.0.0
+# 限流（内存存储，无需Redis）
+pyrate-limiter>=3.0.0
 
 # 数据库
 openpyxl>=3.1.0
@@ -23,3 +22,6 @@ python-dotenv>=1.0.0
 
 # SQLModel
 sqlmodel>=0.0.21
+
+# 密码安全（替换 SHA256）
+bcrypt>=4.1.0

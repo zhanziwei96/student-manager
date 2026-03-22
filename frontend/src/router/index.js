@@ -50,28 +50,23 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   
-  // 需要登录但未登录
-  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    return next('/login')
-  }
-  
-  // 已登录用户访问登录页，根据角色重定向
-  if (to.meta.guest && userStore.isLoggedIn && userStore.role) {
-    const roleRoutes = {
-      admin: '/admin',
-      teacher: '/teacher',
-      student: '/student'
+  // 如果路由需要认证
+  if (to.meta.requiresAuth) {
+    // 初始化用户信息（如果未加载且未在加载中）
+    if (!userStore.userInfo && !userStore.isLoading) {
+      await userStore.fetchUserInfo()
     }
-    return next(roleRoutes[userStore.role] || '/')
-  }
-  
-  // 角色权限检查
-  if (to.meta.requiresAuth && to.meta.role) {
-    if (userStore.role !== to.meta.role) {
-      // 用户角色与路由不匹配，重定向到对应角色的首页
+    
+    // 需要登录但未登录
+    if (!userStore.isLoggedIn) {
+      return next('/login')
+    }
+    
+    // 角色权限检查
+    if (to.meta.role && userStore.role !== to.meta.role) {
       const roleRoutes = {
         admin: '/admin',
         teacher: '/teacher',
@@ -81,6 +76,17 @@ router.beforeEach((to, from, next) => {
     }
   }
   
+  // 已登录用户访问登录页，根据角色重定向
+  if (to.meta.guest && userStore.isLoggedIn) {
+    const roleRoutes = {
+      admin: '/admin',
+      teacher: '/teacher',
+      student: '/student'
+    }
+    return next(roleRoutes[userStore.role] || '/')
+  }
+  
+  // 公开路由直接放行
   next()
 })
 

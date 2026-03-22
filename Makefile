@@ -26,7 +26,6 @@ install:
 # 启动所有开发服务（需要多个终端或使用后台任务）
 dev:
 	@echo "启动开发环境..."
-	@echo "请确保 Redis 已启动: redis-cli ping"
 	@echo "建议开两个终端分别运行: make dev-backend 和 make dev-frontend"
 
 # 启动后端服务（需要 conda 环境）
@@ -62,9 +61,6 @@ status:
 	@echo ""
 	@echo "=== 前端状态 ==="
 	@curl -s http://localhost:3000 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"
-	@echo ""
-	@echo "=== Redis 状态 ==="
-	@redis-cli ping 2>/dev/null && echo " ✅ Redis 运行中" || echo " ❌ Redis 未运行"
 
 # 清理构建文件
 clean:

@@ -1,50 +1,41 @@
 """
-API 依赖注入
+API 依赖注入 - JWT 版本
 """
-from typing import Generator, Optional
-from fastapi import Request, HTTPException, Depends
+from typing import Optional
+from fastapi import Request
 from sqlmodel import Session
 from app.core.db import get_session
-from app.crud import get_user_by_username
-from app.core.config import HttpStatus
-from app.models.constants import SessionKeyConst
-
+from app.core.jwt import (
+    get_current_user as jwt_get_current_user,
+    require_login as jwt_require_login,
+    require_admin as jwt_require_admin,
+)
 
 # 数据库会话依赖
-SessionDep = Depends(get_session)
+SessionDep = get_session
 
 
-def get_current_user(request: Request):
-    """获取当前登录用户（用于依赖注入）"""
-    user_id = request.session.get(SessionKeyConst.USER_ID)
-    if not user_id:
-        raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='请先登录')
-    return user_id
-
-
-def require_login(request: Request) -> int:
-    """要求登录"""
-    user_id = request.session.get(SessionKeyConst.USER_ID)
-    if not user_id:
-        raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='请先登录')
-    return user_id
-
-
-def require_admin(request: Request) -> int:
-    """要求管理员权限"""
-    user_id = request.session.get(SessionKeyConst.USER_ID)
-    if not user_id:
-        raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='请先登录')
-    if not request.session.get(SessionKeyConst.IS_ADMIN):
-        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='需要管理员权限')
-    return user_id
+# JWT 依赖导出
+get_current_user = jwt_get_current_user
+require_login = jwt_require_login
+require_admin = jwt_require_admin
 
 
 def is_admin(request: Request) -> bool:
     """检查是否为管理员"""
-    return request.session.get(SessionKeyConst.IS_ADMIN, False)
+    from fastapi import HTTPException
+    try:
+        user = jwt_get_current_user(request)
+        return user.get("is_admin", False)
+    except HTTPException:
+        return False
 
 
-def get_session_user_id(request: Request) -> Optional[int]:
+def get_session_user_id(request: Request) -> Optional[str]:
     """获取会话中的用户ID"""
-    return request.session.get(SessionKeyConst.USER_ID)
+    from fastapi import HTTPException
+    try:
+        user = jwt_get_current_user(request)
+        return user.get("sub")
+    except HTTPException:
+        return None

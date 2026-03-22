@@ -1,12 +1,12 @@
-# 班级管理系统 - FastAPI + DDD架构
+# 班级管理系统 - FastAPI + SQLModel 架构
 
 ## 架构概览
 
-本项目采用 **FastAPI** + **DDD（领域驱动设计）** 架构，完全前后端分离。
+本项目采用 **FastAPI** + **SQLModel** 架构，完全前后端分离。
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        前端 (Vue 3)                          │
+│                        前端 (Vue 3 + Naive UI)               │
 │                   http://localhost:3000                     │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -16,89 +16,79 @@
 │                      后端 (FastAPI)                          │
 │                   http://localhost:8000                     │
 ├─────────────────────────────────────────────────────────────┤
-│  接口层 (Interface)                                          │
-│  ├── 处理HTTP请求/响应 (FastAPI路由)                          │
-│  ├── 输入验证 (Pydantic模型)                                  │
-│  └── 调用应用服务                                             │
+│  API 层 (app/api/)                                           │
+│  ├── 路由定义 (FastAPI APIRouter)                            │
+│  ├── 请求/响应模型 (Pydantic)                                │
+│  ├── 依赖注入 (deps.py)                                      │
+│  └── 权限控制 (session-based)                                │
 ├─────────────────────────────────────────────────────────────┤
-│  应用层 (Application)                                        │
-│  ├── 应用服务 (协调用例)                                      │
-│  ├── 事务控制                                                 │
-│  └── DTO转换                                                  │
+│  核心层 (app/core/)                                          │
+│  ├── 配置管理 (Pydantic Settings)                            │
+│  ├── 数据库连接 (SQLModel/SQLAlchemy)                        │
+│  ├── 安全工具 (bcrypt密码哈希、JWT认证)                     │
+│  └── 异常处理                                                │
 ├─────────────────────────────────────────────────────────────┤
-│  领域层 (Domain) ★ 核心                                      │
-│  ├── 实体 (Student, User, Checkin)                           │
-│  ├── 值对象 (StudentId, Score, Password)                     │
-│  ├── 仓储接口                                                 │
-│  └── 领域事件                                                 │
+│  CRUD 层 (app/crud/)                                         │
+│  ├── 学生数据操作                                            │
+│  ├── 用户数据操作                                            │
+│  ├── 签到记录操作                                            │
+│  └── 审计日志操作                                            │
 ├─────────────────────────────────────────────────────────────┤
-│  基础设施层 (Infrastructure)                                 │
-│  ├── 数据库访问 (SQLite)                                     │
-│  ├── 仓储实现                                                 │
-│  ├── 限流器 (FastAPI-Limiter)                               │
-│  └── Session管理                                             │
+│  模型层 (app/models/)                                        │
+│  ├── SQLModel 数据模型                                       │
+│  ├── 业务常量定义                                            │
+│  └── 枚举类型                                                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## 技术栈
 
-- **框架**: FastAPI 0.104+
+- **框架**: FastAPI 0.115+
 - **ASGI服务器**: Uvicorn
-- **数据验证**: Pydantic v2
-- **限流**: FastAPI-Limiter + fakeredis (内存存储)
-- **Session**: Starlette SessionMiddleware
+- **ORM**: SQLModel (SQLAlchemy + Pydantic)
 - **数据库**: SQLite3
+- **认证**: JWT + HttpOnly Cookie（python-jose）
+- **配置**: Pydantic Settings
+- **限流**: pyrate-limiter (内存存储)
 
 ## 目录结构
 
 ```
 backend/
-├── domain/                      # 领域层（核心业务逻辑）
-│   ├── entities/               # 实体
-│   │   ├── student.py
-│   │   ├── user.py
-│   │   ├── checkin.py
-│   │   └── score_log.py
-│   ├── value_objects/          # 值对象
-│   │   ├── student_id.py
-│   │   ├── score.py
-│   │   └── password.py
-│   ├── repositories/           # 仓储接口
-│   │   ├── student_repository.py
-│   │   ├── user_repository.py
-│   │   └── checkin_repository.py
-│   └── events/                 # 领域事件
-│       ├── score_changed.py
-│       └── student_checked_in.py
-├── application/                 # 应用层（用例协调）
-│   ├── services/               # 应用服务
-│   │   ├── student_app_service.py
-│   │   ├── user_app_service.py
-│   │   ├── checkin_app_service.py
-│   │   └── privacy_service.py
-│   └── dto/                    # 数据传输对象
-│       ├── student_dto.py
-│       └── user_dto.py
-├── infrastructure/              # 基础设施层
-│   ├── persistence/            # 持久化
-│   │   ├── database.py
-│   │   └── repositories/       # 仓储实现
-│   │       ├── sqlite_student_repository.py
-│   │       ├── sqlite_user_repository.py
-│   │       ├── sqlite_checkin_repository.py
-│   │       └── sqlite_score_log_repository.py
-│   └── security/               # 安全
-│       ├── rate_limiter.py     # 限流器
-│       └── session.py          # Session工具
-├── interface/                   # 接口层
-│   └── api/                    # REST API控制器
-│       ├── student_controller.py
-│       ├── user_controller.py
-│       ├── checkin_controller.py
-│       └── class_session_controller.py
-├── main.py                      # FastAPI应用入口
-├── requirements.txt             # 依赖
-└── start.sh                     # 启动脚本
+├── app/                         # 应用主目录
+│   ├── api/                     # API 层
+│   │   ├── __init__.py
+│   │   ├── deps.py             # 依赖注入（权限、Session）
+│   │   └── routes/             # 路由处理器
+│   │       ├── login.py        # 登录/认证
+│   │       ├── students.py     # 学生管理
+│   │       ├── users.py        # 用户管理（管理员）
+│   │       ├── checkin.py      # 签到系统
+│   │       └── system.py       # 系统接口
+│   ├── core/                    # 核心层
+│   │   ├── __init__.py
+│   │   ├── config.py           # Pydantic 配置
+│   │   ├── db.py               # 数据库连接
+│   │   ├── security.py         # 安全工具
+│   │   ├── exceptions.py       # 异常处理
+│   │   └── logging.py          # 日志配置
+│   ├── crud/                    # CRUD 操作
+│   │   ├── __init__.py
+│   │   ├── student.py          # 学生操作
+│   │   ├── user.py             # 用户操作
+│   │   ├── checkin.py          # 签到操作
+│   │   └── audit.py            # 审计日志
+│   └── models/                  # 数据模型
+│       ├── __init__.py
+│       ├── user.py             # 用户模型
+│       ├── student.py          # 学生模型
+│       ├── checkin.py          # 签到模型
+│       ├── audit.py            # 审计模型
+│       └── constants.py        # 常量定义
+├── data/                        # 数据目录
+│   └── class_system.db         # SQLite 数据库
+├── main.py                      # 应用入口
+└── requirements.txt             # 依赖
 ```
 
 ## 快速开始
@@ -113,14 +103,11 @@ pip install -r requirements.txt
 ### 2. 启动后端
 
 ```bash
-# 方式1: 使用启动脚本
-./start.sh
+# 方式1: 直接使用 uvicorn（开发模式，支持热重载）
+ENV=development uvicorn main:app --reload --port 8000
 
-# 方式2: 直接使用 uvicorn
-uvicorn main:app --reload --port 8000
-
-# 方式3: 使用 python
-python main.py
+# 方式2: 使用 python（生产模式）
+ENV=production python main.py
 ```
 
 后端将在 http://localhost:8000 运行
@@ -135,117 +122,181 @@ pnpm dev      # 或 npm run dev
 
 前端将在 http://localhost:3000 运行
 
-## API文档
+## API 文档
 
-FastAPI自动生成API文档：
+FastAPI 自动生成 API 文档：
 
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-## API接口列表
+## API 接口列表
+
+### 系统
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/health` | 健康检查 |
+| GET | `/api/stats` | 系统统计（需登录） |
+| GET | `/api/dashboard` | 仪表盘数据（公开，脱敏） |
+
+### 认证
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/login` | 用户登录 |
+| POST | `/api/logout` | 用户登出 |
+| GET | `/api/me` | 当前用户信息 |
 
 ### 学生管理
-- `GET /api/students` - 获取学生列表
-- `GET /api/students/{student_id}` - 获取单个学生
-- `POST /api/students` - 创建学生
-- `POST /api/students/{student_id}/score` - 更新分数
-- `DELETE /api/students/{student_id}` - 删除学生
-- `POST /api/students/import` - Excel导入
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/students` | 获取学生列表 |
+| POST | `/api/students` | 添加学生 |
+| PUT | `/api/students/{student_id}/score` | 更新分数 |
+| DELETE | `/api/students/{student_id}` | 删除学生 |
+| GET | `/api/students/{student_id}/scores` | 分数历史 |
+| PUT | `/api/students/{student_id}/reset-password` | 重置密码（管理员） |
+| POST | `/api/students/import` | Excel 导入（TODO） |
+
+### 班级
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/classes` | 获取班级列表 |
+
+### 用户管理（管理员）
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/admin/users` | 用户列表 |
+| POST | `/admin/users` | 创建用户 |
+| PUT | `/admin/users/{user_id}` | 更新用户 |
+| PUT | `/admin/users/{user_id}/reset-password` | 重置密码 |
+| DELETE | `/admin/users/{user_id}` | 删除用户 |
+
+### 课堂管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/class-session` | 获取当前课堂状态 |
+| POST | `/api/class-session/start` | 开始上课 |
+| POST | `/api/class-session/end` | 结束上课 |
 
 ### 签到系统
-- `POST /api/checkin` - 学生签到
-- `POST /api/teacher-checkin` - 老师代签
-- `GET /api/checkin/records` - 签到记录
-- `GET /api/checkin/stats` - 签到统计
-- `GET /api/checkin/today` - 今日签到
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/checkin` | 学生签到 |
+| GET | `/api/checkins/today` | 今日签到列表 |
+| GET | `/api/checkins/stats` | 签到统计 |
 
-### 用户管理
-- `POST /api/login` - 用户登录
-- `POST /api/logout` - 用户登出
-- `GET /api/me` - 当前用户信息
-- `POST /api/change-password` - 修改密码
+## 配置管理
 
-### 管理员
-- `GET /api/admin/users` - 用户列表
-- `POST /api/admin/users` - 创建用户
-- `PUT /api/admin/users/{user_id}` - 更新用户
-- `DELETE /api/admin/users/{user_id}` - 删除用户
-- `POST /api/admin/users/{user_id}/reset-password` - 重置密码
-- `POST /api/admin/users/{user_id}/unlock` - 解锁账号
-- `POST /api/admin/reset-scores` - 重置所有分数
+使用 Pydantic Settings 管理配置，支持环境变量和 `.env` 文件：
 
-### 课堂会话
-- `GET /api/class-session` - 获取当前课堂状态
-- `POST /api/class-session` - 设置/结束课堂
-- `GET /api/class-session/students` - 课堂学生签到状态
+```bash
+# 环境
+ENV=production  # 或 development, testing
 
-### 其他
-- `GET /api/stats` - 统计数据
-- `GET /api/score/logs` - 分数变更日志
+# 数据库
+DATABASE__PATH=./data/class_system.db
 
-## 限流配置
+# 安全配置
+SECURITY__SECRET_KEY=your-secret-key  # JWT 签名密钥
 
-使用 FastAPI-Limiter 实现限流，存储在内存中（fakeredis）：
+# 限流配置
+RATE_LIMIT__ENABLED=true
+RATE_LIMIT__LOGIN_MAX_REQUESTS=5
+```
 
-| 接口 | 限制 |
-|------|------|
-| 登录 | 5次/分钟 |
-| 签到 | 10次/分钟 |
-| 分数修改 | 10次/分钟 |
-| 其他 | 60次/分钟 |
+详见 [配置指南](../.agents/CONFIG_GUIDE.md)
+
+## 响应格式
+
+统一 API 响应格式：
+
+```json
+// 成功
+{
+  "success": true,
+  "data": { ... },
+  "message": "操作成功"
+}
+
+// 失败
+{
+  "success": false,
+  "message": "错误信息"
+}
+```
+
+## 开发指南
+
+### 添加新 API
+
+1. **定义 SQLModel 模型**（如需要）：`app/models/`
+2. **添加 CRUD 操作**（如需要）：`app/crud/`
+3. **创建路由**：`app/api/routes/`
+4. **注册路由**：`main.py`
+
+### 示例
+
+```python
+# app/api/routes/example.py
+from fastapi import APIRouter, Depends
+from sqlmodel import Session
+from app.core.db import get_session
+from app.api.deps import require_login
+
+router = APIRouter(prefix="/api", tags=["example"])
+
+@router.get("/example")
+def example(
+    request: Request,
+    session: Session = Depends(get_session)
+):
+    user_id = require_login(request)
+    return {"success": True, "data": []}
+
+# main.py
+from app.api.routes import example
+app.include_router(example.router)
+```
+
+### 数据库操作示例
+
+```python
+# app/crud/example.py
+from sqlmodel import Session
+from app.models import Example
+
+def create_example(session: Session, name: str) -> Example:
+    example = Example(name=name)
+    session.add(example)
+    session.commit()
+    session.refresh(example)
+    return example
+```
 
 ## 环境变量
 
 ```bash
 # 会话密钥（生产环境必须设置）
-export SECRET_KEY="your-secret-key-here"
+export SECURITY__SECRET_KEY="your-secret-key-here"
 
 # 开发/生产模式
-export FASTAPI_ENV="development"  # 或 "production"
+export ENV="production"  # 或 "development"
+
+# 数据库路径
+export DATABASE__PATH="/path/to/class_system.db"
 ```
 
-## 与Flask版本对比
+## 架构特点
 
-| 特性 | Flask版本 | FastAPI版本 |
-|------|-----------|-------------|
-| 框架 | Flask 3.x | FastAPI 0.104+ |
-| 自动文档 | ❌ | ✅ Swagger/ReDoc |
-| 数据验证 | 手动 | Pydantic自动验证 |
-| 异步支持 | ❌ | ✅ |
-| 性能 | 一般 | 高（基于Starlette） |
-| 类型提示 | 部分 | 完整 |
+1. **简洁分层**: API → CRUD → Models，职责清晰
+2. **类型安全**: 全代码类型提示，Pydantic 自动验证
+3. **统一响应**: 标准化 API 响应格式
+4. **配置灵活**: 环境变量 + `.env` 文件支持
+5. **易于测试**: SQLModel 支持内存数据库，测试隔离
 
-## DDD架构优势
+## 相关文档
 
-1. **业务逻辑集中**: 领域层包含核心业务规则
-2. **可测试性高**: 领域层可独立单元测试
-3. **可维护性好**: 清晰的边界和职责分离
-4. **易于扩展**: 添加新功能只需新增领域实体
-
-## 开发指南
-
-### 添加新API
-
-1. **定义领域实体**（domain/entities/）
-2. **定义仓储接口**（domain/repositories/）
-3. **实现仓储**（infrastructure/persistence/repositories/）
-4. **创建应用服务**（application/services/）
-5. **创建API控制器**（interface/api/）
-6. **注册路由**（main.py）
-
-### 示例
-
-```python
-# interface/api/example_controller.py
-from fastapi import APIRouter, Depends
-
-router = APIRouter(prefix="/api", tags=["example"])
-
-@router.get("/example")
-async def example():
-    return {"success": True, "data": []}
-
-# main.py
-from interface.api import example_controller
-app.include_router(example_controller.router)
-```
+- [AI 助手速查手册](../.agents/AGENTS.md)
+- [配置管理指南](../.agents/CONFIG_GUIDE.md)
+- [部署指南](../.agents/DEPLOYMENT.md)
+- [常见错误速查](../.agents/ERRORS.md)
+- [测试指南](../tests/README.md)

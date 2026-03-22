@@ -1,5 +1,5 @@
 """
-学生管理 API
+学生管理 API - JWT 版本
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Request, HTTPException, Query, UploadFile, File, Body
@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
+from app.core.jwt import require_login, require_admin, get_current_user
 from app.crud import (
     get_student, get_students, get_students_by_class,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password
 )
-from app.api.deps import require_login, require_admin, is_admin, get_session_user_id, SessionKeyConst
 from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst
 )
@@ -31,14 +31,15 @@ class UpdateScoreRequest(BaseModel):
 
 
 @router.get("/students")
-def get_students_list(
+async def get_students_list(
     request: Request,
     class_name: Optional[str] = Query(None, description="班级名称"),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """获取学生列表（管理员看所有，教师看负责班级）"""
-    user_id = require_login(request)
-    is_admin = request.session.get(SessionKeyConst.IS_ADMIN, False)
+    is_admin = user.get("is_admin", False)
+    user_id = user.get("sub")
     
     if is_admin:
         # 管理员可以查看所有学生
@@ -49,8 +50,8 @@ def get_students_list(
     else:
         # 教师只能查看负责班级的学生
         from app.crud import get_user
-        user = get_user(session, user_id)
-        assigned_classes = user.get_assigned_classes() if user else []
+        user_obj = get_user(session, int(user_id))
+        assigned_classes = user_obj.get_assigned_classes() if user_obj else []
         
         # 如果指定了班级，检查是否有权限
         if class_name:
@@ -78,14 +79,13 @@ def get_students_list(
 
 
 @router.post("/students")
-def add_student(
+async def add_student(
     request: Request,
     data: CreateStudentRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """添加学生"""
-    require_login(request)
-    
     existing = get_student(session, data.student_id)
     if existing:
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='学号已存在')
@@ -105,15 +105,15 @@ def add_student(
 
 
 @router.put("/students/{student_id}/score")
-def update_score(
+async def update_score(
     request: Request,
     student_id: str,
     data: UpdateScoreRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """更新学生分数"""
-    user_id = require_login(request)
-    username = request.session.get(SessionKeyConst.USERNAME, '')
+    username = user.get("username", '')
     
     student = update_student_score(session, student_id, data.score_change, data.reason, username)
     if not student:
@@ -133,14 +133,13 @@ def update_score(
 
 
 @router.delete("/students/{student_id}")
-def remove_student(
+async def remove_student(
     request: Request,
     student_id: str,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user_id: str = Depends(require_admin)
 ):
     """删除学生"""
-    require_admin(request)
-    
     success = delete_student(session, student_id)
     if not success:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
@@ -152,12 +151,12 @@ def remove_student(
 
 
 @router.get("/classes")
-def get_classes(
+async def get_classes(
     request: Request,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """获取班级列表"""
-    require_login(request)
     classes = get_all_classes(session)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -166,13 +165,13 @@ def get_classes(
 
 
 @router.post("/students/import")
-def import_students(
+async def import_students(
     request: Request,
     file: UploadFile = File(...),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """导入学生（Excel）"""
-    require_login(request)
     # TODO: 实现导入逻辑
     return {
         ApiResponseConst.SUCCESS: True,
@@ -181,15 +180,14 @@ def import_students(
 
 
 @router.get("/students/{student_id}/scores")
-def get_student_scores(
+async def get_student_scores(
     request: Request,
     student_id: str,
     limit: int = Query(None, description="数量限制"),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """获取学生分数历史"""
-    require_login(request)
-    
     from app.crud import get_student_score_logs
     logs = get_student_score_logs(session, student_id, limit)
     
@@ -204,15 +202,14 @@ class ResetStudentPasswordRequest(BaseModel):
 
 
 @router.put("/students/{student_id}/reset-password")
-def reset_student_password_api(
+async def reset_student_password_api(
     request: Request,
     student_id: str,
     data: ResetStudentPasswordRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user_id: str = Depends(require_admin)
 ):
     """重置学生密码"""
-    require_admin(request)
-    
     from app.core.security import generate_password_hash
     password_hash, salt = generate_password_hash(data.new_password)
     

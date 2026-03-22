@@ -175,3 +175,91 @@ redis_required = pytest.mark.skipif(
     not ServiceChecker.is_redis_available(),
     reason="Redis 未运行，跳过测试"
 )
+
+
+# ========== JWT 集成测试 Fixtures ==========
+
+@pytest.fixture(scope="function")
+def jwt_client(monkeypatch):
+    """Create a test client with in-memory database for JWT tests"""
+    from fastapi.testclient import TestClient
+    from sqlmodel import SQLModel, Session, create_engine
+    from sqlmodel.pool import StaticPool
+    from main import app
+    import app.core.db as db_module
+    from app.api import deps
+    from app.api.routes import login, students, users, checkin, system
+    
+    # 创建内存数据库引擎
+    test_engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    
+    # 创建所有表
+    SQLModel.metadata.create_all(test_engine)
+    
+    # 创建测试用的 get_session
+    def get_test_session():
+        with Session(test_engine) as session:
+            yield session
+    
+    # 猴子补丁替换所有相关模块的 get_session
+    monkeypatch.setattr(db_module, "engine", test_engine)
+    monkeypatch.setattr(db_module, "get_session", get_test_session)
+    monkeypatch.setattr(deps, "get_session", get_test_session)
+    monkeypatch.setattr(login, "get_session", get_test_session)
+    monkeypatch.setattr(students, "get_session", get_test_session)
+    monkeypatch.setattr(users, "get_session", get_test_session)
+    monkeypatch.setattr(checkin, "get_session", get_test_session)
+    monkeypatch.setattr(system, "get_session", get_test_session)
+    
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def jwt_admin_user(jwt_client):
+    """Create admin user for JWT tests"""
+    import app.core.db as db_module
+    from app.models import User
+    from app.core.security import generate_password_hash
+    from sqlmodel import Session
+    
+    with Session(db_module.engine) as session:
+        password_hash, _ = generate_password_hash("admin123")
+        user = User(
+            username="admin",
+            password_hash=password_hash,
+            salt="",  # bcrypt 不需要外部 salt
+            name="Administrator",
+            role="admin"
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        yield user
+
+
+@pytest.fixture
+def jwt_teacher_user(jwt_client):
+    """Create teacher user for JWT tests"""
+    import app.core.db as db_module
+    from app.models import User
+    from app.core.security import generate_password_hash
+    from sqlmodel import Session
+    
+    with Session(db_module.engine) as session:
+        password_hash, _ = generate_password_hash("zha123")
+        user = User(
+            username="zhanziwei",
+            password_hash=password_hash,
+            salt="",  # bcrypt 不需要外部 salt
+            name="Teacher Zhao",
+            role="teacher"
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        yield user

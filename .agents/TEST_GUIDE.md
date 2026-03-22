@@ -188,11 +188,18 @@ pytest tests/ --cov=backend --cov-report=html
 
 | 层级 | 数量 | 位置 | 说明 |
 |------|------|------|------|
-| Unit - CRUD | 30+ | `tests/unit/crud/` | 数据库操作测试 |
-| Unit - Models | 10+ | `tests/unit/models/` | 模型验证测试 |
-| Unit - Security | 5 | `tests/unit/test_security.py` | 密码哈希测试 |
-| Integration | 79 | `tests/integration/` | API集成测试 |
-| **总计** | **123** | | |
+| Unit - JWT | 19 | `tests/unit/test_jwt.py` | JWT 工具测试 |
+| Unit - JWT Deps | 8 | `tests/unit/test_jwt_deps.py` | JWT 依赖测试 |
+| Integration - JWT | 13 | `tests/integration/test_jwt_auth.py` | JWT 集成测试 |
+| Integration - Other | 66 | `tests/integration/` | 其他 API 集成测试 |
+| **总计** | **106+** | | |
+
+**JWT 测试覆盖：**
+- Token 创建和解码
+- Token 过期处理
+- Cookie 设置和清除
+- 受保护路由访问控制
+- 管理员权限验证
 
 ---
 

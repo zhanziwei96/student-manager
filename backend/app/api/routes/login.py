@@ -1,18 +1,22 @@
 """
-登录相关 API
+登录相关 API - JWT 版本
 """
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, Response, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
 from app.core.logging import logger
+from app.core.jwt import (
+    create_access_token, set_token_cookie, clear_token_cookie,
+    get_current_user, require_login
+)
 from app.crud import get_user_by_username, record_login_success, record_login_failure
 from app.models import User, UserRoleConst
 from app.models.constants import (
-    SessionKeyConst, ApiResponseConst, MessageConst, RoutePrefixConst
+    ApiResponseConst, MessageConst, RoutePrefixConst
 )
 
 router = APIRouter(prefix=RoutePrefixConst.API, tags=["login"])
@@ -62,10 +66,11 @@ async def check_rate_limit(request: Request, identifier: str) -> bool:
 @router.post("/login")
 async def login(
     request: Request,
+    response: Response,  # 新增：用于设置 Cookie
     data: LoginRequest,
     session: Session = Depends(get_session)
 ):
-    """用户登录"""
+    """用户登录 - JWT 版本"""
     username = data.username.strip()
     password = data.password.strip()
     
@@ -91,11 +96,17 @@ async def login(
         if not verify_password_hash(password, student.password_hash, student.salt):
             raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
         
-        request.session.clear()
-        request.session[SessionKeyConst.USER_ID] = student.student_id
-        request.session[SessionKeyConst.USERNAME] = str(student.student_id)
-        request.session[SessionKeyConst.ROLE] = UserRoleConst.STUDENT
-        request.session[SessionKeyConst.IS_ADMIN] = False
+        # 生成 JWT Token
+        token_data = {
+            "sub": str(student.student_id),
+            "username": str(student.student_id),
+            "name": student.name,
+            "role": UserRoleConst.STUDENT,
+            "is_admin": False,
+            "class_name": student.class_name,
+        }
+        access_token = create_access_token(token_data)
+        set_token_cookie(response, access_token)
         
         logger.info(f"学生登录成功: {student.student_id}")
         
@@ -104,9 +115,9 @@ async def login(
             ApiResponseConst.MESSAGE: MessageConst.LOGIN_SUCCESS,
             ApiResponseConst.DATA: {
                 'id': str(student.student_id),
-                SessionKeyConst.USERNAME: str(student.student_id),
+                'username': str(student.student_id),
                 'name': student.name,
-                SessionKeyConst.ROLE: UserRoleConst.STUDENT,
+                'role': UserRoleConst.STUDENT,
                 'class_name': student.class_name
             }
         }
@@ -144,31 +155,35 @@ async def login(
     record_login_success(session, user, request.client.host)
     logger.info(f"用户登录成功: {username}, 角色: {user.role}")
     
-    request.session.clear()
-    request.session[SessionKeyConst.USER_ID] = user.id
-    request.session[SessionKeyConst.USERNAME] = user.username
-    request.session[SessionKeyConst.ROLE] = user.role
-    request.session[SessionKeyConst.IS_ADMIN] = user.is_admin()
+    # 生成 JWT Token
+    token_data = {
+        "sub": str(user.id),
+        "username": user.username,
+        "name": user.name,
+        "role": user.role,
+        "is_admin": user.is_admin(),
+    }
+    access_token = create_access_token(token_data)
+    set_token_cookie(response, access_token)
     
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.LOGIN_SUCCESS,
         ApiResponseConst.DATA: {
             'id': user.id,
-            SessionKeyConst.USERNAME: user.username,
+            'username': user.username,
             'name': user.name,
-            SessionKeyConst.ROLE: user.role,
-            SessionKeyConst.IS_ADMIN: user.is_admin()
+            'role': user.role,
+            'is_admin': user.is_admin()
         }
     }
 
 
 @router.post("/logout")
-def logout(request: Request):
-    """用户登出"""
-    user_id = request.session.get(SessionKeyConst.USER_ID)
-    request.session.clear()
-    logger.info(f"用户登出: {user_id}")
+def logout(response: Response):
+    """用户登出 - 清除 Cookie"""
+    clear_token_cookie(response)
+    logger.info("用户登出")
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.LOGOUT_SUCCESS
@@ -176,31 +191,32 @@ def logout(request: Request):
 
 
 @router.post("/change-password")
-def change_password(
+async def change_password(
     request: Request,
     data: ChangePasswordRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)  # 使用 JWT 获取用户
 ):
     """修改密码"""
-    user_id = request.session.get(SessionKeyConst.USER_ID)
+    user_id = user.get("sub")
+    role = user.get("role")
+    
     if not user_id:
         raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='请先登录')
     
-    role = request.session.get(SessionKeyConst.ROLE)
-    
     if role == UserRoleConst.STUDENT:
         from app.crud import get_student
-        user = get_student(session, str(user_id))
+        user_obj = get_student(session, str(user_id))
     else:
         from app.crud import get_user
-        user = get_user(session, user_id)
+        user_obj = get_user(session, int(user_id))
     
-    if not user:
+    if not user_obj:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='用户不存在')
     
     # 验证旧密码
     from app.core.security import verify_password_hash
-    if not verify_password_hash(data.old_password, user.password_hash, user.salt):
+    if not verify_password_hash(data.old_password, user_obj.password_hash, user_obj.salt):
         logger.info(f"修改密码失败，旧密码错误: {user_id}")
         return {
             ApiResponseConst.SUCCESS: False,
@@ -209,8 +225,8 @@ def change_password(
     
     # 设置新密码
     from app.core.security import generate_password_hash
-    user.password_hash, user.salt = generate_password_hash(data.new_password)
-    session.add(user)
+    user_obj.password_hash, user_obj.salt = generate_password_hash(data.new_password)
+    session.add(user_obj)
     session.commit()
     
     logger.info(f"密码修改成功: {user_id}")
@@ -221,60 +237,9 @@ def change_password(
 
 
 @router.get("/me")
-def get_current_user(request: Request, session: Session = Depends(get_session)):
-    """获取当前用户信息"""
-    user_id = request.session.get(SessionKeyConst.USER_ID)
-    role = request.session.get(SessionKeyConst.ROLE)
-    
-    if not user_id:
-        raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='请先登录')
-    
-    if role == UserRoleConst.STUDENT:
-        from app.crud import get_student, get_students, get_students_by_class
-        student = get_student(session, str(user_id))
-        if student:
-            # 计算排名
-            all_students = get_students(session)
-            class_students = get_students_by_class(session, student.class_name)
-            
-            # 按分数降序排序
-            all_sorted = sorted(all_students, key=lambda s: s.score, reverse=True)
-            class_sorted = sorted(class_students, key=lambda s: s.score, reverse=True)
-            
-            # 计算排名（从1开始）
-            school_rank = next((i for i, s in enumerate(all_sorted, 1) if s.student_id == student.student_id), len(all_sorted))
-            class_rank = next((i for i, s in enumerate(class_sorted, 1) if s.student_id == student.student_id), len(class_sorted))
-            
-            return {
-                ApiResponseConst.SUCCESS: True,
-                ApiResponseConst.DATA: {
-                    'id': str(student.student_id),
-                    SessionKeyConst.USERNAME: str(student.student_id),
-                    'name': student.name,
-                    SessionKeyConst.ROLE: UserRoleConst.STUDENT,
-                    SessionKeyConst.IS_ADMIN: False,
-                    'assigned_classes': [student.class_name],
-                    'score': student.score,
-                    'school_rank': school_rank,
-                    'class_rank': class_rank,
-                    'total_students': len(all_sorted),
-                    'class_total': len(class_sorted)
-                }
-            }
-    else:
-        from app.crud import get_user
-        user = get_user(session, user_id)
-        if user:
-            return {
-                ApiResponseConst.SUCCESS: True,
-                ApiResponseConst.DATA: {
-                    'id': user.id,
-                    SessionKeyConst.USERNAME: user.username,
-                    'name': user.name,
-                    SessionKeyConst.ROLE: user.role,
-                    SessionKeyConst.IS_ADMIN: user.is_admin(),
-                    'assigned_classes': user.assigned_classes
-                }
-            }
-    
-    raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='用户不存在')
+async def get_me(user: dict = Depends(get_current_user)):
+    """获取当前用户信息 - 从 JWT 解析"""
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: user
+    }

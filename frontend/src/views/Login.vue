@@ -317,7 +317,8 @@ const handleLogin = async () => {
         return
       }
       
-      userStore.setUser(res.data.id, res.data.username, res.data.name, res.data.role)
+      // JWT通过HttpOnly Cookie自动携带，获取完整用户信息
+      await userStore.fetchUserInfo()
       message.success('🎉 登录成功，欢迎回来！')
       
       // 根据角色跳转到不同页面

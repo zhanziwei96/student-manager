@@ -47,24 +47,28 @@ python -c "from app.core.config import get_settings; print(get_settings().app.en
 
 ## 开发类错误
 
-### 5. 混淆 UI 框架
-- 项目使用 **Naive UI**，不是 Element Plus
-- `el-button` → `n-button`
-- `el-input` → `n-input`
-
-### 6. 魔法字符串
-使用常量类避免拼写错误：
+### 6. JWT Claims 使用
+JWT Token 中包含的字段（claims）：
 
 ```python
-from app.models.constants import (
-    UserRoleConst,      # ADMIN, TEACHER, STUDENT
-    SessionKeyConst,    # USER_ID, USERNAME, ROLE, IS_ADMIN
-    ApiResponseConst,   # SUCCESS, DATA, MESSAGE
-)
+# JWT Payload 结构
+{
+    "sub": "1",           # 用户ID
+    "username": "admin",  # 用户名
+    "name": "管理员",      # 显示名称
+    "role": "admin",      # 角色: admin/teacher/student
+    "is_admin": true,     # 是否管理员
+    "exp": 1774265683     # 过期时间
+}
 
-# 正确
-role = UserRoleConst.ADMIN
-user_id = request.session.get(SessionKeyConst.USER_ID)
+# 从请求中获取用户信息
+from app.core.jwt import get_current_user
+
+@app.get("/api/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    user_id = user.get("sub")
+    role = user.get("role")
+    is_admin = user.get("is_admin")
 ```
 
 ### 7. API 响应格式
@@ -102,30 +106,6 @@ userStore.setUser(res.user.id, ...)  // ❌ 应该是 res.data.xxx
 if (res.data.role !== form.role) {
 userStore.setUser(res.data.id, res.data.username, res.data.name, res.data.role)
 ```
-
----
-
-### 9. 登录 401 错误显示样式问题（后端待修复）
-
-**问题**: 登录 401 错误显示 "Request failed with status code 401" 而不是 Naive UI 风格提示
-
-**原因**: 后端 `login.py` 中 `raise HTTPException` 直接抛出的错误没有走 `http_exception_handler` 统一转换格式，返回的是 FastAPI 默认的 `{detail: "..."}` 格式，而非项目统一的 `{success: false, message: "..."}`
-
-**影响范围**: 
-- 登录接口 401 错误
-- 登录接口 403 错误（账号锁定/禁用）
-
-**后端修复方案**: 
-需要在 `backend/app/api/routes/login.py` 中统一返回格式，例如：
-```python
-# 而不是 raise HTTPException(status_code=401, detail='用户名或密码错误')
-return {
-    ApiResponseConst.SUCCESS: False,
-    ApiResponseConst.MESSAGE: '用户名或密码错误'
-}
-```
-
-**前端暂不处理**，等待后端接口统一
 
 ---
 

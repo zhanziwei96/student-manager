@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
             return 'vue-vendor'
           }
-          if (id.includes('axios') || id.includes('js-cookie')) {
+          if (id.includes('axios')) {
             return 'utils'
           }
         },

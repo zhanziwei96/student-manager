@@ -51,13 +51,13 @@ def get_current_session(
 
 
 @router.post("/class-session/start")
-def begin_class(
+async def begin_class(
     request: Request,
     data: StartClassRequest,
     session: Session = Depends(get_session)
 ):
     """开始上课"""
-    require_login(request)
+    await require_login(request)
     
     class_session = start_class(session, data.class_name)
     return {
@@ -68,12 +68,12 @@ def begin_class(
 
 
 @router.post("/class-session/end")
-def finish_class(
+async def finish_class(
     request: Request,
     session: Session = Depends(get_session)
 ):
     """结束上课"""
-    require_login(request)
+    await require_login(request)
     
     end_class(session)
     return {

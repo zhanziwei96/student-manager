@@ -95,7 +95,7 @@ class TestUserManagementScenario:
         assert update_response.json()["data"]["name"] == "更新的教师名"
         
         # 3. 重置密码
-        reset_response = admin_client.post(f"/api/admin/users/{user_id}/reset-password", json={
+        reset_response = admin_client.put(f"/api/admin/users/{user_id}/reset-password", json={
             "new_password": "newpass123"
         })
         assert reset_response.status_code == 200

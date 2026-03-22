@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "element-plus": "^2.13.5"
+  },
+  "devDependencies": {
+    "@playwright/mcp": "^0.0.68"
   }
 }
