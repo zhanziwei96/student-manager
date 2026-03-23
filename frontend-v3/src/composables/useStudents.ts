@@ -7,7 +7,7 @@ import type { UpdateScoreRequest } from '@/types'
  * Based on: https://github.com/tanstack/query
  */
 export function useStudents() {
-  return useQuery({
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
       const res = await studentsApi.getAll()
@@ -17,12 +17,19 @@ export function useStudents() {
       throw new Error(res.message || 'Failed to fetch students')
     },
   })
+
+  return {
+    data,
+    isPending,
+    error,
+    refetch,
+  }
 }
 
-export function useUpdateScore() {
+export function useScoreUpdate() {
   const queryClient = useQueryClient()
 
-  return useMutation({
+  const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: UpdateScoreRequest }) => {
       const res = await studentsApi.updateScore(id, data)
       if (res.success && res.data) {
@@ -31,10 +38,16 @@ export function useUpdateScore() {
       throw new Error(res.message || 'Failed to update score')
     },
     onSuccess: () => {
-      // Invalidate students cache
+      // 使学生缓存失效
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      // Also invalidate stats
+      // 同时使统计数据失效
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
   })
+
+  return {
+    mutateAsync,
+    isPending,
+    error,
+  }
 }

@@ -8,31 +8,31 @@ const { data: stats, isPending, error } = useStats()
 
 const statCards = computed(() => [
   {
-    title: 'Total Students',
+    title: '学生总数',
     value: stats.value?.total_students ?? 0,
     icon: Users,
-    trend: '+12%',
+    trend: '+12%', // TODO: 从 API 获取真实趋势数据
     color: 'text-blue-400',
   },
   {
-    title: 'Active Students',
+    title: '活跃学生',
     value: stats.value?.active_students ?? 0,
     icon: GraduationCap,
-    trend: '+5%',
+    trend: '+5%', // TODO: 从 API 获取真实趋势数据
     color: 'text-green-400',
   },
   {
-    title: 'Total Classes',
+    title: '班级总数',
     value: stats.value?.total_classes ?? 0,
     icon: BookOpen,
-    trend: '0%',
+    trend: '0%', // TODO: 从 API 获取真实趋势数据
     color: 'text-purple-400',
   },
   {
-    title: 'Avg Score',
+    title: '平均分数',
     value: Math.round(stats.value?.average_score ?? 0),
     icon: TrendingUp,
-    trend: '+2%',
+    trend: '+2%', // TODO: 从 API 获取真实趋势数据
     color: 'text-orange-400',
   },
 ])
@@ -42,8 +42,8 @@ const statCards = computed(() => [
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">Dashboard</h1>
-      <p class="text-white/60">Welcome back, Administrator</p>
+      <h1 class="text-2xl font-bold text-white">仪表板</h1>
+      <p class="text-white/60">欢迎回来，管理员</p>
     </div>
 
     <!-- Loading state -->
@@ -53,7 +53,7 @@ const statCards = computed(() => [
 
     <!-- Error state -->
     <div v-else-if="error" class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400">
-      Failed to load stats: {{ error.message }}
+      加载统计数据失败: {{ error.message }}
     </div>
 
     <!-- Stats grid -->
@@ -76,16 +76,17 @@ const statCards = computed(() => [
           <Badge variant="secondary" class="text-xs">
             {{ card.trend }}
           </Badge>
-          <span class="text-xs text-white/40">from last month</span>
+          <span class="text-xs text-white/40">较上月</span>
         </div>
       </Card>
     </div>
 
     <!-- Recent activity -->
     <Card class="border-white/10 bg-white/[0.02] p-6">
-      <h2 class="text-lg font-semibold text-white">Recent Activity</h2>
-      <p class="text-sm text-white/60">Latest updates from your classroom</p>
+      <h2 class="text-lg font-semibold text-white">最近活动</h2>
+      <p class="text-sm text-white/60">课堂最新动态</p>
       
+      <!-- TODO: 替换为真实的活动日志 API -->
       <div class="mt-6 space-y-4">
         <div
           v-for="i in 5"
@@ -94,10 +95,10 @@ const statCards = computed(() => [
         >
           <div class="h-8 w-8 rounded-full bg-primary/20" />
           <div class="flex-1">
-            <p class="text-sm text-white">Student {{ i }} checked in</p>
-            <p class="text-xs text-white/40">{{ i }} minutes ago</p>
+            <p class="text-sm text-white">学生 {{ i }} 签到成功</p>
+            <p class="text-xs text-white/40">{{ i }} 分钟前</p>
           </div>
-          <Badge variant="secondary">+10 points</Badge>
+          <Badge variant="secondary">+10 分</Badge>
         </div>
       </div>
     </Card>

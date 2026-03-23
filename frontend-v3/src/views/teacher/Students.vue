@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useStudents, useUpdateScore } from '@/composables'
-import { Card, Button, Badge, Dialog, Input, Label } from '@/components/ui'
-import { Search, Plus, Minus, Loader2, TrendingUp, TrendingDown } from 'lucide-vue-next'
+import { useStudents, useScoreUpdate } from '@/composables'
+import { Card, Button, Badge, Dialog, Input, Label, DataContainer, SearchableSelect } from '@/components/ui'
+import { Search, TrendingUp, TrendingDown } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
 
-const { data: students, isPending, error } = useStudents()
-const updateScoreMutation = useUpdateScore()
+const { data: students, isPending, error, refetch } = useStudents()
+const { mutateAsync: updateScore, isPending: isUpdatingScore } = useScoreUpdate()
 
 const searchQuery = ref('')
+const selectedClass = ref<string>('')
 const selectedStudent = ref<Student | null>(null)
 const showScoreDialog = ref(false)
 const scoreChange = ref(0)
@@ -19,17 +20,63 @@ const showToast = ref(false)
 const toastMessage = ref('')
 const toastVariant = ref<'default' | 'success' | 'error'>('default')
 
+// 按班级分组的学生
+const studentsByClass = computed(() => {
+  if (!students.value) return {}
+  
+  const grouped: Record<string, Student[]> = {}
+  students.value.forEach(student => {
+    const className = student.class_name || '未分班'
+    if (!grouped[className]) {
+      grouped[className] = []
+    }
+    grouped[className].push(student)
+  })
+  return grouped
+})
+
+// 班级列表（包含学生数量）
+const classList = computed(() => {
+  const list = Object.entries(studentsByClass.value).map(([name, students]) => ({
+    name,
+    count: students.length,
+  }))
+  // 按班级名称排序
+  return list.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+})
+
+// 班级下拉选项
+const classOptions = computed(() => [
+  { value: '', label: '全部班级' },
+  ...classList.value.map(c => ({ 
+    value: c.name, 
+    label: `${c.name} (${c.count}人)` 
+  }))
+])
+
+// 过滤后的学生列表
 const filteredStudents = computed(() => {
   if (!students.value) return []
-  if (!searchQuery.value) return students.value
   
-  const query = searchQuery.value.toLowerCase()
-  return students.value.filter(
-    (s) =>
-      s.name.toLowerCase().includes(query) ||
-      s.student_id.toLowerCase().includes(query) ||
-      s.class_name.toLowerCase().includes(query)
-  )
+  let result = students.value
+  
+  // 按班级筛选
+  if (selectedClass.value) {
+    result = result.filter(s => s.class_name === selectedClass.value)
+  }
+  
+  // 按搜索词筛选
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(
+      (s) =>
+        s.name.toLowerCase().includes(query) ||
+        s.student_id.toLowerCase().includes(query) ||
+        s.class_name.toLowerCase().includes(query)
+    )
+  }
+  
+  return result
 })
 
 const openScoreDialog = (student: Student, isAdd: boolean) => {
@@ -43,7 +90,7 @@ const handleUpdateScore = async () => {
   if (!selectedStudent.value) return
 
   try {
-    await updateScoreMutation.mutateAsync({
+    await updateScore({
       id: selectedStudent.value.id,
       data: {
         score_change: scoreChange.value,
@@ -51,12 +98,12 @@ const handleUpdateScore = async () => {
       },
     })
 
-    toastMessage.value = `Score updated for ${selectedStudent.value.name}`
+    toastMessage.value = `${selectedStudent.value.name} 的分数已更新`
     toastVariant.value = 'success'
     showToast.value = true
     showScoreDialog.value = false
   } catch (err: any) {
-    toastMessage.value = err.message || 'Failed to update score'
+    toastMessage.value = err.message || '更新分数失败'
     toastVariant.value = 'error'
     showToast.value = true
   }
@@ -67,113 +114,125 @@ const handleUpdateScore = async () => {
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">My Students</h1>
-      <p class="text-white/60">View and manage your students' scores</p>
+      <h1 class="text-2xl font-bold text-white">我的学生</h1>
+      <p class="text-white/60">查看和管理学生分数</p>
     </div>
 
-    <!-- Search -->
-    <div class="relative">
-      <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
-      <Input
-        v-model="searchQuery"
-        placeholder="Search students..."
-        class="pl-10"
-      />
+    <!-- Filters -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <!-- Class Filter -->
+      <div class="w-full sm:w-64">
+        <SearchableSelect
+          v-model="selectedClass"
+          :options="classOptions"
+          placeholder="选择班级筛选..."
+          search-placeholder="搜索班级..."
+        />
+      </div>
+
+      <!-- Search -->
+      <div class="relative flex-1">
+        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+        <Input
+          v-model="searchQuery"
+          placeholder="搜索学生..."
+          class="pl-10"
+        />
+      </div>
     </div>
 
-    <!-- Loading state -->
-    <div v-if="isPending" class="flex h-64 items-center justify-center">
-      <Loader2 class="h-8 w-8 animate-spin text-primary" />
-    </div>
-
-    <!-- Error state -->
-    <div v-else-if="error" class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400">
-      Failed to load students: {{ error.message }}
-    </div>
-
-    <!-- Students list -->
-    <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <Card
-        v-for="student in filteredStudents"
-        :key="student.id"
-        class="border-white/10 bg-white/[0.02] p-4"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-              <span class="text-sm font-medium text-primary">
-                {{ student.name.charAt(0).toUpperCase() }}
-              </span>
+    <!-- Data Container -->
+    <DataContainer
+      :loading="isPending"
+      :error="error"
+      :has-data="filteredStudents.length > 0"
+      empty-text="未找到匹配的学生"
+      @retry="refetch"
+    >
+      <!-- Students list -->
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card
+          v-for="student in filteredStudents"
+          :key="student.id"
+          class="border-white/10 bg-white/[0.02] p-4"
+        >
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+                <span class="text-sm font-medium text-primary">
+                  {{ student.name.charAt(0).toUpperCase() }}
+                </span>
+              </div>
+              <div>
+                <p class="font-medium text-white">{{ student.name }}</p>
+                <p class="text-xs text-white/60">{{ student.student_id }}</p>
+                <p class="text-xs text-white/40">{{ student.class_name }}</p>
+              </div>
             </div>
+            <Badge :variant="student.status === 'active' ? 'success' : 'secondary'">
+              {{ student.status === 'active' ? '活跃' : '非活跃' }}
+            </Badge>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between">
             <div>
-              <p class="font-medium text-white">{{ student.name }}</p>
-              <p class="text-xs text-white/60">{{ student.student_id }}</p>
+              <p class="text-xs text-white/40">分数</p>
+              <p class="text-2xl font-bold text-primary">{{ student.score }}</p>
+            </div>
+            <div class="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                class="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                @click="openScoreDialog(student, true)"
+              >
+                <TrendingUp class="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                class="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                @click="openScoreDialog(student, false)"
+              >
+                <TrendingDown class="h-4 w-4" />
+              </Button>
             </div>
           </div>
-          <Badge :variant="student.status === 'active' ? 'success' : 'secondary'">
-            {{ student.status }}
-          </Badge>
-        </div>
-
-        <div class="mt-4 flex items-center justify-between">
-          <div>
-            <p class="text-xs text-white/40">Score</p>
-            <p class="text-2xl font-bold text-primary">{{ student.score }}</p>
-          </div>
-          <div class="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              class="border-green-500/30 text-green-400 hover:bg-green-500/10"
-              @click="openScoreDialog(student, true)"
-            >
-              <TrendingUp class="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              class="border-red-500/30 text-red-400 hover:bg-red-500/10"
-              @click="openScoreDialog(student, false)"
-            >
-              <TrendingDown class="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </DataContainer>
 
     <!-- Score Dialog -->
-    <Dialog v-model:open="showScoreDialog" title="Update Score">
+    <Dialog v-model:open="showScoreDialog" title="更新分数">
       <div class="space-y-4">
         <p v-if="selectedStudent" class="text-white/60">
-          Update score for <span class="font-medium text-white">{{ selectedStudent.name }}</span>
+          更新 <span class="font-medium text-white">{{ selectedStudent.name }}</span> 的分数
         </p>
         <div class="space-y-2">
-          <Label for="scoreChange">Score Change</Label>
+          <Label for="scoreChange">分数变化</Label>
           <Input
             id="scoreChange"
             v-model.number="scoreChange"
             type="number"
-            placeholder="Enter points (positive or negative)"
+            placeholder="输入分数（正数或负数）"
           />
         </div>
         <div class="space-y-2">
-          <Label for="reason">Reason</Label>
+          <Label for="reason">原因</Label>
           <Input
             id="reason"
             v-model="scoreReason"
-            placeholder="Enter reason for score change"
+            placeholder="输入分数变化原因"
           />
         </div>
       </div>
       <template #footer>
-        <Button variant="outline" @click="showScoreDialog = false">Cancel</Button>
+        <Button variant="outline" @click="showScoreDialog = false">取消</Button>
         <Button
-          :disabled="updateScoreMutation.isPending.value"
+          :loading="isUpdatingScore"
           @click="handleUpdateScore"
         >
-          <Loader2 v-if="updateScoreMutation.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
-          Update Score
+          更新分数
         </Button>
       </template>
     </Dialog>

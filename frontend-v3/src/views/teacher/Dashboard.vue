@@ -10,22 +10,22 @@ const { data: stats, isPending, error } = useStats()
 
 const statCards = computed(() => [
   {
-    title: 'My Students',
+    title: '我的学生',
     value: stats.value?.total_students ?? 0,
     icon: Users,
     color: 'text-blue-400',
     link: '/teacher/students',
   },
   {
-    title: 'Active Sessions',
-    value: '2',
+    title: '活跃课堂',
+    value: '2', // TODO: 从 API 获取真实数据
     icon: Calendar,
     color: 'text-green-400',
     link: '/teacher/session',
   },
   {
-    title: 'Class Hours',
-    value: '24h',
+    title: '授课时长',
+    value: '24小时', // TODO: 从 API 获取真实数据
     icon: Clock,
     color: 'text-purple-400',
     link: '/teacher',
@@ -37,19 +37,19 @@ const statCards = computed(() => [
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">Teacher Dashboard</h1>
-      <p class="text-white/60">Welcome back, Teacher</p>
+      <h1 class="text-2xl font-bold text-white">教师仪表板</h1>
+      <p class="text-white/60">欢迎回来，教师</p>
     </div>
 
     <!-- Quick actions -->
     <div class="flex gap-4">
       <Button @click="router.push('/teacher/session')">
         <Calendar class="mr-2 h-4 w-4" />
-        Start Class Session
+        开始上课
       </Button>
       <Button variant="outline" @click="router.push('/teacher/students')">
         <Users class="mr-2 h-4 w-4" />
-        View Students
+        查看学生
       </Button>
     </div>
 
@@ -60,7 +60,7 @@ const statCards = computed(() => [
 
     <!-- Error state -->
     <div v-else-if="error" class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400">
-      Failed to load stats: {{ error.message }}
+      加载统计数据失败: {{ error.message }}
     </div>
 
     <!-- Stats grid -->
@@ -81,7 +81,7 @@ const statCards = computed(() => [
         </div>
         <div class="mt-4">
           <Button variant="ghost" size="sm" class="p-0 text-primary hover:text-primary/80" @click="router.push(card.link)">
-            View details
+            查看详情
             <ArrowRight class="ml-1 h-4 w-4" />
           </Button>
         </div>
@@ -90,8 +90,8 @@ const statCards = computed(() => [
 
     <!-- Today's schedule -->
     <Card class="border-white/10 bg-white/[0.02] p-6">
-      <h2 class="text-lg font-semibold text-white">Today's Schedule</h2>
-      <p class="text-sm text-white/60">Your classes for today</p>
+      <h2 class="text-lg font-semibold text-white">今日课表</h2>
+      <p class="text-sm text-white/60">今天的课程安排</p>
       
       <div class="mt-6 space-y-4">
         <div
@@ -103,10 +103,10 @@ const statCards = computed(() => [
             <span class="text-xs font-medium">{{ 9 + i }}:00</span>
           </div>
           <div class="flex-1">
-            <p class="font-medium text-white">Computer Science {{ i }}01</p>
-            <p class="text-sm text-white/60">Room {{ 100 + i }} • {{ 20 + i * 5 }} students</p>
+            <p class="font-medium text-white">计算机科学 {{ i }}01</p>
+            <p class="text-sm text-white/60">教室 {{ 100 + i }} • {{ 20 + i * 5 }} 名学生</p>
           </div>
-          <Badge variant="secondary">Upcoming</Badge>
+          <Badge variant="secondary">即将开始</Badge>
         </div>
       </div>
     </Card>

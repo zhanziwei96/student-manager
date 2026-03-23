@@ -3,13 +3,15 @@ import { computed } from 'vue'
 import { useAuthStore } from '@/stores'
 import { useStudents } from '@/composables'
 import { Card, Badge } from '@/components/ui'
-import { Star, TrendingUp, Users, Award, Loader2 } from 'lucide-vue-next'
+import { Star, TrendingUp, Users, Award, Loader2, AlertCircle } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
-const { data: students, isPending } = useStudents()
+const { data: students, isPending, error } = useStudents()
 
+// TODO: 后端需要添加用户关联的 student_id，目前临时使用 name 匹配
 const currentStudent = computed(() => {
   if (!students.value) return null
+  // FIXME: 应该通过 student_id 匹配而非 name，避免重名问题
   return students.value.find(s => s.name === authStore.user?.name) || null
 })
 
@@ -17,7 +19,7 @@ const rank = computed(() => {
   if (!students.value || !currentStudent.value) return '-'
   const sorted = [...students.value].sort((a, b) => b.score - a.score)
   const index = sorted.findIndex(s => s.id === currentStudent.value!.id)
-  return index >= 0 ? `#${index + 1}` : '-'
+  return index >= 0 ? `第 ${index + 1} 名` : '-'
 })
 </script>
 
@@ -25,8 +27,8 @@ const rank = computed(() => {
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">Student Dashboard</h1>
-      <p class="text-white/60">Welcome back, {{ authStore.user?.name }}</p>
+      <h1 class="text-2xl font-bold text-white">学生仪表板</h1>
+      <p class="text-white/60">欢迎回来，{{ authStore.user?.name }}</p>
     </div>
 
     <!-- Loading state -->
@@ -34,24 +36,37 @@ const rank = computed(() => {
       <Loader2 class="h-8 w-8 animate-spin text-primary" />
     </div>
 
-    <template v-else-if="currentStudent">
+    <!-- Error state -->
+    <div v-else-if="error" class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400">
+      <div class="flex items-center gap-2">
+        <AlertCircle class="h-5 w-5" />
+        <span>加载数据失败: {{ error.message }}</span>
+      </div>
+    </div>
+
+    <!-- No data state -->
+    <div v-else-if="!currentStudent" class="rounded-lg border border-white/10 bg-white/[0.02] p-8 text-center">
+      <p class="text-white/60">未找到您的学生信息</p>
+    </div>
+
+    <template v-else>
       <!-- Score card -->
       <Card class="relative overflow-hidden border-white/10 bg-gradient-to-br from-primary/20 to-accent-cyan/20 p-8">
         <div class="relative z-10">
           <div class="flex items-center gap-3">
             <Star class="h-8 w-8 text-yellow-400" />
             <div>
-              <p class="text-sm text-white/80">Your Score</p>
+              <p class="text-sm text-white/80">我的分数</p>
               <p class="text-5xl font-bold text-white">{{ currentStudent.score }}</p>
             </div>
           </div>
           <div class="mt-4 flex items-center gap-2">
             <Badge variant="secondary" class="bg-white/20">
               <TrendingUp class="mr-1 h-3 w-3" />
-              +10 this week
+              本周 +10
             </Badge>
             <Badge variant="secondary" class="bg-white/20">
-              Rank {{ rank }}
+              排名 {{ rank }}
             </Badge>
           </div>
         </div>
@@ -68,7 +83,7 @@ const rank = computed(() => {
               <Users class="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <p class="text-sm text-white/60">Class</p>
+              <p class="text-sm text-white/60">班级</p>
               <p class="font-medium text-white">{{ currentStudent.class_name }}</p>
             </div>
           </div>
@@ -79,7 +94,7 @@ const rank = computed(() => {
               <Award class="h-5 w-5 text-purple-400" />
             </div>
             <div>
-              <p class="text-sm text-white/60">Student ID</p>
+              <p class="text-sm text-white/60">学号</p>
               <p class="font-medium text-white">{{ currentStudent.student_id }}</p>
             </div>
           </div>
@@ -90,9 +105,9 @@ const rank = computed(() => {
               <TrendingUp class="h-5 w-5 text-green-400" />
             </div>
             <div>
-              <p class="text-sm text-white/60">Status</p>
+              <p class="text-sm text-white/60">状态</p>
               <Badge :variant="currentStudent.status === 'active' ? 'success' : 'secondary'">
-                {{ currentStudent.status }}
+                {{ currentStudent.status === 'active' ? '活跃' : '非活跃' }}
               </Badge>
             </div>
           </div>
@@ -101,8 +116,9 @@ const rank = computed(() => {
 
       <!-- Recent activity -->
       <Card class="border-white/10 bg-white/[0.02] p-6">
-        <h2 class="text-lg font-semibold text-white">Recent Activity</h2>
-        <p class="text-sm text-white/60">Your latest score changes</p>
+        <h2 class="text-lg font-semibold text-white">最近活动</h2>
+        <p class="text-sm text-white/60">最新的分数变化</p>
+        <!-- TODO: 替换为真实的分数历史 API -->
         <div class="mt-6 space-y-4">
           <div class="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-4">
             <div class="flex items-center gap-3">
@@ -110,8 +126,8 @@ const rank = computed(() => {
                 <TrendingUp class="h-4 w-4 text-green-400" />
               </div>
               <div>
-                <p class="text-sm text-white">Class participation</p>
-                <p class="text-xs text-white/40">2 days ago</p>
+                <p class="text-sm text-white">课堂参与</p>
+                <p class="text-xs text-white/40">2 天前</p>
               </div>
             </div>
             <Badge variant="success">+10</Badge>
@@ -122,8 +138,8 @@ const rank = computed(() => {
                 <TrendingUp class="h-4 w-4 text-green-400" />
               </div>
               <div>
-                <p class="text-sm text-white">Assignment completed</p>
-                <p class="text-xs text-white/40">1 week ago</p>
+                <p class="text-sm text-white">完成作业</p>
+                <p class="text-xs text-white/40">1 周前</p>
               </div>
             </div>
             <Badge variant="success">+15</Badge>

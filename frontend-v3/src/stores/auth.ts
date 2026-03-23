@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { authApi } from '@/api'
-import type { User, LoginRequest, LoginResponse } from '@/types'
+import type { User, LoginRequest } from '@/types'
 
 /**
  * Auth Store using Pinia Setup Store + TanStack Query
@@ -12,13 +12,13 @@ export const useAuthStore = defineStore('auth', () => {
   const queryClient = useQueryClient()
   const user = ref<User | null>(null)
 
-  // Computed getters
+  // 计算属性 getters
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
   const isTeacher = computed(() => user.value?.role === 'teacher')
   const isStudent = computed(() => user.value?.role === 'student')
 
-  // Fetch current user query
+  // 获取当前用户查询
   const { refetch: fetchUserInfo } = useQuery({
     queryKey: ['me'],
     queryFn: async () => {
@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
     retry: false,
   })
 
-  // Login mutation
+  // 登录 mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
       const res = await authApi.login(data)
@@ -43,12 +43,12 @@ export const useAuthStore = defineStore('auth', () => {
       throw new Error(res.message || 'Login failed')
     },
     onSuccess: () => {
-      // Fetch full user info after login
+      // 登录后获取完整用户信息
       fetchUserInfo()
     },
   })
 
-  // Logout mutation
+  // 登出 mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const res = await authApi.logout()
@@ -57,13 +57,16 @@ export const useAuthStore = defineStore('auth', () => {
       }
     },
     onSuccess: () => {
+      // 清除用户状态
       user.value = null
+      // 清除所有查询缓存
       queryClient.clear()
+      // 通过刷新页面重置所有 store
       window.location.href = '/login'
     },
   })
 
-  // Actions
+  // 操作方法
   const login = async (data: LoginRequest) => {
     return loginMutation.mutateAsync(data)
   }

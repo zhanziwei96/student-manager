@@ -7,6 +7,10 @@ import type {
   ChangePasswordRequest,
 } from '@/types'
 
+/**
+ * 认证相关 API
+ * 后端路由: /api/login, /api/logout, /api/me, /api/change-password
+ */
 export const authApi = {
   login: (data: LoginRequest): Promise<ApiResponse<LoginResponse>> =>
     api('/login', { method: 'POST', body: data }),

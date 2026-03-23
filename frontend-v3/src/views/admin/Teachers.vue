@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Card, Button, Badge } from '@/components/ui'
+import { Card, Button, Badge, Input } from '@/components/ui'
 import { Plus, Search, Mail, Loader2 } from 'lucide-vue-next'
 import type { User } from '@/types'
 
-// Mock teachers data - replace with actual API call
+// TODO: 替换为真实的教师管理 API
 const teachers = ref<User[]>([
-  { id: 1, username: 'teacher1', name: 'John Smith', role: 'teacher' },
-  { id: 2, username: 'teacher2', name: 'Jane Doe', role: 'teacher' },
+  { id: 1, username: 'teacher1', name: '张老师', role: 'teacher' },
+  { id: 2, username: 'teacher2', name: '李老师', role: 'teacher' },
 ])
 const isPending = ref(false)
 const searchQuery = ref('')
@@ -18,23 +18,22 @@ const searchQuery = ref('')
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">Teachers</h1>
-        <p class="text-white/60">Manage teacher accounts</p>
+        <h1 class="text-2xl font-bold text-white">教师管理</h1>
+        <p class="text-white/60">管理教师账号</p>
       </div>
       <Button>
         <Plus class="mr-2 h-4 w-4" />
-        Add Teacher
+        添加教师
       </Button>
     </div>
 
     <!-- Search -->
     <div class="relative">
       <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
-      <input
+      <Input
         v-model="searchQuery"
-        type="text"
-        placeholder="Search teachers..."
-        class="w-full rounded-lg border border-white/20 bg-transparent py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/50 focus:border-primary focus:outline-none"
+        placeholder="搜索教师..."
+        class="pl-10"
       />
     </div>
 
@@ -60,16 +59,16 @@ const searchQuery = ref('')
             <h3 class="truncate font-medium text-white">{{ teacher.name }}</h3>
             <p class="text-sm text-white/60">@{{ teacher.username }}</p>
             <div class="mt-2 flex items-center gap-2">
-              <Badge variant="secondary">{{ teacher.role }}</Badge>
+              <Badge variant="secondary">教师</Badge>
             </div>
           </div>
         </div>
         <div class="mt-4 flex gap-2">
           <Button variant="outline" size="sm" class="flex-1">
             <Mail class="mr-2 h-4 w-4" />
-            Contact
+            联系
           </Button>
-          <Button variant="outline" size="sm" class="flex-1">Edit</Button>
+          <Button variant="outline" size="sm" class="flex-1">编辑</Button>
         </div>
       </Card>
     </div>

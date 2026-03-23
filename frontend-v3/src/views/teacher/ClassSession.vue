@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useClassSession, useStartClassSession, useEndClassSession, useCheckIn } from '@/composables'
-import { Card, Button, Input, Badge } from '@/components/ui'
-import { Play, Square, CheckCircle, Clock, Users, Loader2 } from 'lucide-vue-next'
+import { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCheckIn } from '@/composables'
+import { Card, Button, Input } from '@/components/ui'
+import { Play, Square, CheckCircle, Clock, Users } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 
 const className = ref('')
 const studentCode = ref('')
 
 const { data: activeSession } = useClassSession()
-const startSessionMutation = useStartClassSession()
-const endSessionMutation = useEndClassSession()
-const checkInMutation = useCheckIn()
+const { mutateAsync: startSession, isPending: isStartingSession } = useClassSessionStart()
+const { mutateAsync: endSession, isPending: isEndingSession } = useClassSessionEnd()
+const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn()
 
 const showToast = ref(false)
 const toastMessage = ref('')
@@ -21,19 +21,19 @@ const isSessionActive = computed(() => !!activeSession.value)
 
 const handleStartSession = async () => {
   if (!className.value.trim()) {
-    toastMessage.value = 'Please enter a class name'
+    toastMessage.value = '请输入班级名称'
     toastVariant.value = 'error'
     showToast.value = true
     return
   }
 
   try {
-    await startSessionMutation.mutateAsync(className.value)
-    toastMessage.value = 'Class session started!'
+    await startSession(className.value)
+    toastMessage.value = '课堂已开始！'
     toastVariant.value = 'success'
     showToast.value = true
   } catch (err: any) {
-    toastMessage.value = err.message || 'Failed to start session'
+    toastMessage.value = err.message || '开始课堂失败'
     toastVariant.value = 'error'
     showToast.value = true
   }
@@ -41,13 +41,13 @@ const handleStartSession = async () => {
 
 const handleEndSession = async () => {
   try {
-    await endSessionMutation.mutateAsync()
-    toastMessage.value = 'Class session ended!'
+    await endSession()
+    toastMessage.value = '课堂已结束！'
     toastVariant.value = 'success'
     showToast.value = true
     className.value = ''
   } catch (err: any) {
-    toastMessage.value = err.message || 'Failed to end session'
+    toastMessage.value = err.message || '结束课堂失败'
     toastVariant.value = 'error'
     showToast.value = true
   }
@@ -55,23 +55,23 @@ const handleEndSession = async () => {
 
 const handleCheckIn = async () => {
   if (!studentCode.value.trim()) {
-    toastMessage.value = 'Please enter student code'
+    toastMessage.value = '请输入学生代码'
     toastVariant.value = 'error'
     showToast.value = true
     return
   }
 
   try {
-    await checkInMutation.mutateAsync({
+    await checkIn({
       student_code: studentCode.value,
       session_id: activeSession.value?.id || '',
     })
-    toastMessage.value = 'Student checked in successfully!'
+    toastMessage.value = '学生签到成功！'
     toastVariant.value = 'success'
     showToast.value = true
     studentCode.value = ''
   } catch (err: any) {
-    toastMessage.value = err.message || 'Check-in failed'
+    toastMessage.value = err.message || '签到失败'
     toastVariant.value = 'error'
     showToast.value = true
   }
@@ -82,8 +82,8 @@ const handleCheckIn = async () => {
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">Class Session</h1>
-      <p class="text-white/60">Manage your active class sessions</p>
+      <h1 class="text-2xl font-bold text-white">课堂签到</h1>
+      <p class="text-white/60">管理您的活跃课堂</p>
     </div>
 
     <!-- Session status -->
@@ -101,33 +101,31 @@ const handleCheckIn = async () => {
           </div>
           <div>
             <h2 class="font-medium text-white">
-              {{ isSessionActive ? 'Session Active' : 'No Active Session' }}
+              {{ isSessionActive ? '课堂进行中' : '暂无活跃课堂' }}
             </h2>
             <p v-if="activeSession" class="text-sm text-white/60">
-              {{ activeSession.class_name }} • Started {{ activeSession.start_time }}
+              {{ activeSession.class_name }} • 开始于 {{ activeSession.start_time }}
             </p>
-            <p v-else class="text-sm text-white/60">Start a new session to begin</p>
+            <p v-else class="text-sm text-white/60">开始新课堂以进行签到</p>
           </div>
         </div>
         <div>
           <Button
             v-if="!isSessionActive"
-            :disabled="startSessionMutation.isPending.value"
+            :loading="isStartingSession"
             @click="handleStartSession"
           >
-            <Loader2 v-if="startSessionMutation.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
-            <Play v-else class="mr-2 h-4 w-4" />
-            Start Session
+            <Play class="mr-2 h-4 w-4" />
+            开始课堂
           </Button>
           <Button
             v-else
             variant="destructive"
-            :disabled="endSessionMutation.isPending.value"
+            :loading="isEndingSession"
             @click="handleEndSession"
           >
-            <Loader2 v-if="endSessionMutation.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
-            <Square v-else class="mr-2 h-4 w-4" />
-            End Session
+            <Square class="mr-2 h-4 w-4" />
+            结束课堂
           </Button>
         </div>
       </div>
@@ -135,19 +133,18 @@ const handleCheckIn = async () => {
 
     <!-- Start session form -->
     <Card v-if="!isSessionActive" class="border-white/10 bg-white/[0.02] p-6">
-      <h3 class="font-medium text-white">Start New Session</h3>
-      <p class="text-sm text-white/60">Enter class details to begin</p>
+      <h3 class="font-medium text-white">开始新课堂</h3>
+      <p class="text-sm text-white/60">输入班级信息以开始</p>
       <div class="mt-4 flex gap-4">
         <Input
           v-model="className"
-          placeholder="Enter class name (e.g., CS101)"
+          placeholder="请输入班级名称（如：计算机101）"
           class="flex-1"
           @keyup.enter="handleStartSession"
         />
-        <Button :disabled="startSessionMutation.isPending.value" @click="handleStartSession">
-          <Loader2 v-if="startSessionMutation.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
-          <Play v-else class="mr-2 h-4 w-4" />
-          Start
+        <Button :loading="isStartingSession" @click="handleStartSession">
+          <Play class="mr-2 h-4 w-4" />
+          开始
         </Button>
       </div>
     </Card>
@@ -159,21 +156,20 @@ const handleCheckIn = async () => {
           <CheckCircle class="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 class="font-medium text-white">Student Check-in</h3>
-          <p class="text-sm text-white/60">Enter student code to check them in</p>
+          <h3 class="font-medium text-white">学生签到</h3>
+          <p class="text-sm text-white/60">输入学生代码进行签到</p>
         </div>
       </div>
       <div class="mt-4 flex gap-4">
         <Input
           v-model="studentCode"
-          placeholder="Enter student code"
+          placeholder="请输入学生代码"
           class="flex-1"
           @keyup.enter="handleCheckIn"
         />
-        <Button :disabled="checkInMutation.isPending.value" @click="handleCheckIn">
-          <Loader2 v-if="checkInMutation.isPending.value" class="mr-2 h-4 w-4 animate-spin" />
-          <CheckCircle v-else class="mr-2 h-4 w-4" />
-          Check In
+        <Button :loading="isCheckingIn" @click="handleCheckIn">
+          <CheckCircle class="mr-2 h-4 w-4" />
+          签到
         </Button>
       </div>
     </Card>
@@ -184,7 +180,7 @@ const handleCheckIn = async () => {
         <div class="flex items-center gap-3">
           <Users class="h-5 w-5 text-white/60" />
           <div>
-            <p class="text-sm text-white/60">Checked In</p>
+            <p class="text-sm text-white/60">已签到</p>
             <p class="text-2xl font-bold text-white">{{ activeSession?.checked_in_count || 0 }}</p>
           </div>
         </div>
@@ -193,8 +189,8 @@ const handleCheckIn = async () => {
         <div class="flex items-center gap-3">
           <Clock class="h-5 w-5 text-white/60" />
           <div>
-            <p class="text-sm text-white/60">Duration</p>
-            <p class="text-2xl font-bold text-white">45 min</p>
+            <p class="text-sm text-white/60">已进行</p>
+            <p class="text-2xl font-bold text-white">45 分钟</p>
           </div>
         </div>
       </Card>

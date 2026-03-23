@@ -1,11 +1,11 @@
-// API Response wrapper
+// API 响应包装器
 export interface ApiResponse<T> {
   success: boolean
   data?: T
   message?: string
 }
 
-// User types
+// 用户类型
 export type UserRole = 'admin' | 'teacher' | 'student'
 
 export interface User {
@@ -16,7 +16,7 @@ export interface User {
   is_admin?: boolean
 }
 
-// Auth types
+// 认证类型
 export interface LoginRequest {
   username: string
   password: string
@@ -36,7 +36,7 @@ export interface ChangePasswordRequest {
   new_password: string
 }
 
-// Student types
+// 学生类型
 export interface Student {
   id: number
   student_id: string
@@ -67,7 +67,7 @@ export interface ScoreLog {
   created_by: string
 }
 
-// Stats types
+// 统计类型
 export interface StatsData {
   total_students: number
   active_students: number
@@ -86,7 +86,7 @@ export interface DashboardData {
   top_students: Student[]
 }
 
-// Class Session types
+// 课堂会话类型
 export interface ClassSession {
   id: string
   class_name: string
@@ -99,13 +99,8 @@ export interface StartClassRequest {
   class_name: string
 }
 
-// Check-in types
+// 签到类型
 export interface CheckinRequest {
-  student_code: string
-  session_id: string
-}
-
-export interface CheckInRequest {
   student_code: string
   session_id: string
 }
@@ -119,10 +114,12 @@ export interface CheckinRecord {
   points_earned: number
 }
 
-export interface CheckInResponse {
-  success: boolean
-  message: string
-  student_id?: string
-  student_name?: string
-  points_earned?: number
+// 班级信息类型
+export interface ClassInfo {
+  id: number
+  name: string
+  teacher: string
+  students: number
+  schedule: string
+  status: 'active' | 'inactive'
 }

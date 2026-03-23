@@ -1,19 +1,19 @@
 import { useQuery } from '@tanstack/vue-query'
-import { statsApi } from '@/api'
+import { classesApi } from '@/api'
 
 /**
- * Stats query composable
- * Based on: https://github.com/tanstack/query
+ * Classes query composable
+ * Fetches list of all class names
  */
-export function useStats() {
+export function useClasses() {
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['stats'],
+    queryKey: ['classes'],
     queryFn: async () => {
-      const res = await statsApi.getStats()
+      const res = await classesApi.getAll()
       if (res.success && res.data) {
         return res.data
       }
-      throw new Error(res.message || 'Failed to fetch stats')
+      throw new Error(res.message || 'Failed to fetch classes')
     },
   })
 

@@ -2,21 +2,13 @@
 import { ref } from 'vue'
 import { Card, Button, Badge } from '@/components/ui'
 import { Plus, Users, Calendar, Loader2 } from 'lucide-vue-next'
+import type { ClassInfo } from '@/types'
 
-interface ClassInfo {
-  id: number
-  name: string
-  teacher: string
-  students: number
-  schedule: string
-  status: 'active' | 'inactive'
-}
-
-// Mock classes data - replace with actual API call
+// TODO: 替换为真实的班级管理 API
 const classes = ref<ClassInfo[]>([
-  { id: 1, name: 'Computer Science 101', teacher: 'John Smith', students: 35, schedule: 'Mon/Wed 10:00', status: 'active' },
-  { id: 2, name: 'Data Structures', teacher: 'Jane Doe', students: 28, schedule: 'Tue/Thu 14:00', status: 'active' },
-  { id: 3, name: 'Algorithms', teacher: 'Bob Johnson', students: 22, schedule: 'Mon/Fri 09:00', status: 'inactive' },
+  { id: 1, name: '计算机科学 101', teacher: '张老师', students: 35, schedule: '周一/周三 10:00', status: 'active' },
+  { id: 2, name: '数据结构', teacher: '李老师', students: 28, schedule: '周二/周四 14:00', status: 'active' },
+  { id: 3, name: '算法设计', teacher: '王老师', students: 22, schedule: '周一/周五 09:00', status: 'inactive' },
 ])
 const isPending = ref(false)
 </script>
@@ -26,12 +18,12 @@ const isPending = ref(false)
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">Classes</h1>
-        <p class="text-white/60">Manage class schedules and assignments</p>
+        <h1 class="text-2xl font-bold text-white">班级管理</h1>
+        <p class="text-white/60">管理班级安排和分配</p>
       </div>
       <Button>
         <Plus class="mr-2 h-4 w-4" />
-        Add Class
+        添加班级
       </Button>
     </div>
 
@@ -50,17 +42,17 @@ const isPending = ref(false)
         <div class="flex items-start justify-between">
           <div>
             <h3 class="font-medium text-white">{{ cls.name }}</h3>
-            <p class="text-sm text-white/60">Teacher: {{ cls.teacher }}</p>
+            <p class="text-sm text-white/60">教师: {{ cls.teacher }}</p>
           </div>
           <Badge :variant="cls.status === 'active' ? 'success' : 'secondary'">
-            {{ cls.status }}
+            {{ cls.status === 'active' ? '活跃' : '非活跃' }}
           </Badge>
         </div>
         
         <div class="mt-4 space-y-2">
           <div class="flex items-center gap-2 text-sm text-white/60">
             <Users class="h-4 w-4" />
-            {{ cls.students }} students
+            {{ cls.students }} 名学生
           </div>
           <div class="flex items-center gap-2 text-sm text-white/60">
             <Calendar class="h-4 w-4" />
@@ -69,8 +61,8 @@ const isPending = ref(false)
         </div>
         
         <div class="mt-4 flex gap-2">
-          <Button variant="outline" size="sm" class="flex-1">View</Button>
-          <Button variant="outline" size="sm" class="flex-1">Edit</Button>
+          <Button variant="outline" size="sm" class="flex-1">查看</Button>
+          <Button variant="outline" size="sm" class="flex-1">编辑</Button>
         </div>
       </Card>
     </div>

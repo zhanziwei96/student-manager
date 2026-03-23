@@ -1,205 +1,243 @@
-# 常见错误速查
+# 执行约束清单
 
-## 环境类错误
+> **警告**: 本文件中的约束是我每次处理请求前**必须**回顾的内容。
+> 不遵循这些约束会导致重复犯错。
 
-### 1. 未激活 Conda 环境
+---
+
+## 通用禁令 (Universal Prohibitions)
+
+以下行为**绝对禁止**：
+
+| # | 禁令 | 违反后果 |
+|---|------|----------|
+| 1 | ❌ 不要在未检查服务状态的情况下重启服务 | 重复部署，端口冲突 |
+| 2 | ❌ 不要快速连续执行停止+启动命令 | 残留进程导致启动失败 |
+| 3 | ❌ 不要假设数据库/服务路径 | 操作错误的文件 |
+| 4 | ❌ 不要在未验证的情况下认为操作成功 | 隐藏错误 |
+| 5 | ❌ 不要修改 test 文件中的逻辑 | 破坏测试本身 |
+| 6 | ❌ **禁止在碰到问题后回退组件版本** | 掩盖问题，重复犯错 |
+
+---
+
+## 执行前强制检查清单
+
+每次执行命令前，按顺序检查：
+
 ```bash
-# 错误
-python -m pytest tests/  # 使用系统 Python
+# 1. 环境检查 (必须)
+which python  # 确认是 miniconda 路径
 
-# 正确
-conda activate student-manage
-python -m pytest tests/
+# 2. 服务状态检查 (必须)
+curl -s http://localhost:8000/api/health  # 后端是否已运行？
+curl -s http://localhost:5173 > /dev/null && echo "前端运行中"  # 前端是否已运行？
+
+# 3. 数据库路径确认 (涉及 DB 操作时必须)
+python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
 ```
 
-### 2. 数据库路径混淆
+**决策逻辑**:
+- 如果服务已运行 → 不需要重启
+- 如果服务未运行 → 按重启流程执行（见下方）
+
+---
+
+## 服务重启强制流程
+
+**禁止**直接执行 `python main.py` 或 `pnpm dev`。
+
+必须按以下步骤：
+
 ```bash
-# 正确 - 先确认实际路径
-python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
-# 通常是: /home/yufeng/student-manager/backend/data/class_system.db
+# 后端重启
+pkill -f "python main.py" 2>/dev/null || true
+sleep 3  # 必须等待！
+ps aux | grep "python.*main.py" | grep -v grep  # 检查残留
+# 如有残留: pkill -9 -f "python.*main.py"
+cd /home/yufeng/student-manager/backend
+conda run -n student-manage ENV=production python main.py &
+sleep 5
+curl -s http://localhost:8000/api/health  # 必须验证！
+
+# 前端重启
+pkill -f "pnpm dev" 2>/dev/null || true
+sleep 2
+cd /home/yufeng/student-manager/frontend-v3
+pnpm dev &
+sleep 3
+curl -s http://localhost:5173 > /dev/null && echo "前端运行中"  # 必须验证！
 ```
 
 ---
 
-## 配置类错误
+## 环境配置约束
 
-### 3. 嵌套配置格式错误
+### Conda 环境 (强制)
+- **所有 Python 命令**必须在 `student-manage` 环境中执行
+- **检查命令**: `which python` 应包含 `miniconda`
+- **激活命令**: `conda activate student-manage`
+
+### 环境变量格式 (强制)
 ```bash
-# 错误
-DATABASE_PATH=xxx
-
 # 正确 - 使用双下划线
 DATABASE__PATH=./data/class_system.db
 SECURITY__MAX_LOGIN_FAILURES=10
+
+# 错误 - 单下划线会被忽略
+DATABASE_PATH=xxx
 ```
 
-### 4. 环境变量未设置
+### 环境变量设置时机 (强制)
+必须在导入应用代码**之前**设置：
 ```bash
-# 必须在导入前设置
+# 正确
 export ENV=testing
 python main.py
 
-# 验证
-python -c "from app.core.config import get_settings; print(get_settings().app.env)"
+# 错误 - 在 Python 内设置不生效
+python -c "import os; os.environ['ENV'] = 'testing'; from app.core.config import get_settings"
 ```
 
 ---
 
-## 开发类错误
+## 前端开发约束
 
-### 6. JWT Claims 使用
-JWT Token 中包含的字段（claims）：
+### Tailwind CSS v4 (强制)
+- 自定义 `@theme` 会**完全覆盖**默认主题
+- 必须保留 `--spacing: 0.25rem` 基础单位
+- **正确做法**: 使用 `@theme inline` 或显式定义 `--spacing`
 
+```css
+/* 正确 */
+@theme inline {
+  --color-primary: #6366f1;
+}
+
+/* 或 */
+@theme {
+  --spacing: 0.25rem;  /* 必须保留！ */
+  --color-primary: #6366f1;
+}
+```
+
+### API 响应处理 (强制)
+- 后端返回格式: `{success: true, data: {...}, message: "..."}`
+- **禁止**直接访问 `res.user`，必须访问 `res.data`
+
+```javascript
+// 错误
+res.user.role
+
+// 正确
+res.data.role
+```
+
+---
+
+## 后端开发约束
+
+### JWT Claims (强制)
+Token 中包含以下字段：
 ```python
-# JWT Payload 结构
 {
     "sub": "1",           # 用户ID
     "username": "admin",  # 用户名
     "name": "管理员",      # 显示名称
-    "role": "admin",      # 角色: admin/teacher/student
+    "role": "admin",      # 角色
     "is_admin": true,     # 是否管理员
-    "exp": 1774265683     # 过期时间
 }
-
-# 从请求中获取用户信息
-from app.core.jwt import get_current_user
-
-@app.get("/api/me")
-async def get_me(user: dict = Depends(get_current_user)):
-    user_id = user.get("sub")
-    role = user.get("role")
-    is_admin = user.get("is_admin")
 ```
 
-### 7. API 响应格式
-使用常量返回统一响应：
+**禁止假设字段存在** - 始终使用 `.get()` 方法：
+```python
+user_id = user.get("sub")  # 正确
+user_id = user["sub"]      # 可能报错
+```
 
+### API 响应常量 (强制)
+**禁止**硬编码响应字段名，必须使用常量：
 ```python
 from app.models.constants import ApiResponseConst, MessageConst
 
+# 正确
 return {
     ApiResponseConst.SUCCESS: True,
     ApiResponseConst.MESSAGE: MessageConst.USER_CREATED,
     ApiResponseConst.DATA: user.model_dump()
 }
+
+# 错误
+return {"success": True, "message": "用户创建成功"}
 ```
 
 ---
 
-## 前端问题
+## 测试执行约束
 
-### 8. API 响应数据访问错误
-
-**问题**: 登录成功后 UI 仍显示"未登录"
-
-**原因**: 后端返回 `{success: true, data: {...}}`，但前端代码访问了 `res.user`
-
-**错误代码**:
-```javascript
-// Login.vue
-if (res.user.role !== form.role) {  // ❌ 应该是 res.data.role
-userStore.setUser(res.user.id, ...)  // ❌ 应该是 res.data.xxx
-```
-
-**正确代码**:
-```javascript
-if (res.data.role !== form.role) {
-userStore.setUser(res.data.id, res.data.username, res.data.name, res.data.role)
-```
-
----
-
-### 10. API 响应格式说明
-
-**后端统一格式**:
-```json
-// 成功 (HTTP 2xx)
-{"success": true, "data": {...}, "message": "..."}
-
-// 错误 (HTTP 4xx/5xx)
-{"success": false, "message": "错误信息"}
-```
-
-**前端处理规范**:
-- 成功响应: 检查 `res.success`，数据在 `res.data`，消息在 `res.message`
-- 错误响应: 错误信息在 `error.response.data?.message`
-
----
-
-## 测试类错误
-
-### 10. 测试路径问题
+### 运行路径 (强制)
 ```bash
-# 在项目根目录运行
+# 正确 - 在项目根目录运行
 pytest tests/ -v
 
-# 不要 cd 到 tests 目录
+# 错误 - 不要 cd 到 tests 目录
 ```
 
-### 11. 集成测试数据库
-集成测试使用内存数据库，与生产数据库隔离。
+### 修改后流程 (强制)
+修改或新增功能后，**必须**询问用户是否需要运行测试：
+
+> "修改/新增功能已完成，是否需要运行测试？
+> - 运行全部测试: pytest tests/ -v
+> - 仅单元测试: pytest tests/unit -v
+> - 仅集成测试: pytest tests/integration -v
+> - 不需要测试"
+
+**禁止**擅自决定不运行测试。
 
 ---
 
-## 检查清单
+## 错误排查约束
 
-执行命令前检查:
-- [ ] Conda 环境已激活 (`which python` 显示 miniconda 路径)
-- [ ] 服务已启动 (`curl http://localhost:8000/api/health`)
-- [ ] 数据库路径正确
+遇到问题时，**按顺序**执行：
 
-遇到错误时:
-- [ ] 查看后端输出日志
-- [ ] 检查进程 `ps aux | grep python`
-- [ ] 验证配置 `python -c "from app.core.config import get_settings; print(get_settings().app.env)"`
+1. **查看后端日志输出**（不是猜测）
+2. **检查进程**: `ps aux | grep python`
+3. **验证配置**: `python -c "from app.core.config import get_settings; print(get_settings().app.env)"`
+
+**禁止**在没有查看日志的情况下尝试修复。
 
 ---
 
-## 重启服务正确步骤
+## 数据库操作约束
 
-### 后端服务重启
-
+### 路径确认 (强制)
+执行任何数据库操作前，**必须**确认实际路径：
 ```bash
-# 1. 停止服务
-pkill -f "python main.py" 2>/dev/null || true
-
-# 2. 等待几秒确保完全停止（重要！）
-sleep 3
-
-# 3. 检查是否还有残留进程
-ps aux | grep "python.*main.py" | grep -v grep
-
-# 4. 如有残留，强制终止
-pkill -9 -f "python.*main.py" 2>/dev/null || true
-sleep 2
-
-# 5. 启动服务（生产环境）
-cd /home/yufeng/student-manager/backend
-conda run -n student-manage ENV=production python main.py &
-
-# 6. 等待几秒后验证
-sleep 5
-curl -s http://localhost:8000/api/health
+python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
 ```
 
-### 前端服务重启
+通常是: `/home/yufeng/student-manager/backend/data/class_system.db`
 
-```bash
-# 1. 停止服务
-pkill -f "pnpm dev" 2>/dev/null || true
+### 集成测试隔离 (强制)
+集成测试使用内存数据库，**禁止**连接到生产数据库。
 
-# 2. 等待几秒
-sleep 2
+---
 
-# 3. 启动服务
-cd /home/yufeng/student-manager/frontend
-pnpm dev &
+## 纠错记录
 
-# 4. 验证
-curl -s http://localhost:3000 > /dev/null && echo "前端运行中"
-```
+以下是我曾经犯过的错误，需要时刻警惕：
 
-**关键要点**:
-- 必须等待几秒确保进程完全停止后再启动
-- 不要连续快速执行停止和启动命令
-- 启动后必须验证健康检查接口再确认成功
+| 日期 | 错误 | 约束 |
+|------|------|------|
+| - | 未检查服务状态就重启 | 执行前必须检查 health |
+| - | 快速停止+启动导致残留进程 | 必须 sleep 3 秒 |
+| - | 未激活 Conda 环境 | 必须检查 which python |
+| - | Tailwind v4 覆盖默认主题 | 必须保留 --spacing |
+| - | 访问 res.user 而非 res.data | 必须使用 res.data.xxx |
+| - | 修改测试文件逻辑 | 禁止修改测试 |
+| - | 未验证就确认成功 | 必须用 curl 验证 |
+| 2026-03-23 | 碰到问题回退组件版本 | **禁止回退版本**，应先尝试修复或报告 |
+
+---
+
+**最后更新**: 2026-03-23
+**版本**: v2 (约束清单格式)

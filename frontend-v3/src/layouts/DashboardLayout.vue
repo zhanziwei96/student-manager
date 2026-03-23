@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { Button } from '@/components/ui'
 import {
@@ -15,7 +15,6 @@ import {
 
 const authStore = useAuthStore()
 const route = useRoute()
-const router = useRouter()
 
 const user = computed(() => authStore.user)
 
@@ -25,19 +24,19 @@ const navItems = computed(() => {
 
   if (authStore.isAdmin) {
     items.push(
-      { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-      { name: 'Students', path: '/admin/students', icon: Users },
-      { name: 'Teachers', path: '/admin/teachers', icon: User },
-      { name: 'Classes', path: '/admin/classes', icon: School }
+      { name: '仪表板', path: '/admin', icon: LayoutDashboard },
+      { name: '学生管理', path: '/admin/students', icon: Users },
+      { name: '教师管理', path: '/admin/teachers', icon: User },
+      { name: '班级管理', path: '/admin/classes', icon: School }
     )
   } else if (authStore.isTeacher) {
     items.push(
-      { name: 'Dashboard', path: '/teacher', icon: LayoutDashboard },
-      { name: 'Students', path: '/teacher/students', icon: Users },
-      { name: 'Class Session', path: '/teacher/session', icon: Calendar }
+      { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
+      { name: '学生管理', path: '/teacher/students', icon: Users },
+      { name: '课堂签到', path: '/teacher/session', icon: Calendar }
     )
   } else if (authStore.isStudent) {
-    items.push({ name: 'Dashboard', path: '/student', icon: LayoutDashboard })
+    items.push({ name: '仪表板', path: '/student', icon: LayoutDashboard })
   }
 
   return items
@@ -61,7 +60,7 @@ const handleLogout = async () => {
       <!-- Logo -->
       <div class="flex h-16 items-center border-b border-white/10 px-6">
         <GraduationCap class="h-8 w-8 text-primary" />
-        <span class="ml-3 text-xl font-bold text-white">ClassHub</span>
+        <span class="ml-3 text-xl font-bold text-white">智慧课堂</span>
       </div>
 
       <!-- User info -->
@@ -72,7 +71,9 @@ const handleLogout = async () => {
           </div>
           <div class="flex-1 min-w-0">
             <p class="truncate text-sm font-medium text-white">{{ user?.name }}</p>
-            <p class="truncate text-xs text-white/50 capitalize">{{ user?.role }}</p>
+            <p class="truncate text-xs text-white/50 capitalize">
+              {{ user?.role === 'admin' ? '管理员' : user?.role === 'teacher' ? '教师' : '学生' }}
+            </p>
           </div>
         </div>
       </div>
@@ -99,7 +100,7 @@ const handleLogout = async () => {
       <div class="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
         <Button variant="ghost" class="w-full justify-start gap-2 text-white/70" @click="handleLogout">
           <LogOut class="h-5 w-5" />
-          Logout
+          退出登录
         </Button>
       </div>
     </aside>
@@ -107,7 +108,6 @@ const handleLogout = async () => {
     <!-- Main content -->
     <main class="ml-64 min-h-screen p-8">
       <div class="mx-auto max-w-7xl">
-        <slot />
         <RouterView />
       </div>
     </main>

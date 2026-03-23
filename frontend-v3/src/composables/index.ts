@@ -1,3 +1,5 @@
-export { useStudents, useUpdateScore } from './useStudents'
+export { useStudents, useScoreUpdate } from './useStudents'
 export { useStats } from './useStats'
-export { useClassSession, useStartClassSession, useEndClassSession, useCheckIn } from './useClassSession'
+export { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCheckIn } from './useClassSession'
+export { useToast } from './useToast'
+export { useClasses } from './useClasses'

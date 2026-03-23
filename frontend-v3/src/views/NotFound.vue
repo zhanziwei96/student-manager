@@ -16,9 +16,9 @@ const router = useRouter()
       </div>
       
       <h1 class="mt-6 text-4xl font-bold text-white">404</h1>
-      <p class="mt-2 text-lg text-white/60">Page not found</p>
+      <p class="mt-2 text-lg text-white/60">页面未找到</p>
       <p class="mt-2 text-sm text-white/40">
-        The page you're looking for doesn't exist or has been moved.
+        您访问的页面不存在或已被移除。
       </p>
       
       <Button
@@ -27,7 +27,7 @@ const router = useRouter()
         @click="router.push('/')"
       >
         <ArrowLeft class="mr-2 h-4 w-4" />
-        Back to Home
+        返回首页
       </Button>
     </Card>
   </div>

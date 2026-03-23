@@ -15,18 +15,18 @@ const router = useRouter()
 const features = [
   {
     icon: Users,
-    title: 'Student Management',
-    description: 'Comprehensive student profiles, scores, and status tracking.',
+    title: '学生管理',
+    description: '全面的学生档案、成绩和状态追踪。',
   },
   {
     icon: BarChart3,
-    title: 'Real-time Analytics',
-    description: 'Live dashboard with key metrics and insights.',
+    title: '实时分析',
+    description: '实时仪表板，关键指标和洞察一目了然。',
   },
   {
     icon: CheckCircle,
-    title: 'Class Sessions',
-    description: 'Interactive check-in system for active learning.',
+    title: '课堂签到',
+    description: '互动式签到系统，促进积极学习。',
   },
 ]
 </script>
@@ -38,14 +38,14 @@ const features = [
       <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <div class="flex items-center gap-2">
           <GraduationCap class="h-8 w-8 text-primary" />
-          <span class="text-xl font-bold text-white">ClassHub</span>
+          <span class="text-xl font-bold text-white">智慧课堂</span>
         </div>
         <div class="flex items-center gap-4">
           <Button variant="ghost" class="text-white/70" @click="router.push('/login')">
-            Sign In
+            登录
           </Button>
           <Button @click="router.push('/login')">
-            Get Started
+            开始使用
             <ArrowRight class="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -53,7 +53,7 @@ const features = [
     </nav>
 
     <!-- Hero Section -->
-    <section class="relative overflow-hidden px-6 pt-32">
+    <section class="relative overflow-hidden px-4 sm:px-6 pt-24 sm:pt-32 pb-12">
       <!-- Background effects -->
       <div class="absolute inset-0 overflow-hidden">
         <div class="absolute -left-1/4 top-0 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]" />
@@ -63,35 +63,31 @@ const features = [
       <div class="relative mx-auto max-w-5xl text-center">
         <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-white/80">
           <Sparkles class="h-4 w-4 text-primary" />
-          Smart Student Management System
+          智能学生管理系统
         </div>
         
-        <h1 class="mt-6 text-4xl font-bold leading-tight text-white sm:text-6xl">
-          Manage your classroom
-          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">
-            with intelligence
+        <h1 class="mt-6 text-3xl font-bold leading-tight text-white sm:text-5xl md:text-6xl">
+          智慧管理课堂
+          <span class="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">
+            提升教学效率
           </span>
         </h1>
         
         <p class="mx-auto mt-6 max-w-2xl text-lg text-white/60">
-          A modern platform for teachers and administrators to track student progress,
-          manage class sessions, and gain real-time insights.
+          一个现代化的平台，帮助教师和管理员追踪学生进度、管理课堂签到，并获取实时洞察。
         </p>
 
         <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button size="lg" @click="router.push('/login')">
-            Get Started
+            开始使用
             <ArrowRight class="ml-2 h-5 w-5" />
-          </Button>
-          <Button size="lg" variant="outline">
-            View Demo
           </Button>
         </div>
       </div>
     </section>
 
     <!-- Features Section -->
-    <section class="relative px-6 py-24">
+    <section class="relative px-4 sm:px-6 py-16 sm:py-24">
       <div class="mx-auto max-w-6xl">
         <div class="grid gap-8 md:grid-cols-3">
           <div
@@ -112,7 +108,7 @@ const features = [
     <!-- Footer -->
     <footer class="border-t border-white/10 px-6 py-8">
       <div class="mx-auto max-w-6xl text-center text-sm text-white/40">
-        <p>&copy; 2024 ClassHub. All rights reserved.</p>
+        <p>&copy; 2026 智慧课堂. 保留所有权利。</p>
       </div>
     </footer>
   </div>

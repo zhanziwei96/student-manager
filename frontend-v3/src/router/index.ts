@@ -89,15 +89,16 @@ const router = createRouter({
 })
 
 // Navigation guards
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
 
   // Fetch user info if not loaded
   if (!authStore.user && !to.meta.public) {
     try {
       await authStore.fetchUserInfo()
-    } catch {
-      // Not authenticated
+    } catch (error) {
+      // Not authenticated - user will be redirected to login below
+      console.log('User not authenticated, redirecting to login')
     }
   }
 

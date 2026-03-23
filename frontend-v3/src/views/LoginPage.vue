@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
+import { useToast } from '@/composables'
 import { Button, Card, Input, Label } from '@/components/ui'
-import { GraduationCap, Lock, User, Loader2 } from 'lucide-vue-next'
+import { GraduationCap, Lock, User } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const { show, message: toastMessage, variant: toastVariant, success, error: showError } = useToast()
 
 const form = ref({
   username: '',
@@ -15,55 +17,39 @@ const form = ref({
   role: 'admin' as 'admin' | 'teacher' | 'student',
 })
 
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastVariant = ref<'default' | 'success' | 'error'>('default')
-
 const roles = [
-  { value: 'admin', label: 'Administrator' },
-  { value: 'teacher', label: 'Teacher' },
-  { value: 'student', label: 'Student' },
+  { value: 'admin', label: '管理员' },
+  { value: 'teacher', label: '教师' },
+  { value: 'student', label: '学生' },
 ]
 
 const handleSubmit = async () => {
   if (!form.value.username || !form.value.password) {
-    toastMessage.value = 'Please enter username and password'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showError('请输入用户名和密码')
     return
   }
 
   try {
     await authStore.login(form.value)
-    toastMessage.value = 'Login successful!'
-    toastVariant.value = 'success'
-    showToast.value = true
+    success('登录成功！')
 
-    // Redirect based on role
+    // 根据后端返回的实际角色跳转（而非前端选择的角色）
+    const userRole = authStore.user?.role
     const redirectMap: Record<string, string> = {
       admin: '/admin',
       teacher: '/teacher',
       student: '/student',
     }
-    router.push(redirectMap[form.value.role])
-  } catch (error: any) {
-    toastMessage.value = error.message || 'Login failed'
-    toastVariant.value = 'error'
-    showToast.value = true
+    if (userRole && redirectMap[userRole]) {
+      router.push(redirectMap[userRole])
+    } else {
+      throw new Error('无法获取用户角色信息')
+    }
+  } catch (err: any) {
+    showError(err.message || '登录失败')
   }
 }
 
-// Demo credentials for quick login
-const setDemoCredentials = (role: 'admin' | 'teacher' | 'student') => {
-  form.value.role = role
-  const credentials: Record<string, { username: string; password: string }> = {
-    admin: { username: 'admin', password: 'admin123' },
-    teacher: { username: 'teacher', password: 'teacher123' },
-    student: { username: '2023001', password: 'student123' },
-  }
-  form.value.username = credentials[role].username
-  form.value.password = credentials[role].password
-}
 </script>
 
 <template>
@@ -80,14 +66,14 @@ const setDemoCredentials = (role: 'admin' | 'teacher' | 'student') => {
         <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
           <GraduationCap class="h-7 w-7 text-primary" />
         </div>
-        <h1 class="text-2xl font-bold text-white">Welcome to ClassHub</h1>
-        <p class="text-sm text-white/60">Sign in to your account</p>
+        <h1 class="text-2xl font-bold text-white">欢迎使用智慧课堂</h1>
+        <p class="text-sm text-white/60">登录您的账号</p>
       </div>
 
       <form @submit.prevent="handleSubmit" class="mt-8 space-y-6">
         <!-- Role selection -->
         <div class="space-y-2">
-          <Label for="role">Role</Label>
+          <Label for="role">角色</Label>
           <div class="grid grid-cols-3 gap-2">
             <button
               v-for="role in roles"
@@ -108,13 +94,13 @@ const setDemoCredentials = (role: 'admin' | 'teacher' | 'student') => {
 
         <!-- Username -->
         <div class="space-y-2">
-          <Label for="username">Username</Label>
+          <Label for="username">用户名</Label>
           <div class="relative">
             <User class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
             <Input
               id="username"
               v-model="form.username"
-              placeholder="Enter your username"
+              placeholder="请输入用户名"
               class="pl-10"
               required
             />
@@ -123,14 +109,14 @@ const setDemoCredentials = (role: 'admin' | 'teacher' | 'student') => {
 
         <!-- Password -->
         <div class="space-y-2">
-          <Label for="password">Password</Label>
+          <Label for="password">密码</Label>
           <div class="relative">
             <Lock class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
             <Input
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="请输入密码"
               class="pl-10"
               required
             />
@@ -141,49 +127,15 @@ const setDemoCredentials = (role: 'admin' | 'teacher' | 'student') => {
         <Button
           type="submit"
           class="w-full"
-          :disabled="authStore.isLoggingIn"
+          :loading="authStore.isLoggingIn"
         >
-          <Loader2 v-if="authStore.isLoggingIn" class="mr-2 h-4 w-4 animate-spin" />
-          Sign In
+          登录
         </Button>
       </form>
 
-      <!-- Quick login buttons for demo -->
-      <div class="mt-6 border-t border-white/10 pt-6">
-        <p class="mb-3 text-center text-xs text-white/50">Quick login (Demo)</p>
-        <div class="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            class="flex-1"
-            @click="setDemoCredentials('admin')"
-          >
-            Admin
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            class="flex-1"
-            @click="setDemoCredentials('teacher')"
-          >
-            Teacher
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            class="flex-1"
-            @click="setDemoCredentials('student')"
-          >
-            Student
-          </Button>
-        </div>
-      </div>
     </Card>
 
     <!-- Toast -->
-    <Toast v-model:show="showToast" :message="toastMessage" :variant="toastVariant" />
+    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
   </div>
 </template>
