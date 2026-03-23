@@ -1,0 +1,37 @@
+{
+  "name": "classhub-frontend-v3",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.ts,.tsx --fix",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@tanstack/vue-query": "^5.56.0",
+    "@vueuse/core": "^11.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.446.0",
+    "ofetch": "^1.4.0",
+    "pinia": "^2.2.0",
+    "radix-vue": "^1.9.0",
+    "tailwind-merge": "^2.5.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.4.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-vue": "^5.1.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0",
+    "vue-tsc": "^2.1.0"
+  }
+}
