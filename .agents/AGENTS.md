@@ -11,7 +11,7 @@
 ```bash
 # 检查服务状态（优先执行）
 curl http://localhost:8000/api/health  # 后端
-curl http://localhost:3000             # 前端
+curl http://localhost:5173             # 前端 (frontend-v3)
 
 # 如果都正常返回，环境已就绪 ✅
 ```
@@ -33,7 +33,7 @@ conda activate student-manage
 cd backend && pip install -r requirements.txt
 
 # 2. 前端依赖
-cd frontend && pnpm install
+cd frontend-v3 && pnpm install
 ```
 
 #### 日常启动
@@ -48,7 +48,7 @@ make status
 
 # 启动服务（开两个终端）
 make dev-backend   # 终端1: 启动后端
-make dev-frontend  # 终端2: 启动前端
+make dev-frontend  # 终端2: 启动前端 (frontend-v3)
 
 # 停止服务
 make stop
@@ -63,8 +63,8 @@ make logs
 # 终端1: 后端（生产环境）
 cd backend && conda activate student-manage && ENV=production python main.py
 
-# 终端2: 前端
-cd frontend && pnpm dev
+# 终端2: 前端 (frontend-v3)
+cd frontend-v3 && pnpm dev
 ```
 
 ### 运行测试
@@ -99,7 +99,8 @@ sqlite3 /home/yufeng/student-manager/backend/data/class_system.db
 | 项目 | 路径 |
 |------|------|
 | 后端代码 | `/home/yufeng/student-manager/backend/` |
-| 前端代码 | `/home/yufeng/student-manager/frontend/` |
+| 前端代码 | `/home/yufeng/student-manager/frontend-v3/` |
+| 旧版前端 | `/home/yufeng/student-manager/frontend/` (不再维护) |
 | 数据库 | `/home/yufeng/student-manager/backend/data/class_system.db` |
 | 测试代码 | `/home/yufeng/student-manager/tests/` |
 | 迁移脚本 | `/home/yufeng/student-manager/migrations/` |
@@ -131,9 +132,10 @@ backend/
 - 分层结构：API → CRUD → Models
 - JWT + HttpOnly Cookie 认证
 
-### 前端（Vue3 + Naive UI）
-- **使用 Naive UI**，不是 Element Plus
-- 深色主题: 背景 `#0a0a0f`，主色 `#6366f1`
+### 前端（Vue3 + Tailwind CSS v4）
+- **使用 Tailwind CSS v4**，不是 Naive UI/Element Plus
+- 深色主题: 背景 `#030307`，主色 `#6366f1`
+- 技术栈: Vue 3.5 + TypeScript + TanStack Query + Pinia
 
 ### 数据库
 - SQLite 文件数据库

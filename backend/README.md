@@ -6,8 +6,8 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        前端 (Vue 3 + Naive UI)               │
-│                   http://localhost:3000                     │
+│                     前端 (Vue 3 + TypeScript)                │
+│                   http://localhost:5173                     │
 └─────────────────────────────────────────────────────────────┘
                               │
                               │ HTTP API
@@ -20,7 +20,7 @@
 │  ├── 路由定义 (FastAPI APIRouter)                            │
 │  ├── 请求/响应模型 (Pydantic)                                │
 │  ├── 依赖注入 (deps.py)                                      │
-│  └── 权限控制 (session-based)                                │
+│  └── 权限控制 (JWT-based)                                    │
 ├─────────────────────────────────────────────────────────────┤
 │  核心层 (app/core/)                                          │
 │  ├── 配置管理 (Pydantic Settings)                            │
@@ -49,7 +49,7 @@
 - **数据库**: SQLite3
 - **认证**: JWT + HttpOnly Cookie（python-jose）
 - **配置**: Pydantic Settings
-- **限流**: pyrate-limiter (内存存储)
+- **限流**: 内存存储（pyrate-limiter）
 
 ## 目录结构
 
@@ -115,12 +115,12 @@ ENV=production python main.py
 ### 3. 启动前端
 
 ```bash
-cd frontend
-pnpm install  # 或 npm install
-pnpm dev      # 或 npm run dev
+cd frontend-v3  # 新版前端
+pnpm install
+pnpm dev
 ```
 
-前端将在 http://localhost:3000 运行
+前端将在 http://localhost:5173 运行
 
 ## API 文档
 
@@ -224,6 +224,8 @@ RATE_LIMIT__LOGIN_MAX_REQUESTS=5
 }
 ```
 
+**注意**: 前端必须通过 `res.data` 访问数据，不能直接访问 `res.xxx`。
+
 ## 开发指南
 
 ### 添加新 API
@@ -283,15 +285,19 @@ export ENV="production"  # 或 "development"
 
 # 数据库路径
 export DATABASE__PATH="/path/to/class_system.db"
+
+# CORS 配置（开发环境）
+export SECURITY__CORS_ORIGINS='["http://localhost:5173"]'
 ```
 
 ## 架构特点
 
-1. **简洁分层**: API → CRUD → Models，职责清晰
+1. **简洁分层**: API → CRUD → Models → Core，职责清晰
 2. **类型安全**: 全代码类型提示，Pydantic 自动验证
 3. **统一响应**: 标准化 API 响应格式
 4. **配置灵活**: 环境变量 + `.env` 文件支持
 5. **易于测试**: SQLModel 支持内存数据库，测试隔离
+6. **前后端分离**: 前端位于 `frontend-v3/` 目录，独立部署
 
 ## 相关文档
 

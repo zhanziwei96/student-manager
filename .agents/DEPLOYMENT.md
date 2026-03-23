@@ -4,7 +4,8 @@
 
 ```bash
 # 检查是否已部署
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/health  # 后端
+curl http://localhost:5173             # 前端 (frontend-v3)
 
 # 如果正常返回，环境已就绪 ✅
 ```
@@ -26,9 +27,9 @@ pip install -r requirements.txt
 ENV=production python main.py
 ```
 
-### 2.2 前端
+### 2.2 前端 (frontend-v3)
 ```bash
-cd frontend
+cd frontend-v3
 pnpm install
 pnpm dev
 ```
@@ -40,7 +41,7 @@ pnpm dev
 cd /home/yufeng/student-manager
 
 make dev-backend   # 终端1: 启动后端
-make dev-frontend  # 终端2: 启动前端
+make dev-frontend  # 终端2: 启动前端 (frontend-v3)
 
 make stop          # 停止所有服务
 make logs          # 查看日志
@@ -58,21 +59,22 @@ curl -X POST http://localhost:8000/api/login \
   -d '{"username":"admin","password":"admin123","role":"admin"}'
 
 # 3. 前端访问
-open http://localhost:3000
+open http://localhost:5173
 ```
 
 ## 5. 常见问题
 
 ### 端口冲突
 ```bash
-lsof -i :8000  # 后端端口
-lsof -i :3000  # 前端端口
+lsof -i :8000   # 后端端口
+lsof -i :5173   # 前端端口 (frontend-v3)
 kill -9 <PID>
 ```
 
 ### 依赖重装
 ```bash
-# 前端
+# 前端 (frontend-v3)
+cd frontend-v3
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
 
@@ -92,11 +94,14 @@ source /home/yufeng/miniconda3/bin/activate student-manage
 | 服务 | 地址 | 说明 |
 |------|------|------|
 | 后端 | http://localhost:8000 | API 服务 |
-| 前端 | http://localhost:3000 | 用户界面 |
+| 前端 | http://localhost:5173 | 用户界面 (frontend-v3) |
 | API 文档 | http://localhost:8000/docs | Swagger |
 | 数据库 | backend/data/class_system.db | SQLite |
 
-**注意**: 后端服务不依赖 Redis，限流使用内存存储。
+**注意**: 
+- 后端服务不依赖 Redis，限流使用内存存储
+- 前端使用 Vite，默认端口 5173
+- 前端代码位于 `frontend-v3/` 目录
 
 ---
 

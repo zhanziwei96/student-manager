@@ -155,27 +155,26 @@ def test_example(session, test_student):
 ### 环境准备
 
 ```bash
-# 1. 检查 Redis
-redis-cli ping
-
-# 2. 检查后端服务
+# 1. 检查后端服务
 curl http://localhost:8000/health
 
-# 3. 检查前端服务
-curl -I http://localhost:3000
+# 2. 检查前端服务 (frontend-v3)
+curl -I http://localhost:5173
 ```
 
 ### 系统测试执行步骤
 
 #### Step 1: 用户认证流程测试
 
+访问 http://localhost:5173 进行测试
+
 | 步骤 | 操作 | 验证点 |
 |-----|------|--------|
 | 1.1 | 访问登录页 | 页面正常加载 |
 | 1.2 | 输入错误密码 | 提示"用户名或密码错误" |
-| 1.3 | 输入正确凭据 | 登录成功 |
-| 1.4 | 检查 Cookie | 存在 session cookie |
-| 1.5 | 点击登出 | 清除 session |
+| 1.3 | 输入正确凭据 | 登录成功，JWT Token 写入 Cookie |
+| 1.4 | 检查 Cookie | 存在 access_token cookie |
+| 1.5 | 点击登出 | 清除 token，返回登录页 |
 
 #### Step 2: 学生管理流程测试
 

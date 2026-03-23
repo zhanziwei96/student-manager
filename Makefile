@@ -19,8 +19,8 @@ help:
 install:
 	@echo "=== 安装后端依赖 ==="
 	cd backend && pip install -r requirements.txt
-	@echo "=== 安装前端依赖 ==="
-	cd frontend && pnpm install
+	@echo "=== 安装前端依赖 (frontend-v3) ==="
+	cd frontend-v3 && pnpm install
 	@echo "=== 依赖安装完成 ==="
 
 # 启动所有开发服务（需要多个终端或使用后台任务）
@@ -35,8 +35,8 @@ dev-backend:
 
 # 启动前端服务
 dev-frontend:
-	@echo "启动前端服务..."
-	cd frontend && pnpm dev
+	@echo "启动前端服务 (frontend-v3)..."
+	cd frontend-v3 && pnpm dev
 
 # 停止服务（根据进程名查找并停止）
 stop:
@@ -52,19 +52,19 @@ logs:
 	tail -20 backend/logs/*.log 2>/dev/null || echo "暂无后端日志"
 	@echo ""
 	@echo "=== 前端日志 ==="
-	@echo "前端日志输出在终端，请查看运行前端的终端窗口"
+	@echo "前端日志输出在终端，请查看运行 frontend-v3 的终端窗口"
 
 # 检查服务状态
 status:
 	@echo "=== 后端状态 ==="
 	@curl -s http://localhost:8000/health 2>/dev/null && echo " ✅ 后端运行中" || echo " ❌ 后端未运行"
 	@echo ""
-	@echo "=== 前端状态 ==="
-	@curl -s http://localhost:3000 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"
+	@echo "=== 前端状态 (frontend-v3) ==="
+	@curl -s http://localhost:5173 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"
 
 # 清理构建文件
 clean:
 	@echo "清理构建文件..."
-	cd frontend && rm -rf dist node_modules
+	cd frontend-v3 && rm -rf dist node_modules
 	cd backend && rm -rf __pycache__ *.pyc logs/*.log
 	@echo "清理完成！"

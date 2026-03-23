@@ -16,13 +16,14 @@
 
 ## 🏗️ 技术架构
 
-### 前端
-- **Vue 3.5** - Composition API
-- **Naive UI 2.44** - UI 组件库
+### 前端 (frontend-v3)
+- **Vue 3.5** - Composition API + TypeScript
+- **Tailwind CSS v4** - 原子化 CSS 框架
 - **Vue Router 4** - 路由管理
 - **Pinia** - 状态管理
-- **Vite 8** - 构建工具
-- **Axios** - HTTP 请求
+- **TanStack Query** - 服务端状态管理
+- **Vite 6** - 构建工具
+- **Lucide Vue** - 图标库
 
 ### 后端
 - **FastAPI** - Python 异步 Web 框架
@@ -34,13 +35,13 @@
 
 ### 架构模式
 ```
-Interface → Application → Domain ← Infrastructure
+API → CRUD → Models ← Core
 ```
 
-- **Interface**: API 控制器，处理 HTTP 请求/响应
-- **Application**: 应用服务层，编排领域对象
-- **Domain**: 领域层，核心业务逻辑
-- **Infrastructure**: 基础设施层，数据库、缓存、安全
+- **API**: 路由定义、请求/响应模型、依赖注入、权限控制
+- **CRUD**: 数据库操作层
+- **Models**: 数据模型、业务常量
+- **Core**: 配置、数据库连接、安全工具、异常处理
 
 ## 📖 文档索引
 
@@ -91,7 +92,7 @@ python main.py
 ### 3. 前端部署
 
 ```bash
-cd frontend
+cd frontend-v3
 
 # 安装依赖
 pnpm install
@@ -100,7 +101,7 @@ pnpm install
 pnpm dev
 ```
 
-前端服务将运行在 http://localhost:3000
+前端服务将运行在 http://localhost:5173
 
 ### 4. 一键启动（推荐）
 
@@ -151,7 +152,7 @@ SECURITY_SECRET_KEY=your-secret-key-change-in-production  # JWT 密钥
 curl http://localhost:8000/health
 
 # 检查前端
-curl http://localhost:3000
+curl http://localhost:5173
 
 # 验证配置
 python -c "from app.core.config import get_settings; print(get_settings().app.env)"
@@ -203,31 +204,32 @@ python -c "from app.core.config import get_settings; print(get_settings().app.en
 
 ```
 student-manager/
-├── backend/                  # FastAPI 后端 (DDD架构)
-│   ├── interface/            # API 层 (Controllers)
-│   ├── application/          # 应用服务层
-│   ├── domain/               # 领域层 (实体、值对象)
-│   ├── infrastructure/       # 基础设施层 (DB, Cache, Security)
+├── backend/                  # FastAPI 后端
+│   ├── app/
+│   │   ├── api/              # API 层 (路由、依赖注入)
+│   │   ├── core/             # 核心层 (配置、数据库、安全)
+│   │   ├── crud/             # 数据操作层
+│   │   └── models/           # 数据模型
+│   ├── data/                 # SQLite 数据库
 │   ├── main.py               # 后端入口
-│   ├── requirements.txt      # Python 依赖
-│   └── .env.example          # 环境变量示例
-├── frontend/                 # Vue3 前端
+│   └── requirements.txt      # Python 依赖
+├── frontend-v3/              # Vue3 + TypeScript 前端
 │   ├── src/
 │   │   ├── api/              # API 请求
+│   │   ├── components/ui/    # UI 组件库
+│   │   ├── composables/      # 组合式函数
 │   │   ├── views/            # 页面组件
 │   │   ├── stores/           # Pinia 状态管理
 │   │   ├── router/           # 路由配置
 │   │   └── styles/           # 样式文件
 │   ├── package.json
-│   └── vite.config.js
+│   └── vite.config.ts
+├── frontend/                 # 旧版前端 (不再维护)
 ├── tests/                    # 测试套件
-│   ├── smoke/                # 冒烟测试
-│   └── conftest.py           # pytest 配置
-├── data/                     # SQLite 数据库文件
-├── uploads/                  # 上传文件存储
+│   ├── unit/                 # 单元测试
+│   └── integration/          # 集成测试
 ├── migrations/               # 数据库迁移脚本
 ├── docker/                   # Docker 配置
-├── docker-compose.yml
 ├── Makefile                  # 常用命令
 └── README.md
 ```
@@ -376,4 +378,4 @@ MIT License
 ---
 
 **版本**: v3.0  
-**最后更新**: 2026-03-22 (JWT认证更新)
+**最后更新**: 2026-03-23 (Frontend-v3 更新 - Tailwind v4 + TypeScript)
