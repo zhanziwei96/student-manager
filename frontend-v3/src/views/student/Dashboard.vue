@@ -1,23 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores'
+import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudents } from '@/composables'
 import { Card, Badge } from '@/components/ui'
 import { Star, TrendingUp, Users, Award, Loader2, AlertCircle } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
-const { data: students, isPending, error } = useStudents()
-
-// TODO: 后端需要添加用户关联的 student_id，目前临时使用 name 匹配
-const currentStudent = computed(() => {
-  if (!students.value) return null
-  // FIXME: 应该通过 student_id 匹配而非 name，避免重名问题
-  return students.value.find(s => s.name === authStore.user?.name) || null
-})
+const { data: currentStudent, isPending, error } = useStudentProfile()
+const { data: allStudents } = useStudents()
 
 const rank = computed(() => {
-  if (!students.value || !currentStudent.value) return '-'
-  const sorted = [...students.value].sort((a, b) => b.score - a.score)
+  if (!allStudents.value || !currentStudent.value) return '-'
+  const sorted = [...allStudents.value].sort((a, b) => b.score - a.score)
   const index = sorted.findIndex(s => s.id === currentStudent.value!.id)
   return index >= 0 ? `第 ${index + 1} 名` : '-'
 })

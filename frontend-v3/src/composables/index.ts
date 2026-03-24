@@ -4,4 +4,5 @@ export { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCh
 export { useToast } from './useToast'
 export { useClasses, useClassStats, useClassStudents } from './useClasses'
 export { useCheckinStats, useTodayCheckins } from './useCheckins'
+export { useStudentProfile } from './useStudentProfile'
 export { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from './useTeachers'

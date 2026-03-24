@@ -85,7 +85,17 @@ async def get_student_info(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取学生信息"""
+    """获取学生信息（学生只能查看自己）"""
+    from app.models import UserRoleConst
+    
+    is_admin = user.get("is_admin", False)
+    role = user.get("role", '')
+    user_id = user.get("sub", '')
+    
+    # 学生只能查看自己的信息
+    if role == UserRoleConst.STUDENT and student_id != user_id:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权查看其他学生信息')
+    
     student = get_student(session, student_id)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
