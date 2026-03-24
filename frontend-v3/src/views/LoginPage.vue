@@ -30,11 +30,11 @@ const handleSubmit = async () => {
   }
 
   try {
-    await authStore.login(form.value)
+    const userInfo = await authStore.login(form.value)
     success('登录成功！')
 
     // 根据后端返回的实际角色跳转（而非前端选择的角色）
-    const userRole = authStore.user?.role
+    const userRole = userInfo?.role
     const redirectMap: Record<string, string> = {
       admin: '/admin',
       teacher: '/teacher',

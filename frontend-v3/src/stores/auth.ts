@@ -68,7 +68,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 操作方法
   const login = async (data: LoginRequest) => {
-    return loginMutation.mutateAsync(data)
+    await loginMutation.mutateAsync(data)
+    // 登录成功后获取用户信息并等待完成
+    const { data: userInfo } = await fetchUserInfo()
+    return userInfo
   }
 
   const logout = async () => {
