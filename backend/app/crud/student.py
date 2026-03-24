@@ -28,16 +28,22 @@ def get_students_by_class(session: Session, class_name: str) -> List[Student]:
 def create_student(session: Session, student_id: str, name: str, class_name: str, score: float = None) -> Student:
     """创建学生"""
     from app.core.config import get_settings
+    from app.core.security import generate_password_hash
     settings = get_settings()
     
     if score is None:
         score = settings.score.default_score
     
+    # 使用学号作为默认密码
+    password_hash, salt = generate_password_hash(student_id)
+    
     student = Student(
         student_id=student_id,
         name=name,
         class_name=class_name,
-        score=score
+        score=score,
+        password_hash=password_hash,
+        salt=salt
     )
     session.add(student)
     session.commit()
