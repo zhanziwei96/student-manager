@@ -15,6 +15,15 @@ export interface CheckinRequest {
   student_name: string
 }
 
+export interface ClassSessionStatus {
+  id?: number
+  session_code?: string
+  active: boolean
+  class_name?: string
+  teacher_name?: string
+  start_time?: string
+}
+
 /**
  * 签到管理 API
  */
@@ -36,4 +45,10 @@ export const checkinApi = {
    */
   getStats: (): Promise<ApiResponse<CheckinStats>> =>
     api('/checkins/stats', { method: 'GET' }),
+
+  /**
+   * 获取班级活跃课堂状态（学生端使用）
+   */
+  getClassSessionForClass: (className: string): Promise<ApiResponse<ClassSessionStatus>> =>
+    api(`/class-sessions/class/${encodeURIComponent(className)}`, { method: 'GET' }),
 }

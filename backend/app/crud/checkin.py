@@ -3,6 +3,7 @@
 """
 from datetime import datetime, date
 from typing import List, Optional
+import uuid
 from sqlmodel import Session, select, func
 from app.models import CheckinRecord, ClassSession, ScoreLog
 
@@ -11,7 +12,6 @@ def get_class_session(session: Session, teacher_id: int = None) -> Optional[Clas
     """获取上课状态
     
     如果提供 teacher_id，则返回该教师的活跃课堂
-    否则返回全局活跃课堂（ID=1）
     """
     if teacher_id:
         query = select(ClassSession).where(
@@ -19,7 +19,7 @@ def get_class_session(session: Session, teacher_id: int = None) -> Optional[Clas
             ClassSession.active == True
         )
         return session.exec(query).first()
-    return session.get(ClassSession, 1)
+    return None
 
 
 def get_class_session_by_class_name(session: Session, class_name: str) -> Optional[ClassSession]:
@@ -32,23 +32,14 @@ def get_class_session_by_class_name(session: Session, class_name: str) -> Option
 
 
 def start_class(session: Session, class_name: str, teacher_id: int = None, teacher_name: str = None) -> ClassSession:
-    """开始上课（支持多教师同时上课）"""
-    # 先检查该教师是否已有活跃课堂
-    existing = get_class_session(session, teacher_id)
-    if existing:
-        # 更新现有课堂
-        existing.class_name = class_name
-        existing.teacher_name = teacher_name
-        existing.active = True
-        existing.start_time = datetime.now()
-        existing.updated_at = datetime.now()
-        session.add(existing)
-        session.commit()
-        session.refresh(existing)
-        return existing
+    """开始上课 - 每次调用创建新的课堂记录"""
+    # 结束该教师之前的活跃课堂
+    end_class(session, teacher_id)
     
-    # 创建新课堂记录
+    # 创建新课堂记录，生成唯一 session_code
+    session_code = str(uuid.uuid4())[:8].upper()
     class_session = ClassSession(
+        session_code=session_code,
         class_name=class_name, 
         teacher_id=teacher_id,
         teacher_name=teacher_name,
@@ -71,22 +62,19 @@ def end_class(session: Session, teacher_id: int = None) -> None:
         )
         class_session = session.exec(query).first()
     else:
-        # 兼容旧逻辑：结束id=1的课堂
-        class_session = session.get(ClassSession, 1)
+        return
     
     if class_session:
         class_session.active = False
+        class_session.end_time = datetime.now()
         class_session.updated_at = datetime.now()
-        session.add(class_session)
-        session.commit()
-        class_session.start_time = None
         session.add(class_session)
         session.commit()
 
 
 def get_today_checkins(session: Session, class_name: Optional[str] = None, session_start: Optional[datetime] = None) -> List[CheckinRecord]:
     """获取签到列表（支持按课堂开始时间筛选）"""
-    from datetime import datetime, time
+    from datetime import time
     
     if session_start:
         # 如果提供了课堂开始时间，只查询该时间之后的签到
@@ -102,12 +90,13 @@ def get_today_checkins(session: Session, class_name: Optional[str] = None, sessi
 
 
 def create_checkin(session: Session, student_id: str, student_name: str, 
-                   class_name: str, checkin_type: str = None) -> CheckinRecord:
-    """创建签到记录"""
+                   class_name: str, session_id: int, checkin_type: str = None) -> CheckinRecord:
+    """创建签到记录 - 关联到具体课堂 session_id"""
     from app.models.constants import CheckinTypeConst
     if checkin_type is None:
         checkin_type = CheckinTypeConst.SELF
     checkin = CheckinRecord(
+        session_id=session_id,
         student_id=student_id,
         student_name=student_name,
         class_name=class_name,
@@ -119,9 +108,18 @@ def create_checkin(session: Session, student_id: str, student_name: str,
     return checkin
 
 
+def has_checked_in_session(session: Session, student_id: str, session_id: int) -> bool:
+    """检查学生是否已在指定课堂签到"""
+    query = select(CheckinRecord).where(
+        CheckinRecord.student_id == student_id,
+        CheckinRecord.session_id == session_id
+    )
+    return session.exec(query).first() is not None
+
+
 def has_checked_in_today(session: Session, student_id: str, class_name: str = None, session_start: Optional[datetime] = None) -> bool:
-    """检查是否已签到（支持按班级和课堂开始时间检查）"""
-    from datetime import datetime, time
+    """检查是否已签到（支持按班级和课堂开始时间检查）- 兼容旧逻辑"""
+    from datetime import time
     
     if session_start:
         # 如果提供了课堂开始时间，只检查该时间之后的签到

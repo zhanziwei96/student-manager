@@ -109,11 +109,12 @@ export interface CheckinRequest {
 
 export interface CheckinRecord {
   id: number
+  session_id?: number
   student_id: string
   student_name: string
   class_name: string
-  check_in_time: string
-  points_earned: number
+  checkin_time: string
+  checkin_type?: string
 }
 
 // 班级信息类型

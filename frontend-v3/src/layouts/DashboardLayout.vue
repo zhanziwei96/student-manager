@@ -38,7 +38,10 @@ const navItems = computed(() => {
       { name: '课堂签到', path: '/teacher/session', icon: Calendar }
     )
   } else if (authStore.isStudent) {
-    items.push({ name: '仪表板', path: '/student', icon: LayoutDashboard })
+    items.push(
+      { name: '仪表板', path: '/student', icon: LayoutDashboard },
+      { name: '课堂签到', path: '/student/checkin', icon: CheckCircle }
+    )
   }
 
   return items

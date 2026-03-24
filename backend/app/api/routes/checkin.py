@@ -118,27 +118,29 @@ def do_checkin(
     session: Session = Depends(get_session)
 ):
     """学生签到"""
-    # 检查是否正在上课
-    class_session = get_class_session(session)
-    if not class_session or not class_session.active:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
-    
     # 验证学生
     from app.crud import get_student
     student = get_student(session, data.student_id)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
     
-    # 检查是否在当前课堂已签到（只检查当前课堂开始后的签到）
-    if has_checked_in_today(session, data.student_id, class_session.class_name, class_session.start_time):
+    # 检查学生所在班级是否有活跃课堂
+    from app.crud.checkin import get_class_session_by_class_name, has_checked_in_session
+    class_session = get_class_session_by_class_name(session, student.class_name)
+    if not class_session or not class_session.active:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
+    
+    # 检查是否在当前课堂已签到（使用 session_id 精确检查）
+    if has_checked_in_session(session, data.student_id, class_session.id):
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
     
-    # 创建签到记录（如果前端未提供姓名，使用数据库中的姓名）
+    # 创建签到记录（关联到具体课堂 session_id）
     checkin = create_checkin(
         session,
         data.student_id,
         data.student_name or student.name,
-        class_session.class_name
+        class_session.class_name,
+        class_session.id  # 关联到当前课堂
     )
     
     return {
@@ -155,11 +157,12 @@ def get_today_checkin_list(
     session: Session = Depends(get_session)
 ):
     """获取今日签到列表（只返回当前课堂开始后的签到）"""
-    # 获取当前课堂会话
-    class_session = get_class_session(session)
+    # 根据班级名称获取活跃课堂
+    from app.crud.checkin import get_class_session_by_class_name
+    class_session = get_class_session_by_class_name(session, class_name) if class_name else None
     
-    # 只查询当前课堂开始时间之后的签到（如果课堂活跃且班级匹配）
-    if class_session and class_session.active and class_session.class_name == class_name:
+    # 只查询当前课堂开始时间之后的签到（如果课堂活跃）
+    if class_session and class_session.active:
         checkins = get_today_checkins(session, class_name, class_session.start_time)
     elif class_name:
         # 指定了班级但没有活跃课堂，返回今日该班级所有签到（用于历史查看）
@@ -177,10 +180,13 @@ def get_today_checkin_list(
 @router.get("/checkins/stats")
 def get_checkin_stats(
     request: Request,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
-    """获取签到统计"""
-    class_session = get_class_session(session)
+    """获取签到统计（当前教师的活跃课堂）"""
+    teacher_id = int(user.get("sub", 0))
+    class_session = get_class_session(session, teacher_id)
+    
     if not class_session or not class_session.active:
         return {
             ApiResponseConst.SUCCESS: True,
@@ -237,4 +243,35 @@ def get_active_class_sessions(
             }
             for s in active_sessions
         ]
+    }
+
+
+@router.get("/class-sessions/class/{class_name}")
+async def get_class_session_for_student(
+    class_name: str,
+    request: Request,
+    session: Session = Depends(get_session)
+):
+    """获取指定班级的活跃课堂状态（学生端使用）"""
+    await require_login(request)
+    
+    from app.crud.checkin import get_class_session_by_class_name
+    class_session = get_class_session_by_class_name(session, class_name)
+    
+    if class_session and class_session.active:
+        return {
+            ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.DATA: {
+                'id': class_session.id,
+                'session_code': class_session.session_code,
+                'active': True,
+                'class_name': class_session.class_name,
+                'teacher_name': class_session.teacher_name,
+                'start_time': class_session.start_time
+            }
+        }
+    
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: {'active': False}
     }

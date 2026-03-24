@@ -79,6 +79,11 @@ const routes = [
         name: 'StudentDashboard',
         component: () => import('@/views/student/Dashboard.vue'),
       },
+      {
+        path: 'checkin',
+        name: 'StudentCheckin',
+        component: () => import('@/views/student/Checkin.vue'),
+      },
     ],
   },
   {
