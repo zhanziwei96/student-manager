@@ -12,6 +12,7 @@ from app.crud import (
     get_student, get_students, get_students_by_class,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password
 )
+from app.crud.checkin import get_class_session, get_today_checkins
 from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst
 )
@@ -72,9 +73,20 @@ async def get_students_list(
                     unique_students.append(s)
             students = unique_students
     
+    # 获取今日已签到学生列表
+    checkins = get_today_checkins(session)
+    checked_in_students = set(c.student_id for c in checkins)
+    
+    # 构建带签到状态的学生列表
+    students_with_status = []
+    for student in students:
+        student_dict = student.model_dump()
+        student_dict['status'] = 'active' if student.student_id in checked_in_students else 'inactive'
+        students_with_status.append(student_dict)
+    
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [s.model_dump() for s in students]
+        ApiResponseConst.DATA: students_with_status
     }
 
 
@@ -189,17 +201,30 @@ async def get_classes(
     
     if is_admin:
         # 管理员返回所有班级
-        classes = get_all_classes(session)
+        class_names = get_all_classes(session)
     else:
         # 教师只返回负责的班级
         from app.crud import get_user
         user_id = user.get("sub")
         user_obj = get_user(session, int(user_id))
-        classes = user_obj.get_assigned_classes() if user_obj else []
+        class_names = user_obj.get_assigned_classes() if user_obj else []
+    
+    # 获取当前课堂会话状态
+    class_session = get_class_session(session)
+    current_class = class_session.class_name if class_session and class_session.active else None
+    
+    # 返回带状态的班级列表
+    classes_with_status = [
+        {
+            'name': class_name,
+            'status': 'active' if class_name == current_class else 'inactive'
+        }
+        for class_name in class_names
+    ]
     
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: classes
+        ApiResponseConst.DATA: classes_with_status
     }
 
 

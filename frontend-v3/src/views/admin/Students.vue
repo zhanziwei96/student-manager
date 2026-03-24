@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useStudents, useScoreUpdate, useStudentCreate } from '@/composables'
 
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer, SearchableSelect } from '@/components/ui'
@@ -69,6 +69,13 @@ const classOptions = computed(() => [
     label: `${c.name} (${c.count}人)` 
   }))
 ])
+
+// 默认选中第一个班级
+watch(classList, (list) => {
+  if (list.length > 0 && !selectedClass.value) {
+    selectedClass.value = list[0].name
+  }
+}, { immediate: true })
 
 // 过滤后的学生列表
 const filteredStudents = computed(() => {
