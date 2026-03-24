@@ -17,6 +17,7 @@
 | 4 | ❌ 不要在未验证的情况下认为操作成功 | 隐藏错误 |
 | 5 | ❌ 不要修改 test 文件中的逻辑 | 破坏测试本身 |
 | 6 | ❌ **禁止在碰到问题后回退组件版本** | 掩盖问题，重复犯错 |
+| 7 | ❌ **禁止在系统自带 python 环境下运行 python 命令** | 模块找不到，环境混乱 |
 
 ---
 
@@ -236,6 +237,7 @@ python -c "from app.core.config import get_settings; print(get_settings().get_da
 | - | 修改测试文件逻辑 | 禁止修改测试 |
 | - | 未验证就确认成功 | 必须用 curl 验证 |
 | 2026-03-23 | 碰到问题回退组件版本 | **禁止回退版本**，应先尝试修复或报告 |
+| 2026-03-24 | 使用系统自带 python 运行脚本 | **必须激活 Conda 环境**，使用 `conda run -n student-manage python` 或先 `conda activate student-manage` |
 
 ---
 
