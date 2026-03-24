@@ -4,7 +4,7 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.crud import (
@@ -12,9 +12,11 @@ from app.crud import (
     get_today_checkins, create_checkin, has_checked_in_today
 )
 from app.api.deps import require_login
+from app.core.jwt import get_current_user
 from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst
 )
+from app.models.checkin import ClassSession
 
 router = APIRouter(prefix=RoutePrefixConst.API, tags=["checkin"])
 
@@ -31,10 +33,12 @@ class StartClassRequest(BaseModel):
 @router.get("/class-session")
 def get_current_session(
     request: Request,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
-    """获取当前上课状态"""
-    class_session = get_class_session(session)
+    """获取当前用户的上课状态"""
+    teacher_id = int(user.get("sub", 0))
+    class_session = get_class_session(session, teacher_id)
     if class_session:
         return {
             ApiResponseConst.SUCCESS: True,
@@ -54,12 +58,35 @@ def get_current_session(
 async def begin_class(
     request: Request,
     data: StartClassRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
-    """开始上课"""
+    """开始上课（检查班级冲突）"""
     await require_login(request)
     
-    class_session = start_class(session, data.class_name)
+    # 检查该班级是否已有活跃课堂
+    from app.crud.checkin import get_class_session_by_class_name
+    existing_session = get_class_session_by_class_name(session, data.class_name)
+    if existing_session and existing_session.active:
+        teacher_name = existing_session.teacher_name or "其他教师"
+        raise HTTPException(
+            status_code=HttpStatus.CONFLICT,
+            detail=f'该班级正在被 {teacher_name} 老师上课，无法开始新课堂'
+        )
+    
+    # 检查当前教师是否有其他活跃课堂
+    teacher_id = int(user.get("sub", 0))
+    current_session = get_class_session(session, teacher_id)
+    if current_session and current_session.active and current_session.class_name != data.class_name:
+        raise HTTPException(
+            status_code=HttpStatus.CONFLICT,
+            detail=f'您正在 {current_session.class_name} 上课，请先结束当前课堂'
+        )
+    
+    # 开始新课堂
+    teacher_name = user.get("name", "")
+    class_session = start_class(session, data.class_name, teacher_id, teacher_name)
+    
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.CLASS_STARTED,
@@ -70,12 +97,14 @@ async def begin_class(
 @router.post("/class-session/end")
 async def finish_class(
     request: Request,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """结束上课"""
     await require_login(request)
     
-    end_class(session)
+    teacher_id = int(user.get("sub", 0))
+    end_class(session, teacher_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.CLASS_ENDED
@@ -100,9 +129,9 @@ def do_checkin(
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
     
-    # 检查是否已签到
-    if has_checked_in_today(session, data.student_id):
-        raise HTTPException(status_code=HttpStatus.CONFLICT, detail='今日已签到')
+    # 检查是否在当前课堂已签到（只检查当前课堂开始后的签到）
+    if has_checked_in_today(session, data.student_id, class_session.class_name, class_session.start_time):
+        raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
     
     # 创建签到记录（如果前端未提供姓名，使用数据库中的姓名）
     checkin = create_checkin(
@@ -125,8 +154,20 @@ def get_today_checkin_list(
     class_name: Optional[str] = Query(None, description="班级名称"),
     session: Session = Depends(get_session)
 ):
-    """获取今日签到列表"""
-    checkins = get_today_checkins(session, class_name)
+    """获取今日签到列表（只返回当前课堂开始后的签到）"""
+    # 获取当前课堂会话
+    class_session = get_class_session(session)
+    
+    # 只查询当前课堂开始时间之后的签到（如果课堂活跃且班级匹配）
+    if class_session and class_session.active and class_session.class_name == class_name:
+        checkins = get_today_checkins(session, class_name, class_session.start_time)
+    elif class_name:
+        # 指定了班级但没有活跃课堂，返回今日该班级所有签到（用于历史查看）
+        checkins = get_today_checkins(session, class_name)
+    else:
+        # 没有指定班级，返回今日所有签到
+        checkins = get_today_checkins(session)
+    
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [c.model_dump() for c in checkins]
@@ -154,7 +195,8 @@ def get_checkin_stats(
     
     from app.crud import get_students_by_class
     students = get_students_by_class(session, class_session.class_name)
-    checkins = get_today_checkins(session, class_session.class_name)
+    # 只统计当前课堂开始后的签到
+    checkins = get_today_checkins(session, class_session.class_name, class_session.start_time)
     
     total = len(students)
     checked_in = len(checkins)
@@ -171,4 +213,28 @@ def get_checkin_stats(
             'not_checked_in': not_checked_in,
             'rate': rate
         }
+    }
+
+
+@router.get("/class-sessions/active")
+def get_active_class_sessions(
+    request: Request,
+    session: Session = Depends(get_session)
+):
+    """获取所有活跃课堂列表"""
+    from sqlmodel import select
+    query = select(ClassSession).where(ClassSession.active == True)
+    active_sessions = session.exec(query).all()
+    
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: [
+            {
+                'class_name': s.class_name,
+                'teacher_id': s.teacher_id,
+                'teacher_name': s.teacher_name,
+                'start_time': s.start_time
+            }
+            for s in active_sessions
+        ]
     }

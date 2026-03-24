@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
+import { toValue, type Ref } from 'vue'
 import { checkinApi } from '@/api/checkin'
 import type { CheckinRecord } from '@/types'
 
@@ -29,11 +30,13 @@ export function useCheckinStats() {
 /**
  * 获取今日签到列表
  */
-export function useTodayCheckins(className?: string) {
+export function useTodayCheckins(className?: string | Ref<string>) {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['today-checkins', className],
     queryFn: async () => {
-      const res = await checkinApi.getToday(className)
+      // 使用 toValue 解包 ComputedRef
+      const resolvedClassName = toValue(className)
+      const res = await checkinApi.getToday(resolvedClassName)
       if (res.success && res.data) {
         return res.data
       }

@@ -73,14 +73,22 @@ async def get_students_list(
                     unique_students.append(s)
             students = unique_students
     
-    # 获取今日已签到学生列表
-    checkins = get_today_checkins(session)
+    # 获取当前课堂会话
+    class_session = get_class_session(session)
+    current_class = class_session.class_name if class_session and class_session.active else None
+    
+    # 只获取当前课堂的签到记录（如果没有活跃课堂，则无人活跃）
+    if current_class:
+        checkins = get_today_checkins(session, current_class)
+    else:
+        checkins = []
     checked_in_students = set(c.student_id for c in checkins)
     
     # 构建带签到状态的学生列表
     students_with_status = []
     for student in students:
         student_dict = student.model_dump()
+        # 只有在当前课堂签到才算活跃
         student_dict['status'] = 'active' if student.student_id in checked_in_students else 'inactive'
         students_with_status.append(student_dict)
     

@@ -5,6 +5,13 @@ import type {
   StartClassRequest,
 } from '@/types'
 
+export interface ActiveClassSession {
+  class_name: string
+  teacher_id: number
+  teacher_name: string
+  start_time: string
+}
+
 export const classSessionApi = {
   getCurrent: (): Promise<ApiResponse<ClassSession | null>> =>
     api('/class-session', { method: 'GET' }),
@@ -25,4 +32,7 @@ export const classSessionApi = {
     }>
   }>> =>
     api('/class-session/students', { method: 'GET' }),
+
+  getActiveSessions: (): Promise<ApiResponse<ActiveClassSession[]>> =>
+    api('/class-sessions/active', { method: 'GET' }),
 }

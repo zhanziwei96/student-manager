@@ -92,6 +92,8 @@ export interface ClassSession {
   class_name: string
   start_time: string
   teacher_id: number
+  teacher_name?: string
+  active: boolean
   checked_in_count?: number
 }
 

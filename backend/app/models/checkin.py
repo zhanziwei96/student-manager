@@ -20,11 +20,13 @@ class CheckinRecord(SQLModel, table=True):
 
 
 class ClassSession(SQLModel, table=True):
-    """上课状态表"""
+    """上课状态表 - 支持多教师同时上课"""
     __tablename__ = "class_session"
     
-    id: int = Field(default=1, primary_key=True)
-    class_name: Optional[str] = Field(default=None, description="当前上课班级")
+    id: Optional[int] = Field(default=None, primary_key=True)
+    class_name: Optional[str] = Field(default=None, description="当前上课班级", index=True)
+    teacher_id: Optional[int] = Field(default=None, description="上课教师ID", index=True)
+    teacher_name: Optional[str] = Field(default=None, description="上课教师姓名")
     start_time: Optional[datetime] = Field(default=None, description="开始时间")
     active: bool = Field(default=False, description="是否上课中")
     updated_at: datetime = Field(default_factory=datetime.now, description="更新时间")

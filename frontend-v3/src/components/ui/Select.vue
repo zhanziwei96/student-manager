@@ -11,6 +11,7 @@ import { ChevronDown } from 'lucide-vue-next'
 interface Option {
   value: string
   label: string
+  disabled?: boolean
 }
 
 interface Props {
@@ -69,6 +70,7 @@ const onChange = (event: Event) => {
         v-for="option in options" 
         :key="option.value" 
         :value="option.value"
+        :disabled="option.disabled"
         class="bg-background-elevated text-text-primary"
       >
         {{ option.label }}

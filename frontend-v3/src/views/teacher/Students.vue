@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useStudents, useScoreUpdate } from '@/composables'
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer, SearchableSelect } from '@/components/ui'
-import { Search, TrendingUp, TrendingDown } from 'lucide-vue-next'
+import { Search, TrendingUp, TrendingDown, MessageCircle, AlertTriangle, UserX, Plus, Minus } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
 
@@ -19,6 +19,13 @@ const scoreReason = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastVariant = ref<'default' | 'success' | 'error'>('default')
+
+// 快速分数选项
+const quickScoreOptions = [
+  { label: '课堂提问', score: 2, icon: MessageCircle, color: 'text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30' },
+  { label: '违反纪律', score: -2, icon: AlertTriangle, color: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30' },
+  { label: '旷课', score: -5, icon: UserX, color: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30' },
+]
 
 // 按班级分组的学生
 const studentsByClass = computed(() => {
@@ -54,6 +61,13 @@ const classOptions = computed(() => [
   }))
 ])
 
+// 默认选中第一个班级
+watch(classList, (list) => {
+  if (list.length > 0 && !selectedClass.value) {
+    selectedClass.value = list[0].name
+  }
+}, { immediate: true })
+
 // 过滤后的学生列表
 const filteredStudents = computed(() => {
   if (!students.value) return []
@@ -79,11 +93,31 @@ const filteredStudents = computed(() => {
   return result
 })
 
-const openScoreDialog = (student: Student, isAdd: boolean) => {
+const openScoreDialog = (student: Student, defaultScore: number = 0, defaultReason: string = '') => {
   selectedStudent.value = student
-  scoreChange.value = isAdd ? 10 : -10
-  scoreReason.value = ''
+  scoreChange.value = defaultScore || 10
+  scoreReason.value = defaultReason
   showScoreDialog.value = true
+}
+
+// 处理快速分数调整
+const handleQuickScore = async (student: Student, score: number, reason: string) => {
+  try {
+    await updateScore({
+      id: student.id,
+      data: {
+        score_change: score,
+        reason: reason,
+      },
+    })
+    toastMessage.value = `${student.name} ${score > 0 ? '+' : ''}${score}分`
+    toastVariant.value = 'success'
+    showToast.value = true
+  } catch (err: any) {
+    toastMessage.value = err.message || '调整分数失败'
+    toastVariant.value = 'error'
+    showToast.value = true
+  }
 }
 
 const handleUpdateScore = async () => {
@@ -150,13 +184,15 @@ const handleUpdateScore = async () => {
       @retry="refetch"
     >
       <!-- Students list -->
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <Card
           v-for="student in filteredStudents"
           :key="student.id"
-          class="border-white/10 bg-white/[0.02] p-4"
+          class="border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
+          :class="student.status === 'active' ? 'border-green-500/30' : ''"
         >
-          <div class="flex items-start justify-between">
+          <!-- 学生信息 -->
+          <div class="flex items-start justify-between mb-3">
             <div class="flex items-center gap-3">
               <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
                 <span class="text-sm font-medium text-primary">
@@ -169,41 +205,64 @@ const handleUpdateScore = async () => {
                 <p class="text-xs text-white/40">{{ student.class_name }}</p>
               </div>
             </div>
-            <Badge :variant="student.status === 'active' ? 'success' : 'secondary'">
+            <Badge :variant="student.status === 'active' ? 'success' : 'secondary'" class="text-xs">
               {{ student.status === 'active' ? '活跃' : '非活跃' }}
             </Badge>
           </div>
-
-          <div class="mt-4 flex items-center justify-between">
-            <div>
-              <p class="text-xs text-white/40">分数</p>
-              <p class="text-2xl font-bold text-primary">{{ student.score }}</p>
-            </div>
-            <div class="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                class="border-green-500/30 text-green-400 hover:bg-green-500/10"
-                @click="openScoreDialog(student, true)"
-              >
-                <TrendingUp class="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                class="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                @click="openScoreDialog(student, false)"
-              >
-                <TrendingDown class="h-4 w-4" />
-              </Button>
-            </div>
+          
+          <!-- 分数显示 -->
+          <div class="mb-3">
+            <p class="text-xs text-white/40 mb-1">当前分数</p>
+            <p class="text-xl font-bold text-primary">{{ student.score }}</p>
+          </div>
+          
+          <!-- 快速操作按钮 -->
+          <div class="grid grid-cols-3 gap-2">
+            <Button
+              v-for="option in quickScoreOptions"
+              :key="option.label"
+              size="sm"
+              variant="outline"
+              class="flex flex-col items-center gap-1 h-auto py-2 px-1 text-xs"
+              :class="[option.borderColor, option.color, option.bgColor]"
+              :disabled="isUpdatingScore"
+              @click="handleQuickScore(student, option.score, option.label)"
+            >
+              <component :is="option.icon" class="h-3.5 w-3.5" />
+              <span>{{ option.label }}</span>
+              <span :class="option.score > 0 ? 'text-green-400' : 'text-red-400'">
+                {{ option.score > 0 ? '+' : '' }}{{ option.score }}
+              </span>
+            </Button>
+          </div>
+          
+          <!-- 自定义分数按钮 -->
+          <div class="mt-2 flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              class="flex-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
+              @click="openScoreDialog(student, 10, '加分')"
+            >
+              <Plus class="h-3 w-3 mr-1" />
+              加分
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              class="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+              @click="openScoreDialog(student, -10, '扣分')"
+            >
+              <Minus class="h-3 w-3 mr-1" />
+              扣分
+            </Button>
           </div>
         </Card>
       </div>
     </DataContainer>
 
     <!-- Score Dialog -->
-    <Dialog v-model:open="showScoreDialog" title="更新分数">
+    <Dialog v-model:open="showScoreDialog" :title="selectedStudent ? `调整 ${selectedStudent.name} 的分数` : '调整分数'">
       <div class="space-y-4">
         <p v-if="selectedStudent" class="text-white/60">
           更新 <span class="font-medium text-white">{{ selectedStudent.name }}</span> 的分数
