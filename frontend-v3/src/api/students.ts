@@ -16,6 +16,9 @@ export const studentsApi = {
 
   getById: (id: number): Promise<ApiResponse<Student>> =>
     api(`/students/${id}`, { method: 'GET' }),
+    
+  getByStudentId: (studentId: string): Promise<ApiResponse<Student>> =>
+    api(`/students/${studentId}`, { method: 'GET' }),
 
   create: (data: CreateStudentRequest): Promise<ApiResponse<Student>> =>
     api('/students', { method: 'POST', body: data }),

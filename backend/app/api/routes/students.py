@@ -78,6 +78,24 @@ async def get_students_list(
     }
 
 
+@router.get("/students/{student_id}")
+async def get_student_info(
+    request: Request,
+    student_id: str,
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """获取学生信息"""
+    student = get_student(session, student_id)
+    if not student:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
+    
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: student.model_dump()
+    }
+
+
 @router.post("/students")
 async def add_student(
     request: Request,
@@ -156,8 +174,19 @@ async def get_classes(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取班级列表"""
-    classes = get_all_classes(session)
+    """获取班级列表（管理员看所有，教师看负责班级）"""
+    is_admin = user.get("is_admin", False)
+    
+    if is_admin:
+        # 管理员返回所有班级
+        classes = get_all_classes(session)
+    else:
+        # 教师只返回负责的班级
+        from app.crud import get_user
+        user_id = user.get("sub")
+        user_obj = get_user(session, int(user_id))
+        classes = user_obj.get_assigned_classes() if user_obj else []
+    
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: classes

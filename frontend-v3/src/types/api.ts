@@ -107,9 +107,9 @@ export interface CheckinRequest {
 
 export interface CheckinRecord {
   id: number
-  student_id: number
+  student_id: string
   student_name: string
-  session_id: string
+  class_name: string
   check_in_time: string
   points_earned: number
 }

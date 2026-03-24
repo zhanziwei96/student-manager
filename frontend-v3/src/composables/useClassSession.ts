@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { classSessionApi, checkinApi } from '@/api'
-import type { CheckinRequest, CheckinRecord } from '@/types'
+import type { CheckinRecord } from '@/types'
 
 /**
  * Class Session composable
@@ -63,13 +63,25 @@ export function useClassSessionEnd() {
 }
 
 export function useStudentCheckIn() {
+  const queryClient = useQueryClient()
+  
   const { mutateAsync, isPending, error } = useMutation({
-    mutationFn: async (data: CheckinRequest): Promise<CheckinRecord> => {
-      const res = await checkinApi.checkin(data)
+    mutationFn: async (studentCode: string): Promise<CheckinRecord> => {
+      // 直接调用签到API，后端会验证学生存在性
+      const res = await checkinApi.checkin({
+        student_id: studentCode,
+        student_name: '', // 后端会根据student_id查找
+      })
+      
       if (res.success && res.data) {
         return res.data
       }
-      throw new Error(res.message || 'Check-in failed')
+      throw new Error(res.message || '签到失败')
+    },
+    onSuccess: () => {
+      // 刷新签到统计
+      queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
     },
   })
 

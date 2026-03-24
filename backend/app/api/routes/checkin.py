@@ -104,11 +104,11 @@ def do_checkin(
     if has_checked_in_today(session, data.student_id):
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='今日已签到')
     
-    # 创建签到记录
+    # 创建签到记录（如果前端未提供姓名，使用数据库中的姓名）
     checkin = create_checkin(
         session,
         data.student_id,
-        data.student_name,
+        data.student_name or student.name,
         class_session.class_name
     )
     

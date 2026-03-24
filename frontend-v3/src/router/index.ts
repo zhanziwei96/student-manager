@@ -40,6 +40,11 @@ const routes = [
         name: 'AdminClasses',
         component: () => import('@/views/admin/Classes.vue'),
       },
+      {
+        path: 'checkins',
+        name: 'AdminCheckins',
+        component: () => import('@/views/admin/Checkins.vue'),
+      },
     ],
   },
   {

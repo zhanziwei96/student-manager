@@ -11,6 +11,7 @@ import {
   LogOut,
   User,
   School,
+  CheckCircle,
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
@@ -27,7 +28,8 @@ const navItems = computed(() => {
       { name: '仪表板', path: '/admin', icon: LayoutDashboard },
       { name: '学生管理', path: '/admin/students', icon: Users },
       { name: '教师管理', path: '/admin/teachers', icon: User },
-      { name: '班级管理', path: '/admin/classes', icon: School }
+      { name: '班级管理', path: '/admin/classes', icon: School },
+      { name: '签到管理', path: '/admin/checkins', icon: CheckCircle }
     )
   } else if (authStore.isTeacher) {
     items.push(
