@@ -17,15 +17,36 @@ const form = ref({
   role: 'admin' as 'admin' | 'teacher' | 'student',
 })
 
+const errors = ref({
+  username: '',
+  password: '',
+})
+
 const roles = [
   { value: 'admin', label: '管理员' },
   { value: 'teacher', label: '教师' },
   { value: 'student', label: '学生' },
 ]
 
+const validateForm = () => {
+  errors.value = { username: '', password: '' }
+  let isValid = true
+
+  if (!form.value.username.trim()) {
+    errors.value.username = '请输入用户名'
+    showError('请输入用户名')
+    isValid = false
+  } else if (!form.value.password.trim()) {
+    errors.value.password = '请输入密码'
+    showError('请输入密码')
+    isValid = false
+  }
+
+  return isValid
+}
+
 const handleSubmit = async () => {
-  if (!form.value.username || !form.value.password) {
-    showError('请输入用户名和密码')
+  if (!validateForm()) {
     return
   }
 
@@ -101,8 +122,8 @@ const handleSubmit = async () => {
               id="username"
               v-model="form.username"
               placeholder="请输入用户名"
-              class="pl-10"
-              required
+              :class="['pl-10', errors.username && 'border-red-500 focus:border-red-500']"
+              @input="errors.username = ''"
             />
           </div>
         </div>
@@ -117,8 +138,8 @@ const handleSubmit = async () => {
               v-model="form.password"
               type="password"
               placeholder="请输入密码"
-              class="pl-10"
-              required
+              :class="['pl-10', errors.password && 'border-red-500 focus:border-red-500']"
+              @input="errors.password = ''"
             />
           </div>
         </div>
