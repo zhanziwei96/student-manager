@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { studentsApi } from '@/api'
-import type { UpdateScoreRequest } from '@/types'
+import type { UpdateScoreRequest, CreateStudentRequest } from '@/types'
 
 /**
  * Students query composable
@@ -36,6 +36,32 @@ export function useScoreUpdate() {
         return res.data
       }
       throw new Error(res.message || 'Failed to update score')
+    },
+    onSuccess: () => {
+      // 使学生缓存失效
+      queryClient.invalidateQueries({ queryKey: ['students'] })
+      // 同时使统计数据失效
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    },
+  })
+
+  return {
+    mutateAsync,
+    isPending,
+    error,
+  }
+}
+
+export function useStudentCreate() {
+  const queryClient = useQueryClient()
+
+  const { mutateAsync, isPending, error } = useMutation({
+    mutationFn: async (data: CreateStudentRequest) => {
+      const res = await studentsApi.create(data)
+      if (res.success && res.data) {
+        return res.data
+      }
+      throw new Error(res.message || 'Failed to create student')
     },
     onSuccess: () => {
       // 使学生缓存失效

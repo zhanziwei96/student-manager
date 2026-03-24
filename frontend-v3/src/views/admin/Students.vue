@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useStudents, useScoreUpdate } from '@/composables'
+import { useStudents, useScoreUpdate, useStudentCreate } from '@/composables'
 
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer, SearchableSelect } from '@/components/ui'
 import { Search, Plus, Minus } from 'lucide-vue-next'
@@ -10,6 +10,7 @@ import type { Student } from '@/types'
 const { data: students, isPending, error, refetch } = useStudents()
 
 const { mutateAsync: updateScore, isPending: isUpdatingScore } = useScoreUpdate()
+const { mutateAsync: createStudent, isPending: isCreating } = useStudentCreate()
 
 const searchQuery = ref('')
 const selectedClass = ref<string>('')
@@ -21,6 +22,19 @@ const scoreReason = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastVariant = ref<'default' | 'success' | 'error'>('default')
+
+// 添加学生弹窗
+const showAddDialog = ref(false)
+const newStudent = ref({
+  student_id: '',
+  name: '',
+  class_name: '',
+})
+const addFormErrors = ref({
+  student_id: '',
+  name: '',
+  class_name: '',
+})
 
 // 按班级分组的学生
 const studentsByClass = computed(() => {
@@ -110,6 +124,70 @@ const handleUpdateScore = async () => {
     showToast.value = true
   }
 }
+
+// 打开添加学生弹窗
+const openAddDialog = () => {
+  newStudent.value = {
+    student_id: '',
+    name: '',
+    class_name: '',
+  }
+  addFormErrors.value = {
+    student_id: '',
+    name: '',
+    class_name: '',
+  }
+  showAddDialog.value = true
+}
+
+// 验证添加学生表单
+const validateAddForm = () => {
+  addFormErrors.value = {
+    student_id: '',
+    name: '',
+    class_name: '',
+  }
+  let isValid = true
+
+  if (!newStudent.value.student_id.trim()) {
+    addFormErrors.value.student_id = '请输入学号'
+    isValid = false
+  }
+
+  if (!newStudent.value.name.trim()) {
+    addFormErrors.value.name = '请输入姓名'
+    isValid = false
+  }
+
+  if (!newStudent.value.class_name.trim()) {
+    addFormErrors.value.class_name = '请输入班级'
+    isValid = false
+  }
+
+  return isValid
+}
+
+// 处理添加学生
+const handleAddStudent = async () => {
+  if (!validateAddForm()) return
+
+  try {
+    await createStudent({
+      student_id: newStudent.value.student_id.trim(),
+      name: newStudent.value.name.trim(),
+      class_name: newStudent.value.class_name.trim(),
+    })
+
+    toastMessage.value = `学生 ${newStudent.value.name} 添加成功`
+    toastVariant.value = 'success'
+    showToast.value = true
+    showAddDialog.value = false
+  } catch (err: any) {
+    toastMessage.value = err.message || '添加学生失败'
+    toastVariant.value = 'error'
+    showToast.value = true
+  }
+}
 </script>
 
 <template>
@@ -120,7 +198,7 @@ const handleUpdateScore = async () => {
         <h1 class="text-2xl font-bold text-white">学生管理</h1>
         <p class="text-white/60">管理学生档案和分数</p>
       </div>
-      <Button>
+      <Button @click="openAddDialog">
         <Plus class="mr-2 h-4 w-4" />
         添加学生
       </Button>
@@ -242,6 +320,51 @@ const handleUpdateScore = async () => {
           @click="handleUpdateScore"
         >
           更新分数
+        </Button>
+      </template>
+    </Dialog>
+
+    <!-- Add Student Dialog -->
+    <Dialog v-model:open="showAddDialog" title="添加学生">
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="studentId">学号</Label>
+          <Input
+            id="studentId"
+            v-model="newStudent.student_id"
+            placeholder="输入学号"
+            :class="addFormErrors.student_id ? 'border-red-500' : ''"
+          />
+          <p v-if="addFormErrors.student_id" class="text-sm text-red-500">{{ addFormErrors.student_id }}</p>
+        </div>
+        <div class="space-y-2">
+          <Label for="studentName">姓名</Label>
+          <Input
+            id="studentName"
+            v-model="newStudent.name"
+            placeholder="输入姓名"
+            :class="addFormErrors.name ? 'border-red-500' : ''"
+          />
+          <p v-if="addFormErrors.name" class="text-sm text-red-500">{{ addFormErrors.name }}</p>
+        </div>
+        <div class="space-y-2">
+          <Label for="className">班级</Label>
+          <Input
+            id="className"
+            v-model="newStudent.class_name"
+            placeholder="输入班级名称"
+            :class="addFormErrors.class_name ? 'border-red-500' : ''"
+          />
+          <p v-if="addFormErrors.class_name" class="text-sm text-red-500">{{ addFormErrors.class_name }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <Button variant="outline" @click="showAddDialog = false">取消</Button>
+        <Button
+          :loading="isCreating"
+          @click="handleAddStudent"
+        >
+          添加
         </Button>
       </template>
     </Dialog>
