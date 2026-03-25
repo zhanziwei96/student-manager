@@ -31,7 +31,7 @@
 - **SQLite** - 轻量级数据库
 - **JWT** - 认证（python-jose）
 - **Pydantic** - 数据验证
-- **DDD 架构** - 领域驱动设计
+- **分层架构** - 经典的三层架构（API/CRUD/Models/Core）
 
 ### 架构模式
 ```

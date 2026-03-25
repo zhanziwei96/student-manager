@@ -1,25 +1,33 @@
 version: '3.8'
 
 services:
-  student-manage:
-    build: .
-    container_name: student-manage-v3
+  classhub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: classhub
     ports:
-      - "80:80"      # HTTP
-      - "443:443"    # HTTPS
+      - "8080:80"      # HTTP (映射到本地8080避免冲突)
     volumes:
       # 数据目录挂载到本地 backend/data 目录
       - ./backend/data:/app/backend/data
       # 上传文件目录挂载
       - ./uploads:/app/uploads
-      # 备份目录挂载
+      # 备份目录挂载到本地 backups 目录（与数据分开）
       - ./backups:/app/backups
+      # 日志目录挂载
+      - ./backend/logs:/app/backend/logs
     environment:
-      - FLASK_ENV=production
-      - SECRET_KEY=${SECRET_KEY:-student-manage-fixed-secret-key-2024}
+      - ENV=production
+      - DEBUG=false
+      - DATABASE_PATH=/app/backend/data/student_manage.db
+      - BACKUP_DIR=/app/backups
+      - SECURITY_SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - HOST=127.0.0.1
+      - PORT=8000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:health"]
       interval: 30s
       timeout: 10s
       retries: 3
