@@ -133,6 +133,7 @@ dmypy.json
 Thumbs.db
 
 # Project specific
+!frontend-v3/src/lib/
 *.pid
 *.log
 uploads/*
