@@ -13,7 +13,7 @@
 | 缺陷类别 | 数量 | 严重级别分布 | 已修复 | 未修复 |
 |----------|------|--------------|--------|--------|
 | 数据库架构 | 3 | 🔴 严重: 2, 🟡 中等: 1 | 1 | 2 |
-| 后端架构 | 8 | 🔴 严重: 3, 🟡 中等: 4, 🟢 轻微: 1 | 4 | 4 |
+| 后端架构 | 8 | 🔴 严重: 3, 🟡 中等: 4, 🟢 轻微: 1 | 5 | 3 |
 | 前端架构 | 5 | 🟡 中等: 4, 🟢 轻微: 1 | 0 | 5 |
 | 安全设计 | 4 | 🔴 严重: 2, 🟡 中等: 2 | 1 | 3 |
 | 部署运维 | 3 | 🟡 中等: 2, 🟢 轻微: 1 | 0 | 3 |
@@ -21,7 +21,7 @@
 
 **总计**: 25 项缺陷  
 **🔴 严重**: 7 项 | **🟡 中等**: 14 项 | **🟢 轻微**: 4 项  
-**已修复**: 8 项 | **未修复**: 14 项
+**已修复**: 9 项 | **未修复**: 13 项
 
 ---
 
@@ -236,24 +236,46 @@ async def begin_class(
 
 ---
 
-### BE-003: 业务逻辑泄露到 API 层 🟡 中等 ❌ 未修复
+### BE-003: 业务逻辑泄露到 API 层 🟡 中等 ✅ 已修复
 **位置**: `backend/app/api/routes/students.py`  
 **缺陷描述**: 复杂的权限过滤逻辑直接写在 API 层
 
+**修复状态**: ✅ **已修复**
+
+**修复详情**:
+- 在 CRUD 层新增 `get_students_by_permission()` 和 `get_classes_by_permission()` 函数
+- 将权限判断、班级过滤、数据去重等逻辑移至 CRUD 层
+- API 层只负责调用 CRUD 函数和处理 HTTP 响应
+
 ```python
-if is_admin:
-    students = get_students(session)
-else:
-    user_obj = get_user(session, int(user_id))
-    assigned_classes = user_obj.get_assigned_classes()
-    # ... 复杂过滤逻辑
+# 修复前 - API 层包含业务逻辑 ❌
+@router.get("/students")
+async def get_students_list(...):
+    is_admin = user.get("is_admin", False)
+    if is_admin:
+        students = get_students(session)
+    else:
+        user_obj = get_user(session, int(user_id))
+        assigned_classes = user_obj.get_assigned_classes()
+        # ... 复杂过滤逻辑
+
+# 修复后 - API 层只负责协议转换 ✅
+@router.get("/students")
+async def get_students_list(...):
+    from app.crud.student import get_students_by_permission
+    students, error = get_students_by_permission(session, user, class_name)
+    if error:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail=error)
 ```
 
-**影响**:
-- API 层违反"只负责 HTTP 协议转换"原则
-- 相同逻辑在多个端点重复
+**架构改进**:
+- 单一职责：API 层只负责 HTTP 协议转换
+- 可复用：权限逻辑可在多个端点复用
+- 可测试：权限逻辑可在单元测试中直接测试
+- 分层清晰：符合 MVC 架构规范
 
-**修复建议**: 移至 Service 层或使用策略模式
+**新增文件**:
+- `tests/unit/crud/test_student_permission.py` - 权限查询单元测试
 
 ---
 
@@ -617,7 +639,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 
 ## 8. 缺陷修复状态汇总
 
-### 已修复 (8项)
+### 已修复 (9项)
 
 | 缺陷ID | 描述 | 严重级别 |
 |--------|------|----------|
@@ -626,6 +648,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 | DB-003 | 事务边界不明确 | 🟡 中等 |
 | BE-001 | 配置加载逻辑分散 | 🟡 中等 |
 | BE-002 | 权限检查机制不一致 | 🟡 中等 |
+| BE-003 | 业务逻辑泄露到 API 层 | 🟡 中等 |
 | BE-004 | 贫血领域模型 | 🟡 中等 |
 | SEC-004 | 审计日志不完整 | 🔴 严重 |
 | TEST-001 | 测试路径硬编码 | 🟡 中等 |

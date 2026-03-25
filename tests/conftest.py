@@ -66,7 +66,8 @@ def test_student(session: Session):
 @pytest.fixture
 def test_user(session: Session):
     """创建测试用户（教师）"""
-    from app.models import User, UserRole
+    from app.models import User
+    from app.models.constants import UserRoleConst
     from app.core.security import generate_password_hash
     
     password_hash, salt = generate_password_hash("teacher123")
@@ -75,7 +76,7 @@ def test_user(session: Session):
         name="测试教师",
         password_hash=password_hash,
         salt=salt,
-        role=UserRole.TEACHER,
+        role=UserRoleConst.TEACHER,
         assigned_classes=["测试班级"]
     )
     session.add(user)
@@ -87,7 +88,8 @@ def test_user(session: Session):
 @pytest.fixture
 def test_admin(session: Session):
     """创建测试管理员"""
-    from app.models import User, UserRole
+    from app.models import User
+    from app.models.constants import UserRoleConst
     from app.core.security import generate_password_hash
     
     password_hash, salt = generate_password_hash("admin123")
@@ -96,7 +98,7 @@ def test_admin(session: Session):
         name="测试管理员",
         password_hash=password_hash,
         salt=salt,
-        role=UserRole.ADMIN,
+        role=UserRoleConst.ADMIN,
         assigned_classes=[]
     )
     session.add(user)

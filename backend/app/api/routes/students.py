@@ -39,39 +39,12 @@ async def get_students_list(
     user: dict = Depends(get_current_user)
 ):
     """获取学生列表（管理员看所有，教师看负责班级）"""
-    is_admin = user.get("is_admin", False)
-    user_id = user.get("sub")
+    # 使用 CRUD 层的权限控制函数，将业务逻辑从 API 层分离
+    from app.crud.student import get_students_by_permission
     
-    if is_admin:
-        # 管理员可以查看所有学生
-        if class_name:
-            students = get_students_by_class(session, class_name)
-        else:
-            students = get_students(session)
-    else:
-        # 教师只能查看负责班级的学生
-        from app.crud import get_user
-        user_obj = get_user(session, int(user_id))
-        assigned_classes = user_obj.get_assigned_classes() if user_obj else []
-        
-        # 如果指定了班级，检查是否有权限
-        if class_name:
-            if class_name not in assigned_classes:
-                raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权查看该班级学生')
-            students = get_students_by_class(session, class_name)
-        else:
-            # 获取所有负责班级的学生
-            students = []
-            for cls in assigned_classes:
-                students.extend(get_students_by_class(session, cls))
-            # 去重（防止同一学生在多个班级的情况）
-            seen = set()
-            unique_students = []
-            for s in students:
-                if s.student_id not in seen:
-                    seen.add(s.student_id)
-                    unique_students.append(s)
-            students = unique_students
+    students, error = get_students_by_permission(session, user, class_name)
+    if error:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail=error)
     
     # 获取当前课堂会话
     class_session = get_class_session(session)
@@ -205,17 +178,12 @@ async def get_classes(
     user: dict = Depends(get_current_user)
 ):
     """获取班级列表（管理员看所有，教师看负责班级）"""
-    is_admin = user.get("is_admin", False)
+    # 使用 CRUD 层的权限控制函数，将业务逻辑从 API 层分离
+    from app.crud.student import get_classes_by_permission
     
-    if is_admin:
-        # 管理员返回所有班级
-        class_names = get_all_classes(session)
-    else:
-        # 教师只返回负责的班级
-        from app.crud import get_user
-        user_id = user.get("sub")
-        user_obj = get_user(session, int(user_id))
-        class_names = user_obj.get_assigned_classes() if user_obj else []
+    class_names, error = get_classes_by_permission(session, user)
+    if error:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail=error)
     
     # 获取当前课堂会话状态
     class_session = get_class_session(session)
