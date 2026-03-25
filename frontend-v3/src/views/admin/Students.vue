@@ -1,23 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useStudents, useScoreUpdate, useStudentCreate } from '@/composables'
+import { useStudents, useStudentCreate } from '@/composables'
 
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer, SearchableSelect } from '@/components/ui'
-import { Search, Plus, Minus } from 'lucide-vue-next'
+import { Search, Plus } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
 
 const { data: students, isPending, error, refetch } = useStudents()
-
-const { mutateAsync: updateScore, isPending: isUpdatingScore } = useScoreUpdate()
 const { mutateAsync: createStudent, isPending: isCreating } = useStudentCreate()
 
 const searchQuery = ref('')
 const selectedClass = ref<string>('')
-const selectedStudent = ref<Student | null>(null)
-const showScoreDialog = ref(false)
-const scoreChange = ref(0)
-const scoreReason = ref('')
 
 const showToast = ref(false)
 const toastMessage = ref('')
@@ -101,36 +95,6 @@ const filteredStudents = computed(() => {
   
   return result
 })
-
-const openScoreDialog = (student: Student, isAdd: boolean) => {
-  selectedStudent.value = student
-  scoreChange.value = isAdd ? 10 : -10
-  scoreReason.value = ''
-  showScoreDialog.value = true
-}
-
-const handleUpdateScore = async () => {
-  if (!selectedStudent.value) return
-
-  try {
-    await updateScore({
-      studentId: selectedStudent.value.student_id,
-      data: {
-        score_change: scoreChange.value,
-        reason: scoreReason.value,
-      },
-    })
-
-    toastMessage.value = `${selectedStudent.value.name} 的分数已更新`
-    toastVariant.value = 'success'
-    showToast.value = true
-    showScoreDialog.value = false
-  } catch (err: any) {
-    toastMessage.value = err.message || '更新分数失败'
-    toastVariant.value = 'error'
-    showToast.value = true
-  }
-}
 
 // 打开添加学生弹窗
 const openAddDialog = () => {
@@ -272,22 +236,7 @@ const handleAddStudent = async () => {
                   </Badge>
                 </td>
                 <td class="px-4 py-3">
-                  <div class="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      @click="openScoreDialog(student, true)"
-                    >
-                      <Plus class="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      @click="openScoreDialog(student, false)"
-                    >
-                      <Minus class="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <span class="text-white/40 text-sm">-</span>
                 </td>
               </tr>
             </tbody>
@@ -295,41 +244,6 @@ const handleAddStudent = async () => {
         </div>
       </Card>
     </DataContainer>
-
-    <!-- Score Dialog -->
-    <Dialog v-model:open="showScoreDialog" title="更新分数">
-      <div class="space-y-4">
-        <p v-if="selectedStudent" class="text-white/60">
-          更新 <span class="font-medium text-white">{{ selectedStudent.name }}</span> 的分数
-        </p>
-        <div class="space-y-2">
-          <Label for="scoreChange">分数变化</Label>
-          <Input
-            id="scoreChange"
-            v-model.number="scoreChange"
-            type="number"
-            placeholder="输入分数（正数或负数）"
-          />
-        </div>
-        <div class="space-y-2">
-          <Label for="reason">原因</Label>
-          <Input
-            id="reason"
-            v-model="scoreReason"
-            placeholder="输入分数变化原因"
-          />
-        </div>
-      </div>
-      <template #footer>
-        <Button variant="outline" @click="showScoreDialog = false">取消</Button>
-        <Button
-          :loading="isUpdatingScore"
-          @click="handleUpdateScore"
-        >
-          更新分数
-        </Button>
-      </template>
-    </Dialog>
 
     <!-- Add Student Dialog -->
     <Dialog v-model:open="showAddDialog" title="添加学生">

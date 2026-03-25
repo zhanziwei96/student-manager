@@ -1,14 +1,28 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useStudents, useScoreUpdate } from '@/composables'
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer, SearchableSelect } from '@/components/ui'
-import { Search, TrendingUp, TrendingDown, MessageCircle, AlertTriangle, UserX, Plus, Minus } from 'lucide-vue-next'
+import { Search, MessageCircle, AlertTriangle, UserX, Plus, Minus } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
 
-const { data: students, isPending, error, refetch } = useStudents()
+// === 使用 Vue Query ===
+const queryClient = useQueryClient()
+const { data: studentsData, isPending, error, refetch } = useStudents()
 const { mutateAsync: updateScore, isPending: isUpdatingScore } = useScoreUpdate()
 
+// === 本地响应式状态 ===
+const students = ref<Student[]>([])
+
+// 同步 Vue Query 数据到本地
+watch(() => studentsData.value, (newData) => {
+  if (newData) {
+    students.value = [...newData]
+  }
+}, { immediate: true, deep: true })
+
+// === 搜索和筛选 ===
 const searchQuery = ref('')
 const selectedClass = ref<string>('')
 const selectedStudent = ref<Student | null>(null)
@@ -29,7 +43,7 @@ const quickScoreOptions = [
 
 // 按班级分组的学生
 const studentsByClass = computed(() => {
-  if (!students.value) return {}
+  if (!students.value.length) return {}
   
   const grouped: Record<string, Student[]> = {}
   students.value.forEach(student => {
@@ -42,13 +56,12 @@ const studentsByClass = computed(() => {
   return grouped
 })
 
-// 班级列表（包含学生数量）
+// 班级列表
 const classList = computed(() => {
   const list = Object.entries(studentsByClass.value).map(([name, students]) => ({
     name,
     count: students.length,
   }))
-  // 按班级名称排序
   return list.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
 })
 
@@ -70,9 +83,9 @@ watch(classList, (list) => {
 
 // 过滤后的学生列表
 const filteredStudents = computed(() => {
-  if (!students.value) return []
+  if (!students.value.length) return []
   
-  let result = students.value
+  let result = [...students.value]
   
   // 按班级筛选
   if (selectedClass.value) {
@@ -93,6 +106,7 @@ const filteredStudents = computed(() => {
   return result
 })
 
+// === 事件处理 ===
 const openScoreDialog = (student: Student, defaultScore: number = 0, defaultReason: string = '') => {
   selectedStudent.value = student
   scoreChange.value = defaultScore || 10
@@ -103,13 +117,31 @@ const openScoreDialog = (student: Student, defaultScore: number = 0, defaultReas
 // 处理快速分数调整
 const handleQuickScore = async (student: Student, score: number, reason: string) => {
   try {
-    await updateScore({
+    const result = await updateScore({
       studentId: student.student_id,
       data: {
         score_change: score,
         reason: reason,
       },
     })
+    
+    // 更新 Vue Query 缓存
+    const currentData = queryClient.getQueryData<Student[]>(['students'])
+    if (currentData) {
+      const newData = currentData.map((s) =>
+        s.student_id === student.student_id
+          ? { ...s, score: result.score }
+          : s
+      )
+      queryClient.setQueryData(['students'], newData)
+    }
+    
+    // 同步更新本地数据（确保 UI 立即响应）
+    const index = students.value.findIndex(s => s.student_id === student.student_id)
+    if (index !== -1) {
+      students.value[index] = { ...students.value[index], score: result.score }
+    }
+    
     toastMessage.value = `${student.name} ${score > 0 ? '+' : ''}${score}分`
     toastVariant.value = 'success'
     showToast.value = true
@@ -120,17 +152,35 @@ const handleQuickScore = async (student: Student, score: number, reason: string)
   }
 }
 
+// 处理自定义分数更新
 const handleUpdateScore = async () => {
   if (!selectedStudent.value) return
 
   try {
-    await updateScore({
+    const result = await updateScore({
       studentId: selectedStudent.value.student_id,
       data: {
         score_change: scoreChange.value,
         reason: scoreReason.value,
       },
     })
+    
+    // 更新 Vue Query 缓存
+    const currentData = queryClient.getQueryData<Student[]>(['students'])
+    if (currentData) {
+      const newData = currentData.map((s) =>
+        s.student_id === selectedStudent.value!.student_id
+          ? { ...s, score: result.score }
+          : s
+      )
+      queryClient.setQueryData(['students'], newData)
+    }
+    
+    // 同步更新本地数据（确保 UI 立即响应）
+    const index = students.value.findIndex(s => s.student_id === selectedStudent.value!.student_id)
+    if (index !== -1) {
+      students.value[index] = { ...students.value[index], score: result.score }
+    }
 
     toastMessage.value = `${selectedStudent.value.name} 的分数已更新`
     toastVariant.value = 'success'
@@ -187,7 +237,7 @@ const handleUpdateScore = async () => {
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <Card
           v-for="student in filteredStudents"
-          :key="student.id"
+          :key="student.student_id"
           class="border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
           :class="student.checkin_status === 'checked_in' ? 'border-green-500/30' : ''"
         >

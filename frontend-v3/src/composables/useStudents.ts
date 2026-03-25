@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { studentsApi } from '@/api'
-import type { UpdateScoreRequest, CreateStudentRequest } from '@/types'
+import type { UpdateScoreRequest, CreateStudentRequest, Student } from '@/types'
 
 /**
  * Students query composable - FE-003 修复后
@@ -13,6 +13,8 @@ export function useStudents() {
       // FE-003: 直接获取数据，错误自动抛出
       return await studentsApi.getAll()
     },
+    // 禁用结构共享，确保 setQueryData 后 UI 立即更新
+    structuralSharing: false,
   })
 
   return {
@@ -31,9 +33,22 @@ export function useScoreUpdate() {
       // FE-003: 直接获取数据，错误自动抛出
       return await studentsApi.updateScore(studentId, data)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['students'] })
-      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    onSuccess: async (updatedStudent) => {
+      // 获取当前缓存数据
+      const currentData = queryClient.getQueryData<Student[]>(['students'])
+      
+      if (currentData) {
+        // 更新缓存中的数据
+        const newData = currentData.map((student) =>
+          student.student_id === updatedStudent.student_id
+            ? { ...student, score: updatedStudent.score }
+            : student
+        )
+        queryClient.setQueryData(['students'], newData)
+      }
+      
+      // 立即强制重新获取，确保数据一致性
+      await queryClient.refetchQueries({ queryKey: ['students'], exact: true })
     },
   })
 
