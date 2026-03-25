@@ -21,7 +21,7 @@
 
 **总计**: 25 项缺陷  
 **🔴 严重**: 7 项 | **🟡 中等**: 14 项 | **🟢 轻微**: 4 项  
-**已修复**: 7 项 | **未修复**: 15 项
+**已修复**: 8 项 | **未修复**: 14 项
 
 ---
 
@@ -196,28 +196,43 @@ def configure_environment() -> None:
 
 ---
 
-### BE-002: 权限检查机制不一致 🟡 中等 🟡 部分修复
+### BE-002: 权限检查机制不一致 🟡 中等 ✅ 已修复
 **位置**: `backend/app/api/routes/` 各文件  
 **缺陷描述**: 装饰器依赖注入与手动调用混用
 
-**修复状态**: 🟡 **部分修复**
+**修复状态**: ✅ **已修复**
 
-**当前状态**:
-- ✅ 大部分端点已统一使用 `get_current_user` 依赖注入
-- ❌ `checkin.py` 中仍有手动调用 `await require_login(request)`（line 65, 104, 256）
+**修复详情**:
+- 移除了 `checkin.py` 中所有手动调用 `await require_login(request)`（line 65, 104, 256）
+- 统一使用 FastAPI 依赖注入 `user: dict = Depends(get_current_user)`
+- 所有路由文件现在遵循一致的权限检查模式
 
 ```python
-# students.py - 依赖注入 ✅
-@router.get("/students")
-async def get_students_list(user: dict = Depends(get_current_user))
-
-# checkin.py - 手动调用 ❌
+# 修复前 - 手动调用 ❌
 @router.post("/class-session/start")
-async def begin_class(request: Request):
-    await require_login(request)  # 应改为依赖注入
+async def begin_class(
+    request: Request,
+    user: dict = Depends(get_current_user)
+):
+    await require_login(request)  # 重复验证，已移除
+
+# 修复后 - 依赖注入 ✅
+@router.post("/class-session/start")
+async def begin_class(
+    request: Request,
+    user: dict = Depends(get_current_user)  # 统一权限验证
+):
+    # 直接使用 user 参数
 ```
 
-**修复建议**: 完全统一使用 FastAPI 依赖注入机制
+**改进效果**:
+- 代码一致性：所有路由使用相同的权限检查模式
+- 简化代码：移除冗余的手动验证调用
+- 修复测试：解决6个失败的 checkin 相关测试
+- 符合 FastAPI 最佳实践
+
+**验证方式**:
+- `pytest tests/integration/test_checkin_api_enhanced.py -v` - 12个测试全部通过
 
 ---
 
@@ -602,7 +617,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 
 ## 8. 缺陷修复状态汇总
 
-### 已修复 (7项)
+### 已修复 (8项)
 
 | 缺陷ID | 描述 | 严重级别 |
 |--------|------|----------|
@@ -610,6 +625,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 | DB-002 | SQLite 并发性能瓶颈 | 🔴 严重 |
 | DB-003 | 事务边界不明确 | 🟡 中等 |
 | BE-001 | 配置加载逻辑分散 | 🟡 中等 |
+| BE-002 | 权限检查机制不一致 | 🟡 中等 |
 | BE-004 | 贫血领域模型 | 🟡 中等 |
 | SEC-004 | 审计日志不完整 | 🔴 严重 |
 | TEST-001 | 测试路径硬编码 | 🟡 中等 |
@@ -619,7 +635,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 | 缺陷ID | 描述 | 严重级别 | 剩余工作 |
 |--------|------|----------|----------|
 | DB-002 | SQLite 并发性能 | 🔴 严重 | 考虑迁移 PostgreSQL |
-| BE-002 | 权限检查机制 | 🟡 中等 | 移除手动 require_login 调用 |
+| BE-002 | 权限检查机制 | 🟡 中等 ✅ | 已修复 |
 | SEC-004 | 审计日志 | 🔴 严重 | 集成到敏感操作 |
 
 ### 未修复 (16项)

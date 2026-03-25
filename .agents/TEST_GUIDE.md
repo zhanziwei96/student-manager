@@ -172,6 +172,30 @@ conda activate student-manage
 | 教师访问其他班级 | 教师访问非负责班级学生 | 只能看到负责班级数据 |
 | 过期Token | 使用过期session调用API | 返回401需要登录 |
 
+### 6.3 权限检查机制一致性 (BE-002)
+
+> **修复说明**: 已统一使用 FastAPI 依赖注入方式进行权限检查
+
+| 测试项 | 测试步骤 | 预期结果 |
+|--------|----------|----------|
+| 依赖注入方式-开始上课 | 教师调用 POST /class-session/start | 正常验证并返回课堂信息 |
+| 依赖注入方式-结束上课 | 教师调用 POST /class-session/end | 正常验证并结束课堂 |
+| 依赖注入方式-学生查询 | 学生调用 GET /class-session/{class_name} | 正常验证并返回课堂状态 |
+| 未登录访问 | 未登录调用受保护端点 | 返回401需要登录 |
+
+**架构规范**:
+```python
+# ✅ 正确：使用 FastAPI 依赖注入
+@router.post("/class-session/start")
+async def begin_class(
+    user: dict = Depends(get_current_user)
+):
+    # 直接使用 user 参数
+
+# ❌ 错误：手动调用 require_login
+await require_login(request)  # 已废弃
+```
+
 ---
 
 ## 七、自动化测试

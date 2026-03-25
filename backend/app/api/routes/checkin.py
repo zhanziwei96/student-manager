@@ -62,7 +62,7 @@ async def begin_class(
     user: dict = Depends(get_current_user)
 ):
     """开始上课（检查班级冲突）"""
-    await require_login(request)
+    # 用户认证已通过 Depends(get_current_user) 完成
     
     # 检查该班级是否已有活跃课堂
     from app.crud.checkin import get_class_session_by_class_name
@@ -101,7 +101,7 @@ async def finish_class(
     user: dict = Depends(get_current_user)
 ):
     """结束上课"""
-    await require_login(request)
+    # 用户认证已通过 Depends(get_current_user) 完成
     
     teacher_id = int(user.get("sub", 0))
     end_class(session, teacher_id)
@@ -250,10 +250,11 @@ def get_active_class_sessions(
 async def get_class_session_for_student(
     class_name: str,
     request: Request,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """获取指定班级的活跃课堂状态（学生端使用）"""
-    await require_login(request)
+    # 用户认证已通过 Depends(get_current_user) 完成
     
     from app.crud.checkin import get_class_session_by_class_name
     class_session = get_class_session_by_class_name(session, class_name)
