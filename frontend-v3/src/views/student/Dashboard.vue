@@ -101,8 +101,8 @@ const rank = computed(() => {
             </div>
             <div>
               <p class="text-sm text-white/60">状态</p>
-              <Badge :variant="currentStudent.status === 'active' ? 'success' : 'secondary'">
-                {{ currentStudent.status === 'active' ? '活跃' : '非活跃' }}
+              <Badge :variant="currentStudent.is_active ? 'success' : 'secondary'">
+                {{ currentStudent.is_active ? '活跃' : '非活跃' }}
               </Badge>
             </div>
           </div>

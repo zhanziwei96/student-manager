@@ -189,7 +189,7 @@ const handleUpdateScore = async () => {
           v-for="student in filteredStudents"
           :key="student.id"
           class="border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
-          :class="student.status === 'active' ? 'border-green-500/30' : ''"
+          :class="student.is_active ? 'border-green-500/30' : ''"
         >
           <!-- 学生信息 -->
           <div class="flex items-start justify-between mb-3">
@@ -205,8 +205,8 @@ const handleUpdateScore = async () => {
                 <p class="text-xs text-white/40">{{ student.class_name }}</p>
               </div>
             </div>
-            <Badge :variant="student.status === 'active' ? 'success' : 'secondary'" class="text-xs">
-              {{ student.status === 'active' ? '活跃' : '非活跃' }}
+            <Badge :variant="student.is_active ? 'success' : 'secondary'" class="text-xs">
+              {{ student.is_active ? '活跃' : '非活跃' }}
             </Badge>
           </div>
           

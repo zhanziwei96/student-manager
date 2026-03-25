@@ -1,8 +1,8 @@
 # ClassHub 班级管理系统 - 缺陷报告
 
-**文档版本**: v1.5  
+**文档版本**: v1.6  
 **编写日期**: 2026-03-24  
-**更新日期**: 2026-03-25 (BE-008 并发保护修复, FE-001/FE-002/FE-003 前端修复)  
+**更新日期**: 2026-03-25 (BE-008 并发保护修复, FE-001/FE-002/FE-003/FE-004 前端修复)  
 **适用系统**: ClassHub 班级管理系统 v3.0 (frontend-v3分支)  
 **架构评估范围**: 前端、后端、数据库、部署、安全
 
@@ -14,14 +14,14 @@
 |----------|------|--------------|--------|--------|
 | 数据库架构 | 3 | 🔴 严重: 2, 🟡 中等: 1 | 1 | 2 |
 | 后端架构 | 8 | 🔴 严重: 3, 🟡 中等: 4, 🟢 轻微: 1 | 7 | 1 |
-| 前端架构 | 5 | 🟡 中等: 4, 🟢 轻微: 1 | 3 | 2 |
+| 前端架构 | 5 | 🟡 中等: 4, 🟢 轻微: 1 | 4 | 1 |
 | 安全设计 | 4 | 🔴 严重: 2, 🟡 中等: 2 | 1 | 3 |
 | 部署运维 | 3 | 🟡 中等: 2, 🟢 轻微: 1 | 0 | 3 |
 | 测试质量 | 2 | 🟡 中等: 1, 🟢 轻微: 1 | 1 | 1 |
 
 **总计**: 25 项缺陷  
 **🔴 严重**: 7 项 | **🟡 中等**: 14 项 | **🟢 轻微**: 4 项  
-**已修复**: 15 项 | **未修复**: 7 项
+**已修复**: 16 项 | **未修复**: 6 项
 
 ---
 
@@ -611,15 +611,48 @@ export async function get<T>(url: string, params?: ...): Promise<T> {
 
 ---
 
-### FE-004: 前后端类型不同步 🟡 中等 ❌ 未修复
+### FE-004: 前后端类型不同步 🟡 中等 ✅ 已修复
 **位置**: `frontend-v3/src/types/` vs `backend/app/models/`  
 **缺陷描述**: TypeScript 类型手动维护，与 SQLModel 定义可能不一致
 
-**影响**:
-- 后端模型变更后，前端类型可能不同步
-- 运行时类型错误
+**修复状态**: ✅ **已修复**
 
-**修复建议**: 引入代码生成工具（如 openapi-typescript）从 API 文档生成类型
+**修复详情**:
+- 更新前端类型定义，添加后端模型对应注释
+- 统一字段命名：`Student.status` → `Student.is_active`
+- 补充缺失字段：`User.assigned_classes`, `Student.created_at`, `Student.last_login`
+- 添加类型映射注释，方便后续维护时参考
+
+```typescript
+/**
+ * 学生类型 - 对应后端 StudentResponse
+ *
+ * 后端模型: backend/app/models/student.py::StudentResponse
+ * 注意: 保持与后端字段一致，修改时需同步更新
+ */
+export interface Student {
+  id: number
+  student_id: string
+  name: string
+  class_name: string
+  score: number
+  is_active: boolean           // FE-004: 统一为 is_active
+  created_at?: string          // FE-004: 补充缺失字段
+  last_login?: string          // FE-004: 补充缺失字段
+}
+```
+
+**修改文件**:
+- `frontend-v3/src/types/api.ts` - 更新类型定义，添加后端对应注释
+- `frontend-v3/src/views/admin/Students.vue` - `status` → `is_active`
+- `frontend-v3/src/views/teacher/Students.vue` - `status` → `is_active`
+- `frontend-v3/src/views/student/Dashboard.vue` - `status` → `is_active`
+
+**轻量级方案说明**:
+- 不引入复杂的代码生成工具
+- 通过注释建立前后端类型映射关系
+- 统一字段命名规范（is_active 替代 status）
+- 未来如需更严格的类型同步，可考虑 openapi-typescript
 
 ---
 
@@ -799,7 +832,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 
 ## 8. 缺陷修复状态汇总
 
-### 已修复 (15项)
+### 已修复 (16项)
 
 | 缺陷ID | 描述 | 严重级别 |
 |--------|------|----------|
@@ -815,6 +848,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 | FE-001 | 双重状态管理冲突 | 🟡 中等 |
 | FE-002 | 路由权限前端控制不可靠 | 🟡 中等 |
 | FE-003 | 缺乏统一 API 响应处理 | 🟡 中等 |
+| FE-004 | 前后端类型不同步 | 🟡 中等 |
 | SEC-004 | 审计日志不完整 | 🔴 严重 |
 | TEST-001 | 测试路径硬编码 | 🟡 中等 |
 | TEST-002 | Fixture 清理 | 🟢 轻微 |
@@ -826,14 +860,13 @@ backend_path = "/home/yufeng/student-manager/backend"
 | DB-002 | SQLite 并发性能 | 🔴 严重 | 考虑迁移 PostgreSQL |
 | SEC-004 | 审计日志 | 🔴 严重 | 集成到敏感操作 |
 
-### 未修复 (7项)
+### 未修复 (6项)
 
 | 缺陷ID | 描述 | 严重级别 | 优先级 |
 |--------|------|----------|--------|
 | BE-005 | JWT 令牌无法撤销 | 🔴 严重 | P0 |
 | SEC-003 | 密码盐值冗余 | 🔴 严重 | P0 |
 | BE-007 | 限流无法扩展 | 🟡 中等 | P1 |
-| FE-004 | 前后端类型不同步 | 🟡 中等 | P2 |
 | SEC-001 | 文件上传安全 | 🟡 中等 | P1 |
 | SEC-002 | CORS 配置 | 🟡 中等 | P1 |
 | DEP-001 | 单容器架构 | 🟡 中等 | P2 |
@@ -879,7 +912,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 ```
 数据库架构   ████████░░  3项 (已修复1/部分修复1/未修复1)
 后端架构     ████████████████░░░░  8项 (已修复7/部分修复0/未修复1)
-前端架构     ██████████░░░░  5项 (已修复3/未修复2)
+前端架构     ██████████░░░░  5项 (已修复4/未修复1)
 安全设计     ████████░░  4项 (部分修复1/未修复3)
 部署运维     ██████░░░░  3项 (未修复3)
 测试质量     ████░░░░░░  2项 (已修复1/未修复1)
@@ -907,6 +940,9 @@ backend_path = "/home/yufeng/student-manager/backend"
 2026-03-25: 已修复 15 项，部分修复 2 项，未修复 7 项
             ↑
            进度 +60% (新增: FE-003 统一 API 响应处理)
+2026-03-25: 已修复 16 项，部分修复 2 项，未修复 6 项
+            ↑
+           进度 +64% (新增: FE-004 前后端类型同步)
 ```
 
 ### C. 关联需求
@@ -916,6 +952,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 - ✅ BE-008 → 已实现乐观锁并发保护（version 字段）
 - ✅ FE-001 → 已分离服务端状态和 UI 状态（Query + Pinia）
 - ✅ FE-003 → 已统一 API 响应处理（自动检查 res.success）
+- ✅ FE-004 → 已同步前后端类型定义（添加类型映射注释）
 - ❌ BE-005 → 仍需引入 Redis 支持 Token 黑名单
 - 🟡 SEC-004 → AuditLog 模型已创建，需集成到业务逻辑
 
