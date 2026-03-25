@@ -123,24 +123,24 @@ def get_students_by_class(session: Session, class_name: str) -> List[Student]:
 
 
 def create_student(session: Session, student_id: str, name: str, class_name: str, score: float = None) -> Student:
-    """创建学生"""
+    """创建学生 - SEC-003: 使用简化密码哈希接口"""
     from app.core.config import get_settings
-    from app.core.security import generate_password_hash
+    from app.core.security import hash_password
     settings = get_settings()
     
     if score is None:
         score = settings.score.default_score
     
     # 使用学号作为默认密码
-    password_hash, salt = generate_password_hash(student_id)
+    password_hash = hash_password(student_id)
     
     student = Student(
         student_id=student_id,
         name=name,
         class_name=class_name,
         score=score,
-        password_hash=password_hash,
-        salt=salt
+        password_hash=password_hash
+        # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     )
     session.add(student)
     session.commit()
@@ -262,13 +262,13 @@ def get_all_classes(session: Session) -> List[str]:
     return [str(row) for row in result if row]
 
 
-def reset_student_password(session: Session, student_id: str, password_hash: str, salt: str) -> Optional[Student]:
-    """重置学生密码"""
+def reset_student_password(session: Session, student_id: str, password_hash: str) -> Optional[Student]:
+    """重置学生密码 - SEC-003: 移除 salt 参数"""
     student = get_student(session, student_id)
     if not student:
         return None
     student.password_hash = password_hash
-    student.salt = salt
+    # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     session.add(student)
     session.commit()
     session.refresh(student)

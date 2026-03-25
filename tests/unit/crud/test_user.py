@@ -1,5 +1,5 @@
 """
-用户 CRUD 单元测试
+用户 CRUD 单元测试 - SEC-003: 移除 salt 参数
 """
 import pytest
 from datetime import datetime
@@ -10,22 +10,21 @@ from app.crud import (
     reset_password, delete_user
 )
 from app.models import User
-from app.core.security import generate_password_hash, verify_password_hash
+from app.core.security import hash_password, verify_password
 
 
 class TestUserCRUD:
     """测试用户 CRUD 操作"""
     
     def test_create_user(self, session: Session):
-        """测试创建用户"""
-        password_hash, salt = generate_password_hash("password123")
+        """测试创建用户 - SEC-003: 简化密码哈希接口"""
+        password_hash = hash_password("password123")
         
         user = create_user(
             session,
             username="new_teacher",
             name="新教师",
             password_hash=password_hash,
-            salt=salt,
             role="teacher",
             assigned_classes=["软件1班"]
         )
@@ -34,11 +33,13 @@ class TestUserCRUD:
         assert user.name == "新教师"
         assert user.role == "teacher"
         assert user.get_assigned_classes() == ["软件1班"]
+        # SEC-003: salt 字段应为 None
+        assert user.salt is None
     
     def test_get_user_by_id(self, session: Session):
         """测试根据ID获取用户"""
-        password_hash, salt = generate_password_hash("password123")
-        user = create_user(session, "teacher1", "教师1", password_hash, salt)
+        password_hash = hash_password("password123")
+        user = create_user(session, "teacher1", "教师1", password_hash)
         
         found = get_user(session, user.id)
         assert found is not None
@@ -46,8 +47,8 @@ class TestUserCRUD:
     
     def test_get_user_by_username(self, session: Session):
         """测试根据用户名获取用户"""
-        password_hash, salt = generate_password_hash("password123")
-        create_user(session, "teacher2", "教师2", password_hash, salt)
+        password_hash = hash_password("password123")
+        create_user(session, "teacher2", "教师2", password_hash)
         
         found = get_user_by_username(session, "teacher2")
         assert found is not None
@@ -60,18 +61,18 @@ class TestUserCRUD:
     
     def test_get_users(self, session: Session):
         """测试获取所有用户"""
-        password_hash, salt = generate_password_hash("password123")
-        create_user(session, "admin1", "管理员", password_hash, salt, role="admin")
-        create_user(session, "teacher3", "教师3", password_hash, salt, role="teacher")
+        password_hash = hash_password("password123")
+        create_user(session, "admin1", "管理员", password_hash, role="admin")
+        create_user(session, "teacher3", "教师3", password_hash, role="teacher")
         
         users = get_users(session)
         assert len(users) == 2
     
     def test_get_users_by_role(self, session: Session):
         """测试按角色获取用户"""
-        password_hash, salt = generate_password_hash("password123")
-        create_user(session, "admin2", "管理员", password_hash, salt, role="admin")
-        create_user(session, "teacher4", "教师4", password_hash, salt, role="teacher")
+        password_hash = hash_password("password123")
+        create_user(session, "admin2", "管理员", password_hash, role="admin")
+        create_user(session, "teacher4", "教师4", password_hash, role="teacher")
         
         admins = get_users(session, role="admin")
         assert len(admins) == 1
@@ -79,8 +80,8 @@ class TestUserCRUD:
     
     def test_record_login_success(self, session: Session):
         """测试记录登录成功"""
-        password_hash, salt = generate_password_hash("password123")
-        user = create_user(session, "teacher5", "教师5", password_hash, salt)
+        password_hash = hash_password("password123")
+        user = create_user(session, "teacher5", "教师5", password_hash)
         user.login_fail_count = 3  # 设置一些失败次数
         
         record_login_success(session, user, "127.0.0.1")
@@ -91,8 +92,8 @@ class TestUserCRUD:
     
     def test_record_login_failure(self, session: Session):
         """测试记录登录失败"""
-        password_hash, salt = generate_password_hash("password123")
-        user = create_user(session, "teacher6", "教师6", password_hash, salt)
+        password_hash = hash_password("password123")
+        user = create_user(session, "teacher6", "教师6", password_hash)
         
         # 连续失败9次
         for i in range(9):
@@ -107,24 +108,25 @@ class TestUserCRUD:
         assert user.locked_until is not None
     
     def test_reset_password(self, session: Session):
-        """测试重置密码"""
-        password_hash, salt = generate_password_hash("password123")
-        user = create_user(session, "teacher7", "教师7", password_hash, salt)
+        """测试重置密码 - SEC-003: 简化密码哈希接口"""
+        password_hash = hash_password("password123")
+        user = create_user(session, "teacher7", "教师7", password_hash)
         user.login_fail_count = 5
         user.locked_until = datetime.now()
         
-        new_hash, new_salt = generate_password_hash("newpassword")
-        reset_password(session, user, new_hash, new_salt)
+        new_hash = hash_password("newpassword")
+        reset_password(session, user, new_hash)
         
         assert user.password_hash == new_hash
-        assert user.salt == new_salt
+        # SEC-003: salt 字段应为 None
+        assert user.salt is None
         assert user.login_fail_count == 0
         assert user.locked_until is None
     
     def test_delete_user(self, session: Session):
         """测试删除用户"""
-        password_hash, salt = generate_password_hash("password123")
-        user = create_user(session, "teacher8", "教师8", password_hash, salt)
+        password_hash = hash_password("password123")
+        user = create_user(session, "teacher8", "教师8", password_hash)
         
         success = delete_user(session, user.id)
         assert success is True
@@ -139,14 +141,13 @@ class TestUserCRUD:
         assert success is False
     
     def test_update_user(self, session: Session):
-        """测试更新用户信息"""
-        password_hash, salt = generate_password_hash("password123")
+        """测试更新用户信息 - SEC-003: 简化密码哈希接口"""
+        password_hash = hash_password("password123")
         user = create_user(
             session, 
             "teacher9", 
             "教师9", 
-            password_hash, 
-            salt,
+            password_hash,
             role="teacher",
             assigned_classes=["软件1班"]
         )
@@ -164,8 +165,8 @@ class TestUserCRUD:
     
     def test_record_login_failure_not_locked(self, session: Session):
         """测试登录失败但未达到锁定阈值"""
-        password_hash, salt = generate_password_hash("password123")
-        user = create_user(session, "teacher10", "教师10", password_hash, salt)
+        password_hash = hash_password("password123")
+        user = create_user(session, "teacher10", "教师10", password_hash)
         
         # 失败1次
         is_locked = record_login_failure(session, user)

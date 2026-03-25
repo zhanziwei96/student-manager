@@ -27,14 +27,14 @@ def get_users(session: Session, role: Optional[str] = None) -> List[User]:
 
 
 def create_user(session: Session, username: str, name: str, password_hash: str, 
-                salt: str, role: str = UserRoleConst.TEACHER, assigned_classes: List[str] = None) -> User:
-    """创建用户"""
+                role: str = UserRoleConst.TEACHER, assigned_classes: List[str] = None) -> User:
+    """创建用户 - SEC-003: 移除 salt 参数"""
     import json
     user = User(
         username=username,
         name=name,
         password_hash=password_hash,
-        salt=salt,
+        # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
         role=role,
         assigned_classes=json.dumps(assigned_classes) if assigned_classes else "[]"
     )
@@ -143,13 +143,12 @@ def record_login_failure(session: Session, user: User) -> bool:
     return False
 
 
-def reset_password(session: Session, user: User, password_hash: str, salt: str) -> None:
-    """重置密码"""
+def reset_password(session: Session, user: User, password_hash: str) -> None:
+    """重置密码 - SEC-003: 移除 salt 参数"""
     user.password_hash = password_hash
-    user.salt = salt
+    # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     user.locked_until = None
     user.login_fail_count = 0
-    user.locked_until = None
     session.add(user)
     session.commit()
 

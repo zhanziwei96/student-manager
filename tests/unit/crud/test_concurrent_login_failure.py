@@ -14,13 +14,12 @@ class TestConcurrentLoginFailure:
     
     @pytest.fixture
     def test_teacher(self, session):
-        """创建测试教师用户"""
+        """创建测试教师用户 - SEC-003: 简化密码哈希接口"""
         return create_user(
             session=session,
             username="concurrent_teacher",
             name="并发测试教师",
             password_hash="fake_hash",
-            salt="fake_salt",
             role=UserRoleConst.TEACHER,
             assigned_classes=["软件1班"]
         )
@@ -93,13 +92,12 @@ class TestLoginFailureLockout:
     
     @pytest.fixture
     def test_teacher_lockout(self, session):
-        """创建测试教师用户"""
+        """创建测试教师用户 - SEC-003: 简化密码哈希接口"""
         return create_user(
             session=session,
             username="lockout_teacher",
             name="锁定测试教师",
             password_hash="fake_hash",
-            salt="fake_salt",
             role=UserRoleConst.TEACHER,
             assigned_classes=["软件1班"]
         )
@@ -154,13 +152,12 @@ class TestOptimisticLockRetry:
     
     @pytest.fixture
     def test_teacher_concurrent(self, session):
-        """创建测试教师用户"""
+        """创建测试教师用户 - SEC-003: 简化密码哈希接口"""
         return create_user(
             session=session,
             username="concurrent_test_teacher",
             name="并发测试教师",
             password_hash="fake_hash",
-            salt="fake_salt",
             role=UserRoleConst.TEACHER,
             assigned_classes=["软件1班"]
         )

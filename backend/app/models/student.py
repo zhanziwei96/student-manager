@@ -22,8 +22,9 @@ class Student(StudentBase, table=True):
     
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
     last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
-    password_hash: Optional[str] = Field(default=None, description="密码哈希")
-    salt: Optional[str] = Field(default=None, description="密码盐值")
+    password_hash: Optional[str] = Field(default=None, description="密码哈希 (bcrypt)")
+    # SEC-003 DEPRECATED: bcrypt 已内置盐值，此字段不再使用，保留仅用于兼容旧数据
+    salt: Optional[str] = Field(default=None, description="[DEPRECATED] 密码盐值 - bcrypt已内置，此字段将在未来版本移除")
     version: int = Field(default=1, description="乐观锁版本号")
     
     def update_score(self, delta: float) -> Tuple[float, float]:

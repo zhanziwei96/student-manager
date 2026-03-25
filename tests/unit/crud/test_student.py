@@ -117,26 +117,25 @@ class TestStudentCRUD:
         assert "软件2班" in classes
     
     def test_reset_student_password(self, session: Session):
-        """测试重置学生密码"""
+        """测试重置学生密码 - SEC-003: 简化密码哈希接口"""
         student = create_student(session, "S014", "张三", "软件1班")
         
         # 重置密码
         updated = reset_student_password(
             session, "S014", 
-            password_hash="new_hash", 
-            salt="new_salt"
+            password_hash="new_hash"
         )
         
         assert updated is not None
         assert updated.password_hash == "new_hash"
-        assert updated.salt == "new_salt"
+        # SEC-003: salt 字段应为 None
+        assert updated.salt is None
     
     def test_reset_student_password_not_found(self, session: Session):
-        """测试重置不存在学生的密码"""
+        """测试重置不存在学生的密码 - SEC-003: 简化密码哈希接口"""
         result = reset_student_password(
             session, "NOT_EXIST",
-            password_hash="new_hash",
-            salt="new_salt"
+            password_hash="new_hash"
         )
         
         assert result is None

@@ -1,63 +1,85 @@
 """
 安全相关工具 - 使用 bcrypt 替代 SHA256
+SEC-003: 密码盐值冗余存储修复
 """
 import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
 
-def generate_password_hash(password: str) -> Tuple[str, str]:
-    """生成密码哈希和盐值（使用 bcrypt）
+# ========== SEC-003: 新的简化接口 ==========
+
+def hash_password(password: str) -> str:
+    """生成密码哈希（bcrypt，自动处理盐值）
     
-    bcrypt 自动处理盐值，返回格式兼容旧接口
+    SEC-003: 简化接口，bcrypt 自动处理盐值，无需单独存储
     
-    注意：bcrypt 有 72 字节长度限制，超长密码会被截断处理
-    
+    Args:
+        password: 明文密码
+        
     Returns:
-        (password_hash, salt) - salt 返回空字符串以保持兼容
+        str: bcrypt 哈希字符串（包含内置盐值）
+        
+    Note:
+        bcrypt 有 72 字节长度限制，超长密码会被截断
     """
     # bcrypt 有 72 字节长度限制
     password_bytes = password.encode('utf-8')[:72]
     
     # bcrypt 自动生成随机盐并包含在哈希中
-    password_hash = bcrypt.hashpw(
+    return bcrypt.hashpw(
         password_bytes, 
         bcrypt.gensalt(rounds=12)  # 12轮是平衡安全性和性能的推荐值
     ).decode('utf-8')
+
+
+def verify_password(password: str, password_hash: Optional[str]) -> bool:
+    """验证密码（支持 bcrypt）
     
-    # 保持接口兼容：返回 (hash, salt)
-    # bcrypt 的哈希已包含盐值，所以 salt 返回空
-    return password_hash, ""
-
-
-def verify_password_hash(password: str, password_hash: Optional[str], salt: Optional[str]) -> bool:
-    """验证密码（支持 bcrypt 和旧版 SHA256 迁移）
+    SEC-003: 简化接口，bcrypt 哈希已包含盐值
     
     Args:
         password: 明文密码
         password_hash: 存储的密码哈希
-        salt: 盐值（bcrypt 模式下忽略）
         
     Returns:
-        是否匹配
+        bool: 是否匹配
     """
     if not password_hash:
         return False
     
-    # 检测哈希类型
+    # 只支持 bcrypt 哈希（以 $2a$, $2b$, $2y$ 开头）
     if password_hash.startswith('$2'):
-        # bcrypt 哈希（以 $2a$, $2b$, $2y$ 开头）
-        # bcrypt 有 72 字节长度限制
         password_bytes = password.encode('utf-8')[:72]
         return bcrypt.checkpw(password_bytes, password_hash.encode('utf-8'))
-    else:
-        # 旧版 SHA256 - 为了兼容现有用户，保留验证逻辑
-        # 建议：用户下次登录时自动迁移到 bcrypt
-        import hashlib
-        if not salt:
-            return False
-        computed_hash = hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
-        return computed_hash == password_hash
+    
+    # 旧版 SHA256 不再支持（需要重新设置密码）
+    return False
+
+
+# ========== 向后兼容接口（已弃用） ==========
+
+def generate_password_hash(password: str) -> Tuple[str, str]:
+    """生成密码哈希和盐值（已弃用）
+    
+    SEC-003 DEPRECATED: 使用 hash_password() 替代
+    
+    保留此函数仅用于向后兼容，salt 始终返回空字符串
+    """
+    password_hash = hash_password(password)
+    return password_hash, ""  # salt 返回空字符串以保持兼容
+
+
+def verify_password_hash(password: str, password_hash: Optional[str], salt: Optional[str] = None) -> bool:
+    """验证密码（已弃用）
+    
+    SEC-003 DEPRECATED: 使用 verify_password() 替代
+    
+    Args:
+        salt: 已弃用参数，bcrypt 哈希已包含盐值
+    """
+    # 忽略 salt 参数，bcrypt 哈希已包含盐值
+    return verify_password(password, password_hash)
 
 
 def needs_password_upgrade(password_hash: Optional[str]) -> bool:

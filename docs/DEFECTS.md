@@ -2,7 +2,7 @@
 
 **文档版本**: v1.7  
 **编写日期**: 2026-03-24  
-**更新日期**: 2026-03-25 (SEC-001 文件上传安全控制 + BE-008 并发保护 + 前端架构修复)  
+**更新日期**: 2026-03-25 (SEC-003 密码盐值冗余修复 + SEC-001 文件上传安全 + 前端架构修复)  
 **适用系统**: ClassHub 班级管理系统 v3.0 (frontend-v3分支)  
 **架构评估范围**: 前端、后端、数据库、部署、安全
 
@@ -15,13 +15,13 @@
 | 数据库架构 | 3 | 🔴 严重: 2, 🟡 中等: 1 | 1 | 2 |
 | 后端架构 | 8 | 🔴 严重: 3, 🟡 中等: 4, 🟢 轻微: 1 | 7 | 1 |
 | 前端架构 | 5 | 🟡 中等: 4, 🟢 轻微: 1 | 5 | 0 |
-| 安全设计 | 4 | 🔴 严重: 2, 🟡 中等: 2 | 2 | 2 |
+| 安全设计 | 4 | 🔴 严重: 2, 🟡 中等: 2 | 3 | 1 |
 | 部署运维 | 3 | 🟡 中等: 2, 🟢 轻微: 1 | 0 | 3 |
 | 测试质量 | 2 | 🟡 中等: 1, 🟢 轻微: 1 | 1 | 1 |
 
 **总计**: 25 项缺陷  
 **🔴 严重**: 7 项 | **🟡 中等**: 14 项 | **🟢 轻微**: 4 项  
-**已修复**: 18 项 | **未修复**: 4 项
+**已修复**: 19 项 | **未修复**: 3 项
 
 ---
 
@@ -798,20 +798,84 @@ cors_origins: List[str] = Field(default=["http://localhost:3000"])
 
 ---
 
-### SEC-003: 密码盐值冗余存储 🔴 严重 ❌ 未修复
+### SEC-003: 密码盐值冗余存储 🔴 严重 ✅ 已修复
 **位置**: `backend/app/models/student.py`, `backend/app/models/user.py`  
 **缺陷描述**: 同时存储 `password_hash` 和 `salt`，但 bcrypt 已内置盐值
 
+**修复状态**: ✅ **已修复（标记弃用，简化接口）**
+
+**修复详情**:
+
+bcrypt 算法自动处理盐值（内嵌在哈希字符串中），单独存储 `salt` 字段是冗余的。
+
+**新的简化接口**:
+
 ```python
-password_hash: Optional[str] = Field(default=None)
-salt: Optional[str] = Field(default=None)  # 冗余
+# SEC-003: 新的推荐接口
+from app.core.security import hash_password, verify_password
+
+# 生成密码哈希（bcrypt 自动处理盐值）
+password_hash = hash_password("user_password")
+
+# 验证密码
+is_valid = verify_password("user_password", stored_hash)
 ```
 
-**影响**:
-- 不必要的字段存储
-- 盐值管理复杂化
+**向后兼容接口**（仍然可用）:
 
-**修复建议**: 移除 salt 字段，bcrypt 哈希已包含盐值
+```python
+# 旧接口仍可用，但 salt 参数被忽略/返回空字符串
+password_hash, _ = generate_password_hash("password")
+is_valid = verify_password_hash("password", stored_hash, user.salt)  # salt 参数被忽略
+```
+
+**模型字段更新**:
+
+```python
+# backend/app/models/user.py
+salt: Optional[str] = Field(
+    default=None, 
+    description="[DEPRECATED] bcrypt已内置盐值，此字段将在未来版本移除"
+)
+```
+
+**CRUD 函数更新**:
+
+```python
+# SEC-003: 移除 salt 参数
+def create_user(session, username, name, password_hash, role, assigned_classes):
+    user = User(
+        ...,
+        password_hash=password_hash,
+        # salt 不再设置
+    )
+
+def reset_password(session, user, password_hash):
+    user.password_hash = password_hash
+    # salt 不再设置
+```
+
+**修改文件**:
+- `backend/app/core/security.py` - 添加 `hash_password()`/`verify_password()` 新接口
+- `backend/app/models/student.py` - 标记 salt 字段弃用
+- `backend/app/models/user.py` - 标记 salt 字段弃用
+- `backend/app/crud/user.py` - 移除 salt 参数
+- `backend/app/crud/student.py` - 移除 salt 参数
+- `backend/app/api/routes/users.py` - 使用新接口
+- `backend/app/api/routes/students.py` - 使用新接口
+- `backend/app/api/routes/login.py` - 使用新接口
+- `docs/DEPRECATIONS.md` - 创建弃用说明文档
+
+**测试更新**:
+- `tests/unit/crud/test_user.py` - 更新为使用新接口
+- `tests/unit/crud/test_student.py` - 更新为使用新接口
+- `tests/unit/crud/test_concurrent_login_failure.py` - 更新为使用新接口
+
+**数据库迁移计划**:
+- v2.x: 保持 salt 字段，新数据为 NULL
+- v3.0: 删除 salt 列
+
+详见 `docs/DEPRECATIONS.md`
 
 ---
 

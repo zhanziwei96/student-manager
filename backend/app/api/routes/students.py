@@ -289,11 +289,11 @@ async def reset_student_password_api(
     session: Session = Depends(get_session),
     user_id: str = Depends(require_admin)
 ):
-    """重置学生密码"""
-    from app.core.security import generate_password_hash
-    password_hash, salt = generate_password_hash(data.new_password)
+    """重置学生密码 - SEC-003: 使用简化密码哈希接口"""
+    from app.core.security import hash_password
+    password_hash = hash_password(data.new_password)
     
-    student = reset_student_password(session, student_id, password_hash, salt)
+    student = reset_student_password(session, student_id, password_hash)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
     

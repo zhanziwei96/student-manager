@@ -61,21 +61,20 @@ async def add_user(
     session: Session = Depends(get_session),
     user_id: str = Depends(require_admin)
 ):
-    """创建用户"""
+    """创建用户 - SEC-003: 使用简化密码哈希接口"""
     existing = get_user_by_username(session, data.username)
     if existing:
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='用户名已存在')
     
-    # 生成密码哈希
-    from app.core.security import generate_password_hash
-    password_hash, salt = generate_password_hash(data.password)
+    # 生成密码哈希（bcrypt 自动处理盐值）
+    from app.core.security import hash_password
+    password_hash = hash_password(data.password)
     
     user_obj = create_user(
         session,
         username=data.username,
         name=data.name,
         password_hash=password_hash,
-        salt=salt,
         role=data.role,
         assigned_classes=data.assigned_classes
     )
@@ -129,9 +128,9 @@ async def reset_user_password_api(
     session: Session = Depends(get_session),
     current_user_id: str = Depends(require_admin)
 ):
-    """重置用户密码，支持 user_id(数字) 或 username(学号/账号)"""
-    from app.core.security import generate_password_hash
-    password_hash, salt = generate_password_hash(data.new_password)
+    """重置用户密码，支持 user_id(数字) 或 username(学号/账号) - SEC-003: 使用简化密码哈希接口"""
+    from app.core.security import hash_password
+    password_hash = hash_password(data.new_password)
     
     # 尝试解析为整数(user_id)，失败则按 username 查找
     try:
@@ -143,7 +142,7 @@ async def reset_user_password_api(
     if not user_obj:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='用户不存在')
     
-    reset_password(session, user_obj, password_hash, salt)
+    reset_password(session, user_obj, password_hash)
     
     return {
         ApiResponseConst.SUCCESS: True,
