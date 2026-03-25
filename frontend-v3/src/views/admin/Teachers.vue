@@ -81,7 +81,8 @@ const validateAddForm = () => {
   return valid
 }
 
-const handleAddTeacher = async () => {
+const handleAddTeacher = async (e?: Event) => {
+  e?.preventDefault()
   if (!validateAddForm()) return
   
   try {
@@ -274,7 +275,13 @@ const handleResetPassword = async () => {
     </div>
 
     <!-- Add Dialog -->
-    <Dialog v-model:open="showAddDialog" title="添加教师" description="创建新的教师账号">
+    <Dialog 
+      v-model:open="showAddDialog" 
+      title="添加教师" 
+      description="创建新的教师账号"
+      :as-form="true"
+      :on-submit="handleAddTeacher"
+    >
       <div class="space-y-4">
         <div>
           <label class="text-sm text-white/80">用户名</label>
@@ -282,7 +289,6 @@ const handleResetPassword = async () => {
             v-model="newTeacher.username"
             placeholder="请输入用户名"
             :class="['mt-1', addErrors.username && 'border-red-500']"
-            @keyup.enter="handleAddTeacher"
           />
           <p v-if="addErrors.username" class="mt-1 text-sm text-red-400">{{ addErrors.username }}</p>
         </div>
@@ -292,7 +298,6 @@ const handleResetPassword = async () => {
             v-model="newTeacher.name"
             placeholder="请输入姓名"
             :class="['mt-1', addErrors.name && 'border-red-500']"
-            @keyup.enter="handleAddTeacher"
           />
           <p v-if="addErrors.name" class="mt-1 text-sm text-red-400">{{ addErrors.name }}</p>
         </div>
@@ -303,7 +308,6 @@ const handleResetPassword = async () => {
             type="password"
             placeholder="请输入密码（至少6位）"
             :class="['mt-1', addErrors.password && 'border-red-500']"
-            @keyup.enter="handleAddTeacher"
           />
           <p v-if="addErrors.password" class="mt-1 text-sm text-red-400">{{ addErrors.password }}</p>
         </div>
@@ -314,14 +318,13 @@ const handleResetPassword = async () => {
             type="password"
             placeholder="请再次输入密码"
             :class="['mt-1', addErrors.confirmPassword && 'border-red-500']"
-            @keyup.enter="handleAddTeacher"
           />
           <p v-if="addErrors.confirmPassword" class="mt-1 text-sm text-red-400">{{ addErrors.confirmPassword }}</p>
         </div>
       </div>
       <template #footer>
-        <Button variant="outline" @click="showAddDialog = false">取消</Button>
-        <Button :disabled="isCreating" @click="handleAddTeacher">
+        <Button type="button" variant="outline" @click="showAddDialog = false">取消</Button>
+        <Button type="submit" :disabled="isCreating">
           <Loader2 v-if="isCreating" class="mr-2 h-4 w-4 animate-spin" />
           创建
         </Button>

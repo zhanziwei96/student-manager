@@ -114,7 +114,7 @@ const handleUpdateScore = async () => {
 
   try {
     await updateScore({
-      id: selectedStudent.value.id,
+      studentId: selectedStudent.value.student_id,
       data: {
         score_change: scoreChange.value,
         reason: scoreReason.value,

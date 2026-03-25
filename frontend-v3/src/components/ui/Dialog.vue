@@ -6,6 +6,7 @@ import { X } from 'lucide-vue-next'
 /**
  * Dialog 组件
  * 基于 ClassHub 设计体系 v1.0.0
+ * 支持作为 form 使用，解决密码字段警告
  */
 
 interface Props {
@@ -13,10 +14,15 @@ interface Props {
   class?: string
   title?: string
   description?: string
+  /** 是否作为 form 元素渲染，用于包裹表单内容 */
+  asForm?: boolean
+  /** form 提交处理函数 */
+  onSubmit?: (e: Event) => void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   open: false,
+  asForm: false,
 })
 
 const emit = defineEmits<{
@@ -65,58 +71,66 @@ const contentClasses = computed(() =>
 const close = () => {
   emit('update:open', false)
 }
+
+// 处理 form 提交
+const handleSubmit = (e: Event) => {
+  e.preventDefault()
+  props.onSubmit?.(e)
+}
 </script>
 
 <template>
-  <Teleport to="body">
-    <!-- Overlay -->
-    <div 
-      :class="overlayClasses" 
-      @click="close"
+  <!-- Overlay - 不使用 Teleport 以保留 form 上下文 -->
+  <div 
+    v-if="open"
+    :class="overlayClasses" 
+    @click="close"
+  >
+    <!-- Content -->
+    <component
+      :is="asForm ? 'form' : 'div'"
+      :class="contentClasses"
+      @click.stop
+      @submit="asForm ? handleSubmit : undefined"
     >
-      <!-- Content -->
+      <!-- Header -->
       <div 
-        :class="contentClasses" 
-        @click.stop
+        v-if="title || $slots.title" 
+        class="flex flex-col space-y-1.5 text-center sm:text-left mb-4"
       >
-        <!-- Header -->
-        <div 
-          v-if="title || $slots.title" 
-          class="flex flex-col space-y-1.5 text-center sm:text-left mb-4"
+        <h3 class="text-lg font-semibold text-text-primary">
+          <slot name="title">{{ title }}</slot>
+        </h3>
+        <p 
+          v-if="description || $slots.description" 
+          class="text-sm text-text-secondary"
         >
-          <h3 class="text-lg font-semibold text-text-primary">
-            <slot name="title">{{ title }}</slot>
-          </h3>
-          <p 
-            v-if="description || $slots.description" 
-            class="text-sm text-text-secondary"
-          >
-            <slot name="description">{{ description }}</slot>
-          </p>
-        </div>
-
-        <!-- Body -->
-        <div class="text-text-secondary">
-          <slot />
-        </div>
-
-        <!-- Footer -->
-        <div 
-          v-if="$slots.footer" 
-          class="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 mt-6 pt-4 border-t border-border"
-        >
-          <slot name="footer" />
-        </div>
-
-        <!-- Close button -->
-        <button
-          class="absolute right-4 top-4 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
-          @click="close"
-        >
-          <X class="h-4 w-4" />
-          <span class="sr-only">关闭</span>
-        </button>
+          <slot name="description">{{ description }}</slot>
+        </p>
       </div>
-    </div>
-  </Teleport>
+
+      <!-- Body -->
+      <div class="text-text-secondary">
+        <slot />
+      </div>
+
+      <!-- Footer -->
+      <div 
+        v-if="$slots.footer" 
+        class="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 mt-6 pt-4 border-t border-border"
+      >
+        <slot name="footer" />
+      </div>
+
+      <!-- Close button -->
+      <button
+        type="button"
+        class="absolute right-4 top-4 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
+        @click="close"
+      >
+        <X class="h-4 w-4" />
+        <span class="sr-only">关闭</span>
+      </button>
+    </component>
+  </div>
 </template>

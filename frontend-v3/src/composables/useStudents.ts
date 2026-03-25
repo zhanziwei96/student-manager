@@ -27,9 +27,9 @@ export function useScoreUpdate() {
   const queryClient = useQueryClient()
 
   const { mutateAsync, isPending, error } = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: UpdateScoreRequest }) => {
+    mutationFn: async ({ studentId, data }: { studentId: string; data: UpdateScoreRequest }) => {
       // FE-003: 直接获取数据，错误自动抛出
-      return await studentsApi.updateScore(id, data)
+      return await studentsApi.updateScore(studentId, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] })

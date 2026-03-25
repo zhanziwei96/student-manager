@@ -31,8 +31,8 @@ export const studentsApi = {
   delete: (id: number): Promise<void> =>
     del(`/students/${id}`),
 
-  updateScore: (id: number, data: UpdateScoreRequest): Promise<Student> =>
-    put(`/students/${id}/score`, data),
+  updateScore: (studentId: string, data: UpdateScoreRequest): Promise<Student> =>
+    put(`/students/${studentId}/score`, data),
 
   getScoreLogs: (id: number): Promise<ScoreLog[]> =>
     get(`/students/${id}/scores`),
