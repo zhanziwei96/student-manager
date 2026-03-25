@@ -3,18 +3,15 @@ import { studentsApi } from '@/api'
 import type { UpdateScoreRequest, CreateStudentRequest } from '@/types'
 
 /**
- * Students query composable
- * Based on: https://github.com/tanstack/query
+ * Students query composable - FE-003 修复后
+ * 使用统一的 API 响应处理，无需手动检查 res.success
  */
 export function useStudents() {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
-      const res = await studentsApi.getAll()
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to fetch students')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await studentsApi.getAll()
     },
   })
 
@@ -31,16 +28,11 @@ export function useScoreUpdate() {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: UpdateScoreRequest }) => {
-      const res = await studentsApi.updateScore(id, data)
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to update score')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await studentsApi.updateScore(id, data)
     },
     onSuccess: () => {
-      // 使学生缓存失效
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      // 同时使统计数据失效
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
   })
@@ -57,16 +49,11 @@ export function useStudentCreate() {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (data: CreateStudentRequest) => {
-      const res = await studentsApi.create(data)
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to create student')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await studentsApi.create(data)
     },
     onSuccess: () => {
-      // 使学生缓存失效
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      // 同时使统计数据失效
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
   })

@@ -1,9 +1,5 @@
-import { api } from '@/lib/api'
-import type {
-  ApiResponse,
-  ClassSession,
-  StartClassRequest,
-} from '@/types'
+import { get, post } from '@/lib/api'
+import type { ClassSession, StartClassRequest } from '@/types'
 
 export interface ActiveClassSession {
   class_name: string
@@ -12,17 +8,23 @@ export interface ActiveClassSession {
   start_time: string
 }
 
+/**
+ * 课堂会话 API - FE-003 修复后
+ *
+ * 调用方无需再检查 res.success，错误会自动抛出
+ * 返回类型直接是数据 T，而不是 ApiResponse<T>
+ */
 export const classSessionApi = {
-  getCurrent: (): Promise<ApiResponse<ClassSession | null>> =>
-    api('/class-session', { method: 'GET' }),
+  getCurrent: (): Promise<ClassSession | null> =>
+    get('/class-session'),
 
-  start: (data: StartClassRequest): Promise<ApiResponse<ClassSession>> =>
-    api('/class-session/start', { method: 'POST', body: data }),
+  start: (data: StartClassRequest): Promise<ClassSession> =>
+    post('/class-session/start', data),
 
-  end: (): Promise<ApiResponse<ClassSession>> =>
-    api('/class-session/end', { method: 'POST' }),
+  end: (): Promise<ClassSession> =>
+    post('/class-session/end'),
 
-  getStudents: (): Promise<ApiResponse<{
+  getStudents: (): Promise<{
     students: Array<{
       id: number
       student_id: string
@@ -30,9 +32,9 @@ export const classSessionApi = {
       checked_in: boolean
       checkin_time?: string
     }>
-  }>> =>
-    api('/class-session/students', { method: 'GET' }),
+  }> =>
+    get('/class-session/students'),
 
-  getActiveSessions: (): Promise<ApiResponse<ActiveClassSession[]>> =>
-    api('/class-sessions/active', { method: 'GET' }),
+  getActiveSessions: (): Promise<ActiveClassSession[]> =>
+    get('/class-sessions/active'),
 }

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { UserRole } from '@/types'
+import { UserRoleConst } from '@/types/api'
 
 const routes = [
   {
@@ -18,7 +19,7 @@ const routes = [
   {
     path: '/admin',
     component: () => import('@/layouts/DashboardLayout.vue'),
-    meta: { role: 'admin' as UserRole },
+    meta: { role: UserRoleConst.ADMIN },  // FE-002: 使用常量
     children: [
       {
         path: '',
@@ -50,7 +51,7 @@ const routes = [
   {
     path: '/teacher',
     component: () => import('@/layouts/DashboardLayout.vue'),
-    meta: { role: 'teacher' as UserRole },
+    meta: { role: UserRoleConst.TEACHER },  // FE-002: 使用常量
     children: [
       {
         path: '',
@@ -72,7 +73,7 @@ const routes = [
   {
     path: '/student',
     component: () => import('@/layouts/DashboardLayout.vue'),
-    meta: { role: 'student' as UserRole },
+    meta: { role: UserRoleConst.STUDENT },  // FE-002: 使用常量
     children: [
       {
         path: '',
@@ -99,8 +100,30 @@ const router = createRouter({
 })
 
 // Navigation guards
+/**
+ * FE-002 修复说明:
+ *
+ * ⚠️ 安全警告 ⚠️
+ * 前端路由权限控制仅作为用户体验优化，不能替代后端权限验证。
+ *
+ * 原因:
+ * 1. 客户端代码可被绕过（禁用 JS、直接访问 API）
+ * 2. 前端路由守卫无法阻止恶意请求
+ *
+ * 真实权限控制应在:
+ * - 后端 API 层进行验证（已实现）
+ * - 数据库访问控制（已实现）
+ *
+ * 此路由守卫的作用:
+ * - 防止已登录用户看到无权限页面（体验优化）
+ * - 根据角色自动跳转到对应首页（导航辅助）
+ */
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+
+  // FE-001: 从 Pinia store 获取认证状态
+  // 实际状态由 TanStack Query 管理，Pinia 作为门面转发
+  // 这样组件和路由守卫可以使用统一的接口
 
   // Fetch user info if not loaded
   if (!authStore.user && !to.meta.public) {
@@ -125,8 +148,13 @@ router.beforeEach(async (to, _from, next) => {
     return next('/login')
   }
 
-  // Role check
+  // Role check - 仅作为体验优化，真实权限验证在后端
   if (to.meta.role && authStore.user?.role !== to.meta.role) {
+    console.warn(
+      `[FE-002] 用户尝试访问无权限路由: ${to.path}, ` +
+      `用户角色: ${authStore.user?.role}, 需要角色: ${to.meta.role}`
+    )
+    console.warn('[FE-002] 真实权限验证应在后端 API 完成')
     return next(getRedirectPath(authStore.user!.role))
   }
 

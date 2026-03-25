@@ -5,6 +5,13 @@ export interface ApiResponse<T> {
   message?: string
 }
 
+// 用户角色常量 - FE-002 修复: 避免硬编码字符串
+export const UserRoleConst = {
+  ADMIN: 'admin' as const,
+  TEACHER: 'teacher' as const,
+  STUDENT: 'student' as const,
+} as const
+
 // 用户类型
 export type UserRole = 'admin' | 'teacher' | 'student'
 

@@ -156,17 +156,19 @@ def update_student_score(
     operator: str
 ) -> Optional[Student]:
     """
-    更新学生分数 - 领域事件模式重构
+    更新学生分数 - 带乐观锁保护（BE-008 修复）
     
     事务边界明确：
     1. 更新学生分数（主业务）- 在同一会话中
     2. 记录分数日志（副作用）- 在同一会话中原子提交
     3. 发布领域事件 - 用于其他副作用（审计、通知等）
+    4. 乐观锁保护 - 防止并发更新导致的数据丢失
     
     这种设计实现了：
     - 单一事务：主业务和核心副作用在同一个事务中提交
     - 职责分离：CRUD 协调操作，副作用逻辑由事件处理器封装
     - 可扩展性：新增副作用只需添加处理器，无需修改原函数
+    - 并发安全：乐观锁防止并发修改导致的数据覆盖
     
     Args:
         session: 数据库会话
@@ -177,13 +179,26 @@ def update_student_score(
         
     Returns:
         Student: 更新后的学生对象，如果不存在则返回 None
+        
+    Raises:
+        HTTPException: 409 冲突，如果检测到并发修改
     """
-    student = get_student(session, student_id)
+    from sqlalchemy.exc import IntegrityError
+    from fastapi import HTTPException
+    
+    # 获取学生（使用 select 确保获取最新版本号）
+    statement = select(Student).where(Student.student_id == student_id)
+    student = session.exec(statement).first()
+    
     if not student:
         return None
     
     # 执行业务操作：更新分数（通过领域方法封装业务规则）
     old_score, new_score = student.update_score(delta)
+    
+    # 乐观锁：递增版本号（BE-008 修复）
+    student.version += 1
+    
     session.add(student)
     
     # 创建领域事件
@@ -197,7 +212,6 @@ def update_student_score(
     )
     
     # 核心副作用：记录分数日志（必须在同一事务中）
-    # 使用事件处理器模式，但在同一 session 中执行
     score_log = ScoreLog(
         student_id=student_id,
         old_score=old_score,
@@ -207,6 +221,15 @@ def update_student_score(
         operator=operator
     )
     session.add(score_log)
+    
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="分数已被其他用户修改，请刷新后重试"
+        )
     
     # 注册事务提交后的回调，用于处理其他非核心副作用
     # 使用 SQLAlchemy 的事件机制确保事件在事务成功提交后才发布

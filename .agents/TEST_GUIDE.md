@@ -220,7 +220,7 @@ pytest tests/ --cov=backend/app --cov-report=term
 
 ```
 tests/
-├── unit/                          # 单元测试 (110个)
+├── unit/                          # 单元测试 (121个)
 │   ├── test_jwt.py               # JWT 工具测试 (11个)
 │   ├── test_jwt_deps.py          # JWT 依赖测试 (8个)
 │   ├── test_config.py            # 配置加载测试 (17个) - BE-001
@@ -236,7 +236,9 @@ tests/
 │       ├── test_user.py          # 用户 CRUD (16个)
 │       ├── test_student.py       # 学生 CRUD (14个)
 │       ├── test_checkin.py       # 签到 CRUD (13个)
-│       └── test_audit.py         # 审计日志 (10个)
+│       ├── test_audit.py         # 审计日志 (10个)
+│       ├── test_concurrent_score_update.py    # 并发分数更新保护 (4个) - BE-008
+│       └── test_concurrent_login_failure.py   # 并发登录失败保护 (7个) - BE-008
 │
 ├── integration/                   # 集成测试 (97个)
 │   ├── test_jwt_auth.py          # JWT 认证集成 (13个)
@@ -255,10 +257,10 @@ tests/
 
 | 类别 | 数量 | 说明 |
 |------|------|------|
-| **单元测试** | **110** | 独立测试各模块功能 |
+| **单元测试** | **121** | 独立测试各模块功能 |
 | **集成测试** | **97** | 测试 API 端到端流程 |
 | **浏览器测试** | **14** | Playwright 录制回放 |
-| **总计** | **221+** | 全量测试覆盖 |
+| **总计** | **232+** | 全量测试覆盖 |
 
 ### 7.4 覆盖率报告
 
@@ -274,7 +276,8 @@ tests/
 | `backend/app/models/*` | 90-100% | 数据模型层 |
 | `backend/app/api/routes/*.py` | 86-100% | API 路由层 |
 | `backend/app/core/middleware.py` | 93% | 审计中间件 |
-| `backend/app/crud/student.py` | 95% | 学生 CRUD |
+| `backend/app/crud/student.py` | 72% | 学生 CRUD（含乐观锁） |
+| `backend/app/crud/user.py` | 87% | 用户 CRUD（含乐观锁） |
 | `backend/app/crud/checkin.py` | 96% | 签到 CRUD |
 
 ### 7.5 测试覆盖的核心功能
@@ -303,6 +306,7 @@ tests/
 - 用户增删改查
 - 签到记录管理
 - 分数更新与历史
+- **并发保护** (BE-008): 乐观锁防止并发更新数据丢失
 
 **权限控制 (BE-002, BE-003)**
 - 角色基础访问控制
@@ -361,7 +365,34 @@ pytest tests/unit/test_events.py::TestEventBus::test_subscribe_and_publish -v
 pytest tests/ --cov=backend/app --cov-report=term-missing
 ```
 
-### 9.2 常见错误
+### 9.2 并发保护测试 (BE-008)
+
+并发保护测试验证乐观锁机制是否正确工作：
+
+```bash
+# 运行并发保护测试
+pytest tests/unit/crud/test_concurrent_score_update.py tests/unit/crud/test_concurrent_login_failure.py -v
+```
+
+**测试覆盖场景**:
+| 测试文件 | 测试场景 | 验证点 |
+|---------|---------|--------|
+| `test_concurrent_score_update.py` | 并发分数更新 | version 字段递增、冲突检测 |
+| `test_concurrent_login_failure.py` | 并发登录失败 | 失败计数准确、锁定机制正确 |
+
+**乐观锁机制验证**:
+```python
+# 1. 检查模型有 version 字段
+student = session.get(Student, "S001")
+assert student.version == 1  # 默认值为 1
+
+# 2. 更新后版本递增
+update_student_score(session, "S001", 5.0, "测试", "teacher")
+session.refresh(student)
+assert student.version == 2  # 版本号递增
+```
+
+### 9.3 常见错误
 
 | 错误 | 原因 | 解决 |
 |------|------|------|
@@ -373,7 +404,7 @@ pytest tests/ --cov=backend/app --cov-report=term-missing
 ---
 
 **文档版本**: 2026-03-25  
-**适用系统版本**: ClassHub v2.1.0  
+**适用系统版本**: ClassHub v2.2.0  
 **架构**: FastAPI + SQLModel  
 **测试框架**: pytest + pytest-cov + pytest-asyncio  
-**覆盖率**: 91% (221+ 测试用例)
+**覆盖率**: 91% (232+ 测试用例)

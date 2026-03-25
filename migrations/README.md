@@ -42,6 +42,33 @@ sqlite3 backend/data/class_system.db ".schema"
 sqlite3 backend/data/student_manage.db < migrations/add_security_tables.sql
 ```
 
+### 3. add_version_optimistic_lock.sql - 乐观锁版本字段（BE-008 修复）
+
+**用途**: 为学生表和用户信息表添加乐观锁版本字段，防止并发更新导致的数据丢失
+
+**主要变更**:
+
+| 表 | 变更内容 |
+|---|---------|
+| `students` | 添加 `version` 字段（INTEGER DEFAULT 1）用于乐观锁 |
+| `users` | 添加 `version` 字段（INTEGER DEFAULT 1）用于乐观锁 |
+
+**使用场景**: 修复 BE-008 并发分数更新无锁问题，确保并发操作时数据一致性
+
+```bash
+# 执行迁移
+sqlite3 backend/data/class_system.db < migrations/add_version_optimistic_lock.sql
+
+# 验证迁移结果
+sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM students WHERE version IS NOT NULL;"
+sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM users WHERE version IS NOT NULL;"
+```
+
+**注意事项**:
+- 迁移前必须备份数据库
+- 现有数据会自动设置 version=1
+- 此迁移与代码版本配套，迁移后需更新代码到包含乐观锁的版本
+
 ## 迁移前检查清单
 
 - [ ] 已备份数据库

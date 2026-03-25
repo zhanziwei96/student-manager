@@ -4,17 +4,15 @@ import { studentsApi } from '@/api/students'
 import { computed, unref, type MaybeRefOrGetter } from 'vue'
 
 /**
- * 班级数据 composable
+ * 班级数据 composable - FE-003 修复后
+ * 使用统一的 API 响应处理，无需手动检查 res.success
  */
 export function useClasses() {
   const { data: classNames, isPending, error, refetch } = useQuery({
     queryKey: ['classes'],
     queryFn: async () => {
-      const res = await classesApi.getAll()
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to fetch classes')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await classesApi.getAll()
     },
   })
 
@@ -27,40 +25,33 @@ export function useClasses() {
 }
 
 /**
- * 获取班级统计信息
+ * 获取班级统计信息 - FE-003 修复后
  */
 export function useClassStats() {
   const { data: classes, isPending, error } = useQuery({
     queryKey: ['classes'],
     queryFn: async () => {
-      const res = await classesApi.getAll()
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to fetch classes')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await classesApi.getAll()
     },
   })
 
   const { data: students } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
-      const res = await studentsApi.getAll()
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to fetch students')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await studentsApi.getAll()
     },
   })
 
   const classStats = computed(() => {
     if (!classes.value || !students.value) return []
-    
-    // 计算每个班级的学生数和平均分
+
     const classMap = new Map<string, {
       student_count: number
       total_score: number
     }>()
-    
+
     students.value.forEach(student => {
       const existing = classMap.get(student.class_name)
       if (existing) {
@@ -73,16 +64,15 @@ export function useClassStats() {
         })
       }
     })
-    
-    // 合并后端返回的班级状态
+
     return classes.value.map(cls => {
       const stats = classMap.get(cls.name) || { student_count: 0, total_score: 0 }
       return {
         name: cls.name,
         status: cls.status,
         student_count: stats.student_count,
-        average_score: stats.student_count > 0 
-          ? Math.round(stats.total_score / stats.student_count * 10) / 10 
+        average_score: stats.student_count > 0
+          ? Math.round(stats.total_score / stats.student_count * 10) / 10
           : 0
       }
     }).sort((a, b) => a.name.localeCompare(b.name))
@@ -96,18 +86,15 @@ export function useClassStats() {
 }
 
 /**
- * 获取指定班级的学生列表
+ * 获取指定班级的学生列表 - FE-003 修复后
  */
 export function useClassStudents(className: MaybeRefOrGetter<string>) {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['class-students', className],
     queryFn: async () => {
       const name = unref(className)
-      const res = await classesApi.getStudentsByClass(name)
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to fetch class students')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await classesApi.getStudentsByClass(name)
     },
     enabled: () => !!unref(className),
   })

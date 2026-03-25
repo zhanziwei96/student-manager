@@ -7,3 +7,5 @@ export { useCheckinStats, useTodayCheckins } from './useCheckins'
 export { useStudentProfile } from './useStudentProfile'
 export { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession } from './useStudentCheckin'
 export { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from './useTeachers'
+// FE-001: 新增 useAuthQuery，用于分离服务端状态和 UI 状态
+export { useAuthQuery } from './useAuth'

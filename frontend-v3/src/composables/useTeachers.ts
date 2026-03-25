@@ -2,17 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { usersApi, type CreateTeacherRequest, type UpdateTeacherRequest } from '@/api/users'
 
 /**
- * Teachers query composable
+ * Teachers query composable - FE-003 修复后
+ * 使用统一的 API 响应处理，无需手动检查 res.success
  */
 export function useTeachers() {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
-      const res = await usersApi.getTeachers()
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to fetch teachers')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await usersApi.getTeachers()
     },
   })
 
@@ -29,11 +27,8 @@ export function useTeacherCreate() {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (data: CreateTeacherRequest) => {
-      const res = await usersApi.create(data)
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to create teacher')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await usersApi.create(data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
@@ -52,11 +47,8 @@ export function useTeacherUpdate() {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: UpdateTeacherRequest }) => {
-      const res = await usersApi.update(id, data)
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to update teacher')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await usersApi.update(id, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
@@ -75,11 +67,8 @@ export function useTeacherDelete() {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (id: number) => {
-      const res = await usersApi.delete(id)
-      if (res.success) {
-        return res
-      }
-      throw new Error(res.message || 'Failed to delete teacher')
+      // FE-003: 直接调用，错误自动抛出
+      await usersApi.delete(id)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] })

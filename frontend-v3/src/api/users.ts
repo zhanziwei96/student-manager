@@ -1,5 +1,5 @@
-import { api } from '@/lib/api'
-import type { ApiResponse, User } from '@/types'
+import { get, post, put, del } from '@/lib/api'
+import type { User } from '@/types'
 
 export interface CreateTeacherRequest {
   username: string
@@ -16,25 +16,30 @@ export interface UpdateTeacherRequest {
   is_active?: boolean
 }
 
+/**
+ * 用户管理 API - FE-003 修复后
+ *
+ * 调用方无需再检查 res.success，错误会自动抛出
+ * 返回类型直接是数据 T，而不是 ApiResponse<T>
+ */
 export const usersApi = {
-  getAll: (role?: string): Promise<ApiResponse<User[]>> =>
-    api(`/admin/users${role ? `?role=${role}` : ''}`, { method: 'GET' }),
+  getAll: (role?: string): Promise<User[]> => {
+    const url = role ? `/admin/users?role=${role}` : '/admin/users'
+    return get(url)
+  },
 
-  getTeachers: (): Promise<ApiResponse<User[]>> =>
-    api('/admin/users?role=teacher', { method: 'GET' }),
+  getTeachers: (): Promise<User[]> =>
+    get('/admin/users?role=teacher'),
 
-  create: (data: CreateTeacherRequest): Promise<ApiResponse<User>> =>
-    api('/admin/users', { method: 'POST', body: data }),
+  create: (data: CreateTeacherRequest): Promise<User> =>
+    post('/admin/users', data),
 
-  update: (id: number, data: UpdateTeacherRequest): Promise<ApiResponse<User>> =>
-    api(`/admin/users/${id}`, { method: 'PUT', body: data }),
+  update: (id: number, data: UpdateTeacherRequest): Promise<User> =>
+    put(`/admin/users/${id}`, data),
 
-  delete: (id: number): Promise<ApiResponse<void>> =>
-    api(`/admin/users/${id}`, { method: 'DELETE' }),
+  delete: (id: number): Promise<void> =>
+    del(`/admin/users/${id}`),
 
-  resetPassword: (id: number, newPassword: string): Promise<ApiResponse<void>> =>
-    api(`/admin/users/${id}/reset-password`, {
-      method: 'PUT',
-      body: { new_password: newPassword },
-    }),
+  resetPassword: (id: number, newPassword: string): Promise<void> =>
+    put(`/admin/users/${id}/reset-password`, { new_password: newPassword }),
 }

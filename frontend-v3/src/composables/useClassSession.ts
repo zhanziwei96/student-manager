@@ -4,27 +4,27 @@ import { classSessionApi, checkinApi } from '@/api'
 import type { CheckinRecord } from '@/types'
 
 /**
- * Class Session composable
- * Based on: https://github.com/tanstack/query
+ * Class Session composable - FE-003 修复后
+ * 使用统一的 API 响应处理，无需手动检查 res.success
  */
 export function useClassSession() {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['classSession'],
     queryFn: async () => {
-      // 优先从服务器 API 获取真实状态
-      const res = await classSessionApi.getCurrent()
-      if (res.success && res.data && res.data.active) {
+      // FE-003: 直接获取数据，错误自动抛出
+      const data = await classSessionApi.getCurrent()
+      if (data?.active) {
         // 同步到 localStorage
-        localStorage.setItem('activeClassSession', JSON.stringify(res.data))
-        return res.data
+        localStorage.setItem('activeClassSession', JSON.stringify(data))
+        return data
       }
-      
+
       // 服务器没有活跃课堂，清除 localStorage
       localStorage.removeItem('activeClassSession')
       return null
     },
-    staleTime: 5000, // 5秒后重新获取
-    refetchOnWindowFocus: true, // 窗口聚焦时重新获取
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
   })
 
   return { data, isPending, error, refetch }
@@ -35,12 +35,10 @@ export function useClassSessionStart() {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (className: string) => {
-      const res = await classSessionApi.start({ class_name: className })
-      if (res.success && res.data) {
-        localStorage.setItem('activeClassSession', JSON.stringify(res.data))
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to start class')
+      // FE-003: 直接获取数据，错误自动抛出
+      const data = await classSessionApi.start({ class_name: className })
+      localStorage.setItem('activeClassSession', JSON.stringify(data))
+      return data
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['classSession'], data)
@@ -55,17 +53,13 @@ export function useClassSessionEnd() {
 
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async () => {
-      const res = await classSessionApi.end()
-      if (!res.success) {
-        throw new Error(res.message || 'Failed to end class')
-      }
+      // FE-003: 直接调用，错误自动抛出
+      await classSessionApi.end()
       localStorage.removeItem('activeClassSession')
     },
     onSuccess: () => {
       queryClient.setQueryData(['classSession'], null)
-      // 刷新学生列表，使活跃状态重置
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      // 刷新签到记录
       queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
     },
@@ -81,13 +75,10 @@ export function useActiveClassSessions() {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['active-class-sessions'],
     queryFn: async () => {
-      const res = await classSessionApi.getActiveSessions()
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || 'Failed to fetch active sessions')
+      // FE-003: 直接获取数据，错误自动抛出
+      return await classSessionApi.getActiveSessions()
     },
-    refetchInterval: 10000, // 每10秒刷新一次
+    refetchInterval: 10000,
   })
 
   return {
@@ -100,23 +91,17 @@ export function useActiveClassSessions() {
 
 export function useStudentCheckIn(className?: string | Ref<string>) {
   const queryClient = useQueryClient()
-  
+
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (studentCode: string): Promise<CheckinRecord> => {
-      // 直接调用签到API，后端会验证学生存在性
-      const res = await checkinApi.checkin({
+      // FE-003: 直接获取数据，错误自动抛出
+      return await checkinApi.checkin({
         student_id: studentCode,
-        student_name: '', // 后端会根据student_id查找
+        student_name: '',
       })
-      
-      if (res.success && res.data) {
-        return res.data
-      }
-      throw new Error(res.message || '签到失败')
     },
     onSuccess: () => {
-      // 刷新签到统计 - 必须包含 className 才能匹配缓存
-      const resolvedClassName = unref(className)  // 解包 ComputedRef
+      const resolvedClassName = unref(className)
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
       if (resolvedClassName) {
         queryClient.invalidateQueries({ queryKey: ['today-checkins', resolvedClassName] })

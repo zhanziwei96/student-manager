@@ -77,6 +77,9 @@ pytest tests/unit -v
 
 # 仅集成测试
 pytest tests/integration -v
+
+# 并发保护测试（BE-008）
+pytest tests/unit/crud/test_concurrent_*.py -v
 ```
 
 ### 数据库操作
@@ -148,11 +151,14 @@ backend/
 
 ```
 tests/
-├── unit/                    # 单元测试
+├── unit/                    # 单元测试 (121个)
 │   ├── test_jwt.py         # JWT 工具测试 (11个)
 │   ├── test_jwt_deps.py    # JWT 依赖测试 (8个)
+│   ├── crud/               # CRUD 测试
+│   │   ├── test_concurrent_score_update.py    # 并发分数更新保护 (4个) - BE-008
+│   │   └── test_concurrent_login_failure.py   # 并发登录失败保护 (7个) - BE-008
 │   └── ...                 # 其他测试
-└── integration/            # 集成测试
+└── integration/            # 集成测试 (97个)
     ├── test_jwt_auth.py    # JWT 认证集成测试 (13个)
     └── ...                 # 其他测试
 ```
@@ -186,6 +192,7 @@ conda activate student-manage
 - 运行全部测试: pytest tests/ -v
 - 仅单元测试: pytest tests/unit -v
 - 仅集成测试: pytest tests/integration -v
+- 仅并发保护测试: pytest tests/unit/crud/test_concurrent_*.py -v
 - 不需要测试
 ```
 
@@ -297,5 +304,5 @@ curl -s http://localhost:8000/api/health || echo "服务未运行"
 
 ---
 
-**最后更新**: 2026-03-23 (约束清单机制更新)
+**最后更新**: 2026-03-25 (BE-008 并发保护修复，测试结构更新)
 **架构版本**: FastAPI + SQLModel

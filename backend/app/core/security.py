@@ -3,10 +3,10 @@
 """
 import bcrypt
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Tuple
 
 
-def generate_password_hash(password: str) -> tuple[str, str]:
+def generate_password_hash(password: str) -> Tuple[str, str]:
     """生成密码哈希和盐值（使用 bcrypt）
     
     bcrypt 自动处理盐值，返回格式兼容旧接口

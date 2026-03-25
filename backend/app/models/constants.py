@@ -1,7 +1,10 @@
 """
 系统常量定义
 """
-from typing import Literal
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 # ==================== 版本信息 ====================
 VERSION: str = "2.0.0"
@@ -34,7 +37,7 @@ class UserRoleConst:
         return role in cls.ALL
     
     @classmethod
-    def all(cls) -> list[str]:
+    def all(cls):
         """获取所有合法角色"""
         return cls.ALL
 

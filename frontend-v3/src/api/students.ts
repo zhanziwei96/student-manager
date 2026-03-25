@@ -1,49 +1,48 @@
-import { api } from '@/lib/api'
+import { get, post, put, del } from '@/lib/api'
 import type {
-  ApiResponse,
   Student,
   CreateStudentRequest,
   UpdateScoreRequest,
   ScoreLog,
 } from '@/types'
 
+/**
+ * 学生相关 API - FE-003 修复后
+ *
+ * 调用方无需再检查 res.success，错误会自动抛出
+ * 返回类型直接是数据 T，而不是 ApiResponse<T>
+ */
 export const studentsApi = {
-  getAll: (): Promise<ApiResponse<Student[]>> =>
-    api('/students', { method: 'GET' }),
-  
-  getList: (): Promise<ApiResponse<Student[]>> =>
-    api('/students', { method: 'GET' }),
+  getAll: (): Promise<Student[]> =>
+    get('/students'),
 
-  getById: (id: number): Promise<ApiResponse<Student>> =>
-    api(`/students/${id}`, { method: 'GET' }),
-    
-  getByStudentId: (studentId: string): Promise<ApiResponse<Student>> =>
-    api(`/students/${studentId}`, { method: 'GET' }),
+  getList: (): Promise<Student[]> =>
+    get('/students'),
 
-  create: (data: CreateStudentRequest): Promise<ApiResponse<Student>> =>
-    api('/students', { method: 'POST', body: data }),
+  getById: (id: number): Promise<Student> =>
+    get(`/students/${id}`),
 
-  delete: (id: number): Promise<ApiResponse<void>> =>
-    api(`/students/${id}`, { method: 'DELETE' }),
+  getByStudentId: (studentId: string): Promise<Student> =>
+    get(`/students/${studentId}`),
 
-  updateScore: (id: number, data: UpdateScoreRequest): Promise<ApiResponse<Student>> =>
-    api(`/students/${id}/score`, { method: 'PUT', body: data }),
+  create: (data: CreateStudentRequest): Promise<Student> =>
+    post('/students', data),
 
-  getScoreLogs: (id: number): Promise<ApiResponse<ScoreLog[]>> =>
-    api(`/students/${id}/scores`, { method: 'GET' }),
+  delete: (id: number): Promise<void> =>
+    del(`/students/${id}`),
 
-  resetPassword: (id: number, newPassword: string): Promise<ApiResponse<void>> =>
-    api(`/students/${id}/reset-password`, {
-      method: 'PUT',
-      body: { new_password: newPassword },
-    }),
+  updateScore: (id: number, data: UpdateScoreRequest): Promise<Student> =>
+    put(`/students/${id}/score`, data),
 
-  import: (file: File): Promise<ApiResponse<{ imported: number }>> => {
+  getScoreLogs: (id: number): Promise<ScoreLog[]> =>
+    get(`/students/${id}/scores`),
+
+  resetPassword: (id: number, newPassword: string): Promise<void> =>
+    put(`/students/${id}/reset-password`, { new_password: newPassword }),
+
+  import: (file: File): Promise<{ imported: number }> => {
     const formData = new FormData()
     formData.append('file', file)
-    return api('/students/import', {
-      method: 'POST',
-      body: formData,
-    })
+    return post('/students/import', formData)
   },
 }

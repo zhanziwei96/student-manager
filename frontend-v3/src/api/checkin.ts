@@ -1,5 +1,5 @@
-import { api } from '@/lib/api'
-import type { ApiResponse, CheckinRecord } from '@/types'
+import { get, post } from '@/lib/api'
+import type { CheckinRecord } from '@/types'
 
 export interface CheckinStats {
   active: boolean
@@ -25,30 +25,35 @@ export interface ClassSessionStatus {
 }
 
 /**
- * 签到管理 API
+ * 签到管理 API - FE-003 修复后
+ *
+ * 调用方无需再检查 res.success，错误会自动抛出
+ * 返回类型直接是数据 T，而不是 ApiResponse<T>
  */
 export const checkinApi = {
   /**
    * 学生签到
    */
-  checkin: (data: CheckinRequest): Promise<ApiResponse<CheckinRecord>> =>
-    api('/checkin', { method: 'POST', body: data }),
+  checkin: (data: CheckinRequest): Promise<CheckinRecord> =>
+    post('/checkin', data),
 
   /**
    * 获取今日签到列表
    */
-  getToday: (className?: string): Promise<ApiResponse<CheckinRecord[]>> =>
-    api(`/checkins/today${className ? `?class_name=${encodeURIComponent(className)}` : ''}`, { method: 'GET' }),
+  getToday: (className?: string): Promise<CheckinRecord[]> => {
+    const query = className ? `?class_name=${encodeURIComponent(className)}` : ''
+    return get(`/checkins/today${query}`)
+  },
 
   /**
    * 获取签到统计
    */
-  getStats: (): Promise<ApiResponse<CheckinStats>> =>
-    api('/checkins/stats', { method: 'GET' }),
+  getStats: (): Promise<CheckinStats> =>
+    get('/checkins/stats'),
 
   /**
    * 获取班级活跃课堂状态（学生端使用）
    */
-  getClassSessionForClass: (className: string): Promise<ApiResponse<ClassSessionStatus>> =>
-    api(`/class-sessions/class/${encodeURIComponent(className)}`, { method: 'GET' }),
+  getClassSessionForClass: (className: string): Promise<ClassSessionStatus> =>
+    get(`/class-sessions/class/${encodeURIComponent(className)}`),
 }
