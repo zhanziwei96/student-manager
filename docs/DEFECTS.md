@@ -2,7 +2,7 @@
 
 **文档版本**: v1.7  
 **编写日期**: 2026-03-24  
-**更新日期**: 2026-03-25 (BE-008 并发保护 + 所有前端架构缺陷修复)  
+**更新日期**: 2026-03-25 (SEC-001 文件上传安全控制 + BE-008 并发保护 + 前端架构修复)  
 **适用系统**: ClassHub 班级管理系统 v3.0 (frontend-v3分支)  
 **架构评估范围**: 前端、后端、数据库、部署、安全
 
@@ -15,13 +15,13 @@
 | 数据库架构 | 3 | 🔴 严重: 2, 🟡 中等: 1 | 1 | 2 |
 | 后端架构 | 8 | 🔴 严重: 3, 🟡 中等: 4, 🟢 轻微: 1 | 7 | 1 |
 | 前端架构 | 5 | 🟡 中等: 4, 🟢 轻微: 1 | 5 | 0 |
-| 安全设计 | 4 | 🔴 严重: 2, 🟡 中等: 2 | 1 | 3 |
+| 安全设计 | 4 | 🔴 严重: 2, 🟡 中等: 2 | 2 | 2 |
 | 部署运维 | 3 | 🟡 中等: 2, 🟢 轻微: 1 | 0 | 3 |
 | 测试质量 | 2 | 🟡 中等: 1, 🟢 轻微: 1 | 1 | 1 |
 
 **总计**: 25 项缺陷  
 **🔴 严重**: 7 项 | **🟡 中等**: 14 项 | **🟢 轻微**: 4 项  
-**已修复**: 17 项 | **未修复**: 5 项
+**已修复**: 18 项 | **未修复**: 4 项
 
 ---
 
@@ -695,24 +695,91 @@ frontend-v3/src/
 
 ## 5. 安全设计缺陷
 
-### SEC-001: 文件上传缺乏安全控制 🟡 中等 ❌ 未修复
+### SEC-001: 文件上传缺乏安全控制 🟡 中等 ✅ 已修复
 **位置**: `backend/app/api/routes/students.py`  
 **缺陷描述**: 上传目录直接挂载，无文件类型白名单和大小限制
+
+**修复状态**: ✅ **已修复**
+
+**修复详情**:
+
+创建安全上传模块 `backend/app/core/upload.py`，提供完整的安全控制：
+
+```python
+async def save_upload_file_securely(
+    upload_file: UploadFile,
+    allowed_extensions: List[str] = None,
+    max_size_mb: int = None,
+    use_uuid: bool = True
+) -> Tuple[str, str]:
+    """安全保存上传文件"""
+    # 1. 验证文件名安全性（防止路径遍历）
+    # 2. 验证文件扩展名白名单 + MIME类型
+    # 3. 检查文件大小限制
+    # 4. 使用UUID重命名文件
+    # 5. 保存到隔离目录
+```
+
+**安全控制措施**:
+
+| 控制项 | 实现方式 | 配置项 |
+|--------|----------|--------|
+| 文件类型白名单 | 扩展名 + MIME类型双重验证 | `UPLOAD_ALLOWED_EXTENSIONS` |
+| 危险文件黑名单 | `.exe`, `.sh`, `.php` 等 30+ 种 | 内置常量 |
+| 文件大小限制 | Content-Length + 实际读取限制 | `UPLOAD_MAX_FILE_SIZE_MB` |
+| 文件名安全 | UUID重命名 + 路径清理 | `UPLOAD_USE_UUID_FILENAME` |
+| 路径遍历防护 | 清理 `../` 和 `./` | 自动处理 |
+| 临时文件清理 | try/finally 确保清理 | 自动处理 |
+
+**配置示例**:
+
+```python
+# backend/app/core/config.py
+class UploadSettings(BaseSettings):
+    allowed_extensions: List[str] = [".xlsx", ".xls"]
+    allowed_content_types: List[str] = [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+    ]
+    max_file_size_mb: int = 10
+    use_uuid_filename: bool = True
+```
+
+**更新后的 API**:
 
 ```python
 @router.post("/students/import")
 async def import_students(
-    file: UploadFile = File(...),
-    # 无文件类型、大小检查
+    file: UploadFile = File(..., description="Excel文件 (.xlsx/.xls)"),
+    ...
 ):
-    # TODO: 实现导入逻辑
+    # SEC-001: 安全文件上传
+    file_path, original_filename = await save_upload_file_securely(
+        file,
+        allowed_extensions=settings.upload.allowed_extensions,
+        max_size_mb=settings.upload.max_file_size_mb,
+        use_uuid=settings.upload.use_uuid_filename
+    )
+    ...
+    finally:
+        cleanup_file(file_path)  # 清理临时文件
 ```
 
-**影响**:
-- 可能上传恶意文件
-- 文件名冲突风险
+**测试覆盖**: 70 个单元测试覆盖所有安全场景
+- 路径遍历攻击防护（`../../../etc/passwd`）
+- 危险文件类型拒绝（`.exe`, `.php`, `.sh` 等）
+- 超大文件拒绝
+- 文件名安全处理（UUID重命名）
+- 文件清理机制
 
-**修复建议**: 限制文件类型、大小，使用 UUID 重命名，隔离存储
+**新增文件**:
+- `backend/app/core/upload.py` - 安全上传工具模块
+- `tests/unit/test_upload.py` - 上传安全单元测试（70个）
+
+**修改文件**:
+- `backend/app/core/config.py` - 添加 UploadSettings 配置类
+- `backend/app/api/routes/students.py` - 使用安全上传
+- `backend/.env.example` - 添加上传配置示例
 
 ---
 

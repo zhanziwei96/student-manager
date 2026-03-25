@@ -121,6 +121,35 @@ class ScoreSettings(BaseSettings):
     default_score: float = Field(default=70, description="学生默认分数")
 
 
+class UploadSettings(BaseSettings):
+    """文件上传配置 - SEC-001: 文件上传安全控制"""
+    model_config = SettingsConfigDict(env_prefix="UPLOAD_")
+    
+    # 允许的文件扩展名白名单
+    allowed_extensions: List[str] = Field(
+        default=[".xlsx", ".xls"], 
+        description="允许上传的文件扩展名"
+    )
+    
+    # 允许的文件MIME类型白名单
+    allowed_content_types: List[str] = Field(
+        default=[
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+        ],
+        description="允许上传的文件MIME类型"
+    )
+    
+    # 文件大小限制 (MB)
+    max_file_size_mb: int = Field(default=10, description="最大文件大小(MB)")
+    
+    # 上传目录
+    directory: str = Field(default="uploads", description="上传文件存储目录")
+    
+    # 是否使用UUID重命名
+    use_uuid_filename: bool = Field(default=True, description="使用UUID重命名文件")
+
+
 class Settings(BaseSettings):
     """应用主配置类"""
     model_config = SettingsConfigDict(
@@ -138,6 +167,7 @@ class Settings(BaseSettings):
     log: LogSettings = Field(default_factory=LogSettings)
     pagination: PaginationSettings = Field(default_factory=PaginationSettings)
     score: ScoreSettings = Field(default_factory=ScoreSettings)
+    upload: UploadSettings = Field(default_factory=UploadSettings)
     
     @property
     def is_development(self) -> bool:

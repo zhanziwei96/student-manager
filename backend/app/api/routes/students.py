@@ -207,16 +207,56 @@ async def get_classes(
 @router.post("/students/import")
 async def import_students(
     request: Request,
-    file: UploadFile = File(...),
+    file: UploadFile = File(..., description="Excel文件 (.xlsx/.xls)"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """导入学生（Excel）"""
-    # TODO: 实现导入逻辑
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: MessageConst.IMPORT_PENDING
-    }
+    """导入学生（Excel）- SEC-001: 安全文件上传"""
+    from app.core.upload import save_upload_file_securely, cleanup_file
+    from app.core.logging import logger
+    
+    settings = get_settings()
+    file_path = None
+    
+    try:
+        # SEC-001: 安全保存文件
+        # - 验证文件扩展名白名单
+        # - 验证MIME类型
+        # - 检查文件大小
+        # - 使用UUID重命名
+        file_path, original_filename = await save_upload_file_securely(
+            file,
+            allowed_extensions=settings.upload.allowed_extensions,
+            allowed_content_types=settings.upload.allowed_content_types,
+            max_size_mb=settings.upload.max_file_size_mb,
+            use_uuid=settings.upload.use_uuid_filename,
+            upload_directory=settings.upload.directory
+        )
+        
+        # TODO: 实现Excel解析和学生导入逻辑
+        # 这里应该调用导入服务解析Excel并导入学生数据
+        # 目前仅演示安全上传功能
+        
+        logger.info(f"学生导入文件已接收: {original_filename} (上传者: {user.get('username')})")
+        
+        return {
+            ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.MESSAGE: f"文件 '{original_filename}' 上传成功，导入功能开发中"
+        }
+        
+    except HTTPException:
+        # 重新抛出HTTP异常（来自save_upload_file_securely）
+        raise
+    except Exception as e:
+        logger.error(f"学生导入失败: {e}")
+        raise HTTPException(
+            status_code=HttpStatus.INTERNAL_ERROR,
+            detail=f"导入失败: {str(e)}"
+        )
+    finally:
+        # SEC-001: 清理临时文件
+        if file_path:
+            cleanup_file(file_path)
 
 
 @router.get("/students/{student_id}/scores")
