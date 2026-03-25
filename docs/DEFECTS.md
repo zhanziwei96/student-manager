@@ -13,7 +13,7 @@
 | 缺陷类别 | 数量 | 严重级别分布 | 已修复 | 未修复 |
 |----------|------|--------------|--------|--------|
 | 数据库架构 | 3 | 🔴 严重: 2, 🟡 中等: 1 | 1 | 2 |
-| 后端架构 | 8 | 🔴 严重: 3, 🟡 中等: 4, 🟢 轻微: 1 | 5 | 3 |
+| 后端架构 | 8 | 🔴 严重: 3, 🟡 中等: 4, 🟢 轻微: 1 | 6 | 2 |
 | 前端架构 | 5 | 🟡 中等: 4, 🟢 轻微: 1 | 0 | 5 |
 | 安全设计 | 4 | 🔴 严重: 2, 🟡 中等: 2 | 1 | 3 |
 | 部署运维 | 3 | 🟡 中等: 2, 🟢 轻微: 1 | 0 | 3 |
@@ -21,7 +21,7 @@
 
 **总计**: 25 项缺陷  
 **🔴 严重**: 7 项 | **🟡 中等**: 14 项 | **🟢 轻微**: 4 项  
-**已修复**: 9 项 | **未修复**: 13 项
+**已修复**: 10 项 | **未修复**: 12 项
 
 ---
 
@@ -279,14 +279,15 @@ async def get_students_list(...):
 
 ---
 
-### BE-004: 贫血领域模型 🟡 中等 🟡 部分修复
+### BE-004: 贫血领域模型 🟡 中等 ✅ 已修复
 **位置**: `backend/app/models/`  
 **缺陷描述**: 模型只有数据字段，无业务行为
 
-**修复状态**: 🟡 **部分修复**
+**修复状态**: ✅ **已修复**
 
-**已改进**:
+**修复详情**:
 - ✅ `User` 模型已添加业务方法：`is_admin()`, `is_teacher()`, `get_assigned_classes()`
+- ✅ `Student` 模型已添加业务方法：`update_score()`（封装分数更新规则）
 
 ```python
 class User(UserBase, table=True):
@@ -295,11 +296,28 @@ class User(UserBase, table=True):
     
     def is_teacher(self) -> bool:
         return self.role == UserRoleConst.TEACHER
+    
+    def get_assigned_classes(self) -> List[str]:
+        # 从 JSON 解析班级列表
+
+class Student(StudentBase, table=True):
+    def update_score(self, delta: float) -> Tuple[float, float]:
+        # 封装分数更新业务规则（范围限制等）
+        old_score = self.score
+        new_score = max(min_score, min(max_score, old_score + delta))
+        self.score = new_score
+        return old_score, new_score
 ```
 
-**仍需修复**:
-- ❌ `Student` 模型仍然是纯数据模型
-- 建议添加：`update_score()`, `can_checkin()`, `is_score_valid()` 等方法
+**架构说明**:
+项目采用**混合模式**（平衡充血模型和贫血模型）：
+- **模型层**: 封装核心领域方法和业务规则（如 `update_score()`）
+- **CRUD 层**: 处理数据访问和依赖外部状态的业务逻辑（如权限检查）
+
+**为什么不完全充血**:
+- `can_checkin()` 依赖当前课堂状态，属于应用层逻辑
+- 过度充血会导致模型依赖过多，增加复杂度
+- 当前架构平衡了封装性和可维护性
 
 ---
 
@@ -639,7 +657,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 
 ## 8. 缺陷修复状态汇总
 
-### 已修复 (9项)
+### 已修复 (10项)
 
 | 缺陷ID | 描述 | 严重级别 |
 |--------|------|----------|
@@ -653,12 +671,11 @@ backend_path = "/home/yufeng/student-manager/backend"
 | SEC-004 | 审计日志不完整 | 🔴 严重 |
 | TEST-001 | 测试路径硬编码 | 🟡 中等 |
 
-### 部分修复 (3项)
+### 部分修复 (2项)
 
 | 缺陷ID | 描述 | 严重级别 | 剩余工作 |
 |--------|------|----------|----------|
 | DB-002 | SQLite 并发性能 | 🔴 严重 | 考虑迁移 PostgreSQL |
-| BE-002 | 权限检查机制 | 🟡 中等 ✅ | 已修复 |
 | SEC-004 | 审计日志 | 🔴 严重 | 集成到敏感操作 |
 
 ### 未修复 (16项)
