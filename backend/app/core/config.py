@@ -79,6 +79,9 @@ class SecuritySettings(BaseSettings):
     # 登录安全设置
     max_login_failures: int = Field(default=10, description="最大登录失败次数")
     lockout_duration_minutes: int = Field(default=30, description="账号锁定时间（分钟）")
+    
+    # Cookie 安全设置 (BE-006 修复)
+    cookie_secure: bool = Field(default=False, description="Cookie Secure标志（生产环境应设为True）")
 
 
 class RateLimitSettings(BaseSettings):

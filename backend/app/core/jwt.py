@@ -36,11 +36,15 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
 
 def set_token_cookie(response: Response, token: str):
     """设置 HttpOnly Cookie"""
+    # BE-006 修复: 根据环境配置设置 secure 标志
+    from app.core.config import get_settings
+    settings = get_settings()
+    
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,  # JS 无法访问
-        secure=False,   # 生产环境应设为 True (HTTPS)
+        secure=settings.security.cookie_secure,  # 根据环境配置
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )

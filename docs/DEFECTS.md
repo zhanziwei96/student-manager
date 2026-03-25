@@ -21,7 +21,7 @@
 
 **总计**: 25 项缺陷  
 **🔴 严重**: 7 项 | **🟡 中等**: 14 项 | **🟢 轻微**: 4 项  
-**已修复**: 10 项 | **未修复**: 12 项
+**已修复**: 11 项 | **未修复**: 11 项
 
 ---
 
@@ -341,25 +341,46 @@ async def get_current_user(request: Request):
 
 ---
 
-### BE-006: JWT 安全设置不当 🔴 严重 ❌ 未修复
+### BE-006: JWT 安全设置不当 🔴 严重 ✅ 已修复
 **位置**: `backend/app/core/jwt.py`  
 **缺陷描述**: Cookie 的 secure 标志硬编码为 False
 
+**修复状态**: ✅ **已修复**
+
+**修复详情**:
+- 在 `SecuritySettings` 中添加 `cookie_secure` 配置项
+- `set_token_cookie()` 函数根据配置动态设置 secure 标志
+- 默认值为 `False`（开发环境），生产环境应通过环境变量设置为 `True`
+
 ```python
+# config.py
+class SecuritySettings(BaseSettings):
+    cookie_secure: bool = Field(default=False, description="Cookie Secure标志")
+
+# jwt.py
 def set_token_cookie(response: Response, token: str):
+    settings = get_settings()
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=False,   # 生产环境应为 True
+        secure=settings.security.cookie_secure,  # 根据环境配置
         samesite="lax",
     )
 ```
 
-**影响**:
-- HTTPS 环境下 Cookie 可能被中间人拦截
+**环境配置示例**:
+```bash
+# 生产环境
+export SECURITY__COOKIE_SECURE=true
 
-**修复建议**: 根据环境变量动态设置 secure 标志
+# 开发环境（默认）
+export SECURITY__COOKIE_SECURE=false
+```
+
+**安全建议**:
+- 生产环境必须启用 HTTPS 并设置 `SECURITY__COOKIE_SECURE=true`
+- 配合 `httponly=True` 和 `samesite="lax"` 提供完整 Cookie 安全保护
 
 ---
 
@@ -678,12 +699,12 @@ backend_path = "/home/yufeng/student-manager/backend"
 | DB-002 | SQLite 并发性能 | 🔴 严重 | 考虑迁移 PostgreSQL |
 | SEC-004 | 审计日志 | 🔴 严重 | 集成到敏感操作 |
 
-### 未修复 (16项)
+### 未修复 (11项)
 
 | 缺陷ID | 描述 | 严重级别 | 优先级 |
 |--------|------|----------|--------|
 | BE-005 | JWT 令牌无法撤销 | 🔴 严重 | P0 |
-| BE-006 | Cookie secure 标志 | 🔴 严重 | P0 |
+| BE-006 | Cookie secure 标志 | 🔴 严重 ✅ | P0 | 已修复 |
 | BE-008 | 并发分数更新无锁 | 🔴 严重 | P0 |
 | SEC-003 | 密码盐值冗余 | 🔴 严重 | P0 |
 | BE-001 | 配置加载分散 | 🟡 中等 ✅ | P2 | 已修复 |
@@ -711,7 +732,7 @@ backend_path = "/home/yufeng/student-manager/backend"
 | SEC-003 | 移除冗余 salt 字段 | ❌ 未修复 |
 | SEC-004 | 完善审计日志集成 | 🟡 部分修复 |
 | BE-005 | JWT 令牌撤销机制 | ❌ 未修复 |
-| BE-006 | Cookie secure 标志 | ❌ 未修复 |
+| BE-006 | Cookie secure 标志 | ✅ 已修复 |
 | BE-008 | 分数更新加锁 | ❌ 未修复 |
 
 ### 第二阶段（重要）- 影响架构稳定
