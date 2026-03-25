@@ -1,34 +1,62 @@
 version: '3.8'
 
 services:
-  classhub:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: classhub
-    ports:
-      - "8080:80"      # HTTP (映射到本地8080避免冲突)
+    container_name: classhub-backend
+    # 不暴露端口，只通过内部网络访问
+    expose:
+      - "8000"
     volumes:
-      # 数据目录挂载到本地 backend/data 目录
-      - ./backend/data:/app/backend/data
+      # 数据目录挂载
+      - /root/.openclaw/workspace/student-manager-v4/backend/data:/app/data
       # 上传文件目录挂载
-      - ./uploads:/app/uploads
-      # 备份目录挂载到本地 backups 目录（与数据分开）
-      - ./backups:/app/backups
+      - /root/.openclaw/workspace/student-manager-v4/uploads:/app/uploads
+      # 备份目录挂载
+      - /root/.openclaw/workspace/student-manager-v4/backups:/app/backups
       # 日志目录挂载
-      - ./backend/logs:/app/backend/logs
+      - /root/.openclaw/workspace/student-manager-v4/backend/logs:/app/logs
     environment:
       - ENV=production
       - DEBUG=false
-      - DATABASE_PATH=/app/backend/data/student_manage.db
-      - BACKUP_DIR=/app/backups
-      - SECURITY_SECRET_KEY=${SECRET_KEY:-change-me-in-production}
-      - HOST=127.0.0.1
-      - PORT=8000
+      # 使用双下划线格式
+      - DATABASE__PATH=/app/data/class_system.db
+      - BACKUP__DIR=/app/backups
+      - SECURITY__SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - APP__HOST=0.0.0.0
+      - APP__PORT=8000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
+    networks:
+      - classhub-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: classhub-nginx
+    ports:
+      - "80:80"       # HTTP - 自动跳转 HTTPS
+      - "443:443"     # HTTPS
+    volumes:
+      # Nginx 配置文件
+      - /root/.openclaw/workspace/student-manager-v4/docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      # SSL 证书
+      - /root/.openclaw/workspace/student-manager-v4/docker/certs:/etc/nginx/certs:ro
+      # 前端静态文件
+      - /root/.openclaw/workspace/student-manager-v4/frontend-v3/dist:/var/www/html:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - classhub-network
+
+networks:
+  classhub-network:
+    driver: bridge

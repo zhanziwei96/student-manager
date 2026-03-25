@@ -32,7 +32,7 @@ class UpdateUserRequest(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
     assigned_classes: Optional[List[str]] = None
-    is_active: Optional[bool] = None
+    is_account_enabled: Optional[bool] = None
 
 
 class ResetPasswordRequest(BaseModel):
@@ -106,8 +106,8 @@ async def update_user_info(
     if data.assigned_classes is not None:
         import json
         user_obj.assigned_classes = json.dumps(data.assigned_classes, ensure_ascii=False)
-    if data.is_active is not None:
-        user_obj.is_active = data.is_active
+    if data.is_account_enabled is not None:
+        user_obj.is_account_enabled = data.is_account_enabled
     
     session.add(user_obj)
     session.commit()

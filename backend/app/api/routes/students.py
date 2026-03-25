@@ -58,16 +58,16 @@ async def get_students_list(
     checked_in_students = set(c.student_id for c in checkins)
     
     # 构建带签到状态的学生列表
-    students_with_status = []
+    students_with_checkin = []
     for student in students:
         student_dict = student.model_dump()
-        # 只有在当前课堂签到才算活跃
-        student_dict['status'] = 'active' if student.student_id in checked_in_students else 'inactive'
-        students_with_status.append(student_dict)
+        # 只有在当前课堂签到才算已签到
+        student_dict['checkin_status'] = 'checked_in' if student.student_id in checked_in_students else 'not_checked_in'
+        students_with_checkin.append(student_dict)
     
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: students_with_status
+        ApiResponseConst.DATA: students_with_checkin
     }
 
 
@@ -148,7 +148,7 @@ async def update_score(
             'name': student.name,
             'class_name': student.class_name,
             'score': student.score,
-            'is_active': student.is_active
+            'is_account_enabled': student.is_account_enabled
         }
     }
 

@@ -104,7 +104,7 @@ const openScoreDialog = (student: Student, defaultScore: number = 0, defaultReas
 const handleQuickScore = async (student: Student, score: number, reason: string) => {
   try {
     await updateScore({
-      id: student.id,
+      studentId: student.student_id,
       data: {
         score_change: score,
         reason: reason,
@@ -125,7 +125,7 @@ const handleUpdateScore = async () => {
 
   try {
     await updateScore({
-      id: selectedStudent.value.id,
+      studentId: selectedStudent.value.student_id,
       data: {
         score_change: scoreChange.value,
         reason: scoreReason.value,
@@ -189,7 +189,7 @@ const handleUpdateScore = async () => {
           v-for="student in filteredStudents"
           :key="student.id"
           class="border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
-          :class="student.is_active ? 'border-green-500/30' : ''"
+          :class="student.checkin_status === 'checked_in' ? 'border-green-500/30' : ''"
         >
           <!-- 学生信息 -->
           <div class="flex items-start justify-between mb-3">
@@ -205,8 +205,8 @@ const handleUpdateScore = async () => {
                 <p class="text-xs text-white/40">{{ student.class_name }}</p>
               </div>
             </div>
-            <Badge :variant="student.is_active ? 'success' : 'secondary'" class="text-xs">
-              {{ student.is_active ? '活跃' : '非活跃' }}
+            <Badge :variant="student.checkin_status === 'checked_in' ? 'success' : 'secondary'" class="text-xs">
+              {{ student.checkin_status === 'checked_in' ? '已签到' : '未签到' }}
             </Badge>
           </div>
           

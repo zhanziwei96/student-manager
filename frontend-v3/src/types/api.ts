@@ -96,7 +96,8 @@ export interface Student {
   name: string                  // 姓名
   class_name: string            // 班级
   score: number                 // 分数
-  is_active: boolean            // 是否激活（FE-004: 统一为 is_active）
+  is_account_enabled: boolean   // 账户是否启用
+  checkin_status?: 'checked_in' | 'not_checked_in' // 课堂签到状态（API 动态返回）
   created_at?: string           // 创建时间（ISO格式）
   last_login?: string           // 最后登录时间（ISO格式）
 }
@@ -132,11 +133,13 @@ export interface UpdateScoreRequest {
 
 export interface ScoreLog {
   id: number
-  student_id: number
-  score_change: number
-  reason: string
+  student_id: string
+  old_score: number | null
+  new_score: number | null
+  delta: number
+  reason: string | null
+  operator: string | null
   created_at: string
-  created_by: string
 }
 
 // 统计类型

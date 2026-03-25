@@ -27,7 +27,7 @@ def init_student_passwords(db_path: str):
         print("添加密码字段...")
         cursor.execute("ALTER TABLE students ADD COLUMN password_hash TEXT")
         cursor.execute("ALTER TABLE students ADD COLUMN salt TEXT")
-        cursor.execute("ALTER TABLE students ADD COLUMN is_active INTEGER DEFAULT 1")
+        cursor.execute("ALTER TABLE students ADD COLUMN is_account_enabled INTEGER DEFAULT 1")
         cursor.execute("ALTER TABLE students ADD COLUMN last_login TIMESTAMP")
         conn.commit()
         print("密码字段添加完成")

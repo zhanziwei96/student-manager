@@ -267,8 +267,8 @@ const handleAddStudent = async () => {
                 <td class="px-4 py-3 text-sm text-white/60">{{ student.class_name }}</td>
                 <td class="px-4 py-3 text-sm font-bold text-primary">{{ student.score }}</td>
                 <td class="px-4 py-3">
-                  <Badge :variant="student.is_active ? 'success' : 'secondary'">
-                    {{ student.is_active ? '活跃' : '非活跃' }}
+                  <Badge :variant="student.is_account_enabled ? 'success' : 'secondary'">
+                    {{ student.is_account_enabled ? '启用' : '禁用' }}
                   </Badge>
                 </td>
                 <td class="px-4 py-3">

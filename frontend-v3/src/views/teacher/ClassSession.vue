@@ -194,7 +194,7 @@ const openScoreDialog = (student: Student, defaultScore: number = 0, defaultReas
 const handleQuickScore = async (student: Student, score: number, reason: string) => {
   try {
     await updateScore({
-      id: student.id,
+      studentId: student.student_id,
       data: {
         score_change: score,
         reason: reason,
@@ -215,7 +215,7 @@ const handleUpdateScore = async () => {
   if (!selectedStudent.value) return
   try {
     await updateScore({
-      id: selectedStudent.value.id,
+      studentId: selectedStudent.value.student_id,
       data: {
         score_change: scoreChange.value,
         reason: scoreReason.value,

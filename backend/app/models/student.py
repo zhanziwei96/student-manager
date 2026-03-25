@@ -13,7 +13,7 @@ class StudentBase(SQLModel):
     name: str = Field(..., description="姓名")
     class_name: str = Field(default="未分班", description="班级")
     score: float = Field(default=70.0, description="分数")
-    is_active: bool = Field(default=True, description="是否激活")
+    is_account_enabled: bool = Field(default=True, description="账户是否启用")
 
 
 class Student(StudentBase, table=True):

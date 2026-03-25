@@ -16,7 +16,7 @@ class UserBase(SQLModel):
     name: str = Field(..., description="姓名")
     role: str = Field(default=UserRoleConst.TEACHER, description="角色")
     assigned_classes: str = Field(default="[]", description="负责班级列表（JSON字符串）")
-    is_active: bool = Field(default=True, description="是否激活")
+    is_account_enabled: bool = Field(default=True, description="账户是否启用")
     
     @field_validator("role")
     @classmethod
@@ -76,7 +76,7 @@ class UserUpdate(SQLModel):
     name: Optional[str] = None
     role: Optional[UserRole] = None
     assigned_classes: Optional[List[str]] = None
-    is_active: Optional[bool] = None
+    is_account_enabled: Optional[bool] = None
 
 
 class UserResponse(SQLModel):
@@ -86,7 +86,7 @@ class UserResponse(SQLModel):
     name: str
     role: UserRole
     assigned_classes: List[str]
-    is_active: bool
+    is_account_enabled: bool
     last_login: Optional[datetime] = None
     created_at: datetime
     

@@ -4,12 +4,10 @@ import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge } from '@/components/ui'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
-import { formatDistanceToNow } from '@/lib/utils'
-
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
 const { data: classSession, isPending: isLoadingSession, hasActiveSession } = useStudentClassSession()
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
-const { hasCheckedIn, sessionCheckin, isPending: isLoadingCheckinStatus } = useHasCheckedInSession(computed(() => classSession.value?.id))
+const { hasCheckedIn, sessionCheckin } = useHasCheckedInSession(computed(() => classSession.value?.id))
 
 const showSuccessToast = ref(false)
 const successMessage = ref('')
@@ -38,7 +36,7 @@ const handleCheckin = async () => {
 
 const formatTime = (time: string) => {
   try {
-    return formatDistanceToNow(new Date(time))
+    return new Date(time).toLocaleString('zh-CN')
   } catch {
     return time
   }

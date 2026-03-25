@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores'
 import { useStudentProfile } from '@/composables/useStudentProfile'
-import { useStudents } from '@/composables'
+import { useStudents, useStudentScoreLogs } from '@/composables'
 import { Card, Badge } from '@/components/ui'
 import { Star, TrendingUp, Users, Award, Loader2, AlertCircle } from 'lucide-vue-next'
 
@@ -10,12 +10,27 @@ const authStore = useAuthStore()
 const { data: currentStudent, isPending, error } = useStudentProfile()
 const { data: allStudents } = useStudents()
 
+// 获取分数历史记录
+const studentId = computed(() => currentStudent.value?.student_id || '')
+const { data: scoreLogs, isPending: logsLoading } = useStudentScoreLogs(studentId)
+
 const rank = computed(() => {
   if (!allStudents.value || !currentStudent.value) return '-'
   const sorted = [...allStudents.value].sort((a, b) => b.score - a.score)
   const index = sorted.findIndex(s => s.id === currentStudent.value!.id)
   return index >= 0 ? `第 ${index + 1} 名` : '-'
 })
+
+// 格式化日期
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 </script>
 
 <template>
@@ -58,9 +73,6 @@ const rank = computed(() => {
           <div class="mt-4 flex items-center gap-2">
             <Badge variant="secondary" class="bg-white/20">
               <TrendingUp class="mr-1 h-3 w-3" />
-              本周 +10
-            </Badge>
-            <Badge variant="secondary" class="bg-white/20">
               排名 {{ rank }}
             </Badge>
           </div>
@@ -101,8 +113,8 @@ const rank = computed(() => {
             </div>
             <div>
               <p class="text-sm text-white/60">状态</p>
-              <Badge :variant="currentStudent.is_active ? 'success' : 'secondary'">
-                {{ currentStudent.is_active ? '活跃' : '非活跃' }}
+              <Badge :variant="currentStudent.is_account_enabled ? 'success' : 'secondary'">
+                {{ currentStudent.is_account_enabled ? '账户启用' : '账户禁用' }}
               </Badge>
             </div>
           </div>
@@ -113,32 +125,36 @@ const rank = computed(() => {
       <Card class="border-white/10 bg-white/[0.02] p-6">
         <h2 class="text-lg font-semibold text-white">最近活动</h2>
         <p class="text-sm text-white/60">最新的分数变化</p>
-        <!-- TODO: 替换为真实的分数历史 API -->
-        <div class="mt-6 space-y-4">
-          <div class="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-4">
+        
+        <!-- Loading state -->
+        <div v-if="logsLoading" class="mt-6 flex h-32 items-center justify-center">
+          <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        </div>
+        
+        <!-- Score logs list -->
+        <div v-else-if="scoreLogs && scoreLogs.length > 0" class="mt-6 space-y-4">
+          <div v-for="log in scoreLogs.slice(0, 5)" :key="log.id" 
+               class="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-4">
             <div class="flex items-center gap-3">
-              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
-                <TrendingUp class="h-4 w-4 text-green-400" />
+              <div class="flex h-8 w-8 items-center justify-center rounded-full"
+                   :class="log.delta >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'">
+                <TrendingUp class="h-4 w-4" 
+                          :class="log.delta >= 0 ? 'text-green-400' : 'text-red-400'" />
               </div>
               <div>
-                <p class="text-sm text-white">课堂参与</p>
-                <p class="text-xs text-white/40">2 天前</p>
+                <p class="text-sm text-white">{{ log.reason || '分数变更' }}</p>
+                <p class="text-xs text-white/40">{{ formatDate(log.created_at) }}</p>
               </div>
             </div>
-            <Badge variant="success">+10</Badge>
+            <Badge :variant="log.delta >= 0 ? 'success' : 'error'">
+              {{ log.delta >= 0 ? '+' : '' }}{{ log.delta }}
+            </Badge>
           </div>
-          <div class="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-4">
-            <div class="flex items-center gap-3">
-              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
-                <TrendingUp class="h-4 w-4 text-green-400" />
-              </div>
-              <div>
-                <p class="text-sm text-white">完成作业</p>
-                <p class="text-xs text-white/40">1 周前</p>
-              </div>
-            </div>
-            <Badge variant="success">+15</Badge>
-          </div>
+        </div>
+        
+        <!-- Empty state -->
+        <div v-else class="mt-6 text-center text-white/40">
+          暂无分数变更记录
         </div>
       </Card>
     </template>

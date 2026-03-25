@@ -1,52 +1,42 @@
 # ClassHub Dockerfile - 生产环境
-# 支持 Nginx + FastAPI + SQLite
+# 使用 Alpine 基础镜像 + 腾讯云镜像源
 
-FROM python:3.11-slim
+FROM python:3.11-alpine
 
 WORKDIR /app
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
-    sqlite3 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# 使用 Alpine 腾讯云镜像源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.cloud.tencent.com/g' /etc/apk/repositories
+
+# 安装系统依赖（编译 Python 包所需）
+RUN apk add --no-cache gcc musl-dev libffi-dev
+
+# 使用腾讯云 PyPI 镜像
+RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple
 
 # 安装 Python 依赖
 COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # 复制后端代码
-COPY backend/ /app/backend/
+COPY backend/ /app/
 
-# 复制前端构建产物（需要提前构建好）
+# 复制前端构建产物
 COPY frontend-v3/dist /var/www/html
 
-# 创建必要的目录（用于挂载卷）
-RUN mkdir -p /app/backend/data /app/uploads /app/backups /app/backend/logs /var/log/nginx
-
-# Nginx 配置
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-
-# 启动脚本
-COPY docker/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
-# 备份脚本
-COPY docker/backup.sh /app/backup.sh
-RUN chmod +x /app/backup.sh
+# 创建必要的目录
+RUN mkdir -p /app/data /app/logs /var/www/html
 
 # 环境变量
 ENV PYTHONUNBUFFERED=1
-ENV DATABASE_PATH=/app/backend/data/student_manage.db
-ENV BACKUP_DIR=/app/backups
+ENV DATABASE_PATH=/app/data/class_system.db
 
 # 暴露端口
-EXPOSE 80
+EXPOSE 8000
 
-# 健康检查
+# 健康检查（使用 Python 内置方式）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-# 启动
-CMD ["/app/start.sh"]
+# 启动命令
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -132,7 +132,7 @@ async def login(
         logger.warning(f"登录失败，账号已锁定: {username}")
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='账号已被锁定，请稍后再试')
     
-    if not user.is_active:
+    if not user.is_account_enabled:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='账号已被禁用')
     
     # 验证密码
