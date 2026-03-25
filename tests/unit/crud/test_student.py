@@ -5,7 +5,8 @@ import pytest
 from sqlmodel import Session
 from app.crud import (
     get_student, get_students, get_students_by_class,
-    create_student, update_student_score, delete_student, get_all_classes
+    create_student, update_student_score, delete_student, get_all_classes,
+    reset_student_password
 )
 from app.models import Student, ScoreLog
 
@@ -114,3 +115,51 @@ class TestStudentCRUD:
         classes = get_all_classes(session)
         assert "软件1班" in classes
         assert "软件2班" in classes
+    
+    def test_reset_student_password(self, session: Session):
+        """测试重置学生密码"""
+        student = create_student(session, "S014", "张三", "软件1班")
+        
+        # 重置密码
+        updated = reset_student_password(
+            session, "S014", 
+            password_hash="new_hash", 
+            salt="new_salt"
+        )
+        
+        assert updated is not None
+        assert updated.password_hash == "new_hash"
+        assert updated.salt == "new_salt"
+    
+    def test_reset_student_password_not_found(self, session: Session):
+        """测试重置不存在学生的密码"""
+        result = reset_student_password(
+            session, "NOT_EXIST",
+            password_hash="new_hash",
+            salt="new_salt"
+        )
+        
+        assert result is None
+    
+    def test_create_student_default_score(self, session: Session):
+        """测试创建学生时使用默认分数"""
+        student = create_student(
+            session,
+            student_id="S015",
+            name="张三",
+            class_name="软件1班"
+            # 不传入 score，使用默认值
+        )
+        
+        assert student.score == 70.0  # 默认分数
+    
+    def test_update_student_score_not_found(self, session: Session):
+        """测试更新不存在学生的分数"""
+        result = update_student_score(
+            session, "NOT_EXIST",
+            delta=5.0,
+            reason="测试",
+            operator="老师"
+        )
+        
+        assert result is None

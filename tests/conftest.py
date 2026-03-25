@@ -5,7 +5,10 @@ import sys
 import os
 
 # 添加 backend 到 Python 路径（必须在任何其他导入之前）
-backend_path = "/home/yufeng/student-manager/backend"
+# 动态检测项目根目录
+_current_file = os.path.abspath(__file__)
+_project_root = os.path.dirname(os.path.dirname(_current_file))
+backend_path = os.path.join(_project_root, "backend")
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 

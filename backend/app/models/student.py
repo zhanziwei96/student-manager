@@ -3,7 +3,7 @@
 与现有 students 表结构兼容
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -24,6 +24,30 @@ class Student(StudentBase, table=True):
     last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
     password_hash: Optional[str] = Field(default=None, description="密码哈希")
     salt: Optional[str] = Field(default=None, description="密码盐值")
+    
+    def update_score(self, delta: float) -> Tuple[float, float]:
+        """
+        更新学生分数 - 领域方法
+        
+        封装业务规则：
+        - 分数在 [min_score, max_score] 范围内
+        - 返回旧分数和新分数
+        
+        Args:
+            delta: 分数变动值
+            
+        Returns:
+            Tuple[float, float]: (旧分数, 新分数)
+        """
+        from app.core.config import get_settings
+        settings = get_settings()
+        
+        old_score = self.score
+        min_score = settings.score.min_score
+        max_score = settings.score.max_score
+        new_score = max(min_score, min(max_score, old_score + delta))
+        self.score = new_score
+        return old_score, new_score
 
 
 class StudentCreate(StudentBase):

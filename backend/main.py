@@ -4,13 +4,10 @@
 """
 import os
 
-# 根据环境变量加载对应配置
-ENV = os.getenv('ENV', 'production').lower()
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-if ENV == 'testing':
-    os.environ['ENV_FILE'] = os.path.join(BASE_DIR, '.env.testing')
-elif ENV == 'development':
-    os.environ['ENV_FILE'] = os.path.join(BASE_DIR, '.env.development')
+# 配置环境 - 必须在导入应用代码前执行
+# 将配置加载逻辑集中到 config.py，避免逻辑分散
+from app.core.config import configure_environment
+configure_environment()
 
 from contextlib import asynccontextmanager
 
@@ -45,6 +42,11 @@ async def lifespan(app: FastAPI):
     
     # 初始化数据库
     init_db()
+    
+    # 导入并注册领域事件处理器
+    # 这会触发 handlers.py 中的事件处理器注册
+    from app.events import handlers  # noqa: F401
+    logger.info("领域事件处理器已注册")
     
     # 初始化限流（如果启用）
     if settings.rate_limit.enabled:
@@ -102,6 +104,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # 审计日志中间件（记录敏感操作）
+    from app.core.middleware import AuditLogMiddleware
+    app.add_middleware(AuditLogMiddleware)
     
     # 注册异常处理器（统一错误响应格式）
     app.add_exception_handler(HTTPException, http_exception_handler)

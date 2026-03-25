@@ -137,3 +137,39 @@ class TestUserCRUD:
         """测试删除不存在的用户"""
         success = delete_user(session, 99999)
         assert success is False
+    
+    def test_update_user(self, session: Session):
+        """测试更新用户信息"""
+        password_hash, salt = generate_password_hash("password123")
+        user = create_user(
+            session, 
+            "teacher9", 
+            "教师9", 
+            password_hash, 
+            salt,
+            role="teacher",
+            assigned_classes=["软件1班"]
+        )
+        
+        # 修改用户信息
+        user.name = "修改后的教师名"
+        user.role = "admin"
+        user.set_assigned_classes(["软件1班", "软件2班"])
+        
+        updated = update_user(session, user)
+        
+        assert updated.name == "修改后的教师名"
+        assert updated.role == "admin"
+        assert updated.get_assigned_classes() == ["软件1班", "软件2班"]
+    
+    def test_record_login_failure_not_locked(self, session: Session):
+        """测试登录失败但未达到锁定阈值"""
+        password_hash, salt = generate_password_hash("password123")
+        user = create_user(session, "teacher10", "教师10", password_hash, salt)
+        
+        # 失败1次
+        is_locked = record_login_failure(session, user)
+        
+        assert is_locked is False
+        assert user.login_fail_count == 1
+        assert user.locked_until is None

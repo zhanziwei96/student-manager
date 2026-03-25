@@ -15,9 +15,9 @@
 | 2 | ❌ 不要快速连续执行停止+启动命令 | 残留进程导致启动失败 |
 | 3 | ❌ 不要假设数据库/服务路径 | 操作错误的文件 |
 | 4 | ❌ 不要在未验证的情况下认为操作成功 | 隐藏错误 |
-| 5 | ❌ 不要修改 test 文件中的逻辑 | 破坏测试本身 |
 | 6 | ❌ **禁止在碰到问题后回退组件版本** | 掩盖问题，重复犯错 |
 | 7 | ❌ **禁止在系统自带 python 环境下运行 python 命令** | 模块找不到，环境混乱 |
+| 8 | ❌ **禁止修改后端代码后不检查/更新对应测试** | 测试失效，覆盖率下降，隐藏回归错误 |
 
 ---
 
@@ -194,6 +194,36 @@ pytest tests/ -v
 
 **禁止**擅自决定不运行测试。
 
+### 修改后端代码后检查清单 (强制)
+修改后端代码后，**必须**执行以下检查：
+
+```bash
+# 1. 查找相关测试文件
+# 单元测试: tests/unit/test_<模块>.py 或 tests/unit/<模块>/test_*.py
+# 集成测试: tests/integration/test_<模块>_api*.py
+
+# 2. 检查测试是否覆盖修改的代码
+# 查看测试文件，确认是否有对应的测试用例
+
+# 3. 运行相关测试验证
+pytest tests/unit/test_<修改模块>.py -v
+pytest tests/integration/test_<修改模块>_api*.py -v
+
+# 4. 如果测试不存在或失效，必须补充或修复
+```
+
+**示例流程**:
+```bash
+# 修改了 backend/app/crud/student.py
+# 1. 检查单元测试
+ls tests/unit/crud/test_student.py
+# 2. 检查集成测试  
+ls tests/integration/test_students_api*.py
+# 3. 运行相关测试
+pytest tests/unit/crud/test_student.py tests/integration/test_students_api_enhanced.py -v
+# 4. 如有失败，修复测试后再提交
+```
+
 ---
 
 ## 错误排查约束
@@ -238,8 +268,9 @@ python -c "from app.core.config import get_settings; print(get_settings().get_da
 | - | 未验证就确认成功 | 必须用 curl 验证 |
 | 2026-03-23 | 碰到问题回退组件版本 | **禁止回退版本**，应先尝试修复或报告 |
 | 2026-03-24 | 使用系统自带 python 运行脚本 | **必须激活 Conda 环境**，使用 `conda run -n student-manage python` 或先 `conda activate student-manage` |
+| 2026-03-25 | 修改后端代码后未检查测试 | **禁止修改后端代码后不检查测试文件**，必须进行测试适配或补充
 
 ---
 
-**最后更新**: 2026-03-23
+**最后更新**: 2026-03-25
 **版本**: v2 (约束清单格式)

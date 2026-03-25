@@ -1,5 +1,5 @@
 """
-签到 CRUD 单元测试
+签到 CRUD 单元测试 - 已修复 API 变更
 """
 import pytest
 from datetime import datetime, date, time
@@ -17,40 +17,45 @@ class TestClassSessionCRUD:
     
     def test_start_class(self, session: Session):
         """测试开始上课"""
-        class_session = start_class(session, "软件1班")
+        class_session = start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
         
         assert class_session.active is True
         assert class_session.class_name == "软件1班"
         assert class_session.start_time is not None
+        assert class_session.teacher_id == 1
+        assert class_session.teacher_name == "张老师"
     
     def test_get_class_session(self, session: Session):
-        """测试获取上课状态"""
-        start_class(session, "软件1班")
+        """测试获取上课状态 - 使用 teacher_id"""
+        start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
         
-        found = get_class_session(session)
+        found = get_class_session(session, teacher_id=1)
         assert found is not None
         assert found.class_name == "软件1班"
     
     def test_end_class(self, session: Session):
-        """测试结束上课"""
-        start_class(session, "软件1班")
-        end_class(session)
+        """测试结束上课 - 使用 teacher_id"""
+        start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        end_class(session, teacher_id=1)
         
-        class_session = get_class_session(session)
-        assert class_session.active is False
-        assert class_session.class_name is None
+        class_session = get_class_session(session, teacher_id=1)
+        assert class_session is None  # 结束后没有活跃的课堂
 
 
 class TestCheckinCRUD:
     """测试签到 CRUD"""
     
     def test_create_checkin(self, session: Session):
-        """测试创建签到记录"""
+        """测试创建签到记录 - 使用 session_id"""
+        # 先创建课堂会话
+        class_session = start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        
         checkin = create_checkin(
             session,
             student_id="S001",
             student_name="张三",
             class_name="软件1班",
+            session_id=class_session.id,  # 新增参数
             checkin_type="self"
         )
         
@@ -58,10 +63,12 @@ class TestCheckinCRUD:
         assert checkin.student_name == "张三"
         assert checkin.class_name == "软件1班"
         assert checkin.checkin_type == "self"
+        assert checkin.session_id == class_session.id
     
     def test_has_checked_in_today(self, session: Session):
         """测试检查今日是否已签到"""
-        create_checkin(session, "S001", "张三", "软件1班")
+        class_session = start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        create_checkin(session, "S001", "张三", "软件1班", session_id=class_session.id)
         
         # 应该返回已签到
         assert has_checked_in_today(session, "S001") is True
@@ -73,10 +80,13 @@ class TestCheckinCRUD:
         """测试获取今日签到列表"""
         from datetime import datetime, timedelta
         
+        # 先创建课堂会话
+        class_session = start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        
         # 创建今日签到
-        create_checkin(session, "S001", "张三", "软件1班")
-        create_checkin(session, "S002", "李四", "软件1班")
-        create_checkin(session, "S003", "王五", "软件2班")
+        create_checkin(session, "S001", "张三", "软件1班", session_id=class_session.id)
+        create_checkin(session, "S002", "李四", "软件1班", session_id=class_session.id)
+        create_checkin(session, "S003", "王五", "软件2班", session_id=class_session.id)
         
         # 获取所有今日签到
         checkins = get_today_checkins(session)

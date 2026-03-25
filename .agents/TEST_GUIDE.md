@@ -2,23 +2,27 @@
 
 ## 概述
 
-根据当前系统功能生成的完整测试方案，涵盖所有角色（管理员、教师、学生）的核心功能。
+根据当前系统功能生成的完整测试方案，涵盖所有角色（管理员、教师、学生）的核心功能，以及领域事件、审计日志、中间件等基础设施测试。
 
 ## 测试环境准备
 
 ### 1. 环境检查
 ```bash
-# 检查服务状态
+# 检查服务状态（可选，测试使用内存数据库）
 curl http://localhost:8000/api/health
-curl http://localhost:3000
+curl http://localhost:5173
+
+# 激活 Conda 环境（必须）
+conda activate student-manage
+# 或: source /home/yufeng/miniconda3/bin/activate student-manage
 ```
 
 ### 2. 测试账号准备
 | 角色 | 用户名 | 密码 | 说明 |
 |------|--------|------|------|
 | 管理员 | admin | admin123 | 系统管理员 |
-| 教师 | zhanziwei | zha123 | 账号为姓名拼音，密码账号+123 |
-| 学生 | 2513070102 | 2513070102 | 学号作为账号和密码 |
+| 教师 | teacher1 | teacher123 | 测试教师账号 |
+| 学生 | S001 | S001 | 学号作为账号和密码 |
 
 **测试环境**: 前端 http://localhost:5173 (frontend-v3)
 
@@ -32,7 +36,7 @@ curl http://localhost:3000
 | 页面加载 | 访问首页，点击"开始使用" | 成功跳转到登录页 |
 | 角色选择-管理员 | 选择"管理员"角色，输入admin/admin123 | 登录成功，跳转/admin |
 | 角色选择-教师 | 选择"教师"角色，输入teacher1/teacher123 | 登录成功，跳转/teacher |
-| 角色选择-学生 | 选择"学生"角色，输入S001/student123 | 登录成功，跳转/student |
+| 角色选择-学生 | 选择"学生"角色，输入S001/S001 | 登录成功，跳转/student |
 | 角色错误提示 | 选择"学生"角色，输入管理员账号 | 提示"用户名或密码错误" |
 | 密码错误 | 输入错误密码 | 提示"密码错误（还剩 X 次机会）" |
 | 空用户名 | 不输入用户名直接登录 | 提示请输入用户名 |
@@ -58,6 +62,7 @@ curl http://localhost:3000
 | 调整分数-加分 | 点击"编辑分数"，输入正数 | 分数增加，显示变更记录 |
 | 调整分数-扣分 | 点击"编辑分数"，输入负数 | 分数减少，显示变更原因 |
 | 搜索学生 | 在搜索框输入学号/姓名 | 筛选显示匹配学生 |
+| 分数历史 | 点击学生"分数历史" | 显示所有分数变更记录 |
 
 ### 2.2 教师管理测试
 | 测试项 | 测试步骤 | 预期结果 |
@@ -144,7 +149,7 @@ curl http://localhost:3000
 ### 5.1 首页测试
 | 测试项 | 测试步骤 | 预期结果 |
 |--------|----------|----------|
-| 首页显示 | 访问 http://localhost:3000 | 显示ClassHub首页 |
+| 首页显示 | 访问 http://localhost:5173 | 显示ClassHub首页 |
 | 统计数据 | 查看首页统计 | 显示正确学生数、班级数、今日签到 |
 | 开始使用 | 点击"开始使用" | 跳转到登录页 |
 
@@ -173,54 +178,176 @@ curl http://localhost:3000
 
 ### 7.1 测试命令
 ```bash
-# 运行单元测试
-pytest tests/unit -v
-
-# 运行集成测试
-pytest tests/integration -v
-
 # 运行全部测试
 pytest tests/ -v
 
+# 仅单元测试
+pytest tests/unit -v
+
+# 仅集成测试
+pytest tests/integration -v
+
 # 生成覆盖率报告
-pytest tests/ --cov=backend --cov-report=html
+pytest tests/ --cov=backend/app --cov-report=html
+pytest tests/ --cov=backend/app --cov-report=term
 ```
 
 ### 7.2 测试结构
 
-| 层级 | 数量 | 位置 | 说明 |
-|------|------|------|------|
-| Unit - JWT | 19 | `tests/unit/test_jwt.py` | JWT 工具测试 |
-| Unit - JWT Deps | 8 | `tests/unit/test_jwt_deps.py` | JWT 依赖测试 |
-| Integration - JWT | 13 | `tests/integration/test_jwt_auth.py` | JWT 集成测试 |
-| Integration - Other | 66 | `tests/integration/` | 其他 API 集成测试 |
-| **总计** | **106+** | | |
+```
+tests/
+├── unit/                          # 单元测试 (110个)
+│   ├── test_jwt.py               # JWT 工具测试 (11个)
+│   ├── test_jwt_deps.py          # JWT 依赖测试 (8个)
+│   ├── test_config.py            # 配置加载测试 (17个) - BE-001
+│   ├── test_events.py            # 领域事件基础设施 (11个)
+│   ├── test_event_handlers.py    # 事件处理器 (1个)
+│   ├── test_middleware.py        # 审计中间件 (8个)
+│   ├── test_security.py          # 安全工具 (5个)
+│   ├── test_exceptions.py        # 异常处理 (10个)
+│   ├── models/                   # 模型测试
+│   │   ├── test_user.py          # 用户模型 (12个)
+│   │   └── test_student.py       # 学生模型 (11个)
+│   └── crud/                     # CRUD 测试
+│       ├── test_user.py          # 用户 CRUD (16个)
+│       ├── test_student.py       # 学生 CRUD (14个)
+│       ├── test_checkin.py       # 签到 CRUD (13个)
+│       └── test_audit.py         # 审计日志 (10个)
+│
+├── integration/                   # 集成测试 (97个)
+│   ├── test_jwt_auth.py          # JWT 认证集成 (13个)
+│   ├── test_login_api_enhanced.py # 登录 API (14个)
+│   ├── test_students_api_enhanced.py # 学生 API (17个)
+│   ├── test_users_api_enhanced.py # 用户 API (14个)
+│   ├── test_checkin_api_enhanced.py # 签到 API (12个)
+│   ├── test_user_api.py          # 用户 API 基础 (13个)
+│   └── test_system_api.py        # 系统 API (5个)
+│
+└── browser/                       # 浏览器测试
+    └── recorded_test.py
+```
 
-**JWT 测试覆盖：**
+### 7.3 测试统计
+
+| 类别 | 数量 | 说明 |
+|------|------|------|
+| **单元测试** | **110** | 独立测试各模块功能 |
+| **集成测试** | **97** | 测试 API 端到端流程 |
+| **浏览器测试** | **14** | Playwright 录制回放 |
+| **总计** | **221+** | 全量测试覆盖 |
+
+### 7.4 覆盖率报告
+
+**总体覆盖率: 91%** (1336 语句中 123 未覆盖)
+
+| 模块 | 覆盖率 | 说明 |
+|------|--------|------|
+| `backend/app/core/events.py` | 100% | 领域事件基础设施 |
+| `backend/app/events/handlers.py` | 100% | 事件处理器 |
+| `backend/app/crud/audit.py` | 100% | 审计日志 CRUD |
+| `backend/app/crud/user.py` | 100% | 用户 CRUD |
+| `backend/app/api/routes/users.py` | 100% | 用户 API |
+| `backend/app/models/*` | 90-100% | 数据模型层 |
+| `backend/app/api/routes/*.py` | 86-100% | API 路由层 |
+| `backend/app/core/middleware.py` | 93% | 审计中间件 |
+| `backend/app/crud/student.py` | 95% | 学生 CRUD |
+| `backend/app/crud/checkin.py` | 96% | 签到 CRUD |
+
+### 7.5 测试覆盖的核心功能
+
+**JWT 认证**
 - Token 创建和解码
 - Token 过期处理
-- Cookie 设置和清除
+- HttpOnly Cookie 设置和清除
 - 受保护路由访问控制
 - 管理员权限验证
 
+**领域事件 (DB-003 修复)**
+- `ScoreUpdated` 事件发布与订阅
+- 事务边界管理（after_commit 模式）
+- 事件处理器执行
+- ScoreLog 自动记录
+
+**审计日志**
+- 敏感操作自动记录
+- 中间件路由匹配
+- 资源标识提取
+- 审计日志查询
+
+**CRUD 操作**
+- 学生增删改查
+- 用户增删改查
+- 签到记录管理
+- 分数更新与历史
+
+**权限控制**
+- 角色基础访问控制
+- 资源级别权限（教师只能访问自己班级）
+- 登录失败锁定
+- 账号启用/禁用
+
 ---
 
-## 八、常见问题排查
+## 八、测试最佳实践
 
-### 8.1 测试环境准备
+### 8.1 测试数据库隔离
+- 单元测试：使用 `MagicMock` 隔离数据库
+- 集成测试：使用内存 SQLite (`sqlite:///:memory:`)
+- 测试数据：每个测试独立，自动清理
+
+### 8.2 延迟导入模式
+事件处理器使用延迟导入避免测试引擎冲突：
+```python
+def handle_score_updated(event):
+    from app.core.db import engine  # 延迟导入
+    with Session(engine) as session:
+        ...
+```
+
+### 8.3 测试环境准备
 ```bash
-# 1. 确认数据库路径正确
-python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
+# 1. 确认 Conda 环境
+which python  # 应包含 miniconda
 
-# 2. 检查测试数据完整性
-sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM students"
+# 2. 安装依赖
+pip install -r backend/requirements.txt
 
-# 3. 重启服务（按ERRORS.md正确步骤）
-# 停止 → 等待3秒 → 启动 → 等待5秒 → 验证
+# 3. 运行测试前检查
+python -c "from app.core.config import get_settings; print('配置加载正常')"
+
+# 4. 执行测试
+pytest tests/ -v
 ```
 
 ---
 
-**文档版本**: 2026-03-22  
-**适用系统版本**: ClassHub v2.0.0  
-**架构**: FastAPI + SQLModel
+## 九、常见问题排查
+
+### 9.1 测试失败排查
+```bash
+# 查看详细错误
+pytest tests/unit/test_xxx.py -v --tb=long
+
+# 单个测试调试
+pytest tests/unit/test_events.py::TestEventBus::test_subscribe_and_publish -v
+
+# 覆盖率缺口分析
+pytest tests/ --cov=backend/app --cov-report=term-missing
+```
+
+### 9.2 常见错误
+
+| 错误 | 原因 | 解决 |
+|------|------|------|
+| `ImportError: cannot import name 'Literal'` | Python 3.7 环境问题 | 确保使用 Python 3.11+ |
+| `ModuleNotFoundError` | 未激活 Conda 环境 | 运行 `conda activate student-manage` |
+| 测试挂起/超时 | 数据库引擎冲突 | 检查 `handlers.py` 使用延迟导入 |
+| 覆盖率下降 | 新增代码未测试 | 补充对应测试文件 |
+
+---
+
+**文档版本**: 2026-03-25  
+**适用系统版本**: ClassHub v2.1.0  
+**架构**: FastAPI + SQLModel  
+**测试框架**: pytest + pytest-cov + pytest-asyncio  
+**覆盖率**: 91% (221+ 测试用例)

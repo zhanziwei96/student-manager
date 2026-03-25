@@ -2,21 +2,51 @@
 应用配置 - 支持多环境和嵌套配置
 """
 import os
+from pathlib import Path
 from typing import Optional, List
 from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _get_env_file() -> str:
-    """根据 ENV 环境变量获取对应的环境文件"""
+def get_env_file_path() -> str:
+    """获取环境文件的完整路径
+    
+    根据 ENV 环境变量返回对应的环境文件完整路径。
+    如果文件不存在，返回默认的 .env 文件路径。
+    """
     env = os.getenv('ENV', 'production').lower()
+    base_dir = Path(__file__).parent.parent  # backend 目录
     env_files = {
-        'development': '.env.development',
-        'testing': '.env.testing',
-        'production': '.env.production'
+        'development': base_dir / '.env.development',
+        'testing': base_dir / '.env.testing',
+        'production': base_dir / '.env.production'
     }
-    return env_files.get(env, '.env')
+    env_file = env_files.get(env, base_dir / '.env')
+    return str(env_file) if env_file.exists() else str(base_dir / '.env')
+
+
+def configure_environment() -> None:
+    """配置环境 - 在应用启动前调用
+    
+    根据 ENV 环境变量设置 ENV_FILE 环境变量，确保配置加载使用正确的环境文件。
+    如果 ENV_FILE 已设置，则不会覆盖。
+    """
+    if 'ENV_FILE' not in os.environ:
+        os.environ['ENV_FILE'] = get_env_file_path()
+
+
+def _get_env_file() -> str:
+    """获取环境文件路径 - 供 Settings 类使用
+    
+    优先使用已设置的 ENV_FILE 环境变量，否则根据 ENV 计算。
+    保持向后兼容性。
+    """
+    # 如果已通过 configure_environment() 设置，直接使用
+    if 'ENV_FILE' in os.environ:
+        return os.environ['ENV_FILE']
+    # 否则根据 ENV 计算（向后兼容）
+    return get_env_file_path()
 
 
 class AppSettings(BaseSettings):
