@@ -1,106 +1,15 @@
 """
 学生 CRUD 操作 - 使用领域事件模式
+
+REVIEW-P1: 权限检查统一在 API 层处理
+- CRUD 层只负责纯粹的数据操作
+- 权限控制、业务逻辑在 API 层实现
 """
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 from sqlmodel import Session, select
 from sqlalchemy import event as sa_event
-from app.models import Student, ScoreLog, User
+from app.models import Student, ScoreLog
 from app.core.events import ScoreUpdated, event_bus
-
-
-def get_students_by_permission(
-    session: Session, 
-    user: Dict, 
-    class_name: Optional[str] = None
-) -> Tuple[List[Student], Optional[str]]:
-    """
-    根据用户权限获取学生列表
-    
-    将权限检查逻辑从 API 层移至 CRUD 层，实现关注点分离。
-    API 层只负责 HTTP 协议转换，业务逻辑在 CRUD 层处理。
-    
-    Args:
-        session: 数据库会话
-        user: 当前用户信息（JWT token payload）
-        class_name: 可选的班级名称过滤
-        
-    Returns:
-        Tuple[List[Student], Optional[str]]: 
-            - 成功时: (学生列表, None)
-            - 权限不足时: (None, 错误信息)
-    """
-    is_admin = user.get("is_admin", False)
-    
-    if is_admin:
-        # 管理员可以查看所有学生
-        if class_name:
-            return get_students_by_class(session, class_name), None
-        return get_students(session), None
-    
-    # 教师逻辑
-    user_id = user.get("sub")
-    if not user_id:
-        return None, "无效的用户信息"
-    
-    user_obj = session.get(User, int(user_id))
-    assigned_classes = user_obj.get_assigned_classes() if user_obj else []
-    
-    if not assigned_classes:
-        return [], None
-    
-    # 如果指定了班级，检查权限
-    if class_name:
-        if class_name not in assigned_classes:
-            return None, "无权查看该班级学生"
-        return get_students_by_class(session, class_name), None
-    
-    # 获取所有负责班级的学生
-    students = []
-    for cls in assigned_classes:
-        students.extend(get_students_by_class(session, cls))
-    
-    # 去重（防止同一学生在多个班级的情况）
-    seen = set()
-    unique_students = []
-    for s in students:
-        if s.student_id not in seen:
-            seen.add(s.student_id)
-            unique_students.append(s)
-    
-    return unique_students, None
-
-
-def get_classes_by_permission(
-    session: Session,
-    user: Dict
-) -> Tuple[List[str], Optional[str]]:
-    """
-    根据用户权限获取班级列表
-    
-    Args:
-        session: 数据库会话
-        user: 当前用户信息
-        
-    Returns:
-        Tuple[List[str], Optional[str]]:
-            - 成功时: (班级列表, None)
-            - 权限不足时: (None, 错误信息)
-    """
-    is_admin = user.get("is_admin", False)
-    
-    if is_admin:
-        # 管理员可以看到所有班级
-        return get_all_classes(session), None
-    
-    # 教师只能看到负责的班级
-    user_id = user.get("sub")
-    if not user_id:
-        return None, "无效的用户信息"
-    
-    user_obj = session.get(User, int(user_id))
-    assigned_classes = user_obj.get_assigned_classes() if user_obj else []
-    
-    return assigned_classes, None
 
 
 def get_student(session: Session, student_id: str) -> Optional[Student]:

@@ -61,12 +61,26 @@ def resolve_alert(session: Session, alert_id: int) -> bool:
 
 
 def cleanup_old_audit_logs(session: Session, retention_days: int = 90) -> int:
-    """清理旧审计日志"""
+    """清理旧审计日志（使用批量 DELETE 优化性能）
+    
+    相比逐条删除，批量 DELETE 减少数据库往返次数，
+    对于大量数据清理性能提升显著。
+    
+    Args:
+        session: 数据库会话
+        retention_days: 保留天数，默认90天
+        
+    Returns:
+        int: 删除的日志数量
+    """
+    from sqlalchemy import delete
+    
     cutoff_date = datetime.now() - timedelta(days=retention_days)
-    query = select(AuditLog).where(AuditLog.created_at < cutoff_date)
-    old_logs = session.exec(query).all()
-    count = len(old_logs)
-    for log in old_logs:
-        session.delete(log)
+    
+    # 使用批量 DELETE 替代逐条删除（REVIEW-P1 优化）
+    result = session.execute(
+        delete(AuditLog).where(AuditLog.created_at < cutoff_date)
+    )
     session.commit()
-    return count
+    
+    return result.rowcount

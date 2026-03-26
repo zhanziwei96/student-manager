@@ -4,8 +4,48 @@ import { classSessionApi, checkinApi } from '@/api'
 import type { CheckinRecord } from '@/types'
 
 /**
+ * REVIEW-P1: SSR 安全工具函数
+ * 检查是否在客户端环境
+ */
+const isClient = (): boolean => typeof window !== 'undefined' && !!window.localStorage
+
+/**
+ * REVIEW-P1: SSR 安全的 localStorage 操作
+ */
+const safeLocalStorage = {
+  getItem(key: string): string | null {
+    if (!isClient()) return null
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  setItem(key: string, value: string): boolean {
+    if (!isClient()) return false
+    try {
+      localStorage.setItem(key, value)
+      return true
+    } catch {
+      return false
+    }
+  },
+  removeItem(key: string): boolean {
+    if (!isClient()) return false
+    try {
+      localStorage.removeItem(key)
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
+/**
  * Class Session composable - FE-003 修复后
  * 使用统一的 API 响应处理，无需手动检查 res.success
+ * 
+ * REVIEW-P1: 添加 SSR 安全检查，避免服务端渲染时访问 localStorage 报错
  */
 export function useClassSession() {
   const { data, isPending, error, refetch } = useQuery({
@@ -14,13 +54,13 @@ export function useClassSession() {
       // FE-003: 直接获取数据，错误自动抛出
       const data = await classSessionApi.getCurrent()
       if (data?.active) {
-        // 同步到 localStorage
-        localStorage.setItem('activeClassSession', JSON.stringify(data))
+        // REVIEW-P1: 使用 SSR 安全的 localStorage
+        safeLocalStorage.setItem('activeClassSession', JSON.stringify(data))
         return data
       }
 
       // 服务器没有活跃课堂，清除 localStorage
-      localStorage.removeItem('activeClassSession')
+      safeLocalStorage.removeItem('activeClassSession')
       return null
     },
     staleTime: 5000,
@@ -37,7 +77,8 @@ export function useClassSessionStart() {
     mutationFn: async (className: string) => {
       // FE-003: 直接获取数据，错误自动抛出
       const data = await classSessionApi.start({ class_name: className })
-      localStorage.setItem('activeClassSession', JSON.stringify(data))
+      // REVIEW-P1: 使用 SSR 安全的 localStorage
+      safeLocalStorage.setItem('activeClassSession', JSON.stringify(data))
       return data
     },
     onSuccess: (data) => {
@@ -55,7 +96,8 @@ export function useClassSessionEnd() {
     mutationFn: async () => {
       // FE-003: 直接调用，错误自动抛出
       await classSessionApi.end()
-      localStorage.removeItem('activeClassSession')
+      // REVIEW-P1: 使用 SSR 安全的 localStorage
+      safeLocalStorage.removeItem('activeClassSession')
     },
     onSuccess: () => {
       queryClient.setQueryData(['classSession'], null)

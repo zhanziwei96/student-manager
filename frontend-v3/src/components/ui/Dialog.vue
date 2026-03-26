@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, watch } from 'vue'
+import { computed, onUnmounted, watch, ref } from 'vue'
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-vue-next'
 
@@ -7,6 +7,9 @@ import { X } from 'lucide-vue-next'
  * Dialog 组件
  * 基于 ClassHub 设计体系 v1.0.0
  * 支持作为 form 使用，解决密码字段警告
+ * 
+ * REVIEW-P1: 使用 Teleport 将对话框挂载到 body，避免层级问题
+ * 添加 onUnmounted 清理，防止内存泄漏
  */
 
 interface Props {
@@ -29,20 +32,29 @@ const emit = defineEmits<{
   (e: 'update:open', value: boolean): void
 }>()
 
+// 用于 Teleport 的目标元素
+const teleportTarget = ref('body')
+
+// 检查是否在客户端环境（SSR 安全）
+const isClient = typeof window !== 'undefined'
+
 // Lock body scroll when open
 watch(
   () => props.open,
   (isOpen) => {
+    if (!isClient) return
     if (isOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
     }
-  }
+  },
+  { immediate: true }
 )
 
-// 组件卸载时重置 body overflow
+// 组件卸载时重置 body overflow（REVIEW-P1: 防止内存泄漏）
 onUnmounted(() => {
+  if (!isClient) return
   document.body.style.overflow = ''
 })
 
@@ -85,12 +97,13 @@ const handleSubmit = (e: Event) => {
 </script>
 
 <template>
-  <!-- Overlay - 不使用 Teleport 以保留 form 上下文 -->
-  <div 
-    v-if="open"
-    :class="overlayClasses" 
-    @click="close"
-  >
+  <!-- REVIEW-P1: 使用 Teleport 挂载到 body，避免 z-index 层级问题 -->
+  <Teleport v-if="isClient" :to="teleportTarget">
+    <div 
+      v-if="open"
+      :class="overlayClasses" 
+      @click="close"
+    >
     <!-- Content -->
     <component
       :is="asForm ? 'form' : 'div'"
@@ -137,5 +150,6 @@ const handleSubmit = (e: Event) => {
         <span class="sr-only">关闭</span>
       </button>
     </component>
-  </div>
+    </div>
+  </Teleport>
 </template>

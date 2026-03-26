@@ -77,14 +77,17 @@ const checkedInStudentIds = computed(() => {
   return new Set(todayCheckins.value.map(c => c.student_id))
 })
 
-// 过滤后的学生列表
-const filteredStudents = computed(() => {
+// REVIEW-P1: 预计算学生列表分组，避免在模板中重复 filter
+const studentListWithCheckin = computed(() => {
   if (!classStudents.value) return []
+  
+  // 添加签到状态
   let students = classStudents.value.map(s => ({
     ...s,
     checkedIn: checkedInStudentIds.value.has(s.student_id)
   }))
   
+  // 搜索过滤
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase()
     students = students.filter(s => 
@@ -96,6 +99,18 @@ const filteredStudents = computed(() => {
   // 按签到状态排序（未签到在前）
   return students.sort((a, b) => (a.checkedIn === b.checkedIn ? 0 : a.checkedIn ? 1 : -1))
 })
+
+// 过滤后的学生列表（兼容原有代码）
+const filteredStudents = computed(() => studentListWithCheckin.value)
+
+// REVIEW-P1: 预计算分组，避免模板重复 filter
+const notCheckedInStudents = computed(() => 
+  studentListWithCheckin.value.filter(s => !s.checkedIn)
+)
+
+const checkedInStudents = computed(() => 
+  studentListWithCheckin.value.filter(s => s.checkedIn)
+)
 
 // 签到统计
 const checkinStats = computed(() => {
@@ -350,16 +365,16 @@ const quickCheckIn = async (studentId: string) => {
         </div>
         
         <div v-else-if="filteredStudents.length > 0" class="divide-y divide-white/5">
-          <!-- 未签到学生组 -->
-          <div v-if="checkinStats.notCheckedIn > 0" class="p-4">
+          <!-- 未签到学生组 - REVIEW-P1: 使用预计算 notCheckedInStudents -->
+          <div v-if="notCheckedInStudents.length > 0" class="p-4">
             <div class="flex items-center gap-2 mb-3">
               <div class="flex h-2 w-2 rounded-full bg-orange-400"></div>
               <h4 class="text-sm font-medium text-white/80">未签到</h4>
-              <span class="text-xs text-white/40">{{ checkinStats.notCheckedIn }}人</span>
+              <span class="text-xs text-white/40">{{ notCheckedInStudents.length }}人</span>
             </div>
             <div class="space-y-2">
               <div
-                v-for="student in filteredStudents.filter(s => !s.checkedIn)"
+                v-for="student in notCheckedInStudents"
                 :key="student.id"
                 class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
               >
@@ -385,16 +400,16 @@ const quickCheckIn = async (studentId: string) => {
             </div>
           </div>
           
-          <!-- 已签到学生组 -->
-          <div v-if="checkinStats.checkedIn > 0" class="p-4">
+          <!-- 已签到学生组 - REVIEW-P1: 使用预计算 checkedInStudents -->
+          <div v-if="checkedInStudents.length > 0" class="p-4">
             <div class="flex items-center gap-2 mb-3">
               <div class="flex h-2 w-2 rounded-full bg-green-400"></div>
               <h4 class="text-sm font-medium text-white/80">已签到</h4>
-              <span class="text-xs text-white/40">{{ checkinStats.checkedIn }}人</span>
+              <span class="text-xs text-white/40">{{ checkedInStudents.length }}人</span>
             </div>
             <div class="space-y-2">
               <div
-                v-for="student in filteredStudents.filter(s => s.checkedIn)"
+                v-for="student in checkedInStudents"
                 :key="student.id"
                 class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
               >
