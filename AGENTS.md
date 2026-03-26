@@ -1,12 +1,12 @@
-# ClassHub 项目助手指令
+# ClassHub AI 助手速查手册
 
 > **⚠️ 执行前强制阅读**: 
-> 1. **先阅读** [ERRORS.md](./.agents/ERRORS.md) - 执行约束清单
+> 1. **先阅读** [ERRORS.md](./.agents/ERRORS.md) - 这是我必须遵守的禁令和强制流程
 > 2. **然后检查**服务状态，避免重复部署
 
 ---
 
-## 通用禁令（绝对禁止）
+## 1. 通用禁令（绝对禁止）
 
 | # | 禁令 | 违反后果 |
 |---|------|----------|
@@ -16,11 +16,11 @@
 | 4 | ❌ 不要在未验证的情况下认为操作成功 | 隐藏错误 |
 | 6 | ❌ **禁止在碰到问题后回退组件版本** | 掩盖问题，重复犯错 |
 | 7 | ❌ **禁止在非虚拟环境的 python 环境下运行 python 命令** | 模块找不到，环境混乱 |
-| 8 | ❌ **禁止修改后端代码后不检查/更新对应测试** | 测试失效，覆盖率下降 |
+| 8 | ❌ **禁止修改后端代码后不检查/更新对应测试** | 测试失效，覆盖率下降，隐藏回归错误 |
 
 ---
 
-## 执行前强制检查清单
+## 2. 执行前强制检查清单
 
 ```bash
 # 1. 环境检查 (必须)
@@ -38,7 +38,7 @@ python -c "from app.core.config import get_settings; print(get_settings().get_da
 
 ---
 
-## 服务重启强制流程
+## 3. 服务重启强制流程
 
 **禁止**直接执行 `python main.py` 或 `pnpm dev`。
 
@@ -63,7 +63,79 @@ curl -s http://localhost:5173 > /dev/null && echo "前端运行中"  # 必须验
 
 ---
 
-## 关键路径
+## 4. 常用命令速查
+
+### 启动服务
+
+**方式1: 使用 Makefile**
+
+```bash
+cd /home/yufeng/student-manager
+
+# 检查状态
+make status
+
+# 启动服务（开两个终端）
+make dev-backend   # 终端1: 启动后端
+make dev-frontend  # 终端2: 启动前端 (frontend-v3)
+
+# 停止服务
+make stop
+
+# 查看日志
+make logs
+```
+
+**方式2: 手动启动**
+
+```bash
+# 终端1: 后端（生产环境）
+cd backend && conda activate student-manage && ENV=production python main.py
+
+# 终端2: 前端 (frontend-v3)
+cd frontend-v3 && pnpm dev
+```
+
+### 运行测试
+
+```bash
+# 全部测试
+pytest tests/ -v
+
+# 仅单元测试
+pytest tests/unit -v
+
+# 仅集成测试
+pytest tests/integration -v
+
+# 并发保护测试（BE-008）
+pytest tests/unit/crud/test_concurrent_*.py -v
+```
+
+**修改后端代码后必须询问用户**: 
+> "修改/新增功能已完成，是否需要运行测试？
+> - 运行全部测试: `pytest tests/ -v`
+> - 仅单元测试: `pytest tests/unit -v`
+> - 仅集成测试: `pytest tests/integration -v`
+> - 不需要测试"
+
+### 数据库操作
+
+```bash
+# 检查数据库路径
+python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
+
+# 连接数据库
+sqlite3 /home/yufeng/student-manager/backend/data/class_system.db
+
+# 查看表结构
+.schema users
+.schema students
+```
+
+---
+
+## 5. 关键路径
 
 | 项目 | 路径 |
 |------|------|
@@ -72,32 +144,67 @@ curl -s http://localhost:5173 > /dev/null && echo "前端运行中"  # 必须验
 | 旧版前端 | `/home/yufeng/student-manager/frontend/` (不再维护) |
 | 数据库 | `/home/yufeng/student-manager/backend/data/class_system.db` |
 | 测试代码 | `/home/yufeng/student-manager/tests/` |
+| 迁移脚本 | `/home/yufeng/student-manager/migrations/` |
 
 ---
 
-## 技术架构
+## 6. 技术架构
 
-### 后端（FastAPI + SQLModel）
+### 当前架构（FastAPI + SQLModel）
+
 ```
 backend/
 ├── app/
 │   ├── api/           # API路由
-│   ├── core/          # 核心组件（config.py, db.py, security.py）
+│   │   ├── deps.py    # 依赖注入
+│   │   └── routes/    # 路由处理器
+│   ├── core/          # 核心组件
+│   │   ├── config.py  # 配置管理
+│   │   ├── db.py      # 数据库连接
+│   │   └── security.py # 安全工具
 │   ├── crud/          # 数据库操作
 │   └── models/        # 数据模型
-└── main.py
+└── main.py            # 应用入口
 ```
+
+**架构特点：**
+- 使用 FastAPI 框架
+- SQLModel 作为 ORM（SQLAlchemy + Pydantic）
+- 分层结构：API → CRUD → Models
 - JWT + HttpOnly Cookie 认证
-- 响应格式：`{success: true, data: {...}, message: "..."}`
 
 ### 前端（Vue3 + Tailwind CSS v4）
-- **Tailwind CSS v4** - 自定义 `@theme` 必须保留 `--spacing: 0.25rem`
+- **使用 Tailwind CSS v4**，不是 Naive UI/Element Plus
 - 深色主题: 背景 `#030307`，主色 `#6366f1`
+- 技术栈: Vue 3.5 + TypeScript + TanStack Query + Pinia
 - API 响应访问: 必须用 `res.data.xxx`，禁止 `res.xxx`
+
+### 数据库
+- SQLite 文件数据库
+- 数据库路径: `backend/data/class_system.db`
+- 配置项: `DATABASE__PATH`（注意双下划线）
 
 ---
 
-## 环境要求
+## 7. 测试结构
+
+```
+tests/
+├── unit/                    # 单元测试 (121个)
+│   ├── test_jwt.py         # JWT 工具测试 (11个)
+│   ├── test_jwt_deps.py    # JWT 依赖测试 (8个)
+│   ├── crud/               # CRUD 测试
+│   │   ├── test_concurrent_score_update.py    # 并发分数更新保护 (4个) - BE-008
+│   │   └── test_concurrent_login_failure.py   # 并发登录失败保护 (7个) - BE-008
+│   └── ...                 # 其他测试
+└── integration/            # 集成测试 (97个)
+    ├── test_jwt_auth.py    # JWT 认证集成测试 (13个)
+    └── ...                 # 其他测试
+```
+
+---
+
+## 8. 环境要求
 
 | 依赖 | 版本 | 检查命令 |
 |------|------|----------|
@@ -110,46 +217,59 @@ backend/
 
 ---
 
-## 工作流程规范
-
-### 修改后端代码后（强制）
-
-**必须**询问用户是否需要运行测试：
-
-> "修改/新增功能已完成，是否需要运行测试？
-> - 运行全部测试: `pytest tests/ -v`
-> - 仅单元测试: `pytest tests/unit -v`
-> - 仅集成测试: `pytest tests/integration -v`
-> - 不需要测试"
-
-**禁止**擅自决定不运行测试。
-
-### 测试执行（强制）
-
-```bash
-# 正确 - 在项目根目录运行
-pytest tests/ -v
-
-# 修改后检查清单
-# 1. 查找相关测试文件
-ls tests/unit/test_<模块>.py
-ls tests/integration/test_<模块>_api*.py
-# 2. 运行相关测试验证
-pytest tests/unit/test_<修改模块>.py -v
-```
-
----
-
-## 详细文档
+## 9. 文档导航
 
 | 文档 | 内容 |
 |------|------|
-| [.agents/ERRORS.md](./.agents/ERRORS.md) | 完整执行约束清单、纠错记录 |
-| [.agents/AGENTS.md](./.agents/AGENTS.md) | 完整速查手册、架构说明 |
+| [.agents/ERRORS.md](./.agents/ERRORS.md) | 常见错误记录、执行约束清单、纠错记录 |
 | [.agents/DEPLOYMENT.md](./.agents/DEPLOYMENT.md) | 完整部署指南 |
 | [.agents/CONFIG_GUIDE.md](./.agents/CONFIG_GUIDE.md) | 配置管理说明 |
+| [migrations/README.md](./migrations/README.md) | 数据库迁移（已完成） |
+| [tests/README.md](./tests/README.md) | 测试说明 |
 
 ---
 
-**最后更新**: 2026-03-25
+## 10. 纠错机制
+
+### 纠错反馈模板（复制使用）
+
+当你发现我犯了错误，请**复制以下模板**填写并发送：
+
+```markdown
+## 纠错反馈
+
+**错误类型**: [环境/前端/后端/测试/通用]
+
+**错误描述**: 
+[描述我具体做了什么错误操作]
+
+**正确做法**: 
+[描述应该怎么做]
+
+**是否需要加入禁令**: [是/否]
+- 如果是"是"，建议禁令表述: [如"禁止在未检查服务状态的情况下重启"]
+
+**相关代码/命令**: 
+```
+[如果有具体代码或命令，贴在这里]
+```
+```
+
+### 如何处理纠错反馈
+
+1. **确认收到**: "已收到纠错反馈，将更新约束清单"
+2. **分析错误**: 确定是流程缺失、知识错误还是禁令违反
+3. **更新 ERRORS.md**:
+   - 如果是新类型的错误 → 添加到对应约束章节
+   - 如果需要禁止 → 加入通用禁令表
+   - 更新纠错记录表
+4. **确认更新**: "已更新 ERRORS.md，新增约束: [简述]"
+
+### 当前已纠正的错误模式
+
+见 [.agents/ERRORS.md 纠错记录](./.agents/ERRORS.md#纠错记录)
+
+---
+
+**最后更新**: 2026-03-25 (BE-008 并发保护修复，测试结构更新)
 **架构版本**: FastAPI + SQLModel
