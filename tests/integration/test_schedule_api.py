@@ -200,8 +200,8 @@ def test_download_template(teacher_client):
     assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
-def test_teacher_can_import(teacher_client):
-    """测试教师可以导入课表"""
+def test_teacher_cannot_import(teacher_client):
+    """测试教师无权导入课表（仅管理员可导入）"""
     import io
     
     csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间
@@ -214,10 +214,8 @@ def test_teacher_can_import(teacher_client):
         files={"file": ("schedules.csv", file, "text/csv")}
     )
     
-    # 教师应该有权限导入
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
+    # 教师无权导入课表，应返回 403
+    assert response.status_code == 403
 
 
 @pytest.mark.smoke

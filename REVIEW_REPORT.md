@@ -145,11 +145,14 @@ if not verify_password(password, student.password_hash):
   - `config.py` 添加 `TOO_MANY_REQUESTS = 429`
   - `login.py` 限流返回正确的 HTTP 429 状态码
 
-### 7. 测试失败修复
+### 7. 测试失败修复 ✅ 已修复
 - **位置**：`tests/integration/test_schedule_api.py`
-- **问题**：`test_teacher_can_import` 断言与业务权限设计不符
-- **风险**：假失败或真实权限问题
+- **问题**：`test_teacher_can_import` 断言与业务权限设计不符（期望 200，实际 403）
+- **原因**：课表导入 API 使用 `require_admin`，仅管理员可访问，测试期望教师可导入是过时的
+- **修复**：修改为 `test_teacher_cannot_import`，验证教师无权导入（返回 403）
 - **负责人**：测试
+- **修复状态**：✅ 已修复（2026-03-26）
+- **测试验证**：13 个课表 API 测试全部通过
 
 ---
 
@@ -192,7 +195,7 @@ if not verify_password(password, student.password_hash):
 - [ ] 修复类型不一致问题 - 后端
 - [x] 修复 datetime.utcnow() 弃用警告 - 后端（已改用北京时间）
 - [ ] 修复限流状态码 503→429 - 后端
-- [ ] 修复测试失败 - 测试
+- [x] 修复测试失败 - 测试（已修复 test_teacher_can_import）
 
 ### P1 (本月完成)
 - [ ] 签到和统计接口添加认证 - 后端
