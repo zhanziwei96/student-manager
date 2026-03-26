@@ -177,7 +177,7 @@ if not verify_password(password, student.password_hash):
 
 ### P0 (本周必须完成)
 - [x] 乐观锁实现缺陷 - 后端（已文档化，接受风险）
-- [x] 修复 Toast 内存泄漏 - 前端（已修复 Toast.vue 和 Dialog.vue）
+- [x] 修复 Toast 内存泄漏 - 前端（已修复 + Vitest 单元测试 7 个通过）
 - [ ] 统一密码验证接口 - 后端
 - [ ] 修复类型不一致问题 - 后端
 - [x] 修复 datetime.utcnow() 弃用警告 - 后端（已改用北京时间）
