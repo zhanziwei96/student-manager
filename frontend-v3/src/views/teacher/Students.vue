@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useStudents } from '@/composables'
+import { useStudents, useToast } from '@/composables'
 import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, useStudentFilters } from '@/features/students'
 import { DataContainer } from '@/components/ui'
 import { Toast } from '@/components/ui'
@@ -42,10 +42,8 @@ const showScoreDialog = ref(false)
 const defaultScore = ref(0)
 const defaultReason = ref('')
 
-// === Toast 状态 ===
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastVariant = ref<'default' | 'success' | 'error'>('default')
+// === Toast 状态 (REVIEW-P1: 使用全局 useToast composable) ===
+const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast } = useToast()
 
 // === 快速分数选项 ===
 const quickScoreOptions = [
@@ -66,13 +64,9 @@ const handleQuickScore = async (student: Student, score: number, reason: string)
   try {
     await updateScore(student.student_id, score, reason)
     
-    toastMessage.value = `${student.name} ${score > 0 ? '+' : ''}${score}分`
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast(`${student.name} ${score > 0 ? '+' : ''}${score}分`)
   } catch (err: any) {
-    toastMessage.value = err.message || '调整分数失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '调整分数失败')
   }
 }
 
@@ -82,14 +76,10 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
   try {
     await updateScore(selectedStudent.value.student_id, scoreChange, reason)
 
-    toastMessage.value = `${selectedStudent.value.name} 的分数已更新`
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast(`${selectedStudent.value.name} 的分数已更新`)
     showScoreDialog.value = false
   } catch (err: any) {
-    toastMessage.value = err.message || '更新分数失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '更新分数失败')
   }
 }
 </script>
@@ -145,6 +135,6 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
     />
 
     <!-- Toast -->
-    <Toast v-model:show="showToast" :message="toastMessage" :variant="toastVariant" />
+    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
   </div>
 </template>

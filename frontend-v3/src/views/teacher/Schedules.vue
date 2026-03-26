@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from '@/composables/useSchedules'
-import { useClasses } from '@/composables/useClasses'
+import { useClasses, useToast } from '@/composables'
 import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer } from '@/components/ui'
 import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Loader2 } from 'lucide-vue-next'
@@ -45,10 +45,8 @@ const { mutateAsync: deleteSchedule, isPending: isDeleting } = useDeleteSchedule
 // 下载模板
 const { download: downloadTemplate } = useDownloadTemplate()
 
-// Toast
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastVariant = ref<'default' | 'success' | 'error'>('default')
+// Toast (REVIEW-P1: 使用全局 useToast composable)
+const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast, showToast } = useToast()
 
 // 星期选项
 const weekDays = [
@@ -85,9 +83,7 @@ const handleFileChange = (event: Event) => {
 // 处理导入
 const handleImport = async () => {
   if (!selectedFile.value) {
-    toastMessage.value = '请选择文件'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast('请选择文件')
     return
   }
 
@@ -97,17 +93,12 @@ const handleImport = async () => {
     selectedFile.value = null
     
     if (result.errors && result.errors.length > 0) {
-      toastMessage.value = `导入完成: ${result.imported} 条成功, ${result.errors.length} 条失败`
-      toastVariant.value = 'default'
+      showToast(`导入完成: ${result.imported} 条成功, ${result.errors.length} 条失败`, 'default')
     } else {
-      toastMessage.value = `成功导入 ${result.imported} 条课程`
-      toastVariant.value = 'success'
+      showSuccessToast(`成功导入 ${result.imported} 条课程`)
     }
-    showToast.value = true
   } catch (err: any) {
-    toastMessage.value = err.message || '导入失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '导入失败')
   }
 }
 
@@ -117,13 +108,9 @@ const handleDelete = async (id: number) => {
   
   try {
     await deleteSchedule(id)
-    toastMessage.value = '课程已删除'
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast('课程已删除')
   } catch (err: any) {
-    toastMessage.value = err.message || '删除失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '删除失败')
   }
 }
 </script>
@@ -289,6 +276,6 @@ const handleDelete = async (id: number) => {
     </Dialog>
 
     <!-- Toast -->
-    <Toast v-model:show="showToast" :message="toastMessage" :variant="toastVariant" />
+    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
   </div>
 </template>

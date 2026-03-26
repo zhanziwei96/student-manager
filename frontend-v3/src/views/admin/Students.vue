@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useStudents, useStudentCreate } from '@/composables'
+import { useStudents, useStudentCreate, useToast } from '@/composables'
 import { StudentFilters, useStudentFilters } from '@/features/students'
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer } from '@/components/ui'
 import { Plus } from 'lucide-vue-next'
@@ -33,10 +33,8 @@ watch(() => students.value, (newData) => {
   }
 }, { immediate: true })
 
-// === Toast 状态 ===
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastVariant = ref<'default' | 'success' | 'error'>('default')
+// === Toast 状态 (REVIEW-P1: 使用全局 useToast composable) ===
+const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast } = useToast()
 
 // === 添加学生对话框 ===
 const showAddDialog = ref(false)
@@ -104,14 +102,10 @@ const handleAddStudent = async () => {
       class_name: newStudent.value.class_name.trim(),
     })
 
-    toastMessage.value = `学生 ${newStudent.value.name} 添加成功`
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast(`学生 ${newStudent.value.name} 添加成功`)
     showAddDialog.value = false
   } catch (err: any) {
-    toastMessage.value = err.message || '添加学生失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '添加学生失败')
   }
 }
 </script>
@@ -232,6 +226,6 @@ const handleAddStudent = async () => {
     </Dialog>
 
     <!-- Toast -->
-    <Toast v-model:show="showToast" :message="toastMessage" :variant="toastVariant" />
+    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
   </div>
 </template>

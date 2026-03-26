@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCheckIn, useActiveClassSessions } from '@/composables'
+import { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCheckIn, useActiveClassSessions, useToast } from '@/composables'
 import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useTodayCheckins } from '@/composables/useCheckins'
 import { useAuthStore } from '@/stores'
@@ -63,9 +63,7 @@ const { data: classStudents, isPending: isLoadingStudents } = useClassStudents(c
 // 获取当前课堂的签到记录
 const { data: todayCheckins, refetch: refetchCheckins } = useTodayCheckins(computed(() => activeSession.value?.class_name || ''))
 
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastVariant = ref<'default' | 'success' | 'error'>('default')
+const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast } = useToast()
 
 
 
@@ -122,58 +120,42 @@ const checkinStats = computed(() => {
 
 const handleStartSession = async () => {
   if (!className.value) {
-    toastMessage.value = '请选择班级'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast('请选择班级')
     return
   }
 
   try {
     await startSession(className.value)
-    toastMessage.value = '课堂已开始！'
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast('课堂已开始！')
   } catch (err: any) {
-    toastMessage.value = err.message || '开始课堂失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '开始课堂失败')
   }
 }
 
 const handleEndSession = async () => {
   try {
     await endSession()
-    toastMessage.value = '课堂已结束！'
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast('课堂已结束！')
     className.value = ''
   } catch (err: any) {
-    toastMessage.value = err.message || '结束课堂失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '结束课堂失败')
   }
 }
 
 const handleCheckIn = async () => {
   if (!studentCode.value.trim()) {
-    toastMessage.value = '请输入学生代码'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast('请输入学生代码')
     return
   }
 
   try {
     await checkIn(studentCode.value.trim())
-    toastMessage.value = '学生签到成功！'
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast('学生签到成功！')
     studentCode.value = ''
     // 刷新签到记录
     refetchCheckins()
   } catch (err: any) {
-    toastMessage.value = err.message || '签到失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '签到失败')
   }
 }
 
@@ -181,14 +163,10 @@ const handleCheckIn = async () => {
 const quickCheckIn = async (studentId: string) => {
   try {
     await checkIn(studentId)
-    toastMessage.value = '签到成功！'
-    toastVariant.value = 'success'
-    showToast.value = true
+    showSuccessToast('签到成功！')
     refetchCheckins()
   } catch (err: any) {
-    toastMessage.value = err.message || '签到失败'
-    toastVariant.value = 'error'
-    showToast.value = true
+    showErrorToast(err.message || '签到失败')
   }
 }
 </script>
@@ -440,6 +418,6 @@ const quickCheckIn = async (studentId: string) => {
     </template>
 
     <!-- Toast -->
-    <Toast v-model:show="showToast" :message="toastMessage" :variant="toastVariant" />
+    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
   </div>
 </template>

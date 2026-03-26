@@ -18,10 +18,18 @@ const duration = ref(3000)
  * Provides a global toast notification system
  */
 export function useToast() {
-  const showToast = (options: ToastOptions) => {
-    message.value = options.message
-    variant.value = options.variant || 'default'
-    duration.value = options.duration || 3000
+  const showToast = (options: ToastOptions | string, variantOrDuration?: ToastVariant | number, dur?: number) => {
+    if (typeof options === 'string') {
+      // 便捷调用: showToast('message', 'variant', duration)
+      message.value = options
+      variant.value = (variantOrDuration as ToastVariant) || 'default'
+      duration.value = dur || 3000
+    } else {
+      // 标准调用: showToast({ message: '...', variant: '...' })
+      message.value = options.message
+      variant.value = options.variant || 'default'
+      duration.value = options.duration || 3000
+    }
     show.value = true
   }
 
