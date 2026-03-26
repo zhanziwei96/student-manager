@@ -33,8 +33,6 @@ class TestUserCRUD:
         assert user.name == "新教师"
         assert user.role == "teacher"
         assert user.get_assigned_classes() == ["软件1班"]
-        # SEC-003: salt 字段应为 None
-        assert user.salt is None
     
     def test_get_user_by_id(self, session: Session):
         """测试根据ID获取用户"""
@@ -118,8 +116,6 @@ class TestUserCRUD:
         reset_password(session, user, new_hash)
         
         assert user.password_hash == new_hash
-        # SEC-003: salt 字段应为 None
-        assert user.salt is None
         assert user.login_fail_count == 0
         assert user.locked_until is None
     

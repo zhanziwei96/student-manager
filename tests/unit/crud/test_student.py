@@ -128,8 +128,6 @@ class TestStudentCRUD:
         
         assert updated is not None
         assert updated.password_hash == "new_hash"
-        # SEC-003: salt 字段应为 None
-        assert updated.salt is None
     
     def test_reset_student_password_not_found(self, session: Session):
         """测试重置不存在学生的密码 - SEC-003: 简化密码哈希接口"""

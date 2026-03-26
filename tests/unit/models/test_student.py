@@ -3,7 +3,7 @@
 """
 import pytest
 from app.models import Student, StudentCreate, StudentUpdate
-from app.core.security import generate_password_hash
+from app.core.security import hash_password
 
 
 class TestStudentModel:
@@ -36,18 +36,16 @@ class TestStudentModel:
         assert student.is_account_enabled is True
     
     def test_student_with_password(self):
-        """测试带密码的学生"""
-        password_hash, salt = generate_password_hash("2024003")
+        """测试带密码的学生 - SEC-003: 移除 salt"""
+        password_hash = hash_password("2024003")
         
         student = Student(
             student_id="2024003",
             name="王五",
-            password_hash=password_hash,
-            salt=salt
+            password_hash=password_hash
         )
         
         assert student.password_hash is not None
-        assert student.salt is not None
 
 
 class TestStudentSchemas:

@@ -44,8 +44,6 @@ class User(UserBase, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     password_hash: str = Field(..., description="密码哈希 (bcrypt)")
-    # SEC-003 DEPRECATED: bcrypt 已内置盐值，此字段不再使用，保留仅用于兼容旧数据
-    salt: Optional[str] = Field(default=None, description="[DEPRECATED] 密码盐值 - bcrypt已内置，此字段将在未来版本移除")
     login_fail_count: int = Field(default=0, description="登录失败次数")
     locked_until: Optional[datetime] = Field(default=None, description="锁定截止时间")
     last_login_ip: Optional[str] = Field(default=None, description="最后登录IP")
