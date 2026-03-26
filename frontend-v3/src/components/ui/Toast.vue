@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { cn } from '@/lib/utils'
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-vue-next'
 
@@ -28,6 +28,8 @@ const emit = defineEmits<{
 }>()
 
 const isVisible = ref(false)
+const timeoutId = ref<ReturnType<typeof setTimeout> | null>(null)
+const closeTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // 变体样式映射
 const variantClasses: Record<ToastVariant, string> = {
@@ -73,18 +75,36 @@ onMounted(() => {
   }
 })
 
+const clearTimers = () => {
+  if (timeoutId.value) {
+    clearTimeout(timeoutId.value)
+    timeoutId.value = null
+  }
+  if (closeTimeoutId.value) {
+    clearTimeout(closeTimeoutId.value)
+    closeTimeoutId.value = null
+  }
+}
+
 const showToast = () => {
+  clearTimers()
   isVisible.value = true
-  setTimeout(() => {
+  timeoutId.value = setTimeout(() => {
     isVisible.value = false
-    setTimeout(() => emit('update:show', false), 300)
+    closeTimeoutId.value = setTimeout(() => emit('update:show', false), 300)
   }, props.duration)
 }
 
 const close = () => {
+  clearTimers()
   isVisible.value = false
-  setTimeout(() => emit('update:show', false), 300)
+  closeTimeoutId.value = setTimeout(() => emit('update:show', false), 300)
 }
+
+// 组件卸载时清理 timer
+onUnmounted(() => {
+  clearTimers()
+})
 
 // 暴露 show 方法
 defineExpose({ show: showToast })

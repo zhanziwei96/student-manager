@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onUnmounted, watch } from 'vue'
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-vue-next'
 
@@ -40,6 +40,11 @@ watch(
     }
   }
 )
+
+// 组件卸载时重置 body overflow
+onUnmounted(() => {
+  document.body.style.overflow = ''
+})
 
 const overlayClasses = computed(() =>
   cn(

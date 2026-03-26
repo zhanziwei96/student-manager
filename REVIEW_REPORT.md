@@ -69,28 +69,15 @@ if result.rowcount == 0:
     raise HTTPException(status_code=409, detail="并发修改冲突")
 ```
 
-### 2. 前端内存泄漏
-- **位置**：`frontend-v3/src/components/ui/Toast.vue:77-81`
-- **问题**：`setTimeout` 未在组件卸载时清理
-- **风险**：内存泄漏，长时间运行后性能下降
+### 2. 前端内存泄漏 ✅ 已修复
+- **位置**：`frontend-v3/src/components/ui/Toast.vue`, `Dialog.vue`
+- **问题**：`setTimeout` 未在组件卸载时清理；`body overflow` 样式未重置
+- **风险**：内存泄漏，长时间运行后性能下降；布局错乱
 - **负责人**：前端
-- **修复代码**：
-```typescript
-const timeoutId = ref<ReturnType<typeof setTimeout> | null>(null)
-
-const showToast = () => {
-  isVisible.value = true
-  if (timeoutId.value) clearTimeout(timeoutId.value)
-  timeoutId.value = setTimeout(() => {
-    isVisible.value = false
-    setTimeout(() => emit('update:show', false), 300)
-  }, props.duration)
-}
-
-onUnmounted(() => {
-  if (timeoutId.value) clearTimeout(timeoutId.value)
-})
-```
+- **修复状态**：✅ 已修复（2026-03-26）
+- **修复内容**：
+  - Toast.vue: 添加 `onUnmounted` 清理 setTimeout timer，使用 ref 存储 timeout ID
+  - Dialog.vue: 添加 `onUnmounted` 重置 body overflow 样式
 
 ### 3. 使用已弃用函数 ✅ 已修复
 - **位置**：`backend/app/api/routes/login.py:96,140,218`
@@ -190,7 +177,7 @@ if not verify_password(password, student.password_hash):
 
 ### P0 (本周必须完成)
 - [x] 乐观锁实现缺陷 - 后端（已文档化，接受风险）
-- [ ] 修复 Toast 内存泄漏 - 前端
+- [x] 修复 Toast 内存泄漏 - 前端（已修复 Toast.vue 和 Dialog.vue）
 - [ ] 统一密码验证接口 - 后端
 - [ ] 修复类型不一致问题 - 后端
 - [x] 修复 datetime.utcnow() 弃用警告 - 后端（已改用北京时间）
