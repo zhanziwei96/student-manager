@@ -77,7 +77,7 @@ def test_user(session: Session):
         password_hash=password_hash,
         salt=salt,
         role=UserRoleConst.TEACHER,
-        assigned_classes=["测试班级"]
+        assigned_classes='["测试班级"]'
     )
     session.add(user)
     session.commit()
@@ -99,7 +99,7 @@ def test_admin(session: Session):
         password_hash=password_hash,
         salt=salt,
         role=UserRoleConst.ADMIN,
-        assigned_classes=[]
+        assigned_classes='[]'
     )
     session.add(user)
     session.commit()
