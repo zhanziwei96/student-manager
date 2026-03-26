@@ -18,6 +18,9 @@ pyrate-limiter>=3.0.0
 # 数据库
 openpyxl>=3.1.0
 
+# Excel/CSV 处理
+pandas>=2.0.0
+
 # 环境变量
 python-dotenv>=1.0.0
 

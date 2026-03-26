@@ -5,6 +5,7 @@ from app.models.student import Student, StudentCreate, StudentUpdate, StudentRes
 from app.models.user import User, UserCreate, UserUpdate, UserResponse
 from app.models.checkin import CheckinRecord, ClassSession, ScoreLog
 from app.models.audit import AuditLog, SecurityAlert
+from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
 from app.models.constants import UserRole, UserRoleConst, UserStatus, CheckinType
 
 __all__ = [
@@ -18,4 +19,6 @@ __all__ = [
     "CheckinRecord", "ClassSession", "ScoreLog",
     # Audit
     "AuditLog", "SecurityAlert",
+    # Course Schedule
+    "CourseSchedule", "CourseScheduleResponse",
 ]

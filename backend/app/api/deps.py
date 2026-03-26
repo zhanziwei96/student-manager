@@ -10,6 +10,8 @@ from app.core.jwt import (
     require_login as jwt_require_login,
     require_admin as jwt_require_admin,
 )
+from fastapi import HTTPException
+from app.core.config import HttpStatus
 
 # 数据库会话依赖
 SessionDep = get_session
@@ -33,9 +35,20 @@ def is_admin(request: Request) -> bool:
 
 def get_session_user_id(request: Request) -> Optional[str]:
     """获取会话中的用户ID"""
-    from fastapi import HTTPException
     try:
         user = jwt_get_current_user(request)
         return user.get("sub")
     except HTTPException:
         return None
+
+
+def require_admin_or_teacher(request: Request):
+    """要求管理员或教师权限"""
+    user = jwt_get_current_user(request)
+    role = user.get("role", "")
+    if role not in ["admin", "teacher"]:
+        raise HTTPException(
+            status_code=HttpStatus.FORBIDDEN,
+            detail="需要管理员或教师权限"
+        )
+    return user

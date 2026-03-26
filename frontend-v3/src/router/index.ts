@@ -46,6 +46,11 @@ const routes = [
         name: 'AdminCheckins',
         component: () => import('@/views/admin/Checkins.vue'),
       },
+      {
+        path: 'schedules',
+        name: 'AdminSchedules',
+        component: () => import('@/views/teacher/Schedules.vue'),
+      },
     ],
   },
   {
@@ -67,6 +72,11 @@ const routes = [
         path: 'session',
         name: 'TeacherSession',
         component: () => import('@/views/teacher/ClassSession.vue'),
+      },
+      {
+        path: 'schedules',
+        name: 'TeacherSchedules',
+        component: () => import('@/views/teacher/Schedules.vue'),
       },
     ],
   },

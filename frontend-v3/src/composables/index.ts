@@ -10,3 +10,5 @@ export { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession }
 export { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from './useTeachers'
 // FE-001: 新增 useAuthQuery，用于分离服务端状态和 UI 状态
 export { useAuthQuery } from './useAuth'
+// 课表管理
+export { useSchedules, useTodaySchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from './useSchedules'

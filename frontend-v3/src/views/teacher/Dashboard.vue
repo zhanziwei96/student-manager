@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useStats } from '@/composables'
-import { Card, Button, Badge } from '@/components/ui'
-import { Users, Calendar, Clock, Loader2, ArrowRight } from 'lucide-vue-next'
+import { useStats, useTodaySchedules } from '@/composables'
+import { Card, Button, Badge, DataContainer } from '@/components/ui'
+import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const { data: stats, isPending, error } = useStats()
+const { data: todaySchedules, isPending: isLoadingSchedules } = useTodaySchedules()
+
+// 获取今天的星期
+const todayWeekDay = computed(() => {
+  const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  return days[new Date().getDay()]
+})
 
 const statCards = computed(() => [
   {
@@ -90,25 +97,50 @@ const statCards = computed(() => [
 
     <!-- Today's schedule -->
     <Card class="border-white/10 bg-white/[0.02] p-6">
-      <h2 class="text-lg font-semibold text-white">今日课表</h2>
-      <p class="text-sm text-white/60">今天的课程安排</p>
-      
-      <div class="mt-6 space-y-4">
-        <div
-          v-for="i in 3"
-          :key="i"
-          class="flex items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] p-4"
-        >
-          <div class="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <span class="text-xs font-medium">{{ 9 + i }}:00</span>
-          </div>
-          <div class="flex-1">
-            <p class="font-medium text-white">计算机科学 {{ i }}01</p>
-            <p class="text-sm text-white/60">教室 {{ 100 + i }} • {{ 20 + i * 5 }} 名学生</p>
-          </div>
-          <Badge variant="secondary">即将开始</Badge>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-white">今日课表</h2>
+          <p class="text-sm text-white/60">{{ todayWeekDay }}的课程安排</p>
         </div>
+        <Button variant="outline" size="sm" @click="router.push('/teacher/schedules')">
+          管理课表
+        </Button>
       </div>
+      
+      <DataContainer
+        :loading="isLoadingSchedules"
+        :has-data="todaySchedules.length > 0"
+        empty-text="今天没有课程安排"
+        class="mt-4"
+      >
+        <div class="space-y-3">
+          <div
+            v-for="schedule in todaySchedules"
+            :key="schedule.id"
+            class="flex items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] p-4"
+          >
+            <div class="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <span class="text-xs font-medium">{{ schedule.start_time }}</span>
+            </div>
+            <div class="flex-1">
+              <p class="font-medium text-white">{{ schedule.course_name }}</p>
+              <p class="text-sm text-white/60">
+                {{ schedule.class_name }}
+                <span v-if="schedule.classroom" class="inline-flex items-center gap-1 ml-2">
+                  <MapPin class="h-3 w-3" />
+                  {{ schedule.classroom }}
+                </span>
+              </p>
+            </div>
+            <Button
+              size="sm"
+              @click="router.push('/teacher/session')"
+            >
+              去上课
+            </Button>
+          </div>
+        </div>
+      </DataContainer>
     </Card>
   </div>
 </template>

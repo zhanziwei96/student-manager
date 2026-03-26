@@ -6,6 +6,7 @@ from app.api.routes.students import router as students_router
 from app.api.routes.users import router as users_router
 from app.api.routes.checkin import router as checkin_router
 from app.api.routes.system import router as system_router
+from app.api.routes.schedules import router as schedules_router
 
 __all__ = [
     "login_router",
@@ -13,4 +14,5 @@ __all__ = [
     "users_router",
     "checkin_router",
     "system_router",
+    "schedules_router",
 ]

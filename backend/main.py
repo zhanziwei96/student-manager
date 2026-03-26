@@ -123,7 +123,7 @@ def create_app() -> FastAPI:
     # 注册API路由（必须在静态文件之前）
     from app.api.routes import (
         login_router, students_router, users_router,
-        checkin_router, system_router
+        checkin_router, system_router, schedules_router
     )
     
     app.include_router(login_router)
@@ -131,6 +131,7 @@ def create_app() -> FastAPI:
     app.include_router(students_router)
     app.include_router(users_router)
     app.include_router(checkin_router)
+    app.include_router(schedules_router)
     
     # 静态文件服务（生产环境）
     if os.path.exists(STATIC_DIR):
