@@ -1,8 +1,9 @@
 """
-JWT 认证工具
+JWT 认证工具 - 使用北京时间（Asia/Shanghai）
 """
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+from zoneinfo import ZoneInfo
 from jose import JWTError, jwt
 from fastapi import HTTPException, Request, Response
 from app.core.config import get_settings
@@ -15,11 +16,19 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24小时
 COOKIE_NAME = "access_token"
 
+# 北京时间时区（Asia/Shanghai）
+BEIJING_TZ = ZoneInfo("Asia/Shanghai")
+
+
+def get_beijing_time() -> datetime:
+    """获取当前北京时间"""
+    return datetime.now(BEIJING_TZ)
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """创建 JWT Token"""
+    """创建 JWT Token（使用北京时间）"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = get_beijing_time() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -71,9 +80,9 @@ async def get_current_user(request: Request) -> Dict[str, Any]:
     if not payload:
         raise HTTPException(status_code=401, detail="登录已过期")
     
-    # 检查过期时间
+    # 检查过期时间（使用北京时间）
     exp = payload.get("exp")
-    if exp and datetime.utcnow().timestamp() > exp:
+    if exp and get_beijing_time().timestamp() > exp:
         raise HTTPException(status_code=401, detail="登录已过期")
     
     return payload

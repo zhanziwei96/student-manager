@@ -123,22 +123,17 @@ if not verify_password(password, student.password_hash):
   - 添加异常处理防止无法转换时的错误
 - **测试验证**：35 个用户相关测试全部通过
 
-### 5. JWT 时区处理不当
-- **位置**：`backend/app/core/jwt.py:22,76`
+### 5. JWT 时区处理不当 ✅ 已修复
+- **位置**：`backend/app/core/jwt.py`
 - **问题**：使用 `datetime.utcnow()`（Python 3.12+ 已弃用），时区处理不当
 - **风险**：认证绕过或提前过期
 - **负责人**：后端
-- **修复**：
-```python
-from datetime import datetime, timezone
-
-# 创建 Token
-expire = datetime.now(timezone.utc) + expires_delta
-
-# 验证 Token
-if datetime.now(timezone.utc).timestamp() > exp:
-    raise HTTPException(...)
-```
+- **修复状态**：✅ 已修复（2026-03-26）
+- **修复内容**：
+  - 使用 `ZoneInfo("Asia/Shanghai")` 统一使用北京时间
+  - 添加 `get_beijing_time()` 工具函数
+  - Token 创建和过期验证均使用北京时间
+- **测试验证**：24 个 JWT 相关测试全部通过
 
 ### 6. 限流状态码错误 ✅ 已修复
 - **位置**：`backend/app/api/routes/login.py:82`, `backend/app/core/config.py`
@@ -195,7 +190,7 @@ if datetime.now(timezone.utc).timestamp() > exp:
 - [ ] 修复 Toast 内存泄漏 - 前端
 - [ ] 统一密码验证接口 - 后端
 - [ ] 修复类型不一致问题 - 后端
-- [ ] 修复 datetime.utcnow() 弃用警告 - 后端
+- [x] 修复 datetime.utcnow() 弃用警告 - 后端（已改用北京时间）
 - [ ] 修复限流状态码 503→429 - 后端
 - [ ] 修复测试失败 - 测试
 
