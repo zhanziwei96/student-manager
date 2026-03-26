@@ -222,6 +222,19 @@ def update_student_score(
     )
     session.add(score_log)
     
+    # NOTE: 乐观锁实现说明
+    # 当前实现使用 version 字段递增来标识记录变更，但存在以下限制：
+    # 1. IntegrityError 捕获实际上不会触发，因为 version 字段没有唯一约束
+    # 2. 真正的乐观锁应使用 "UPDATE ... WHERE version = :expected_version" 模式
+    # 
+    # 不修复原因（业务评估）：
+    # - 业务场景：一个学生由一门课的一个老师管理，并发修改概率极低
+    # - 部署环境：SQLite 单进程部署，天然事务隔离，冲突可能性更小
+    # - 成本收益：修复成本 > 实际收益
+    # 
+    # 如需完整乐观锁保护，应：
+    # 1. 添加唯一约束 (student_id, version)，或
+    # 2. 使用原生 UPDATE with WHERE version = :version 检查 affected rows
     try:
         session.commit()
     except IntegrityError:
