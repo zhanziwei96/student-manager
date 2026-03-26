@@ -91,9 +91,9 @@ async def login(
         if not student:
             raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
         
-        # 验证密码
-        from app.core.security import verify_password_hash
-        if not verify_password_hash(password, student.password_hash, student.salt):
+        # 验证密码 (SEC-003: 使用新的 verify_password 接口)
+        from app.core.security import verify_password
+        if not verify_password(password, student.password_hash):
             raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
         
         # 生成 JWT Token
@@ -135,9 +135,9 @@ async def login(
     if not user.is_account_enabled:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='账号已被禁用')
     
-    # 验证密码
-    from app.core.security import verify_password_hash
-    if not verify_password_hash(password, user.password_hash, user.salt):
+    # 验证密码 (SEC-003: 使用新的 verify_password 接口)
+    from app.core.security import verify_password
+    if not verify_password(password, user.password_hash):
         is_locked = record_login_failure(session, user)
         if is_locked:
             logger.warning(f"账号因多次失败被锁定: {username}")
@@ -214,9 +214,9 @@ async def change_password(
     if not user_obj:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='用户不存在')
     
-    # 验证旧密码
-    from app.core.security import verify_password_hash
-    if not verify_password_hash(data.old_password, user_obj.password_hash, user_obj.salt):
+    # 验证旧密码 (SEC-003: 使用新的 verify_password 接口)
+    from app.core.security import verify_password
+    if not verify_password(data.old_password, user_obj.password_hash):
         logger.info(f"修改密码失败，旧密码错误: {user_id}")
         return {
             ApiResponseConst.SUCCESS: False,

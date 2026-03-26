@@ -143,13 +143,12 @@ class TestResetPasswordAPI:
         assert data["success"] is True
         assert data["message"] == "密码重置成功"
         
-        # 验证新密码可以登录
-        from app.core.security import verify_password_hash
+        # 验证新密码可以登录 (SEC-003: 使用新的 verify_password 接口)
+        from app.core.security import verify_password
         with Session(test_engine) as session:
             session.add(teacher_user)
             session.refresh(teacher_user)
-            # bcrypt 模式下 salt 参数被忽略
-            assert verify_password_hash("resetpass123", teacher_user.password_hash, "")
+            assert verify_password("resetpass123", teacher_user.password_hash)
     
     def test_reset_password_user_not_found(self, admin_client):
         """用户不存在"""
