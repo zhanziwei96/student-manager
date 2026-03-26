@@ -10,6 +10,10 @@
 /* ===== 导入 Tailwind CSS v4 ===== */
 @import "tailwindcss";
 
+/* ===== 导入设计体系组件样式 ===== */
+@import "./styles/tokens.css";
+@import "./styles/components.css";
+
 /* ===== 自定义主题配置 (@theme inline 合并到默认主题) ===== */
 @theme inline {
   /* 颜色系统 */
@@ -26,6 +30,16 @@
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
+  
+  /* Grafana 柔和配色 */
+  --color-success-soft: #73bf69;
+  --color-success-soft-muted: rgba(115, 191, 105, 0.15);
+  --color-warning-soft: #f2cc0c;
+  --color-warning-soft-muted: rgba(242, 204, 12, 0.15);
+  --color-error-soft: #e02f44;
+  --color-error-soft-muted: rgba(224, 47, 68, 0.15);
+  --color-info-soft: #5794f2;
+  --color-info-soft-muted: rgba(87, 148, 242, 0.15);
   
   /* 字体 */
   --font-sans: 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;

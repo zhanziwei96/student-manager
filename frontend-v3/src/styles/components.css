@@ -66,6 +66,25 @@
   color: white;
 }
 
+/* 按钮组件 - Grafana 柔和配色 */
+.ch-button--success-soft {
+  background-color: var(--color-success-soft-muted);
+  color: var(--color-success-soft);
+}
+
+.ch-button--success-soft:hover:not(:disabled) {
+  background-color: rgba(115, 191, 105, 0.25);
+}
+
+.ch-button--error-soft {
+  background-color: var(--color-error-soft-muted);
+  color: var(--color-error-soft);
+}
+
+.ch-button--error-soft:hover:not(:disabled) {
+  background-color: rgba(224, 47, 68, 0.25);
+}
+
 /* 按钮尺寸 */
 .ch-button--sm {
   height: 2rem;
@@ -174,6 +193,22 @@
 .ch-badge--primary {
   background-color: var(--color-primary-muted);
   color: var(--color-primary);
+}
+
+/* 徽章组件 - Grafana 柔和配色 */
+.ch-badge--success-soft {
+  background-color: var(--color-success-soft-muted);
+  color: var(--color-success-soft);
+}
+
+.ch-badge--warning-soft {
+  background-color: var(--color-warning-soft-muted);
+  color: var(--color-warning-soft);
+}
+
+.ch-badge--error-soft {
+  background-color: var(--color-error-soft-muted);
+  color: var(--color-error-soft);
 }
 
 /* ========== 导航项 ========== */
@@ -304,6 +339,19 @@
   background-color: var(--color-error-muted);
   border-color: var(--color-error);
   color: var(--color-error);
+}
+
+/* Toast 提示 - Grafana 柔和配色 */
+.ch-toast--success-soft {
+  background-color: var(--color-success-soft-muted);
+  border-color: var(--color-success-soft);
+  color: var(--color-success-soft);
+}
+
+.ch-toast--error-soft {
+  background-color: var(--color-error-soft-muted);
+  border-color: var(--color-error-soft);
+  color: var(--color-error-soft);
 }
 
 /* ========== 加载状态 ========== */

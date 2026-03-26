@@ -34,11 +34,11 @@ const showToast = ref(false)
 const toastMessage = ref('')
 const toastVariant = ref<'default' | 'success' | 'error'>('default')
 
-// 快速分数选项
+// 快速分数选项 (Indigo 单色系设计)
 const quickScoreOptions = [
-  { label: '课堂提问', score: 2, icon: MessageCircle, color: 'text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30' },
-  { label: '违反纪律', score: -2, icon: AlertTriangle, color: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30' },
-  { label: '旷课', score: -5, icon: UserX, color: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30' },
+  { label: '课堂提问', score: 2, icon: MessageCircle },
+  { label: '违反纪律', score: -2, icon: AlertTriangle },
+  { label: '旷课', score: -5, icon: UserX },
 ]
 
 // 按班级分组的学生
@@ -266,46 +266,49 @@ const handleUpdateScore = async () => {
             <p class="text-xl font-bold text-primary">{{ student.score }}</p>
           </div>
           
-          <!-- 快速操作按钮 -->
+          <!-- 快速操作按钮 (使用设计体系 Grafana 柔和配色) -->
           <div class="grid grid-cols-3 gap-2">
-            <Button
+            <button
               v-for="option in quickScoreOptions"
               :key="option.label"
-              size="sm"
-              variant="outline"
-              class="flex flex-col items-center gap-1 h-auto py-2 px-1 text-xs"
-              :class="[option.borderColor, option.color, option.bgColor]"
+              class="group relative flex flex-col items-center gap-1 rounded-lg py-2.5 px-1 text-xs transition-all duration-200 disabled:opacity-50"
+              :class="[
+                option.score > 0 
+                  ? 'bg-success-soft-muted text-success-soft hover:bg-success-soft/25' 
+                  : 'bg-error-soft-muted text-error-soft hover:bg-error-soft/25'
+              ]"
               :disabled="isUpdatingScore"
               @click="handleQuickScore(student, option.score, option.label)"
             >
-              <component :is="option.icon" class="h-3.5 w-3.5" />
-              <span>{{ option.label }}</span>
-              <span :class="option.score > 0 ? 'text-green-400' : 'text-red-400'">
+              <component :is="option.icon" class="h-4 w-4 opacity-80 group-hover:opacity-100" />
+              <span class="font-medium">{{ option.label }}</span>
+              <span class="text-[10px] opacity-70">
                 {{ option.score > 0 ? '+' : '' }}{{ option.score }}
               </span>
-            </Button>
+              <!-- 光晕效果 -->
+              <div 
+                class="absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100 pointer-events-none"
+                :class="option.score > 0 ? 'shadow-[0_0_12px_rgba(115,191,105,0.25)]' : 'shadow-[0_0_12px_rgba(224,47,68,0.25)]'"
+              />
+            </button>
           </div>
           
-          <!-- 自定义分数按钮 -->
-          <div class="mt-2 flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              class="flex-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
+          <!-- 自定义分数按钮 (使用设计体系 Grafana 柔和配色) -->
+          <div class="mt-3 flex gap-2">
+            <button
+              class="ch-button ch-button--sm ch-button--success-soft flex-1"
               @click="openScoreDialog(student, 10, '加分')"
             >
-              <Plus class="h-3 w-3 mr-1" />
+              <Plus class="h-3.5 w-3.5" />
               加分
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              class="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
+            </button>
+            <button
+              class="ch-button ch-button--sm ch-button--error-soft flex-1"
               @click="openScoreDialog(student, -10, '扣分')"
             >
-              <Minus class="h-3 w-3 mr-1" />
+              <Minus class="h-3.5 w-3.5" />
               扣分
-            </Button>
+            </button>
           </div>
         </Card>
       </div>

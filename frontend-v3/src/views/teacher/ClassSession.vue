@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCheckIn, useScoreUpdate, useActiveClassSessions } from '@/composables'
+import { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCheckIn, useActiveClassSessions } from '@/composables'
 import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useTodayCheckins } from '@/composables/useCheckins'
-import { Card, Button, Input, Select, Badge, Dialog } from '@/components/ui'
-import { Play, Square, CheckCircle, Clock, Users, Search, GraduationCap, Plus, Minus, MessageCircle, AlertTriangle, UserX } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores'
+import { Card, Button, Input, Select, Badge } from '@/components/ui'
+import { Play, Square, CheckCircle, Clock, Users, Search, GraduationCap, AlertTriangle } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
 
 const className = ref('')
 const studentCode = ref('')
 const searchQuery = ref('')
+
+// 获取当前用户信息
+const authStore = useAuthStore()
+const currentUser = computed(() => authStore.user)
 
 const { data: activeSession } = useClassSession()
 const { mutateAsync: startSession, isPending: isStartingSession } = useClassSessionStart()
@@ -29,7 +34,9 @@ const occupiedClasses = computed(() => {
 // 其他教师占用的班级（排除当前用户的）
 const otherOccupiedClasses = computed(() => {
   if (!activeSessions.value) return []
-  return activeSessions.value.filter(s => s.class_name !== activeSession.value?.class_name)
+  const currentUserId = currentUser.value?.id
+  // 排除当前教师开启的所有课堂（不只是当前活跃课堂）
+  return activeSessions.value.filter(s => s.teacher_id !== currentUserId)
 })
 
 // 可用的班级选项（被占用的标记为禁用）
@@ -60,19 +67,7 @@ const showToast = ref(false)
 const toastMessage = ref('')
 const toastVariant = ref<'default' | 'success' | 'error'>('default')
 
-// 分数调整相关
-const { mutateAsync: updateScore, isPending: isUpdatingScore } = useScoreUpdate()
-const showScoreDialog = ref(false)
-const selectedStudent = ref<Student | null>(null)
-const scoreChange = ref(0)
-const scoreReason = ref('')
 
-// 快速分数选项
-const quickScoreOptions = [
-  { label: '课堂提问', score: 2, icon: MessageCircle, color: 'text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30' },
-  { label: '违反纪律', score: -2, icon: AlertTriangle, color: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30' },
-  { label: '旷课', score: -5, icon: UserX, color: 'text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30' },
-]
 
 const isSessionActive = computed(() => !!activeSession.value)
 
@@ -177,56 +172,6 @@ const quickCheckIn = async (studentId: string) => {
     refetchCheckins()
   } catch (err: any) {
     toastMessage.value = err.message || '签到失败'
-    toastVariant.value = 'error'
-    showToast.value = true
-  }
-}
-
-// 打开分数调整弹窗
-const openScoreDialog = (student: Student, defaultScore: number = 0, defaultReason: string = '') => {
-  selectedStudent.value = student
-  scoreChange.value = defaultScore
-  scoreReason.value = defaultReason
-  showScoreDialog.value = true
-}
-
-// 处理快速分数调整
-const handleQuickScore = async (student: Student, score: number, reason: string) => {
-  try {
-    await updateScore({
-      studentId: student.student_id,
-      data: {
-        score_change: score,
-        reason: reason,
-      },
-    })
-    toastMessage.value = `${student.name} ${score > 0 ? '+' : ''}${score}分`
-    toastVariant.value = 'success'
-    showToast.value = true
-  } catch (err: any) {
-    toastMessage.value = err.message || '调整分数失败'
-    toastVariant.value = 'error'
-    showToast.value = true
-  }
-}
-
-// 处理自定义分数调整
-const handleUpdateScore = async () => {
-  if (!selectedStudent.value) return
-  try {
-    await updateScore({
-      studentId: selectedStudent.value.student_id,
-      data: {
-        score_change: scoreChange.value,
-        reason: scoreReason.value,
-      },
-    })
-    toastMessage.value = `${selectedStudent.value.name} 分数已更新`
-    toastVariant.value = 'success'
-    showToast.value = true
-    showScoreDialog.value = false
-  } catch (err: any) {
-    toastMessage.value = err.message || '更新分数失败'
     toastVariant.value = 'error'
     showToast.value = true
   }
@@ -380,15 +325,15 @@ const handleUpdateScore = async () => {
         </Card>
       </div>
 
-      <!-- Student list -->
+      <!-- Student list - 列表式布局 -->
       <Card class="border-white/10 bg-white/[0.02]">
         <div class="p-4 border-b border-white/10 flex items-center justify-between">
           <div>
             <h3 class="font-medium text-white flex items-center gap-2">
               <GraduationCap class="h-5 w-5" />
               班级学生列表
+              <span class="text-sm text-white/50">({{ checkinStats.total }}人)</span>
             </h3>
-            <p class="text-sm text-white/50">点击卡片可快速签到，使用下方按钮调整分数</p>
           </div>
           <div class="relative w-48">
             <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
@@ -404,83 +349,71 @@ const handleUpdateScore = async () => {
           <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
         
-        <div v-else-if="filteredStudents.length > 0" class="p-4">
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <Card
-              v-for="student in filteredStudents"
-              :key="student.id"
-              class="border-white/10 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
-              :class="student.checkedIn ? 'border-green-500/30' : ''"
-            >
-              <!-- 学生信息 -->
-              <div class="flex items-start justify-between mb-3">
+        <div v-else-if="filteredStudents.length > 0" class="divide-y divide-white/5">
+          <!-- 未签到学生组 -->
+          <div v-if="checkinStats.notCheckedIn > 0" class="p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="flex h-2 w-2 rounded-full bg-orange-400"></div>
+              <h4 class="text-sm font-medium text-white/80">未签到</h4>
+              <span class="text-xs text-white/40">{{ checkinStats.notCheckedIn }}人</span>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="student in filteredStudents.filter(s => !s.checkedIn)"
+                :key="student.id"
+                class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
+              >
                 <div class="flex items-center gap-3">
-                  <div 
-                    class="flex h-10 w-10 items-center justify-center rounded-full cursor-pointer"
-                    :class="student.checkedIn ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/60 hover:bg-white/20'"
-                    @click="!student.checkedIn && quickCheckIn(student.student_id)"
-                  >
-                    <CheckCircle v-if="student.checkedIn" class="h-5 w-5" />
-                    <span v-else class="text-sm">{{ student.name.charAt(0) }}</span>
+                  <div class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/60">
+                    <span class="text-sm">{{ student.name.charAt(0) }}</span>
                   </div>
                   <div>
-                    <p class="font-medium text-white">{{ student.name }}</p>
-                    <p class="text-xs text-white/50">{{ student.student_id }}</p>
+                    <p class="text-sm font-medium text-white">{{ student.name }}</p>
+                    <p class="text-xs text-white/40">{{ student.student_id }}</p>
                   </div>
                 </div>
-                <Badge :variant="student.checkedIn ? 'success' : 'secondary'" class="text-xs">
-                  {{ student.checkedIn ? '已签到' : '未签到' }}
-                </Badge>
-              </div>
-              
-              <!-- 分数显示 -->
-              <div class="mb-3">
-                <p class="text-xs text-white/40 mb-1">当前分数</p>
-                <p class="text-xl font-bold text-primary">{{ student.score }}</p>
-              </div>
-              
-              <!-- 快速操作按钮 -->
-              <div class="grid grid-cols-3 gap-2">
-                <Button
-                  v-for="option in quickScoreOptions"
-                  :key="option.label"
-                  size="sm"
-                  variant="outline"
-                  class="flex flex-col items-center gap-1 h-auto py-2 px-1 text-xs"
-                  :class="[option.borderColor, option.color, option.bgColor]"
-                  :disabled="isUpdatingScore"
-                  @click="handleQuickScore(student, option.score, option.label)"
-                >
-                  <component :is="option.icon" class="h-3.5 w-3.5" />
-                  <span>{{ option.label }}</span>
-                  <span :class="option.score > 0 ? 'text-green-400' : 'text-red-400'">
-                    {{ option.score > 0 ? '+' : '' }}{{ option.score }}
-                  </span>
-                </Button>
-              </div>
-              
-              <!-- 自定义分数按钮 -->
-              <div class="mt-2 flex gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
-                  class="flex-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
-                  @click="openScoreDialog(student, 5, '加分')"
+                  class="h-8 px-3 text-xs"
+                  :loading="isCheckingIn"
+                  @click="quickCheckIn(student.student_id)"
                 >
-                  <Plus class="h-3 w-3 mr-1" />
-                  加分
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  class="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10"
-                  @click="openScoreDialog(student, -5, '扣分')"
-                >
-                  <Minus class="h-3 w-3 mr-1" />
-                  扣分
+                  <CheckCircle class="mr-1 h-3.5 w-3.5" />
+                  签到
                 </Button>
               </div>
-            </Card>
+            </div>
+          </div>
+          
+          <!-- 已签到学生组 -->
+          <div v-if="checkinStats.checkedIn > 0" class="p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="flex h-2 w-2 rounded-full bg-green-400"></div>
+              <h4 class="text-sm font-medium text-white/80">已签到</h4>
+              <span class="text-xs text-white/40">{{ checkinStats.checkedIn }}人</span>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="student in filteredStudents.filter(s => s.checkedIn)"
+                :key="student.id"
+                class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="flex h-9 w-9 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+                    <CheckCircle class="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-white">{{ student.name }}</p>
+                    <p class="text-xs text-white/40">{{ student.student_id }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Badge variant="success" class="text-xs bg-green-500/10 text-green-400 border-green-500/30">
+                    已签到
+                  </Badge>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -493,35 +426,5 @@ const handleUpdateScore = async () => {
 
     <!-- Toast -->
     <Toast v-model:show="showToast" :message="toastMessage" :variant="toastVariant" />
-    
-    <!-- Score Dialog -->
-    <Dialog v-model:open="showScoreDialog" :title="selectedStudent ? `调整 ${selectedStudent.name} 的分数` : '调整分数'">
-      <div class="space-y-4">
-        <div class="space-y-2">
-          <label class="text-sm text-white/60">分数变化</label>
-          <Input
-            v-model.number="scoreChange"
-            type="number"
-            placeholder="输入分数（正数加分，负数扣分）"
-          />
-        </div>
-        <div class="space-y-2">
-          <label class="text-sm text-white/60">原因</label>
-          <Input
-            v-model="scoreReason"
-            placeholder="输入分数调整原因"
-          />
-        </div>
-      </div>
-      <template #footer>
-        <Button variant="outline" @click="showScoreDialog = false">取消</Button>
-        <Button
-          :loading="isUpdatingScore"
-          @click="handleUpdateScore"
-        >
-          确认调整
-        </Button>
-      </template>
-    </Dialog>
   </div>
 </template>
