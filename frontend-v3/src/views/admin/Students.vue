@@ -1,23 +1,44 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useStudents, useStudentCreate } from '@/composables'
-
-import { Card, Button, Badge, Dialog, Input, Label, DataContainer, SearchableSelect } from '@/components/ui'
-import { Search, Plus } from 'lucide-vue-next'
+import { StudentFilters, useStudentFilters } from '@/features/students'
+import { Card, Button, Badge, Dialog, Input, Label, DataContainer } from '@/components/ui'
+import { Plus } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
-import type { Student } from '@/types'
 
+/**
+ * 管理员学生管理页面 - FE-006 重构后
+ * 
+ * 使用 Feature-based 架构，使用共享的 StudentFilters 组件
+ */
+
+// === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
 const { mutateAsync: createStudent, isPending: isCreating } = useStudentCreate()
 
-const searchQuery = ref('')
-const selectedClass = ref<string>('')
+// === Feature composables ===
+const { 
+  filters, 
+  classOptions, 
+  filteredStudents, 
+  setSearchQuery, 
+  setClassFilter,
+  selectFirstClass,
+} = useStudentFilters(students)
 
+// 默认选中第一个班级
+watch(() => students.value, (newData) => {
+  if (newData && newData.length > 0) {
+    selectFirstClass()
+  }
+}, { immediate: true })
+
+// === Toast 状态 ===
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastVariant = ref<'default' | 'success' | 'error'>('default')
 
-// 添加学生弹窗
+// === 添加学生对话框 ===
 const showAddDialog = ref(false)
 const newStudent = ref({
   student_id: '',
@@ -28,72 +49,6 @@ const addFormErrors = ref({
   student_id: '',
   name: '',
   class_name: '',
-})
-
-// 按班级分组的学生
-const studentsByClass = computed(() => {
-  if (!students.value) return {}
-  
-  const grouped: Record<string, Student[]> = {}
-  students.value.forEach(student => {
-    const className = student.class_name || '未分班'
-    if (!grouped[className]) {
-      grouped[className] = []
-    }
-    grouped[className].push(student)
-  })
-  return grouped
-})
-
-// 班级列表（包含学生数量）
-const classList = computed(() => {
-  const list = Object.entries(studentsByClass.value).map(([name, students]) => ({
-    name,
-    count: students.length,
-  }))
-  // 按班级名称排序
-  return list.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
-})
-
-// 班级下拉选项
-const classOptions = computed(() => [
-  { value: '', label: '全部班级' },
-  ...classList.value.map(c => ({ 
-    value: c.name, 
-    label: `${c.name} (${c.count}人)` 
-  }))
-])
-
-// 默认选中第一个班级
-watch(classList, (list) => {
-  if (list.length > 0 && !selectedClass.value) {
-    selectedClass.value = list[0].name
-  }
-}, { immediate: true })
-
-// 过滤后的学生列表
-const filteredStudents = computed(() => {
-  if (!students.value) return []
-  
-  let result = students.value
-  
-  // 按班级筛选
-  if (selectedClass.value) {
-    result = result.filter(s => s.class_name === selectedClass.value)
-  }
-  
-  // 按搜索词筛选
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(
-      (s) =>
-        s.name.toLowerCase().includes(query) ||
-        s.student_id.toLowerCase().includes(query) ||
-        s.class_name.toLowerCase().includes(query)
-    )
-  }
-  
-  return result
 })
 
 // 打开添加学生弹窗
@@ -176,27 +131,13 @@ const handleAddStudent = async () => {
     </div>
 
     <!-- Filters -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-      <!-- Class Filter -->
-      <div class="w-full sm:w-64">
-        <SearchableSelect
-          v-model="selectedClass"
-          :options="classOptions"
-          placeholder="选择班级筛选..."
-          search-placeholder="搜索班级..."
-        />
-      </div>
-
-      <!-- Search -->
-      <div class="relative flex-1">
-        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
-        <Input
-          v-model="searchQuery"
-          placeholder="搜索姓名、学号或班级..."
-          class="pl-10"
-        />
-      </div>
-    </div>
+    <StudentFilters
+      v-model:search-query="filters.searchQuery"
+      v-model:selected-class="filters.className"
+      :class-options="classOptions"
+      @update:search-query="setSearchQuery"
+      @update:selected-class="setClassFilter"
+    />
 
     <!-- Data Container -->
     <DataContainer

@@ -42,9 +42,9 @@ def get_session_user_id(request: Request) -> Optional[str]:
         return None
 
 
-def require_admin_or_teacher(request: Request):
+async def require_admin_or_teacher(request: Request):
     """要求管理员或教师权限"""
-    user = jwt_get_current_user(request)
+    user = await jwt_get_current_user(request)
     role = user.get("role", "")
     if role not in ["admin", "teacher"]:
         raise HTTPException(

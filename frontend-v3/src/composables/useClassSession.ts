@@ -62,6 +62,8 @@ export function useClassSessionEnd() {
       queryClient.invalidateQueries({ queryKey: ['students'] })
       queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
+      // 刷新活跃课堂列表，立即更新"其他教师占用"提示
+      queryClient.invalidateQueries({ queryKey: ['active-class-sessions'] })
     },
   })
 

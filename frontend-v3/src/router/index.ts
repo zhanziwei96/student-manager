@@ -141,7 +141,6 @@ router.beforeEach(async (to, _from, next) => {
       await authStore.fetchUserInfo()
     } catch (error) {
       // Not authenticated - user will be redirected to login below
-      console.log('User not authenticated, redirecting to login')
     }
   }
 
@@ -160,11 +159,6 @@ router.beforeEach(async (to, _from, next) => {
 
   // Role check - 仅作为体验优化，真实权限验证在后端
   if (to.meta.role && authStore.user?.role !== to.meta.role) {
-    console.warn(
-      `[FE-002] 用户尝试访问无权限路由: ${to.path}, ` +
-      `用户角色: ${authStore.user?.role}, 需要角色: ${to.meta.role}`
-    )
-    console.warn('[FE-002] 真实权限验证应在后端 API 完成')
     return next(getRedirectPath(authStore.user!.role))
   }
 

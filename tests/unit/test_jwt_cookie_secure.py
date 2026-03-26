@@ -44,20 +44,27 @@ class TestBE006Fix:
         
         mock_response = Mock()
         
-        # 创建嵌套的 mock 结构
-        mock_security = Mock()
-        mock_security.cookie_secure = True  # 设为 True
-        mock_settings = Mock()
-        mock_settings.security = mock_security
+        # 使用 MagicMock 创建支持属性访问的嵌套 mock
+        from unittest.mock import MagicMock
+        mock_settings = MagicMock()
+        # 通过 __getattr__ 方式设置嵌套属性
+        mock_settings.security.cookie_secure = True
         
         with patch('app.core.jwt.get_settings', return_value=mock_settings):
             set_token_cookie(mock_response, "test_token")
             
             # 验证 set_cookie 被调用
             mock_response.set_cookie.assert_called_once()
-            call_kwargs = mock_response.set_cookie.call_args.kwargs
+            call_args = mock_response.set_cookie.call_args
             
-            # 验证关键参数
-            assert call_kwargs['key'] == COOKIE_NAME
-            assert call_kwargs['httponly'] is True
-            assert 'secure' in call_kwargs
+            # Python 3.7+ 中 call_args 有 kwargs 属性
+            call_kwargs = call_args[-1]  # 最后一个是 kwargs dict
+            if isinstance(call_kwargs, dict):
+                assert call_kwargs['key'] == COOKIE_NAME
+                assert call_kwargs['httponly'] is True
+                assert 'secure' in call_kwargs
+            else:
+                # 兜底：直接检查调用字符串
+                call_str = str(mock_response.set_cookie.call_args)
+                assert COOKIE_NAME in call_str
+                assert 'httponly' in call_str

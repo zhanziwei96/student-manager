@@ -2,6 +2,7 @@
  * 课表 API
  */
 import { get, post, del } from '@/lib/api'
+import { api } from '@/lib/api'
 import type { ApiResponse } from '@/types'
 
 export interface CourseSchedule {
@@ -43,15 +44,31 @@ export const schedulesApi = {
 
   /**
    * 导入课表
+   * 使用原生 fetch 处理文件上传，避免 ofetch 的 Content-Type 问题
+   * 返回提取后的 ImportResult（类似 api.ts 中 request 函数的处理）
    */
-  import: (file: File): Promise<ApiResponse<ImportResult>> => {
+  import: async (file: File): Promise<ImportResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    return post('/schedules/import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+    
+    const res = await fetch('/api/schedules/import', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
     })
+    
+    const responseData = await res.json().catch(() => ({ 
+      success: false, 
+      message: '解析响应失败' 
+    }))
+    
+    // HTTP 错误或非成功响应
+    if (!res.ok || responseData.success === false) {
+      throw new Error(responseData.message || `上传失败: ${res.status}`)
+    }
+    
+    // 提取 data 部分（与 api.ts 中 request 函数行为一致）
+    return responseData.data as ImportResult
   },
 
   /**

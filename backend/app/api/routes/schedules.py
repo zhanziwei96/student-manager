@@ -10,7 +10,13 @@ from io import BytesIO
 
 from app.core.db import get_session
 from app.core.config import HttpStatus
-from app.api.deps import require_login, require_admin_or_teacher
+from app.core.upload import (
+    _validate_filename,
+    _validate_extension,
+    _validate_content_type,
+    _validate_file_size,
+)
+from app.api.deps import get_current_user, require_login, require_admin, require_admin_or_teacher
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
 from app.models.constants import ApiResponseConst, MessageConst, RoutePrefixConst
 
@@ -18,12 +24,12 @@ router = APIRouter(prefix=RoutePrefixConst.API, tags=["schedules"])
 
 
 @router.get("/schedules", response_model=dict)
-def get_schedules(
+async def get_schedules(
     class_name: Optional[str] = Query(None, description="按班级筛选"),
     teacher_id: Optional[int] = Query(None, description="按教师筛选"),
     day_of_week: Optional[int] = Query(None, description="按星期筛选(1-7)"),
     session: Session = Depends(get_session),
-    user: dict = Depends(require_login)
+    user: dict = Depends(get_current_user)
 ):
     """获取课表列表"""
     query = select(CourseSchedule)
@@ -51,9 +57,9 @@ def get_schedules(
 
 
 @router.get("/schedules/today", response_model=dict)
-def get_today_schedules(
+async def get_today_schedules(
     session: Session = Depends(get_session),
-    user: dict = Depends(require_login)
+    user: dict = Depends(get_current_user)
 ):
     """获取今日课表"""
     # 获取今天是星期几 (1-7)
@@ -78,26 +84,48 @@ def get_today_schedules(
 async def import_schedules(
     file: UploadFile = File(..., description="Excel或CSV文件"),
     session: Session = Depends(get_session),
-    user: dict = Depends(require_admin_or_teacher)
+    user: dict = Depends(require_admin)
 ):
     """导入课表"""
-    # 检查文件类型
-    filename = file.filename.lower()
-    if not (filename.endswith('.xlsx') or filename.endswith('.csv')):
-        raise HTTPException(
-            status_code=HttpStatus.BAD_REQUEST,
-            detail="只支持 .xlsx 或 .csv 格式的文件"
-        )
+    # SEC-001: 文件上传安全检查（使用 upload.py 安全模块）
+    
+    # 1. 验证文件名（路径遍历防护）
+    cleaned_filename = _validate_filename(file.filename or "unnamed")
+    
+    # 2. 验证扩展名白名单
+    _validate_extension(cleaned_filename, ['.xlsx', '.csv'])
+    
+    # 3. 验证 MIME 类型
+    _validate_content_type(file.content_type, [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # .xlsx
+        'application/vnd.ms-excel',  # .xls
+        'text/csv',  # .csv
+        'application/csv',
+        'text/plain',  # CSV 有时被识别为 text/plain
+    ])
+    
+    # 4. 读取文件并验证大小
+    contents = await file.read()
+    _validate_file_size(len(contents), max_size_mb=10)
+    
+    # 使用清理后的文件名
+    filename = cleaned_filename.lower()
     
     try:
-        # 读取文件内容
-        contents = await file.read()
         
         # 根据文件类型解析
         if filename.endswith('.xlsx'):
             df = pd.read_excel(BytesIO(contents))
         else:
             df = pd.read_csv(BytesIO(contents))
+        
+        # 5. 检查行数限制（最多 1000 行，防止内存攻击）
+        MAX_ROWS = 1000
+        if len(df) > MAX_ROWS:
+            raise HTTPException(
+                status_code=HttpStatus.BAD_REQUEST,
+                detail=f"数据行数超过限制（最大 {MAX_ROWS} 行，当前 {len(df)} 行）"
+            )
         
         # 检查必需的列
         required_columns = ['课程名称', '班级', '教师姓名', '星期', '开始时间', '结束时间']
@@ -140,6 +168,21 @@ async def import_schedules(
                 teacher = session.exec(
                     select(User).where(User.name == teacher_name)
                 ).first()
+                
+                # 检查是否已存在相同课程（查重）
+                existing = session.exec(
+                    select(CourseSchedule).where(
+                        CourseSchedule.course_name == course_name,
+                        CourseSchedule.class_name == class_name,
+                        CourseSchedule.teacher_name == teacher_name,
+                        CourseSchedule.day_of_week == day_of_week,
+                        CourseSchedule.start_time == start_time
+                    )
+                ).first()
+                
+                if existing:
+                    errors.append(f"第 {index + 2} 行: 课程已存在（{course_name} - {class_name} - 星期{day_of_week} {start_time}）")
+                    continue
                 
                 schedule = CourseSchedule(
                     course_name=course_name,
@@ -188,24 +231,17 @@ async def import_schedules(
 
 
 @router.delete("/schedules/{schedule_id}", response_model=dict)
-def delete_schedule(
+async def delete_schedule(
     schedule_id: int,
     session: Session = Depends(get_session),
-    user: dict = Depends(require_admin_or_teacher)
+    user: dict = Depends(require_admin)
 ):
-    """删除课程"""
+    """删除课程（仅管理员）"""
     schedule = session.get(CourseSchedule, schedule_id)
     if not schedule:
         raise HTTPException(
             status_code=HttpStatus.NOT_FOUND,
             detail="课程不存在"
-        )
-    
-    # 教师只能删除自己的课程
-    if user.get("role") == "teacher" and schedule.teacher_id != int(user.get("sub", 0)):
-        raise HTTPException(
-            status_code=HttpStatus.FORBIDDEN,
-            detail="只能删除自己的课程"
         )
     
     session.delete(schedule)
@@ -242,8 +278,11 @@ def download_template():
     
     from fastapi.responses import StreamingResponse
     
+    # RFC 5987 编码中文文件名
+    from urllib.parse import quote
+    filename = quote("课表导入模板.xlsx", safe="")
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=课表导入模板.xlsx"}
+        headers={"Content-Disposition": f"attachment; filename*=utf-8''{filename}"}
     )

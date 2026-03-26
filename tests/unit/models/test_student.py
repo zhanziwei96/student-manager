@@ -22,7 +22,7 @@ class TestStudentModel:
         assert student.name == "张三"
         assert student.class_name == "软件1班"
         assert student.score == 85.5
-        assert student.is_active is True
+        assert student.is_account_enabled is True
     
     def test_student_default_values(self):
         """测试学生默认值"""
@@ -33,7 +33,7 @@ class TestStudentModel:
         
         assert student.class_name == "未分班"
         assert student.score == 70.0
-        assert student.is_active is True
+        assert student.is_account_enabled is True
     
     def test_student_with_password(self):
         """测试带密码的学生"""

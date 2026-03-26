@@ -1,46 +1,62 @@
+/**
+ * 学生功能模块类型定义
+ * 
+ * 这些类型专门用于 features/students 模块
+ * 与全局类型保持兼容，但提供更细粒度的类型定义
+ */
+
 import type { Student } from '@/types'
 
-/**
- * Students Feature 专用类型
- * 
- * FE-005: Feature-based 组织示例
- * 这些类型专门用于学生管理功能模块
- */
+// 重新导出 Student 类型，让组件可以从本模块导入
+export type { Student }
 
 /**
- * 学生表单数据
- * 用于创建/编辑学生
+ * 快速分数选项
  */
-export interface StudentFormData {
-  student_id: string
-  name: string
-  class_name: string
-  score?: number
+export interface QuickScoreOption {
+  label: string
+  score: number
+  icon: string  // 使用图标名称，组件中解析为实际图标组件
 }
 
 /**
- * 分数更新数据
+ * 学生卡片展示配置
  */
-export interface ScoreUpdateData {
-  score_change: number
+export interface StudentCardConfig {
+  showCheckinStatus: boolean
+  showQuickActions: boolean
+  showScoreEdit: boolean
+}
+
+/**
+ * 学生筛选条件
+ */
+export interface StudentFilterState {
+  searchQuery: string
+  className: string
+}
+
+/**
+ * 分数更新事件
+ */
+export interface ScoreUpdateEvent {
+  student: Student
+  scoreChange: number
   reason: string
 }
 
 /**
- * 学生列表筛选条件
+ * 学生分组结果
  */
-export interface StudentListFilters {
-  class_name?: string
-  search?: string
-  is_active?: boolean
+export interface GroupedStudents {
+  [className: string]: Student[]
 }
 
 /**
- * 学生统计信息
+ * 班级选项
  */
-export interface StudentStats {
-  total: number
-  active: number
-  average_score: number
-  class_distribution: Record<string, number>
+export interface ClassOption {
+  value: string
+  label: string
+  count: number
 }

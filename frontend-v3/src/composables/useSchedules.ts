@@ -3,21 +3,21 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { schedulesApi } from '@/api/schedules'
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 
 /**
  * 获取课表列表
  */
-export function useSchedules(params?: {
+export function useSchedules(params?: Ref<{
   class_name?: string
   teacher_id?: number
   day_of_week?: number
-}) {
+} | undefined>) {
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['schedules', params],
+    queryKey: computed(() => ['schedules', params?.value]),
     queryFn: async () => {
-      const res = await schedulesApi.getList(params)
-      return res.data || []
+      // schedulesApi.getList() 使用 request 函数，已自动提取 data
+      return await schedulesApi.getList(params?.value) || []
     },
     staleTime: 5 * 60 * 1000,
   })
@@ -37,8 +37,8 @@ export function useTodaySchedules() {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['schedules', 'today'],
     queryFn: async () => {
-      const res = await schedulesApi.getToday()
-      return res.data || []
+      // schedulesApi.getToday() 使用 request 函数，已自动提取 data
+      return await schedulesApi.getToday() || []
     },
     staleTime: 1 * 60 * 1000, // 1分钟刷新
   })

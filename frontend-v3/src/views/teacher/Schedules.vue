@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from '@/composables/useSchedules'
 import { useClasses } from '@/composables/useClasses'
+import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer } from '@/components/ui'
 import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Loader2 } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
+
+// 获取当前用户权限
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.isAdmin)
 
 // 查询条件
 const selectedClass = ref('')
@@ -12,10 +17,22 @@ const selectedDay = ref<number | undefined>(undefined)
 
 // 获取数据
 const { data: classes } = useClasses()
-const { data: schedules, isPending, error, refetch } = useSchedules(computed(() => ({
+
+// 查询参数 - 使用 ref 存储筛选条件
+const queryParams = ref({
   class_name: selectedClass.value || undefined,
   day_of_week: selectedDay.value
-})))
+})
+
+// 监听筛选条件变化，更新查询参数
+watch([selectedClass, selectedDay], () => {
+  queryParams.value = {
+    class_name: selectedClass.value || undefined,
+    day_of_week: selectedDay.value
+  }
+})
+
+const { data: schedules, isPending, error, refetch } = useSchedules(queryParams)
 
 // 导入相关
 const showImportDialog = ref(false)
@@ -120,11 +137,11 @@ const handleDelete = async (id: number) => {
         <p class="text-white/60">管理课程安排，支持批量导入</p>
       </div>
       <div class="flex gap-2">
-        <Button variant="outline" @click="downloadTemplate">
+        <Button v-if="isAdmin" variant="outline" @click="downloadTemplate">
           <Download class="mr-2 h-4 w-4" />
           下载模板
         </Button>
-        <Button @click="showImportDialog = true">
+        <Button v-if="isAdmin" @click="showImportDialog = true">
           <Upload class="mr-2 h-4 w-4" />
           导入课表
         </Button>
@@ -138,10 +155,10 @@ const handleDelete = async (id: number) => {
           <label class="mb-1 block text-sm text-white/60">班级</label>
           <select
             v-model="selectedClass"
-            class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
+            class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
           >
-            <option value="">全部班级</option>
-            <option v-for="cls in classes" :key="cls.name" :value="cls.name">
+            <option value="" class="bg-gray-900 text-white">全部班级</option>
+            <option v-for="cls in classes" :key="cls.name" :value="cls.name" class="bg-gray-900 text-white">
               {{ cls.name }}
             </option>
           </select>
@@ -150,10 +167,10 @@ const handleDelete = async (id: number) => {
           <label class="mb-1 block text-sm text-white/60">星期</label>
           <select
             v-model="selectedDay"
-            class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none"
+            class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
           >
-            <option :value="undefined">全部</option>
-            <option v-for="day in weekDays" :key="day.value" :value="day.value">
+            <option :value="undefined" class="bg-gray-900 text-white">全部</option>
+            <option v-for="day in weekDays" :key="day.value" :value="day.value" class="bg-gray-900 text-white">
               {{ day.label }}
             </option>
           </select>
@@ -218,6 +235,7 @@ const handleDelete = async (id: number) => {
                     </div>
                   </div>
                   <Button
+                    v-if="isAdmin"
                     variant="ghost"
                     size="sm"
                     class="h-8 w-8 p-0 text-white/40 hover:text-red-400"

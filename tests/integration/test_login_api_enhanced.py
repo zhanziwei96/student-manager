@@ -119,7 +119,7 @@ class TestLoginAPIEnhanced:
         with Session(engine) as session:
             from app.crud import get_user_by_username
             user = get_user_by_username(session, "admin")
-            user.is_active = False
+            user.is_account_enabled = False
             session.add(user)
             session.commit()
         

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useStats, useTodaySchedules } from '@/composables'
+import { useStats, useTodaySchedules, useActiveClassSessions } from '@/composables'
 import { Card, Button, Badge, DataContainer } from '@/components/ui'
 import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
@@ -8,6 +8,10 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const { data: stats, isPending, error } = useStats()
 const { data: todaySchedules, isPending: isLoadingSchedules } = useTodaySchedules()
+const { data: activeSessions } = useActiveClassSessions()
+
+// 活跃课堂数量
+const activeSessionsCount = computed(() => activeSessions.value?.length || 0)
 
 // 获取今天的星期
 const todayWeekDay = computed(() => {
@@ -25,14 +29,14 @@ const statCards = computed(() => [
   },
   {
     title: '活跃课堂',
-    value: '2', // TODO: 从 API 获取真实数据
+    value: activeSessionsCount.value,
     icon: Calendar,
     color: 'text-green-400',
     link: '/teacher/session',
   },
   {
     title: '授课时长',
-    value: '24小时', // TODO: 从 API 获取真实数据
+    value: '-', // 后端暂无此数据
     icon: Clock,
     color: 'text-purple-400',
     link: '/teacher',

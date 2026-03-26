@@ -46,8 +46,9 @@ def _clear_all_data():
         # 按照外键依赖顺序删除
         tables = [
             "score_logs",
-            "checkin_records", 
+            "checkin_records",
             "class_session",
+            "course_schedules",
             "security_alerts",
             "audit_logs",
             "students",

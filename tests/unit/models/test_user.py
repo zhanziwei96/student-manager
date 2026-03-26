@@ -31,7 +31,7 @@ class TestUserModel:
         assert user.get_assigned_classes() == ["软件1班", "软件2班"]
         # 原始值是JSON字符串
         assert isinstance(user.assigned_classes, str)
-        assert user.is_active is True
+        assert user.is_account_enabled is True
         assert user.login_fail_count == 0
     
     def test_user_is_admin(self):
@@ -71,7 +71,7 @@ class TestUserModel:
         assert user.get_assigned_classes() == []
         # 默认值是JSON字符串 '[]'
         assert user.assigned_classes == '[]'
-        assert user.is_active is True
+        assert user.is_account_enabled is True
         assert user.created_at is not None
 
 
