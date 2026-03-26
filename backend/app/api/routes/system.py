@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import get_settings
+from app.core.jwt import get_current_user
 from app.models.constants import (
     VERSION, SystemStatusConst, ApiResponseConst, RoutePrefixConst
 )
@@ -24,7 +25,11 @@ def health_check():
 
 
 @router.get("/stats")
-def get_stats(request: Request, session: Session = Depends(get_session)):
+def get_stats(
+    request: Request, 
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
     """获取系统统计（需要登录）"""
     from app.crud import get_students, get_all_classes
     from app.crud.checkin import get_today_checkins

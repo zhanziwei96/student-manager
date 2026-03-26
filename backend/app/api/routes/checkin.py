@@ -115,7 +115,8 @@ async def finish_class(
 def do_checkin(
     request: Request,
     data: CheckinRequest,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """学生签到"""
     # 验证学生
@@ -154,7 +155,8 @@ def do_checkin(
 def get_today_checkin_list(
     request: Request,
     class_name: Optional[str] = Query(None, description="班级名称"),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
     """获取今日签到列表（只返回当前课堂开始后的签到）"""
     # 根据班级名称获取活跃课堂

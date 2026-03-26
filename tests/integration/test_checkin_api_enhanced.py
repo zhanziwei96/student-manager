@@ -87,7 +87,7 @@ class TestCheckinAPIEnhanced:
         data = response.json()
         assert data["success"] is True
     
-    def test_student_checkin(self, teacher_client, sample_students):
+    def test_student_checkin(self, teacher_client, student_user, client):
         """测试学生签到 - 需要教师先开始上课"""
         # 教师开始上课
         response = teacher_client.post("/api/class-session/start", json={
@@ -95,15 +95,15 @@ class TestCheckinAPIEnhanced:
         })
         assert response.status_code == 200
         
-        # 学生登录并签到（默认密码是学号）
-        teacher_client.post("/api/logout")
-        teacher_client.post("/api/login", json={
+        # 学生登录并签到（student_user fixture 的密码是 student123）
+        login_response = client.post("/api/login", json={
             "username": "S001",
-            "password": "S001",
+            "password": "student123",
             "role": "student"
         })
+        assert login_response.status_code == 200
         
-        response = teacher_client.post("/api/checkin", json={
+        response = client.post("/api/checkin", json={
             "student_id": "S001",
             "student_name": "学生1"
         })

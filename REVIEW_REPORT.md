@@ -185,7 +185,7 @@ if not verify_password(password, student.password_hash):
 - [x] 修复测试失败 - 测试（已修复 test_teacher_can_import）
 
 ### P1 (本月完成)
-- [ ] 签到和统计接口添加认证 - 后端
+- [x] 签到和统计接口添加认证 - 后端（已添加 get_current_user）
 - [ ] 优化签到率计算性能 - 后端
 - [ ] Dialog 组件添加 Teleport - 前端
 - [ ] localStorage 添加 SSR 检查 - 前端

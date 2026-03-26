@@ -196,3 +196,15 @@ def teacher_client(client, teacher_user):
     })
     assert response.status_code == 200, f"Teacher login failed: {response.json()}"
     return client
+
+
+@pytest.fixture
+def student_client(client, student_user):
+    """已登录学生的客户端"""
+    response = client.post("/api/login", json={
+        "username": "S001",
+        "password": "student123",
+        "role": "student"
+    })
+    assert response.status_code == 200, f"Student login failed: {response.json()}"
+    return client
