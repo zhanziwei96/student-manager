@@ -140,18 +140,15 @@ if datetime.now(timezone.utc).timestamp() > exp:
     raise HTTPException(...)
 ```
 
-### 6. 限流状态码错误
-- **位置**：`backend/app/api/routes/login.py:82`
+### 6. 限流状态码错误 ✅ 已修复
+- **位置**：`backend/app/api/routes/login.py:82`, `backend/app/core/config.py`
 - **问题**：限流触发返回 HTTP 503（服务不可用），应返回 429（请求过多）
 - **风险**：HTTP 语义错误，客户端处理混乱
 - **负责人**：后端
-- **修复**：
-```python
-raise HTTPException(
-    status_code=HttpStatus.TOOO_MANY_REQUESTS,  # 429
-    detail='请求过于频繁，请稍后再试'
-)
-```
+- **修复状态**：✅ 已修复（2026-03-26）
+- **修复内容**：
+  - `config.py` 添加 `TOO_MANY_REQUESTS = 429`
+  - `login.py` 限流返回正确的 HTTP 429 状态码
 
 ### 7. 测试失败修复
 - **位置**：`tests/integration/test_schedule_api.py`

@@ -78,7 +78,7 @@ async def login(
     allowed = await check_rate_limit(request, username)
     if not allowed:
         raise HTTPException(
-            status_code=HttpStatus.SERVICE_UNAVAILABLE,
+            status_code=HttpStatus.TOO_MANY_REQUESTS,  # 429 请求过多
             detail='请求过于频繁，请稍后再试'
         )
     
