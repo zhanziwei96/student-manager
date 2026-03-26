@@ -54,17 +54,20 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
     获取仪表盘统计数据（公开接口，数据脱敏）
     用于首页数据展示，无需登录
     """
-    from app.crud import get_students, get_all_classes
-    from app.crud.checkin import get_today_checkins
+    from app.crud import get_students, get_all_classes, count_students
+    from app.crud.checkin import get_today_checkins, count_today_checkins
     
-    students = get_students(session)
-    classes = get_all_classes(session)
-    checkins = get_today_checkins(session)
-    
-    total_students = len(students)
-    checked_in = len(checkins)
+    # 使用 COUNT 查询优化性能（避免加载所有对象到内存）
+    total_students = count_students(session)
+    checked_in = count_today_checkins(session)
     not_checked_in = total_students - checked_in
     checkin_rate = round(checked_in / total_students * 100, 1) if total_students > 0 else 0
+    
+    # 获取班级列表（数据量小，保持原方式）
+    classes = get_all_classes(session)
+    
+    # 获取分数排行榜（需要完整对象，保持原方式）
+    students = get_students(session)
     
     # 分数排行榜（脱敏处理：隐藏姓名和学号，只显示分数和排名）
     score_ranking = []

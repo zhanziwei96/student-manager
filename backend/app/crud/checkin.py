@@ -89,6 +89,35 @@ def get_today_checkins(session: Session, class_name: Optional[str] = None, sessi
     return session.exec(query).all()
 
 
+def count_today_checkins(session: Session, class_name: Optional[str] = None) -> int:
+    """使用 SQL COUNT 计算今日签到数（性能优化）
+    
+    相比 get_today_checkins() + len()，此函数使用数据库聚合查询，
+    不加载完整对象，内存占用更少，执行更快。
+    
+    Args:
+        session: 数据库会话
+        class_name: 可选的班级名称筛选
+        
+    Returns:
+        int: 今日签到数
+    """
+    from sqlalchemy import func
+    from datetime import time
+    
+    today_start = datetime.combine(date.today(), time.min)
+    
+    query = select(func.count()).select_from(CheckinRecord).where(
+        CheckinRecord.checkin_time >= today_start
+    )
+    
+    if class_name:
+        query = query.where(CheckinRecord.class_name == class_name)
+    
+    result = session.exec(query)
+    return result.one()
+
+
 def create_checkin(session: Session, student_id: str, student_name: str, 
                    class_name: str, session_id: int, checkin_type: str = None) -> CheckinRecord:
     """创建签到记录 - 关联到具体课堂 session_id"""

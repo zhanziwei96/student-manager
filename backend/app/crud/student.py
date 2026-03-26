@@ -275,6 +275,23 @@ def get_all_classes(session: Session) -> List[str]:
     return [str(row) for row in result if row]
 
 
+def count_students(session: Session) -> int:
+    """使用 SQL COUNT 计算学生总数（性能优化）
+    
+    相比 get_students() + len()，此函数使用数据库聚合查询，
+    不加载完整对象，内存占用更少，执行更快。
+    
+    Args:
+        session: 数据库会话
+        
+    Returns:
+        int: 学生总数
+    """
+    from sqlalchemy import func
+    result = session.exec(select(func.count()).select_from(Student))
+    return result.one()
+
+
 def reset_student_password(session: Session, student_id: str, password_hash: str) -> Optional[Student]:
     """重置学生密码 - SEC-003: 移除 salt 参数"""
     student = get_student(session, student_id)
