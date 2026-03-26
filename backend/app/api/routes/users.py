@@ -158,9 +158,14 @@ async def remove_user(
     current_user_id: str = Depends(require_admin)
 ):
     """删除用户"""
-    # 检查是否尝试删除自己
-    if str(user_id) == str(current_user_id):
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='不能删除当前登录账号')
+    # 检查是否尝试删除自己（统一使用 int 比较避免类型不一致问题）
+    try:
+        if user_id == int(current_user_id):
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='不能删除当前登录账号')
+    except (ValueError, TypeError):
+        # 如果 current_user_id 无法转换为 int，记录错误但继续执行（保守策略）
+        from app.core.logging import logger
+        logger.warning(f"无法将 current_user_id 转换为 int: {current_user_id}")
     
     success = delete_user(session, user_id)
     if not success:
