@@ -1,9 +1,10 @@
 /**
  * 课表 API
+ * 
+ * REVIEW-P1: 统一使用 request<T>() 包装，返回类型为 T（已自动提取 data）
+ * 与 lib/api.ts 中的 get/post/del 函数保持一致
  */
-import { get, post, del } from '@/lib/api'
-import { api } from '@/lib/api'
-import type { ApiResponse } from '@/types'
+import { get, del } from '@/lib/api'
 
 export interface CourseSchedule {
   id: number
@@ -28,24 +29,26 @@ export interface ImportResult {
 export const schedulesApi = {
   /**
    * 获取课表列表
+   * 返回类型: CourseSchedule[]（已自动提取 data）
    */
   getList: (params?: {
     class_name?: string
     teacher_id?: number
     day_of_week?: number
-  }): Promise<ApiResponse<CourseSchedule[]>> =>
-    get('/schedules', { params }),
+  }): Promise<CourseSchedule[]> =>
+    get('/schedules', params),
 
   /**
    * 获取今日课表
+   * 返回类型: CourseSchedule[]（已自动提取 data）
    */
-  getToday: (): Promise<ApiResponse<CourseSchedule[]>> =>
+  getToday: (): Promise<CourseSchedule[]> =>
     get('/schedules/today'),
 
   /**
    * 导入课表
    * 使用原生 fetch 处理文件上传，避免 ofetch 的 Content-Type 问题
-   * 返回提取后的 ImportResult（类似 api.ts 中 request 函数的处理）
+   * 返回提取后的 ImportResult（与 request<T>() 行为一致）
    */
   import: async (file: File): Promise<ImportResult> => {
     const formData = new FormData()
@@ -73,12 +76,14 @@ export const schedulesApi = {
 
   /**
    * 删除课程
+   * 返回类型: void（已自动提取 data）
    */
-  delete: (id: number): Promise<ApiResponse<void>> =>
+  delete: (id: number): Promise<void> =>
     del(`/schedules/${id}`),
 
   /**
    * 下载导入模板
+   * 返回类型: Blob（原始响应，非 JSON）
    */
   downloadTemplate: (): Promise<Blob> =>
     get('/schedules/template', {
