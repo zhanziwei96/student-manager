@@ -78,7 +78,9 @@ const handleLogout = async () => {
             <User class="h-5 w-5 text-primary" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="truncate text-sm font-medium text-white">{{ user?.name }}</p>
+            <p class="truncate text-sm font-medium text-white">
+              {{ user?.name }}
+            </p>
             <p class="truncate text-xs text-white/50 capitalize">
               {{ user?.role === 'admin' ? '管理员' : user?.role === 'teacher' ? '教师' : '学生' }}
             </p>
@@ -99,14 +101,21 @@ const handleLogout = async () => {
               : 'text-white/70 hover:bg-white/10 hover:text-white',
           ]"
         >
-          <component :is="item.icon" class="h-5 w-5" />
+          <component
+            :is="item.icon"
+            class="h-5 w-5"
+          />
           {{ item.name }}
         </RouterLink>
       </nav>
 
       <!-- Bottom actions -->
       <div class="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
-        <Button variant="ghost" class="w-full justify-start gap-2 text-white/70" @click="handleLogout">
+        <Button
+          variant="ghost"
+          class="w-full justify-start gap-2 text-white/70"
+          @click="handleLogout"
+        >
           <LogOut class="h-5 w-5" />
           退出登录
         </Button>

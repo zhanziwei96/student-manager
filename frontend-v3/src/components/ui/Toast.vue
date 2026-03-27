@@ -125,11 +125,14 @@ defineExpose({ show: showToast })
         class="fixed bottom-6 right-6 z-[100] flex flex-col gap-2"
       >
         <div :class="classes">
-          <component :is="icon" class="h-5 w-5 shrink-0" />
+          <component
+            :is="icon"
+            class="h-5 w-5 shrink-0"
+          />
           <span class="flex-1 text-sm font-medium">{{ message }}</span>
           <button 
-            @click="close" 
-            class="shrink-0 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors"
+            class="shrink-0 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors" 
+            @click="close"
           >
             <X class="h-4 w-4" />
           </button>

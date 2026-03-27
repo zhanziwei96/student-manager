@@ -116,8 +116,12 @@ const handleAddStudent = async () => {
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">学生管理</h1>
-        <p class="text-white/60">管理学生档案和分数</p>
+        <h1 class="text-2xl font-bold text-white">
+          学生管理
+        </h1>
+        <p class="text-white/60">
+          管理学生档案和分数
+        </p>
       </div>
       <Button @click="openAddDialog">
         <Plus class="mr-2 h-4 w-4" />
@@ -148,12 +152,24 @@ const handleAddStudent = async () => {
           <table class="w-full">
             <thead>
               <tr class="border-b border-white/10 bg-white/[0.02]">
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">学号</th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">姓名</th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">班级</th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">分数</th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">状态</th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">操作</th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                  学号
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                  姓名
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                  班级
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                  分数
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                  状态
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                  操作
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -162,10 +178,18 @@ const handleAddStudent = async () => {
                 :key="student.id"
                 class="border-b border-white/5 transition-colors hover:bg-white/[0.02]"
               >
-                <td class="px-4 py-3 text-sm text-white/60">{{ student.student_id }}</td>
-                <td class="px-4 py-3 text-sm font-medium text-white">{{ student.name }}</td>
-                <td class="px-4 py-3 text-sm text-white/60">{{ student.class_name }}</td>
-                <td class="px-4 py-3 text-sm font-bold text-primary">{{ student.score }}</td>
+                <td class="px-4 py-3 text-sm text-white/60">
+                  {{ student.student_id }}
+                </td>
+                <td class="px-4 py-3 text-sm font-medium text-white">
+                  {{ student.name }}
+                </td>
+                <td class="px-4 py-3 text-sm text-white/60">
+                  {{ student.class_name }}
+                </td>
+                <td class="px-4 py-3 text-sm font-bold text-primary">
+                  {{ student.score }}
+                </td>
                 <td class="px-4 py-3">
                   <Badge :variant="student.is_account_enabled ? 'success' : 'secondary'">
                     {{ student.is_account_enabled ? '启用' : '禁用' }}
@@ -182,7 +206,10 @@ const handleAddStudent = async () => {
     </DataContainer>
 
     <!-- Add Student Dialog -->
-    <Dialog v-model:open="showAddDialog" title="添加学生">
+    <Dialog
+      v-model:open="showAddDialog"
+      title="添加学生"
+    >
       <div class="space-y-4">
         <div class="space-y-2">
           <Label for="studentId">学号</Label>
@@ -192,7 +219,12 @@ const handleAddStudent = async () => {
             placeholder="输入学号"
             :class="addFormErrors.student_id ? 'border-red-500' : ''"
           />
-          <p v-if="addFormErrors.student_id" class="text-sm text-red-500">{{ addFormErrors.student_id }}</p>
+          <p
+            v-if="addFormErrors.student_id"
+            class="text-sm text-red-500"
+          >
+            {{ addFormErrors.student_id }}
+          </p>
         </div>
         <div class="space-y-2">
           <Label for="studentName">姓名</Label>
@@ -202,7 +234,12 @@ const handleAddStudent = async () => {
             placeholder="输入姓名"
             :class="addFormErrors.name ? 'border-red-500' : ''"
           />
-          <p v-if="addFormErrors.name" class="text-sm text-red-500">{{ addFormErrors.name }}</p>
+          <p
+            v-if="addFormErrors.name"
+            class="text-sm text-red-500"
+          >
+            {{ addFormErrors.name }}
+          </p>
         </div>
         <div class="space-y-2">
           <Label for="className">班级</Label>
@@ -212,11 +249,21 @@ const handleAddStudent = async () => {
             placeholder="输入班级名称"
             :class="addFormErrors.class_name ? 'border-red-500' : ''"
           />
-          <p v-if="addFormErrors.class_name" class="text-sm text-red-500">{{ addFormErrors.class_name }}</p>
+          <p
+            v-if="addFormErrors.class_name"
+            class="text-sm text-red-500"
+          >
+            {{ addFormErrors.class_name }}
+          </p>
         </div>
       </div>
       <template #footer>
-        <Button variant="outline" @click="showAddDialog = false">取消</Button>
+        <Button
+          variant="outline"
+          @click="showAddDialog = false"
+        >
+          取消
+        </Button>
         <Button
           :loading="isCreating"
           @click="handleAddStudent"
@@ -227,6 +274,10 @@ const handleAddStudent = async () => {
     </Dialog>
 
     <!-- Toast -->
-    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
+    <Toast
+      v-model:show="show"
+      :message="toastMessage"
+      :variant="toastVariant"
+    />
   </div>
 </template>

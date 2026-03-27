@@ -107,7 +107,7 @@ class TestScheduleCRUD:
         assert success is False
 
     def test_import_schedules(self, session: Session):
-        """测试批量导入课表"""
+        """测试批量导入课表 - 完整业务逻辑封装"""
         records = [
             {
                 'course_name': '导入课程1',
@@ -133,10 +133,7 @@ class TestScheduleCRUD:
             }
         ]
         
-        def mock_get_teacher(name):
-            return None
-        
-        imported, errors = import_schedules(session, records, mock_get_teacher)
+        imported, errors = import_schedules(session, records)
         
         assert imported == 2
         assert len(errors) == 0
@@ -146,7 +143,7 @@ class TestScheduleCRUD:
         assert len(schedules) == 2
 
     def test_import_schedules_with_errors(self, session: Session):
-        """测试批量导入课表（含错误）"""
+        """测试批量导入课表（含错误）- 完整业务逻辑封装"""
         records = [
             {
                 'course_name': '有效课程',
@@ -166,11 +163,71 @@ class TestScheduleCRUD:
             }
         ]
         
-        def mock_get_teacher(name):
-            return None
-        
-        imported, errors = import_schedules(session, records, mock_get_teacher)
+        imported, errors = import_schedules(session, records)
         
         assert imported == 1
         assert len(errors) == 1
         assert "第 3 行" in errors[0]  # 索引+2
+
+    def test_import_schedules_validation(self, session: Session):
+        """测试导入数据校验 - 空值检查"""
+        records = [
+            {
+                'course_name': '',  # 空值
+                'class_name': '班级1',
+                'teacher_name': '教师1',
+                'day_of_week': '1',
+                'start_time': '08:00',
+                'end_time': '09:40',
+            }
+        ]
+        
+        imported, errors = import_schedules(session, records)
+        
+        assert imported == 0
+        assert len(errors) == 1
+        assert "存在空值" in errors[0]
+
+    def test_import_schedules_day_of_week_validation(self, session: Session):
+        """测试导入星期范围校验"""
+        records = [
+            {
+                'course_name': '课程1',
+                'class_name': '班级1',
+                'teacher_name': '教师1',
+                'day_of_week': '8',  # 无效：大于7
+                'start_time': '08:00',
+                'end_time': '09:40',
+            }
+        ]
+        
+        imported, errors = import_schedules(session, records)
+        
+        assert imported == 0
+        assert len(errors) == 1
+        assert "星期必须在 1-7 之间" in errors[0]
+
+    def test_import_schedules_duplicate_check(self, session: Session):
+        """测试导入查重检查"""
+        # 先创建一个课程
+        create_schedule(
+            session, "重复课程", "班级1", None, "教师1", 1, "08:00", "09:40", "A101", 1, 20
+        )
+        
+        # 尝试导入相同课程
+        records = [
+            {
+                'course_name': '重复课程',
+                'class_name': '班级1',
+                'teacher_name': '教师1',
+                'day_of_week': '1',
+                'start_time': '08:00',
+                'end_time': '09:40',
+            }
+        ]
+        
+        imported, errors = import_schedules(session, records)
+        
+        assert imported == 0
+        assert len(errors) == 1
+        assert "课程已存在" in errors[0]

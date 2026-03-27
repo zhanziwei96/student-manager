@@ -1,5 +1,7 @@
 # 配置管理指南
 
+> **最后更新时间**: 2026-03-27
+
 ## 概述
 
 本系统使用 Pydantic Settings 管理配置，支持环境变量、`.env` 文件和代码默认值三种配置来源。
@@ -18,6 +20,7 @@
 | `JWTSettings` | JWT 认证配置 | `JWT_` | `settings.jwt.*` |
 | `ScoreSettings` | 分数配置 | `SCORE_` | `settings.score.*` |
 | `PaginationSettings` | 分页配置 | `PAGINATION_` | `settings.pagination.*` |
+| `RateLimitSettings` | 限流配置 | `RATE_LIMIT_` | `settings.rate_limit.*` |
 
 ### 2. 配置优先级
 
@@ -81,16 +84,18 @@ APP__HOST=0.0.0.0                 # 服务器地址
 APP__PORT=8000                    # 服务器端口
 
 # 数据库配置
-DATABASE__PATH=/data/class_system.db  # 数据库文件路径
+DATABASE__PATH=./data/class_system.db  # 数据库文件路径
 
 # 安全配置
 SECURITY__SECRET_KEY=your-secret      # JWT 密钥
+SECURITY__MAX_LOGIN_FAILURES=10       # 最大登录失败次数
+SECURITY__LOCKOUT_DURATION_MINUTES=30 # 账号锁定时间
+SECURITY__CORS_ORIGINS=["http://localhost:5173"]  # CORS 来源
+
+# JWT 配置
 JWT__ACCESS_TOKEN_EXPIRE_MINUTES=1440 # JWT 有效期（分钟，默认24小时）
 JWT__ALGORITHM=HS256                  # JWT 算法
 JWT__COOKIE_NAME=access_token         # Cookie 名称
-SECURITY__MAX_LOGIN_FAILURES=10       # 最大登录失败次数
-SECURITY__LOCKOUT_DURATION_MINUTES=30 # 账号锁定时间
-SECURITY__CORS_ORIGINS=["http://localhost:3000"]  # CORS 来源
 
 # 分数配置
 SCORE__MIN_SCORE=0                # 最低分数
@@ -100,6 +105,27 @@ SCORE__DEFAULT_SCORE=70           # 默认分数
 # 分页配置
 PAGINATION__DEFAULT_PAGE_SIZE=20         # 默认每页数量
 PAGINATION__SCORE_LOG_DEFAULT_LIMIT=50   # 分数日志默认条数
+
+# 限流配置（内存存储，无需Redis）
+RATE_LIMIT__ENABLED=true              # 是否启用限流
+RATE_LIMIT__LOGIN_MAX_REQUESTS=5      # 登录接口每分钟最大请求数
+RATE_LIMIT__CHECKIN_MAX_REQUESTS=10   # 签到接口每分钟最大请求数
+RATE_LIMIT__SCORE_MAX_REQUESTS=10     # 分数接口每分钟最大请求数
+```
+
+### 最新环境变量（2026-03-27）
+
+新增配置项：
+
+```bash
+# 审计日志配置
+AUDIT__ENABLED=true                   # 是否启用审计日志
+AUDIT__ASYNC_WRITE=false              # 是否异步写入（默认同步）
+AUDIT__BATCH_SIZE=100                 # 批量写入大小（异步模式）
+
+# 领域事件配置
+EVENTS__ENABLED=true                  # 是否启用领域事件
+EVENTS__SCORE_LOG_VIA_EVENTS=true     # 通过事件处理器记录分数日志
 ```
 
 ## 多环境配置
@@ -117,8 +143,23 @@ PAGINATION__SCORE_LOG_DEFAULT_LIMIT=50   # 分数日志默认条数
 ```bash
 # .env.production
 ENV=production
-SECURITY__SECRET_KEY=your-production-secret-key
+SECURITY__SECRET_KEY=your-production-secret-key-min-32-chars-long
 DATABASE__PATH=./data/class_system.db
+JWT__ACCESS_TOKEN_EXPIRE_MINUTES=1440
+RATE_LIMIT__ENABLED=true
+```
+
+### 多环境配置最佳实践
+
+```bash
+# 开发环境（热重载+详细日志）
+ENV=development uvicorn main:app --reload --log-level debug
+
+# 测试环境（内存数据库）
+ENV=testing pytest tests/ -v
+
+# 生产环境（性能优先）
+ENV=production python main.py
 ```
 
 ## 兼容性常量
@@ -241,3 +282,8 @@ print(f"是否生产环境: {settings.app.is_production}")
 - `backend/.env.example` - 配置示例（如存在）
 - `backend/.env.production` - 生产环境配置
 - `backend/.env.testing` - 测试环境配置
+
+---
+
+**文档版本**: v2.0  
+**最后更新**: 2026-03-27（新增审计日志和领域事件配置）

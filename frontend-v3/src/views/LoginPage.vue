@@ -89,11 +89,18 @@ const handleSubmit = async () => {
         <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
           <GraduationCap class="h-7 w-7 text-primary" />
         </div>
-        <h1 class="text-2xl font-bold text-white">欢迎使用智慧课堂</h1>
-        <p class="text-sm text-white/60">登录您的账号</p>
+        <h1 class="text-2xl font-bold text-white">
+          欢迎使用智慧课堂
+        </h1>
+        <p class="text-sm text-white/60">
+          登录您的账号
+        </p>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="mt-8 space-y-6">
+      <form
+        class="mt-8 space-y-6"
+        @submit.prevent="handleSubmit"
+      >
         <!-- Role selection -->
         <div class="space-y-2">
           <Label for="role">角色</Label>
@@ -155,10 +162,13 @@ const handleSubmit = async () => {
           登录
         </Button>
       </form>
-
     </Card>
 
     <!-- Toast -->
-    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
+    <Toast
+      v-model:show="show"
+      :message="toastMessage"
+      :variant="toastVariant"
+    />
   </div>
 </template>

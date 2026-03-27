@@ -20,7 +20,7 @@ import { getErrorMessage } from '@/lib/error'
 const { data: students, isPending, error, refetch } = useStudents()
 
 // === Feature composables ===
-const { updateScore, isUpdating, error: scoreError, updatingStudentId } = useStudentScore()
+const { updateScore, isUpdating, updatingStudentId } = useStudentScore()
 const { 
   filters, 
   classOptions, 
@@ -89,8 +89,12 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">我的学生</h1>
-      <p class="text-white/60">查看和管理学生分数</p>
+      <h1 class="text-2xl font-bold text-white">
+        我的学生
+      </h1>
+      <p class="text-white/60">
+        查看和管理学生分数
+      </p>
     </div>
 
     <!-- Filters -->
@@ -136,6 +140,10 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
     />
 
     <!-- Toast -->
-    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
+    <Toast
+      v-model:show="show"
+      :message="toastMessage"
+      :variant="toastVariant"
+    />
   </div>
 </template>

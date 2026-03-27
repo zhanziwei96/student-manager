@@ -39,20 +39,33 @@ defineEmits<{
           </span>
         </div>
         <div>
-          <p class="font-medium text-white">{{ student.name }}</p>
-          <p class="text-xs text-white/60">{{ student.student_id }}</p>
-          <p class="text-xs text-white/40">{{ student.class_name }}</p>
+          <p class="font-medium text-white">
+            {{ student.name }}
+          </p>
+          <p class="text-xs text-white/60">
+            {{ student.student_id }}
+          </p>
+          <p class="text-xs text-white/40">
+            {{ student.class_name }}
+          </p>
         </div>
       </div>
-      <Badge :variant="student.checkin_status === 'checked_in' ? 'success' : 'secondary'" class="text-xs">
+      <Badge
+        :variant="student.checkin_status === 'checked_in' ? 'success' : 'secondary'"
+        class="text-xs"
+      >
         {{ student.checkin_status === 'checked_in' ? '已签到' : '未签到' }}
       </Badge>
     </div>
     
     <!-- 分数显示 -->
     <div class="mb-3">
-      <p class="text-xs text-white/40 mb-1">当前分数</p>
-      <p class="text-xl font-bold text-primary">{{ student.score }}</p>
+      <p class="text-xs text-white/40 mb-1">
+        当前分数
+      </p>
+      <p class="text-xl font-bold text-primary">
+        {{ student.score }}
+      </p>
     </div>
     
     <!-- 快速操作按钮 -->

@@ -51,8 +51,12 @@ const emit = defineEmits<{
     <div class="flex items-center gap-3 text-red-400">
       <AlertCircle class="h-5 w-5" />
       <div class="flex-1">
-        <p class="font-medium">加载失败</p>
-        <p class="text-sm opacity-80">{{ error.message }}</p>
+        <p class="font-medium">
+          加载失败
+        </p>
+        <p class="text-sm opacity-80">
+          {{ error.message }}
+        </p>
       </div>
       <button
         class="rounded-md px-3 py-1 text-sm hover:bg-red-500/20"
@@ -68,7 +72,9 @@ const emit = defineEmits<{
     v-else-if="!hasData"
     class="border-white/10 bg-white/[0.02] p-8 text-center"
   >
-    <p class="text-white/60">{{ emptyText }}</p>
+    <p class="text-white/60">
+      {{ emptyText }}
+    </p>
   </Card>
 
   <!-- 正常内容 -->

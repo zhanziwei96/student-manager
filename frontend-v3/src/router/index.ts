@@ -139,7 +139,7 @@ router.beforeEach(async (to, _from, next) => {
   if (!authStore.user && !to.meta.public) {
     try {
       await authStore.fetchUserInfo()
-    } catch (error) {
+    } catch {
       // Not authenticated - user will be redirected to login below
     }
   }

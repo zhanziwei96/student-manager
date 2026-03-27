@@ -76,9 +76,10 @@ export const api = ofetch.create({
  */
 async function request<T>(
   url: string,
-  options?: Parameters<typeof api>[1]
+  options?: Omit<NonNullable<Parameters<typeof api>[1]>, 'body' | 'responseType'> & { body?: unknown }
 ): Promise<T> {
-  const response = await api<ApiResponse<T>>(url, options)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const response = await api<ApiResponse<T>>(url, options as any)
 
   // 检查是否是 ApiResponse 格式
   if (!isApiResponse(response)) {
@@ -101,9 +102,10 @@ async function request<T>(
  */
 async function requestRaw<T>(
   url: string,
-  options?: Parameters<typeof api>[1]
+  options?: Omit<NonNullable<Parameters<typeof api>[1]>, 'body' | 'responseType'> & { body?: unknown }
 ): Promise<ApiResponse<T>> {
-  return api<ApiResponse<T>>(url, options)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return api<ApiResponse<T>>(url, options as any)
 }
 
 // HTTP 方法封装 - 自动处理响应

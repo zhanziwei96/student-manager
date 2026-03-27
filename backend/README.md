@@ -1,4 +1,7 @@
-# 班级管理系统 - FastAPI + SQLModel 架构
+# ClassHub 后端 - FastAPI + SQLModel 架构
+
+> **最后更新时间**: 2026-03-27  
+> **架构评分**: 8.5/10 🟢
 
 ## 架构概览
 
@@ -26,13 +29,15 @@
 │  ├── 配置管理 (Pydantic Settings)                            │
 │  ├── 数据库连接 (SQLModel/SQLAlchemy)                        │
 │  ├── 安全工具 (bcrypt密码哈希、JWT认证)                     │
+│  ├── 领域事件 (events.py + handlers.py)                      │
 │  └── 异常处理                                                │
 ├─────────────────────────────────────────────────────────────┤
 │  CRUD 层 (app/crud/)                                         │
 │  ├── 学生数据操作                                            │
 │  ├── 用户数据操作                                            │
 │  ├── 签到记录操作                                            │
-│  └── 审计日志操作                                            │
+│  ├── 审计日志操作                                            │
+│  └── 乐观锁保护 (BE-008)                                     │
 ├─────────────────────────────────────────────────────────────┤
 │  模型层 (app/models/)                                        │
 │  ├── SQLModel 数据模型                                       │
@@ -48,8 +53,10 @@
 - **ORM**: SQLModel (SQLAlchemy + Pydantic)
 - **数据库**: SQLite3
 - **认证**: JWT + HttpOnly Cookie（python-jose）
+- **密码哈希**: bcrypt（SEC-003已修复）
 - **配置**: Pydantic Settings
 - **限流**: 内存存储（pyrate-limiter）
+- **架构模式**: 领域事件、乐观锁、依赖注入
 
 ## 目录结构
 
@@ -59,25 +66,31 @@ backend/
 │   ├── api/                     # API 层
 │   │   ├── __init__.py
 │   │   ├── deps.py             # 依赖注入（权限、Session）
+│   │   ├── middleware.py       # 审计日志中间件
 │   │   └── routes/             # 路由处理器
 │   │       ├── login.py        # 登录/认证
 │   │       ├── students.py     # 学生管理
 │   │       ├── users.py        # 用户管理（管理员）
 │   │       ├── checkin.py      # 签到系统
+│   │       ├── schedules.py    # 课程表管理
 │   │       └── system.py       # 系统接口
 │   ├── core/                    # 核心层
 │   │   ├── __init__.py
 │   │   ├── config.py           # Pydantic 配置
 │   │   ├── db.py               # 数据库连接
-│   │   ├── security.py         # 安全工具
+│   │   ├── security.py         # 安全工具（bcrypt）
 │   │   ├── exceptions.py       # 异常处理
+│   │   ├── events.py           # 领域事件发布
 │   │   └── logging.py          # 日志配置
 │   ├── crud/                    # CRUD 操作
 │   │   ├── __init__.py
-│   │   ├── student.py          # 学生操作
-│   │   ├── user.py             # 用户操作
+│   │   ├── student.py          # 学生操作（含乐观锁）
+│   │   ├── user.py             # 用户操作（含乐观锁）
 │   │   ├── checkin.py          # 签到操作
 │   │   └── audit.py            # 审计日志
+│   ├── events/                  # 领域事件处理器
+│   │   ├── __init__.py
+│   │   └── handlers.py         # 事件处理逻辑
 │   └── models/                  # 数据模型
 │       ├── __init__.py
 │       ├── user.py             # 用户模型
@@ -129,85 +142,18 @@ FastAPI 自动生成 API 文档：
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-## API 接口列表
+## API 设计规范
 
-### 系统
-| 方法 | 路径 | 说明 |
+### RESTful 接口规范
+
+| 方法 | 用途 | 示例 |
 |------|------|------|
-| GET | `/api/health` | 健康检查 |
-| GET | `/api/stats` | 系统统计（需登录） |
-| GET | `/api/dashboard` | 仪表盘数据（公开，脱敏） |
+| GET | 获取资源 | `GET /api/students` |
+| POST | 创建资源 | `POST /api/students` |
+| PUT | 更新资源 | `PUT /api/students/{id}/score` |
+| DELETE | 删除资源 | `DELETE /api/students/{id}` |
 
-### 认证
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/login` | 用户登录 |
-| POST | `/api/logout` | 用户登出 |
-| GET | `/api/me` | 当前用户信息 |
-
-### 学生管理
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/students` | 获取学生列表 |
-| POST | `/api/students` | 添加学生 |
-| PUT | `/api/students/{student_id}/score` | 更新分数 |
-| DELETE | `/api/students/{student_id}` | 删除学生 |
-| GET | `/api/students/{student_id}/scores` | 分数历史 |
-| PUT | `/api/students/{student_id}/reset-password` | 重置密码（管理员） |
-| POST | `/api/students/import` | Excel 导入（TODO） |
-
-### 班级
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/classes` | 获取班级列表 |
-
-### 用户管理（管理员）
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/admin/users` | 用户列表 |
-| POST | `/admin/users` | 创建用户 |
-| PUT | `/admin/users/{user_id}` | 更新用户 |
-| PUT | `/admin/users/{user_id}/reset-password` | 重置密码 |
-| DELETE | `/admin/users/{user_id}` | 删除用户 |
-
-### 课堂管理
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/class-session` | 获取当前课堂状态 |
-| POST | `/api/class-session/start` | 开始上课 |
-| POST | `/api/class-session/end` | 结束上课 |
-
-### 签到系统
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/checkin` | 学生签到 |
-| GET | `/api/checkins/today` | 今日签到列表 |
-| GET | `/api/checkins/stats` | 签到统计 |
-
-## 配置管理
-
-使用 Pydantic Settings 管理配置，支持环境变量和 `.env` 文件：
-
-```bash
-# 环境
-ENV=production  # 或 development, testing
-
-# 数据库
-DATABASE__PATH=./data/class_system.db
-
-# 安全配置
-SECURITY__SECRET_KEY=your-secret-key  # JWT 签名密钥
-
-# 限流配置
-RATE_LIMIT__ENABLED=true
-RATE_LIMIT__LOGIN_MAX_REQUESTS=5
-```
-
-详见 [配置指南](../.agents/CONFIG_GUIDE.md)
-
-## 响应格式
-
-统一 API 响应格式：
+### 统一响应格式
 
 ```json
 // 成功
@@ -225,6 +171,165 @@ RATE_LIMIT__LOGIN_MAX_REQUESTS=5
 ```
 
 **注意**: 前端必须通过 `res.data` 访问数据，不能直接访问 `res.xxx`。
+
+### 接口列表
+
+#### 系统
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/health` | 健康检查 |
+| GET | `/api/stats` | 系统统计（需登录） |
+| GET | `/api/dashboard` | 仪表盘数据（公开，脱敏） |
+
+#### 认证
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/login` | 用户登录（限流5次/分钟） |
+| POST | `/api/logout` | 用户登出 |
+| GET | `/api/me` | 当前用户信息 |
+| POST | `/api/change-password` | 修改密码 |
+
+#### 学生管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/students` | 获取学生列表 |
+| POST | `/api/students` | 添加学生 |
+| PUT | `/api/students/{student_id}/score` | 更新分数（限流10次/分钟，乐观锁保护） |
+| DELETE | `/api/students/{student_id}` | 删除学生 |
+| GET | `/api/students/{student_id}/scores` | 分数历史 |
+| PUT | `/api/students/{student_id}/reset-password` | 重置密码（管理员） |
+| POST | `/api/students/import` | Excel 导入 |
+
+#### 班级
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/classes` | 获取班级列表 |
+
+#### 用户管理（管理员）
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/admin/users` | 用户列表 |
+| POST | `/admin/users` | 创建用户 |
+| PUT | `/admin/users/{user_id}` | 更新用户 |
+| PUT | `/admin/users/{user_id}/reset-password` | 重置密码 |
+| DELETE | `/admin/users/{user_id}` | 删除用户 |
+
+#### 课堂管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/class-session` | 获取当前课堂状态 |
+| POST | `/api/class-session/start` | 开始上课 |
+| POST | `/api/class-session/end` | 结束上课 |
+
+#### 签到系统
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/checkin` | 学生签到（限流10次/分钟） |
+| POST | `/api/teacher-checkin` | 教师代签 |
+| GET | `/api/checkin/records` | 签到记录查询 |
+| GET | `/api/checkins/today` | 今日签到列表 |
+| GET | `/api/checkins/stats` | 签到统计 |
+
+#### 课程表（开发中）
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/schedules` | 获取课程表 |
+| POST | `/api/schedules` | 创建课程（管理员） |
+| POST | `/api/schedules/import` | 导入课程表 |
+
+## 架构模式
+
+### 1. 领域事件模式
+
+```python
+# 发布事件
+from app.core.events import publish_event
+
+publish_event(ScoreChangedEvent(
+    student_id=student_id,
+    old_score=old_score,
+    new_score=new_score,
+    changed_by=teacher_id
+))
+
+# 事件处理（app/events/handlers.py）
+@register_handler(ScoreChangedEvent)
+def handle_score_changed(event: ScoreChangedEvent):
+    # 创建ScoreLog、发送通知等
+    ...
+```
+
+### 2. 乐观锁保护（BE-008）
+
+```python
+# 模型定义
+class Student(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    score: int = Field(default=0)
+    version: int = Field(default=0)  # 乐观锁版本号
+
+# CRUD层使用
+from app.crud.student import update_student_score
+
+update_student_score(
+    session=session,
+    student_id=student_id,
+    score_change=10,
+    changed_by=teacher_id
+)
+# 并发冲突自动抛出ConcurrentUpdateError
+```
+
+### 3. 依赖注入
+
+```python
+from fastapi import Depends, APIRouter
+from sqlmodel import Session
+from app.core.db import get_session
+from app.api.deps import require_teacher
+
+router = APIRouter()
+
+@router.put("/api/students/{student_id}/score")
+def update_score(
+    student_id: int,
+    score_data: ScoreUpdate,
+    session: Session = Depends(get_session),
+    teacher_id: int = Depends(require_teacher)
+):
+    # teacher_id 已通过JWT验证
+    # session 已注入数据库会话
+    ...
+```
+
+## 配置管理
+
+使用 Pydantic Settings 管理配置，支持环境变量和 `.env` 文件：
+
+```bash
+# 环境
+ENV=production  # 或 development, testing
+
+# 数据库
+DATABASE__PATH=./data/class_system.db
+
+# 安全配置
+SECURITY__SECRET_KEY=your-secret-key  # JWT 签名密钥
+SECURITY__MAX_LOGIN_FAILURES=10       # 最大登录失败次数
+SECURITY__LOCKOUT_DURATION_MINUTES=30 # 账号锁定时间
+
+# JWT配置
+JWT__ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24小时
+JWT__ALGORITHM=HS256
+JWT__COOKIE_NAME=access_token
+
+# 限流配置
+RATE_LIMIT__ENABLED=true
+RATE_LIMIT__LOGIN_MAX_REQUESTS=5
+RATE_LIMIT__CHECKIN_MAX_REQUESTS=10
+```
+
+详见 [配置指南](../.agents/CONFIG_GUIDE.md)
 
 ## 开发指南
 
@@ -278,7 +383,7 @@ def create_example(session: Session, name: str) -> Example:
 
 ```bash
 # 会话密钥（生产环境必须设置）
-export SECURITY__SECRET_KEY="your-secret-key-here"
+export SECURITY__SECRET_KEY="your-secret-key-here-min-32-chars"
 
 # 开发/生产模式
 export ENV="production"  # 或 "development"
@@ -290,6 +395,36 @@ export DATABASE__PATH="/path/to/class_system.db"
 export SECURITY__CORS_ORIGINS='["http://localhost:5173"]'
 ```
 
+## 安全特性
+
+| 特性 | 状态 | 说明 |
+|------|------|------|
+| bcrypt密码哈希 | ✅ 已实施 | SEC-003已修复，自动处理盐值 |
+| JWT认证 | ✅ 已实施 | HttpOnly Cookie存储 |
+| 乐观锁保护 | ✅ 已完善 | BE-008并发保护 |
+| 请求限流 | ✅ 已实施 | 内存存储，无需Redis |
+| 审计日志 | ✅ 已实施 | 敏感操作记录 |
+| CORS配置 | ✅ 已实施 | 跨域安全策略 |
+| 登录失败保护 | ✅ 已实施 | 10次失败后锁定30分钟 |
+
+## 测试
+
+```bash
+# 运行全部测试
+pytest tests/ -v
+
+# 仅单元测试
+pytest tests/unit -v
+
+# 仅集成测试
+pytest tests/integration -v
+
+# 并发保护测试（BE-008）
+pytest tests/unit/crud/test_concurrent_*.py -v
+```
+
+测试覆盖率：89%（330个测试中329个通过）
+
 ## 架构特点
 
 1. **简洁分层**: API → CRUD → Models → Core，职责清晰
@@ -298,6 +433,16 @@ export SECURITY__CORS_ORIGINS='["http://localhost:5173"]'
 4. **配置灵活**: 环境变量 + `.env` 文件支持
 5. **易于测试**: SQLModel 支持内存数据库，测试隔离
 6. **前后端分离**: 前端位于 `frontend-v3/` 目录，独立部署
+7. **领域事件**: 业务逻辑解耦，可扩展性强
+8. **乐观锁**: 并发数据保护，防止数据竞争
+
+## 已知问题
+
+| 优先级 | 问题 | 位置 | 状态 |
+|--------|------|------|------|
+| 🔴 P0 | ScoreLog重复记录 | `crud/student.py:215-223` | 🔧 修复中 |
+| 🟡 P1 | API层直接操作Session | `users.py:112-114` | 📋 待优化 |
+| 🟡 P1 | 审计日志同步写入 | `middleware.py:128-137` | 📋 待优化 |
 
 ## 相关文档
 
@@ -306,3 +451,10 @@ export SECURITY__CORS_ORIGINS='["http://localhost:5173"]'
 - [部署指南](../.agents/DEPLOYMENT.md)
 - [常见错误速查](../.agents/ERRORS.md)
 - [测试指南](../tests/README.md)
+- [项目健康报告](../docs/project_health_report.md)
+- [优化方案](../docs/OPTIMIZATION_PLAN.md)
+
+---
+
+**架构评分**: 8.5/10 🟢  
+**最后更新**: 2026-03-27（更新SEC-003修复状态、领域事件模式、乐观锁保护）

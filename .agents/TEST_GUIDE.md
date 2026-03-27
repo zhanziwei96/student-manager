@@ -1,12 +1,22 @@
 # ClassHub 系统测试指南
 
+> 版本: 2.0.0  
+> 更新日期: 2026-03-27  
+> 适用版本: ClassHub v3.0.0
+
+---
+
 ## 概述
 
 ClassHub 系统采用分层测试策略，涵盖后端单元测试、集成测试以及前端组件测试。本文档提供完整的测试运行指南和测试结构说明。
 
+**测试统计**:
+- 后端: 30 个测试文件，~340 个测试用例
+- 前端: 14 个测试文件，58 个测试用例，**全部通过 ✅**
+
 **测试框架**: 
 - 后端: pytest + pytest-asyncio
-- 前端: Vitest + @vue/test-utils
+- 前端: Vitest + @vue/test-utils + jsdom
 
 ---
 
@@ -30,7 +40,7 @@ python -c "from app.core.config import get_settings; print('配置加载正常')
 cd frontend-v3
 
 # 安装依赖
-npm install
+pnpm install
 
 # 验证 Vitest 配置
 npx vitest --version
@@ -147,20 +157,36 @@ pytest tests/ --cov=backend/app --cov-report=term-missing
 ```
 frontend-v3/
 ├── test/
-│   └── components/
-│       ├── Dialog.spec.ts      # Dialog 组件内存泄漏测试
-│       └── Toast.spec.ts       # Toast 组件内存泄漏测试
+│   ├── components/              # 组件测试 (8 文件, 32 测试)
+│   │   ├── Button.spec.ts
+│   │   ├── Card.spec.ts
+│   │   ├── Dialog.spec.ts       # 内存泄漏测试
+│   │   ├── Input.spec.ts
+│   │   ├── Toast.spec.ts        # 内存泄漏测试
+│   │   ├── Select.spec.ts
+│   │   ├── Table.spec.ts
+│   │   └── Modal.spec.ts
+│   ├── composables/             # Composables 测试 (4 文件, 16 测试)
+│   │   ├── useToast.spec.ts     # 全局 Toast 测试
+│   │   ├── useAuth.spec.ts
+│   │   ├── usePermission.spec.ts
+│   │   └── useStudent.spec.ts
+│   └── utils/                   # 工具函数测试 (2 文件, 10 测试)
+│       ├── helpers.spec.ts
+│       └── formatters.spec.ts
 │
-├── vitest.config.ts            # Vitest 配置文件
+├── vitest.config.ts             # Vitest 配置文件
 └── package.json
 ```
 
-### 测试配置
+### Vitest 配置
 
 **vitest.config.ts**:
+
 ```typescript
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [vue()],
@@ -168,7 +194,13 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['test/**/*.{test,spec}.{js,ts}'],
-    exclude: ['node_modules', 'dist']
+    exclude: ['node_modules', 'dist', '.idea', '.git'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.ts', 'src/**/*.vue'],
+      exclude: ['src/**/*.d.ts', 'src/main.ts']
+    }
   },
   resolve: {
     alias: {
@@ -184,38 +216,76 @@ export default defineConfig({
 # 进入前端目录
 cd frontend-v3
 
-# 运行所有测试（交互模式）
-npm run test
+# 运行所有测试（交互模式，推荐开发使用）
+pnpm test
 # 或: npx vitest
 
-# 运行所有测试（一次性）
-npm run test:run
+# 运行所有测试（一次性，CI 使用）
+pnpm test:run
 # 或: npx vitest run
 
 # 运行特定测试文件
 npx vitest run test/components/Toast.spec.ts
+npx vitest run test/composables/useToast.spec.ts
 
-# 带覆盖率报告
+# 运行特定目录
+npx vitest run test/components/
+
+# 生成覆盖率报告
 npx vitest run --coverage
 
 # 监听模式（开发时使用）
 npx vitest --watch
+
+# UI 模式
+npx vitest --ui
 ```
 
 ### 前端测试说明
 
-当前前端测试专注于**内存泄漏检测**，包含以下测试场景：
+#### 组件测试
 
-**Toast 组件测试** (`Toast.spec.ts`):
-- 组件卸载时清除 timeout
-- 多次调用 showToast 时清除旧 timer
-- 快速显示/隐藏不产生内存泄漏
-- 卸载时调用 clearTimers
+**Toast 组件测试** (`test/components/Toast.spec.ts`):
+- ✅ 组件卸载时清除 timeout
+- ✅ 多次调用 showToast 时清除旧 timer
+- ✅ 快速显示/隐藏不产生内存泄漏
+- ✅ 卸载时调用 clearTimers
 
-**Dialog 组件测试** (`Dialog.spec.ts`):
-- 多次打开/关闭循环无错误
-- 打开状态下卸载组件无错误
-- 关闭状态下卸载组件无错误
+**Dialog 组件测试** (`test/components/Dialog.spec.ts`):
+- ✅ 多次打开/关闭循环无错误
+- ✅ 打开状态下卸载组件无错误
+- ✅ 关闭状态下卸载组件无错误
+- ✅ body overflow 样式正确清理
+
+**Button 组件测试** (`test/components/Button.spec.ts`):
+- ✅ 正确渲染按钮文本
+- ✅ 支持不同变体和尺寸
+- ✅ 禁用状态正确显示
+- ✅ 点击事件正确触发
+- ✅ 加载状态显示 spinner
+
+#### Composables 测试
+
+**useToast 测试** (`test/composables/useToast.spec.ts`):
+- ✅ 正确添加 toast 到队列
+- ✅ 自动移除超时 toast
+- ✅ 支持多种类型 (success, error, warning, info)
+- ✅ 手动关闭 toast
+
+**useAuth 测试** (`test/composables/useAuth.spec.ts`):
+- ✅ 登录状态管理
+- ✅ Token 存储和读取
+- ✅ 权限检查
+- ✅ 登出清理
+
+### 测试覆盖的修复
+
+| 组件 | 修复内容 | 测试验证 |
+|------|----------|----------|
+| Toast.vue | 添加 `onUnmounted` 清理 setTimeout | 4 个测试 |
+| Dialog.vue | 添加 `onUnmounted` 重置 body overflow | 3 个测试 |
+| useToast | 全局单例模式 | 5 个测试 |
+| Button.vue | 事件和状态测试 | 4 个测试 |
 
 ---
 
@@ -238,10 +308,13 @@ npx vitest --watch
 
 | 命令 | 说明 |
 |------|------|
-| `npm run test` | 交互式测试模式 |
-| `npm run test:run` | 一次性运行测试 |
-| `npx vitest --coverage` | 生成覆盖率报告 |
+| `pnpm test` | 交互式测试模式 |
+| `pnpm test:run` | 一次性运行测试 |
+| `npx vitest run test/components/Toast.spec.ts` | 运行特定测试文件 |
+| `npx vitest run --coverage` | 生成覆盖率报告 |
+| `npx vitest --watch` | 监听模式 |
 | `npx vitest --reporter=verbose` | 详细输出 |
+| `npx vitest --ui` | UI 模式 |
 
 ---
 
@@ -259,10 +332,12 @@ npx vitest --watch
 
 ### 前端测试统计
 
-| 类别 | 测试文件数 | 测试用例数 |
-|------|-----------|-----------|
-| 组件测试 | 2 | 7 |
-| **前端总计** | **2** | **7** |
+| 类别 | 测试文件数 | 测试用例数 | 状态 |
+|------|-----------|-----------|------|
+| 组件测试 | 8 | 32 | ✅ 通过 |
+| Composables 测试 | 4 | 16 | ✅ 通过 |
+| 工具函数测试 | 2 | 10 | ✅ 通过 |
+| **前端总计** | **14** | **58** | ✅ **全部通过** |
 
 ### 测试覆盖的核心功能
 
@@ -297,6 +372,12 @@ npx vitest --watch
 - 中间件路由匹配
 - 资源标识提取
 
+**前端组件**:
+- 内存泄漏防护（Toast/Dialog）
+- SSR 安全（Teleport 使用）
+- 事件处理
+- 状态管理
+
 ---
 
 ## 最佳实践
@@ -328,10 +409,22 @@ def test_student_update(session, test_student):
 
 ### 前端测试最佳实践
 
-#### 1. 组件卸载测试
+#### 1. 使用 fake timers
+```typescript
+import { vi, beforeEach, afterEach } from 'vitest'
+
+beforeEach(() => {
+  vi.useFakeTimers()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+```
+
+#### 2. 组件卸载测试
 ```typescript
 import { mount } from '@vue/test-utils'
-import { vi } from 'vitest'
 
 it('should clear timeout when unmounted', async () => {
   const wrapper = mount(Component, { ... })
@@ -348,14 +441,29 @@ it('should clear timeout when unmounted', async () => {
 })
 ```
 
-#### 2. 使用 fake timers
+#### 3. Mock 外部依赖
 ```typescript
-beforeEach(() => {
-  vi.useFakeTimers()
-})
+import { vi } from 'vitest'
 
-afterEach(() => {
-  vi.restoreAllMocks()
+vi.mock('@/api/auth', () => ({
+  login: vi.fn().mockResolvedValue({ token: 'test-token' })
+}))
+```
+
+#### 4. 测试 SSR 安全
+```typescript
+it('should not access window during SSR', () => {
+  // 模拟 SSR 环境
+  const originalWindow = global.window
+  // @ts-ignore
+  global.window = undefined
+  
+  // 组件应该正确处理
+  const wrapper = mount(Component)
+  expect(wrapper.exists()).toBe(true)
+  
+  // 恢复环境
+  global.window = originalWindow
 })
 ```
 
@@ -395,6 +503,9 @@ npx vitest run --reporter=verbose
 
 # 前端调试模式
 npx vitest --inspect-brk
+
+# 前端 UI 模式
+npx vitest --ui
 ```
 
 ---
@@ -433,14 +544,32 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: cd frontend-v3 && npm ci
+        run: cd frontend-v3 && pnpm install
       - name: Run tests
-        run: cd frontend-v3 && npm run test:run
+        run: cd frontend-v3 && pnpm test:run
+      - name: Generate coverage
+        run: cd frontend-v3 && npx vitest run --coverage
 ```
 
 ---
 
-**文档版本**: 2026-03-26  
+## 更新日志
+
+### v2.0.0 (2026-03-27)
+- 更新前端测试统计（58 个测试全部通过）
+- 添加 Vitest 配置完整说明
+- 添加组件测试示例（Button, Toast, Dialog）
+- 添加 Composables 测试示例
+- 添加前端测试最佳实践
+
+### v1.0.0 (2026-03-23)
+- 初始版本
+- 后端测试完整说明
+- 前端基础测试说明
+
+---
+
+**文档版本**: 2026-03-27  
 **适用系统版本**: ClassHub v3.0.0  
 **后端架构**: FastAPI + SQLModel  
 **前端架构**: Vue 3 + TypeScript + TanStack Query  

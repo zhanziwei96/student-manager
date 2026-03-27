@@ -2,7 +2,7 @@
 CRUD 导出
 """
 from app.crud.student import (
-    get_student, get_students, get_students_by_class, 
+    get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes,
     reset_student_password, count_students
 )
@@ -27,7 +27,7 @@ from app.crud.audit import (
 
 __all__ = [
     # Student
-    "get_student", "get_students", "get_students_by_class",
+    "get_student", "get_students", "get_students_by_class", "get_students_by_classes",
     "create_student", "update_student_score", "delete_student", "get_all_classes",
     "reset_student_password", "count_students",
     # User

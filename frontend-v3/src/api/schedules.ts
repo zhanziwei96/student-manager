@@ -4,7 +4,7 @@
  * REVIEW-P1: 统一使用 request<T>() 包装，返回类型为 T（已自动提取 data）
  * 与 lib/api.ts 中的 get/post/del 函数保持一致
  */
-import { get, del } from '@/lib/api'
+import { get, put, del } from '@/lib/api'
 
 export interface CourseSchedule {
   id: number
@@ -80,6 +80,22 @@ export const schedulesApi = {
    */
   delete: (id: number): Promise<void> =>
     del(`/schedules/${id}`),
+
+  /**
+   * 为课程分配教师
+   * 返回类型: void（已自动提取 data）
+   */
+  assign: (id: number, teacherId: number, teacherName: string): Promise<void> =>
+    put(`/schedules/${id}/assign`, null, {
+      params: { teacher_id: teacherId, teacher_name: teacherName }
+    }),
+
+  /**
+   * 取消课程的教师分配
+   * 返回类型: void（已自动提取 data）
+   */
+  unassign: (id: number): Promise<void> =>
+    put(`/schedules/${id}/unassign`),
 
   /**
    * 下载导入模板

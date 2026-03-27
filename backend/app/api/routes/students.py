@@ -9,7 +9,7 @@ from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
 from app.core.jwt import require_login, require_admin, get_current_user
 from app.crud import (
-    get_student, get_students, get_students_by_class,
+    get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password
 )
 from app.crud.checkin import get_class_session, get_today_checkins
@@ -65,19 +65,9 @@ async def get_students_list(
                 raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看该班级学生")
             students = get_students_by_class(session, class_name)
         else:
-            # 获取所有负责班级的学生
-            students = []
-            for cls in assigned_classes:
-                students.extend(get_students_by_class(session, cls))
-            
-            # 去重（防止同一学生在多个班级的情况）
-            seen = set()
-            unique_students = []
-            for s in students:
-                if s.student_id not in seen:
-                    seen.add(s.student_id)
-                    unique_students.append(s)
-            students = unique_students
+            # 获取所有负责班级的学生 - 使用IN查询优化性能（REVIEW-P1）
+            # 替代循环查询，减少数据库往返次数
+            students = get_students_by_classes(session, assigned_classes)
     
     # 获取当前课堂会话
     class_session = get_class_session(session)

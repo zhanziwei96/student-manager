@@ -7,7 +7,6 @@ import { useAuthStore } from '@/stores'
 import { Card, Button, Input, Select, Badge } from '@/components/ui'
 import { Play, Square, CheckCircle, Clock, Users, Search, GraduationCap, AlertTriangle } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
-import type { Student } from '@/types'
 import { getErrorMessage } from '@/lib/error'
 
 const className = ref('')
@@ -25,12 +24,6 @@ const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn(comp
 
 // 获取活跃课堂列表
 const { data: activeSessions } = useActiveClassSessions()
-
-// 所有被占用的班级列表（用于显示警告）
-const occupiedClasses = computed(() => {
-  if (!activeSessions.value) return []
-  return activeSessions.value
-})
 
 // 其他教师占用的班级（排除当前用户的）
 const otherOccupiedClasses = computed(() => {
@@ -56,7 +49,7 @@ const availableClassOptions = computed(() => {
 })
 
 // 获取班级列表
-const { data: classList, isPending: isLoadingClasses } = useClasses()
+const { data: classList } = useClasses()
 
 // 获取选中班级的学生列表
 const { data: classStudents, isPending: isLoadingStudents } = useClassStudents(computed(() => activeSession.value?.class_name || ''))
@@ -176,8 +169,12 @@ const quickCheckIn = async (studentId: string) => {
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">课堂签到</h1>
-      <p class="text-white/60">管理您的活跃课堂</p>
+      <h1 class="text-2xl font-bold text-white">
+        课堂签到
+      </h1>
+      <p class="text-white/60">
+        管理您的活跃课堂
+      </p>
     </div>
 
     <!-- Session status -->
@@ -197,10 +194,18 @@ const quickCheckIn = async (studentId: string) => {
             <h2 class="font-medium text-white">
               {{ isSessionActive ? '课堂进行中' : '暂无活跃课堂' }}
             </h2>
-            <p v-if="activeSession" class="text-sm text-white/60">
+            <p
+              v-if="activeSession"
+              class="text-sm text-white/60"
+            >
               {{ activeSession.class_name }} • 开始于 {{ activeSession.start_time }}
             </p>
-            <p v-else class="text-sm text-white/60">选择班级开始新课堂</p>
+            <p
+              v-else
+              class="text-sm text-white/60"
+            >
+              选择班级开始新课堂
+            </p>
           </div>
         </div>
         <div>
@@ -226,18 +231,31 @@ const quickCheckIn = async (studentId: string) => {
     </Card>
 
     <!-- Start session form -->
-    <Card v-if="!isSessionActive" class="border-white/10 bg-white/[0.02] p-6">
-      <h3 class="font-medium text-white">开始新课堂</h3>
-      <p class="text-sm text-white/60">选择您要上课的班级</p>
+    <Card
+      v-if="!isSessionActive"
+      class="border-white/10 bg-white/[0.02] p-6"
+    >
+      <h3 class="font-medium text-white">
+        开始新课堂
+      </h3>
+      <p class="text-sm text-white/60">
+        选择您要上课的班级
+      </p>
       
       <!-- 显示班级占用状态 -->
-      <div v-if="otherOccupiedClasses.length > 0" class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+      <div
+        v-if="otherOccupiedClasses.length > 0"
+        class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg"
+      >
         <p class="text-sm text-yellow-400 flex items-center gap-2">
           <AlertTriangle class="h-4 w-4" />
           以下班级正在被其他教师上课：
         </p>
         <ul class="mt-2 text-sm text-white/70 space-y-1">
-          <li v-for="cls in otherOccupiedClasses" :key="cls.class_name">
+          <li
+            v-for="cls in otherOccupiedClasses"
+            :key="cls.class_name"
+          >
             {{ cls.class_name }} - {{ cls.teacher_name || '其他教师' }} 老师
           </li>
         </ul>
@@ -250,7 +268,11 @@ const quickCheckIn = async (studentId: string) => {
           placeholder="请选择班级"
           :options="availableClassOptions"
         />
-        <Button :loading="isStartingSession" @click="handleStartSession" :disabled="!className">
+        <Button
+          :loading="isStartingSession"
+          :disabled="!className"
+          @click="handleStartSession"
+        >
           <Play class="mr-2 h-4 w-4" />
           开始
         </Button>
@@ -266,8 +288,12 @@ const quickCheckIn = async (studentId: string) => {
             <CheckCircle class="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 class="font-medium text-white">学生签到</h3>
-            <p class="text-sm text-white/60">输入学生学号进行签到</p>
+            <h3 class="font-medium text-white">
+              学生签到
+            </h3>
+            <p class="text-sm text-white/60">
+              输入学生学号进行签到
+            </p>
           </div>
         </div>
         <div class="mt-4 flex gap-4">
@@ -277,7 +303,10 @@ const quickCheckIn = async (studentId: string) => {
             class="flex-1"
             @keyup.enter="handleCheckIn"
           />
-          <Button :loading="isCheckingIn" @click="handleCheckIn">
+          <Button
+            :loading="isCheckingIn"
+            @click="handleCheckIn"
+          >
             <CheckCircle class="mr-2 h-4 w-4" />
             签到
           </Button>
@@ -290,8 +319,12 @@ const quickCheckIn = async (studentId: string) => {
           <div class="flex items-center gap-3">
             <Users class="h-5 w-5 text-white/60" />
             <div>
-              <p class="text-xs text-white/50">班级人数</p>
-              <p class="text-xl font-bold text-white">{{ checkinStats.total }}</p>
+              <p class="text-xs text-white/50">
+                班级人数
+              </p>
+              <p class="text-xl font-bold text-white">
+                {{ checkinStats.total }}
+              </p>
             </div>
           </div>
         </Card>
@@ -301,8 +334,12 @@ const quickCheckIn = async (studentId: string) => {
               <CheckCircle class="h-4 w-4 text-green-400" />
             </div>
             <div>
-              <p class="text-xs text-white/50">已签到</p>
-              <p class="text-xl font-bold text-green-400">{{ checkinStats.checkedIn }}</p>
+              <p class="text-xs text-white/50">
+                已签到
+              </p>
+              <p class="text-xl font-bold text-green-400">
+                {{ checkinStats.checkedIn }}
+              </p>
             </div>
           </div>
         </Card>
@@ -312,8 +349,12 @@ const quickCheckIn = async (studentId: string) => {
               <Clock class="h-4 w-4 text-red-400" />
             </div>
             <div>
-              <p class="text-xs text-white/50">未签到</p>
-              <p class="text-xl font-bold text-red-400">{{ checkinStats.notCheckedIn }}</p>
+              <p class="text-xs text-white/50">
+                未签到
+              </p>
+              <p class="text-xl font-bold text-red-400">
+                {{ checkinStats.notCheckedIn }}
+              </p>
             </div>
           </div>
         </Card>
@@ -339,16 +380,27 @@ const quickCheckIn = async (studentId: string) => {
           </div>
         </div>
         
-        <div v-if="isLoadingStudents" class="flex h-48 items-center justify-center">
+        <div
+          v-if="isLoadingStudents"
+          class="flex h-48 items-center justify-center"
+        >
           <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
         
-        <div v-else-if="filteredStudents.length > 0" class="divide-y divide-white/5">
+        <div
+          v-else-if="filteredStudents.length > 0"
+          class="divide-y divide-white/5"
+        >
           <!-- 未签到学生组 - REVIEW-P1: 使用预计算 notCheckedInStudents -->
-          <div v-if="notCheckedInStudents.length > 0" class="p-4">
+          <div
+            v-if="notCheckedInStudents.length > 0"
+            class="p-4"
+          >
             <div class="flex items-center gap-2 mb-3">
-              <div class="flex h-2 w-2 rounded-full bg-orange-400"></div>
-              <h4 class="text-sm font-medium text-white/80">未签到</h4>
+              <div class="flex h-2 w-2 rounded-full bg-orange-400" />
+              <h4 class="text-sm font-medium text-white/80">
+                未签到
+              </h4>
               <span class="text-xs text-white/40">{{ notCheckedInStudents.length }}人</span>
             </div>
             <div class="space-y-2">
@@ -362,8 +414,12 @@ const quickCheckIn = async (studentId: string) => {
                     <span class="text-sm">{{ student.name.charAt(0) }}</span>
                   </div>
                   <div>
-                    <p class="text-sm font-medium text-white">{{ student.name }}</p>
-                    <p class="text-xs text-white/40">{{ student.student_id }}</p>
+                    <p class="text-sm font-medium text-white">
+                      {{ student.name }}
+                    </p>
+                    <p class="text-xs text-white/40">
+                      {{ student.student_id }}
+                    </p>
                   </div>
                 </div>
                 <Button
@@ -380,10 +436,15 @@ const quickCheckIn = async (studentId: string) => {
           </div>
           
           <!-- 已签到学生组 - REVIEW-P1: 使用预计算 checkedInStudents -->
-          <div v-if="checkedInStudents.length > 0" class="p-4">
+          <div
+            v-if="checkedInStudents.length > 0"
+            class="p-4"
+          >
             <div class="flex items-center gap-2 mb-3">
-              <div class="flex h-2 w-2 rounded-full bg-green-400"></div>
-              <h4 class="text-sm font-medium text-white/80">已签到</h4>
+              <div class="flex h-2 w-2 rounded-full bg-green-400" />
+              <h4 class="text-sm font-medium text-white/80">
+                已签到
+              </h4>
               <span class="text-xs text-white/40">{{ checkedInStudents.length }}人</span>
             </div>
             <div class="space-y-2">
@@ -397,12 +458,19 @@ const quickCheckIn = async (studentId: string) => {
                     <CheckCircle class="h-4 w-4" />
                   </div>
                   <div>
-                    <p class="text-sm font-medium text-white">{{ student.name }}</p>
-                    <p class="text-xs text-white/40">{{ student.student_id }}</p>
+                    <p class="text-sm font-medium text-white">
+                      {{ student.name }}
+                    </p>
+                    <p class="text-xs text-white/40">
+                      {{ student.student_id }}
+                    </p>
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
-                  <Badge variant="success" class="text-xs bg-green-500/10 text-green-400 border-green-500/30">
+                  <Badge
+                    variant="success"
+                    class="text-xs bg-green-500/10 text-green-400 border-green-500/30"
+                  >
                     已签到
                   </Badge>
                 </div>
@@ -411,7 +479,10 @@ const quickCheckIn = async (studentId: string) => {
           </div>
         </div>
         
-        <div v-else class="flex h-48 flex-col items-center justify-center text-white/60">
+        <div
+          v-else
+          class="flex h-48 flex-col items-center justify-center text-white/60"
+        >
           <GraduationCap class="mb-4 h-12 w-12 opacity-50" />
           <p>暂无学生数据</p>
         </div>
@@ -419,6 +490,10 @@ const quickCheckIn = async (studentId: string) => {
     </template>
 
     <!-- Toast -->
-    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
+    <Toast
+      v-model:show="show"
+      :message="toastMessage"
+      :variant="toastVariant"
+    />
   </div>
 </template>

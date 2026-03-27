@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   modelValue?: string | number
-  class?: string
+  class?: string | string[]
   id?: string
   placeholder?: string
   type?: string
@@ -60,5 +60,5 @@ const onInput = (event: Event) => {
     :disabled="disabled"
     :required="required"
     @input="onInput"
-  />
+  >
 </template>

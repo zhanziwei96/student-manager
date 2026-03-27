@@ -4,7 +4,7 @@ import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplat
 import { useClasses, useToast } from '@/composables'
 import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer } from '@/components/ui'
-import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Loader2 } from 'lucide-vue-next'
+import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 import { getErrorMessage } from '@/lib/error'
 
@@ -121,15 +121,26 @@ const handleDelete = async (id: number) => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">课表管理</h1>
-        <p class="text-white/60">管理课程安排，支持批量导入</p>
+        <h1 class="text-2xl font-bold text-white">
+          课表管理
+        </h1>
+        <p class="text-white/60">
+          管理课程安排，支持批量导入
+        </p>
       </div>
       <div class="flex gap-2">
-        <Button v-if="isAdmin" variant="outline" @click="downloadTemplate">
+        <Button
+          v-if="isAdmin"
+          variant="outline"
+          @click="downloadTemplate"
+        >
           <Download class="mr-2 h-4 w-4" />
           下载模板
         </Button>
-        <Button v-if="isAdmin" @click="showImportDialog = true">
+        <Button
+          v-if="isAdmin"
+          @click="showImportDialog = true"
+        >
           <Upload class="mr-2 h-4 w-4" />
           导入课表
         </Button>
@@ -145,8 +156,18 @@ const handleDelete = async (id: number) => {
             v-model="selectedClass"
             class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
           >
-            <option value="" class="bg-gray-900 text-white">全部班级</option>
-            <option v-for="cls in classes" :key="cls.name" :value="cls.name" class="bg-gray-900 text-white">
+            <option
+              value=""
+              class="bg-gray-900 text-white"
+            >
+              全部班级
+            </option>
+            <option
+              v-for="cls in classes"
+              :key="cls.name"
+              :value="cls.name"
+              class="bg-gray-900 text-white"
+            >
               {{ cls.name }}
             </option>
           </select>
@@ -157,8 +178,18 @@ const handleDelete = async (id: number) => {
             v-model="selectedDay"
             class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
           >
-            <option :value="undefined" class="bg-gray-900 text-white">全部</option>
-            <option v-for="day in weekDays" :key="day.value" :value="day.value" class="bg-gray-900 text-white">
+            <option
+              :value="undefined"
+              class="bg-gray-900 text-white"
+            >
+              全部
+            </option>
+            <option
+              v-for="day in weekDays"
+              :key="day.value"
+              :value="day.value"
+              class="bg-gray-900 text-white"
+            >
               {{ day.label }}
             </option>
           </select>
@@ -175,14 +206,22 @@ const handleDelete = async (id: number) => {
       @retry="refetch"
     >
       <div class="space-y-6">
-        <div v-for="day in weekDays" :key="day.value">
-          <div v-if="schedulesByDay[day.value].length > 0" class="space-y-3">
+        <div
+          v-for="day in weekDays"
+          :key="day.value"
+        >
+          <div
+            v-if="schedulesByDay[day.value].length > 0"
+            class="space-y-3"
+          >
             <!-- Day Header -->
             <div class="flex items-center gap-2">
               <div class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-xs text-primary">
                 {{ day.label.charAt(1) }}
               </div>
-              <h3 class="font-medium text-white">{{ day.label }}</h3>
+              <h3 class="font-medium text-white">
+                {{ day.label }}
+              </h3>
               <span class="text-sm text-white/40">({{ schedulesByDay[day.value].length }}节课)</span>
             </div>
 
@@ -197,7 +236,9 @@ const handleDelete = async (id: number) => {
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
                       <BookOpen class="h-4 w-4 text-primary" />
-                      <h4 class="font-medium text-white">{{ schedule.course_name }}</h4>
+                      <h4 class="font-medium text-white">
+                        {{ schedule.course_name }}
+                      </h4>
                     </div>
                     <div class="mt-2 space-y-1 text-sm text-white/60">
                       <div class="flex items-center gap-2">
@@ -208,13 +249,19 @@ const handleDelete = async (id: number) => {
                         <Clock class="h-3.5 w-3.5" />
                         {{ schedule.start_time }} - {{ schedule.end_time }}
                       </div>
-                      <div v-if="schedule.classroom" class="flex items-center gap-2">
+                      <div
+                        v-if="schedule.classroom"
+                        class="flex items-center gap-2"
+                      >
                         <MapPin class="h-3.5 w-3.5" />
                         {{ schedule.classroom }}
                       </div>
                     </div>
                     <div class="mt-2 flex items-center gap-2">
-                      <Badge variant="secondary" class="text-xs">
+                      <Badge
+                        variant="secondary"
+                        class="text-xs"
+                      >
                         {{ schedule.teacher_name || '未分配教师' }}
                       </Badge>
                       <span class="text-xs text-white/40">
@@ -241,10 +288,15 @@ const handleDelete = async (id: number) => {
     </DataContainer>
 
     <!-- Import Dialog -->
-    <Dialog v-model:open="showImportDialog" title="导入课表">
+    <Dialog
+      v-model:open="showImportDialog"
+      title="导入课表"
+    >
       <div class="space-y-4">
         <div class="rounded-lg border border-white/10 bg-white/[0.02] p-4">
-          <h4 class="mb-2 text-sm font-medium text-white">导入说明</h4>
+          <h4 class="mb-2 text-sm font-medium text-white">
+            导入说明
+          </h4>
           <ul class="space-y-1 text-sm text-white/60">
             <li>1. 支持 .xlsx 或 .csv 格式</li>
             <li>2. 请先下载模板，按模板格式填写</li>
@@ -260,16 +312,27 @@ const handleDelete = async (id: number) => {
             accept=".xlsx,.csv"
             class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:text-white hover:file:bg-primary/80"
             @change="handleFileChange"
-          />
-          <p v-if="selectedFile" class="mt-2 text-sm text-white/60">
+          >
+          <p
+            v-if="selectedFile"
+            class="mt-2 text-sm text-white/60"
+          >
             已选择: {{ selectedFile.name }}
           </p>
         </div>
       </div>
 
       <template #footer>
-        <Button variant="outline" @click="showImportDialog = false">取消</Button>
-        <Button :loading="isImporting" @click="handleImport">
+        <Button
+          variant="outline"
+          @click="showImportDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :loading="isImporting"
+          @click="handleImport"
+        >
           <Upload class="mr-2 h-4 w-4" />
           导入
         </Button>
@@ -277,6 +340,10 @@ const handleDelete = async (id: number) => {
     </Dialog>
 
     <!-- Toast -->
-    <Toast v-model:show="show" :message="toastMessage" :variant="toastVariant" />
+    <Toast
+      v-model:show="show"
+      :message="toastMessage"
+      :variant="toastVariant"
+    />
   </div>
 </template>

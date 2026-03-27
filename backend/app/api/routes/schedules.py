@@ -137,76 +137,25 @@ async def import_schedules(
                 detail=f"缺少必需的列: {', '.join(missing_columns)}"
             )
         
-        # 导入数据
-        imported_count = 0
-        errors = []
+        # 准备数据并调用CRUD层函数（架构分层修复）
+        # 将DataFrame转换为字典列表，业务逻辑移到CRUD层
+        records = []
+        for _, row in df.iterrows():
+            records.append({
+                'course_name': row.get('课程名称'),
+                'class_name': row.get('班级'),
+                'teacher_name': row.get('教师姓名'),
+                'day_of_week': row.get('星期'),
+                'start_time': row.get('开始时间'),
+                'end_time': row.get('结束时间'),
+                'classroom': row.get('教室') if pd.notna(row.get('教室')) else None,
+                'week_start': int(row.get('开始周', 1)) if pd.notna(row.get('开始周')) else 1,
+                'week_end': int(row.get('结束周', 20)) if pd.notna(row.get('结束周')) else 20,
+            })
         
-        for index, row in df.iterrows():
-            try:
-                # 数据校验
-                course_name = str(row['课程名称']).strip()
-                class_name = str(row['班级']).strip()
-                teacher_name = str(row['教师姓名']).strip()
-                day_of_week = int(row['星期'])
-                start_time = str(row['开始时间']).strip()
-                end_time = str(row['结束时间']).strip()
-                
-                if not all([course_name, class_name, teacher_name, start_time, end_time]):
-                    errors.append(f"第 {index + 2} 行: 存在空值")
-                    continue
-                
-                if day_of_week < 1 or day_of_week > 7:
-                    errors.append(f"第 {index + 2} 行: 星期必须在 1-7 之间")
-                    continue
-                
-                # 可选字段
-                classroom = str(row.get('教室', '')).strip() if pd.notna(row.get('教室')) else None
-                week_start = int(row.get('开始周', 1)) if pd.notna(row.get('开始周')) else 1
-                week_end = int(row.get('结束周', 20)) if pd.notna(row.get('结束周')) else 20
-                
-                # 查找教师ID
-                from app.models.user import User
-                teacher = session.exec(
-                    select(User).where(User.name == teacher_name)
-                ).first()
-                
-                # 检查是否已存在相同课程（查重）
-                existing = session.exec(
-                    select(CourseSchedule).where(
-                        CourseSchedule.course_name == course_name,
-                        CourseSchedule.class_name == class_name,
-                        CourseSchedule.teacher_name == teacher_name,
-                        CourseSchedule.day_of_week == day_of_week,
-                        CourseSchedule.start_time == start_time
-                    )
-                ).first()
-                
-                if existing:
-                    errors.append(f"第 {index + 2} 行: 课程已存在（{course_name} - {class_name} - 星期{day_of_week} {start_time}）")
-                    continue
-                
-                schedule = CourseSchedule(
-                    course_name=course_name,
-                    class_name=class_name,
-                    teacher_id=teacher.id if teacher else None,
-                    teacher_name=teacher_name,
-                    day_of_week=day_of_week,
-                    start_time=start_time,
-                    end_time=end_time,
-                    classroom=classroom,
-                    week_start=week_start,
-                    week_end=week_end,
-                    created_at=datetime.now().isoformat(),
-                    updated_at=datetime.now().isoformat()
-                )
-                
-                session.add(schedule)
-                imported_count += 1
-                
-            except Exception as e:
-                errors.append(f"第 {index + 2} 行: {str(e)}")
-        
-        session.commit()
+        # 调用CRUD层函数处理所有业务逻辑
+        from app.crud import import_schedules as crud_import_schedules
+        imported_count, errors = crud_import_schedules(session, records)
         
         result = {
             ApiResponseConst.SUCCESS: True,
@@ -248,6 +197,62 @@ async def delete_schedule_api(
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: "课程已删除"
+    }
+
+
+@router.put("/schedules/{schedule_id}/assign", response_model=dict)
+async def assign_teacher_to_schedule(
+    schedule_id: int,
+    teacher_id: int,
+    teacher_name: str,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin)
+):
+    """为课程分配教师（仅管理员）"""
+    # 查询课程
+    schedule = session.get(CourseSchedule, schedule_id)
+    if not schedule:
+        raise HTTPException(
+            status_code=HttpStatus.NOT_FOUND,
+            detail="课程不存在"
+        )
+    
+    # 更新教师信息
+    schedule.teacher_id = teacher_id
+    schedule.teacher_name = teacher_name
+    session.add(schedule)
+    session.commit()
+    
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: f"已将课程 '{schedule.course_name}' 分配给教师 '{teacher_name}'"
+    }
+
+
+@router.put("/schedules/{schedule_id}/unassign", response_model=dict)
+async def unassign_teacher_from_schedule(
+    schedule_id: int,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin)
+):
+    """取消课程的教师分配（仅管理员）"""
+    # 查询课程
+    schedule = session.get(CourseSchedule, schedule_id)
+    if not schedule:
+        raise HTTPException(
+            status_code=HttpStatus.NOT_FOUND,
+            detail="课程不存在"
+        )
+    
+    # 清除教师信息
+    schedule.teacher_id = None
+    schedule.teacher_name = None
+    session.add(schedule)
+    session.commit()
+    
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: f"已取消课程 '{schedule.course_name}' 的教师分配"
     }
 
 

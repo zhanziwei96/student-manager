@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Card, Button, Badge, Input, Dialog } from '@/components/ui'
-import { Plus, Search, Loader2, Trash2, Key } from 'lucide-vue-next'
+import { Plus, Search, Loader2, Trash2, Key, BookOpen, Calendar } from 'lucide-vue-next'
 import { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from '@/composables/useTeachers'
 import { useToast } from '@/composables/useToast'
+import ManageClassesDialog from '@/components/admin/ManageClassesDialog.vue'
+import ManageSchedulesDialog from '@/components/admin/ManageSchedulesDialog.vue'
 import type { User } from '@/types'
 import { getErrorMessage } from '@/lib/error'
 
@@ -167,6 +169,24 @@ const openResetDialog = (teacher: User) => {
   showResetDialog.value = true
 }
 
+// Manage Classes Dialog
+const showManageClassesDialog = ref(false)
+const managingClassesTeacher = ref<User | null>(null)
+
+const openManageClassesDialog = (teacher: User) => {
+  managingClassesTeacher.value = teacher
+  showManageClassesDialog.value = true
+}
+
+// Manage Schedules Dialog
+const showManageSchedulesDialog = ref(false)
+const managingSchedulesTeacher = ref<User | null>(null)
+
+const openManageSchedulesDialog = (teacher: User) => {
+  managingSchedulesTeacher.value = teacher
+  showManageSchedulesDialog.value = true
+}
+
 const validateResetForm = () => {
   let valid = true
   resetErrors.value = { newPassword: '', confirmPassword: '' }
@@ -210,8 +230,12 @@ const handleResetPassword = async () => {
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-white">教师管理</h1>
-        <p class="text-white/60">管理教师账号</p>
+        <h1 class="text-2xl font-bold text-white">
+          教师管理
+        </h1>
+        <p class="text-white/60">
+          管理教师账号
+        </p>
       </div>
       <Button @click="openAddDialog">
         <Plus class="mr-2 h-4 w-4" />
@@ -230,12 +254,18 @@ const handleResetPassword = async () => {
     </div>
 
     <!-- Loading state -->
-    <div v-if="isPending" class="flex h-64 items-center justify-center">
+    <div
+      v-if="isPending"
+      class="flex h-64 items-center justify-center"
+    >
       <Loader2 class="h-8 w-8 animate-spin text-primary" />
     </div>
 
     <!-- Teachers grid -->
-    <div v-else-if="filteredTeachers.length > 0" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      v-else-if="filteredTeachers.length > 0"
+      class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+    >
       <Card
         v-for="teacher in filteredTeachers"
         :key="teacher.id"
@@ -248,30 +278,73 @@ const handleResetPassword = async () => {
             </span>
           </div>
           <div class="flex-1 min-w-0">
-            <h3 class="truncate font-medium text-white">{{ teacher.name }}</h3>
-            <p class="text-sm text-white/60">@{{ teacher.username }}</p>
+            <h3 class="truncate font-medium text-white">
+              {{ teacher.name }}
+            </h3>
+            <p class="text-sm text-white/60">
+              @{{ teacher.username }}
+            </p>
             <div class="mt-2 flex items-center gap-2">
-              <Badge variant="secondary">教师</Badge>
+              <Badge variant="secondary">
+                教师
+              </Badge>
             </div>
           </div>
         </div>
         <div class="mt-4 flex gap-2">
-          <Button variant="outline" size="sm" class="flex-1" @click="openResetDialog(teacher)">
+          <Button
+            variant="outline"
+            size="sm"
+            class="flex-1"
+            @click="openResetDialog(teacher)"
+          >
             <Key class="mr-2 h-4 w-4" />
             重置密码
           </Button>
-          <Button variant="outline" size="sm" class="flex-1" @click="openEditDialog(teacher)">
+          <Button
+            variant="outline"
+            size="sm"
+            class="flex-1"
+            @click="openEditDialog(teacher)"
+          >
             编辑
           </Button>
-          <Button variant="outline" size="sm" @click="openDeleteDialog(teacher)">
+          <Button
+            variant="outline"
+            size="sm"
+            @click="openDeleteDialog(teacher)"
+          >
             <Trash2 class="h-4 w-4 text-red-400" />
+          </Button>
+        </div>
+        <div class="mt-2 flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            class="flex-1"
+            @click="openManageClassesDialog(teacher)"
+          >
+            <BookOpen class="mr-2 h-4 w-4" />
+            管理班级
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="flex-1"
+            @click="openManageSchedulesDialog(teacher)"
+          >
+            <Calendar class="mr-2 h-4 w-4" />
+            管理课表
           </Button>
         </div>
       </Card>
     </div>
 
     <!-- Empty state -->
-    <div v-else class="flex h-64 flex-col items-center justify-center text-white/60">
+    <div
+      v-else
+      class="flex h-64 flex-col items-center justify-center text-white/60"
+    >
       <p>暂无教师数据</p>
     </div>
 
@@ -291,7 +364,12 @@ const handleResetPassword = async () => {
             placeholder="请输入用户名"
             :class="['mt-1', addErrors.username && 'border-red-500']"
           />
-          <p v-if="addErrors.username" class="mt-1 text-sm text-red-400">{{ addErrors.username }}</p>
+          <p
+            v-if="addErrors.username"
+            class="mt-1 text-sm text-red-400"
+          >
+            {{ addErrors.username }}
+          </p>
         </div>
         <div>
           <label class="text-sm text-white/80">姓名</label>
@@ -300,7 +378,12 @@ const handleResetPassword = async () => {
             placeholder="请输入姓名"
             :class="['mt-1', addErrors.name && 'border-red-500']"
           />
-          <p v-if="addErrors.name" class="mt-1 text-sm text-red-400">{{ addErrors.name }}</p>
+          <p
+            v-if="addErrors.name"
+            class="mt-1 text-sm text-red-400"
+          >
+            {{ addErrors.name }}
+          </p>
         </div>
         <div>
           <label class="text-sm text-white/80">密码</label>
@@ -310,7 +393,12 @@ const handleResetPassword = async () => {
             placeholder="请输入密码（至少6位）"
             :class="['mt-1', addErrors.password && 'border-red-500']"
           />
-          <p v-if="addErrors.password" class="mt-1 text-sm text-red-400">{{ addErrors.password }}</p>
+          <p
+            v-if="addErrors.password"
+            class="mt-1 text-sm text-red-400"
+          >
+            {{ addErrors.password }}
+          </p>
         </div>
         <div>
           <label class="text-sm text-white/80">确认密码</label>
@@ -320,20 +408,41 @@ const handleResetPassword = async () => {
             placeholder="请再次输入密码"
             :class="['mt-1', addErrors.confirmPassword && 'border-red-500']"
           />
-          <p v-if="addErrors.confirmPassword" class="mt-1 text-sm text-red-400">{{ addErrors.confirmPassword }}</p>
+          <p
+            v-if="addErrors.confirmPassword"
+            class="mt-1 text-sm text-red-400"
+          >
+            {{ addErrors.confirmPassword }}
+          </p>
         </div>
       </div>
       <template #footer>
-        <Button type="button" variant="outline" @click="showAddDialog = false">取消</Button>
-        <Button type="submit" :disabled="isCreating">
-          <Loader2 v-if="isCreating" class="mr-2 h-4 w-4 animate-spin" />
+        <Button
+          type="button"
+          variant="outline"
+          @click="showAddDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          type="submit"
+          :disabled="isCreating"
+        >
+          <Loader2
+            v-if="isCreating"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
           创建
         </Button>
       </template>
     </Dialog>
 
     <!-- Edit Dialog -->
-    <Dialog v-model:open="showEditDialog" title="编辑教师" description="修改教师信息">
+    <Dialog
+      v-model:open="showEditDialog"
+      title="编辑教师"
+      description="修改教师信息"
+    >
       <div class="space-y-4">
         <div>
           <label class="text-sm text-white/80">姓名</label>
@@ -343,31 +452,67 @@ const handleResetPassword = async () => {
             :class="['mt-1', editError && 'border-red-500']"
             @keyup.enter="handleEditTeacher"
           />
-          <p v-if="editError" class="mt-1 text-sm text-red-400">{{ editError }}</p>
+          <p
+            v-if="editError"
+            class="mt-1 text-sm text-red-400"
+          >
+            {{ editError }}
+          </p>
         </div>
       </div>
       <template #footer>
-        <Button variant="outline" @click="showEditDialog = false">取消</Button>
-        <Button :disabled="isUpdating" @click="handleEditTeacher">
-          <Loader2 v-if="isUpdating" class="mr-2 h-4 w-4 animate-spin" />
+        <Button
+          variant="outline"
+          @click="showEditDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :disabled="isUpdating"
+          @click="handleEditTeacher"
+        >
+          <Loader2
+            v-if="isUpdating"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
           保存
         </Button>
       </template>
     </Dialog>
 
     <!-- Delete Dialog -->
-    <Dialog v-model:open="showDeleteDialog" title="删除教师" :description="`确定要删除教师 '${deletingTeacher?.name}' 吗？此操作不可恢复。`">
+    <Dialog
+      v-model:open="showDeleteDialog"
+      title="删除教师"
+      :description="`确定要删除教师 '${deletingTeacher?.name}' 吗？此操作不可恢复。`"
+    >
       <template #footer>
-        <Button variant="outline" @click="showDeleteDialog = false">取消</Button>
-        <Button variant="destructive" :disabled="isDeleting" @click="handleDeleteTeacher">
-          <Loader2 v-if="isDeleting" class="mr-2 h-4 w-4 animate-spin" />
+        <Button
+          variant="outline"
+          @click="showDeleteDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          variant="destructive"
+          :disabled="isDeleting"
+          @click="handleDeleteTeacher"
+        >
+          <Loader2
+            v-if="isDeleting"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
           删除
         </Button>
       </template>
     </Dialog>
 
     <!-- Reset Password Dialog -->
-    <Dialog v-model:open="showResetDialog" title="重置密码" :description="`为 '${resettingTeacher?.name}' 设置新密码`">
+    <Dialog
+      v-model:open="showResetDialog"
+      title="重置密码"
+      :description="`为 '${resettingTeacher?.name}' 设置新密码`"
+    >
       <div class="space-y-4">
         <div>
           <label class="text-sm text-white/80">新密码</label>
@@ -378,7 +523,12 @@ const handleResetPassword = async () => {
             :class="['mt-1', resetErrors.newPassword && 'border-red-500']"
             @keyup.enter="handleResetPassword"
           />
-          <p v-if="resetErrors.newPassword" class="mt-1 text-sm text-red-400">{{ resetErrors.newPassword }}</p>
+          <p
+            v-if="resetErrors.newPassword"
+            class="mt-1 text-sm text-red-400"
+          >
+            {{ resetErrors.newPassword }}
+          </p>
         </div>
         <div>
           <label class="text-sm text-white/80">确认新密码</label>
@@ -389,16 +539,46 @@ const handleResetPassword = async () => {
             :class="['mt-1', resetErrors.confirmPassword && 'border-red-500']"
             @keyup.enter="handleResetPassword"
           />
-          <p v-if="resetErrors.confirmPassword" class="mt-1 text-sm text-red-400">{{ resetErrors.confirmPassword }}</p>
+          <p
+            v-if="resetErrors.confirmPassword"
+            class="mt-1 text-sm text-red-400"
+          >
+            {{ resetErrors.confirmPassword }}
+          </p>
         </div>
       </div>
       <template #footer>
-        <Button variant="outline" @click="showResetDialog = false">取消</Button>
-        <Button :disabled="isResetting" @click="handleResetPassword">
-          <Loader2 v-if="isResetting" class="mr-2 h-4 w-4 animate-spin" />
+        <Button
+          variant="outline"
+          @click="showResetDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :disabled="isResetting"
+          @click="handleResetPassword"
+        >
+          <Loader2
+            v-if="isResetting"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
           重置密码
         </Button>
       </template>
     </Dialog>
+
+    <!-- Manage Classes Dialog -->
+    <ManageClassesDialog
+      v-model:open="showManageClassesDialog"
+      :teacher="managingClassesTeacher"
+      @success="() => { /* 数据会自动刷新 */ }"
+    />
+
+    <!-- Manage Schedules Dialog -->
+    <ManageSchedulesDialog
+      v-model:open="showManageSchedulesDialog"
+      :teacher="managingSchedulesTeacher"
+      @success="() => { /* 数据会自动刷新 */ }"
+    />
   </div>
 </template>

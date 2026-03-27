@@ -41,7 +41,11 @@ const features = [
           <span class="text-xl font-bold text-white">智慧课堂</span>
         </div>
         <div class="flex items-center gap-4">
-          <Button variant="ghost" class="text-white/70" @click="router.push('/login')">
+          <Button
+            variant="ghost"
+            class="text-white/70"
+            @click="router.push('/login')"
+          >
             登录
           </Button>
           <Button @click="router.push('/login')">
@@ -78,7 +82,10 @@ const features = [
         </p>
 
         <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button size="lg" @click="router.push('/login')">
+          <Button
+            size="lg"
+            @click="router.push('/login')"
+          >
             开始使用
             <ArrowRight class="ml-2 h-5 w-5" />
           </Button>
@@ -96,10 +103,17 @@ const features = [
             class="group rounded-2xl border border-white/10 bg-white/[0.02] p-6 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
           >
             <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-              <component :is="feature.icon" class="h-6 w-6" />
+              <component
+                :is="feature.icon"
+                class="h-6 w-6"
+              />
             </div>
-            <h3 class="mt-4 text-lg font-semibold text-white">{{ feature.title }}</h3>
-            <p class="mt-2 text-sm text-white/60">{{ feature.description }}</p>
+            <h3 class="mt-4 text-lg font-semibold text-white">
+              {{ feature.title }}
+            </h3>
+            <p class="mt-2 text-sm text-white/60">
+              {{ feature.description }}
+            </p>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useStats, useTodaySchedules, useActiveClassSessions } from '@/composables'
-import { Card, Button, Badge, DataContainer } from '@/components/ui'
+import { Card, Button, DataContainer } from '@/components/ui'
 import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
@@ -48,8 +48,12 @@ const statCards = computed(() => [
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">教师仪表板</h1>
-      <p class="text-white/60">欢迎回来，教师</p>
+      <h1 class="text-2xl font-bold text-white">
+        教师仪表板
+      </h1>
+      <p class="text-white/60">
+        欢迎回来，教师
+      </p>
     </div>
 
     <!-- Quick actions -->
@@ -58,24 +62,36 @@ const statCards = computed(() => [
         <Calendar class="mr-2 h-4 w-4" />
         开始上课
       </Button>
-      <Button variant="outline" @click="router.push('/teacher/students')">
+      <Button
+        variant="outline"
+        @click="router.push('/teacher/students')"
+      >
         <Users class="mr-2 h-4 w-4" />
         查看学生
       </Button>
     </div>
 
     <!-- Loading state -->
-    <div v-if="isPending" class="flex h-64 items-center justify-center">
+    <div
+      v-if="isPending"
+      class="flex h-64 items-center justify-center"
+    >
       <Loader2 class="h-8 w-8 animate-spin text-primary" />
     </div>
 
     <!-- Error state -->
-    <div v-else-if="error" class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400">
+    <div
+      v-else-if="error"
+      class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400"
+    >
       加载统计数据失败: {{ error.message }}
     </div>
 
     <!-- Stats grid -->
-    <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      v-else
+      class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+    >
       <Card
         v-for="card in statCards"
         :key="card.title"
@@ -83,15 +99,27 @@ const statCards = computed(() => [
       >
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-white/60">{{ card.title }}</p>
-            <p class="mt-1 text-3xl font-bold text-white">{{ card.value }}</p>
+            <p class="text-sm text-white/60">
+              {{ card.title }}
+            </p>
+            <p class="mt-1 text-3xl font-bold text-white">
+              {{ card.value }}
+            </p>
           </div>
           <div :class="['rounded-lg bg-white/5 p-3 transition-colors group-hover:bg-white/10', card.color]">
-            <component :is="card.icon" class="h-6 w-6" />
+            <component
+              :is="card.icon"
+              class="h-6 w-6"
+            />
           </div>
         </div>
         <div class="mt-4">
-          <Button variant="ghost" size="sm" class="p-0 text-primary hover:text-primary/80" @click="router.push(card.link)">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="p-0 text-primary hover:text-primary/80"
+            @click="router.push(card.link)"
+          >
             查看详情
             <ArrowRight class="ml-1 h-4 w-4" />
           </Button>
@@ -103,10 +131,18 @@ const statCards = computed(() => [
     <Card class="border-white/10 bg-white/[0.02] p-6">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-lg font-semibold text-white">今日课表</h2>
-          <p class="text-sm text-white/60">{{ todayWeekDay }}的课程安排</p>
+          <h2 class="text-lg font-semibold text-white">
+            今日课表
+          </h2>
+          <p class="text-sm text-white/60">
+            {{ todayWeekDay }}的课程安排
+          </p>
         </div>
-        <Button variant="outline" size="sm" @click="router.push('/teacher/schedules')">
+        <Button
+          variant="outline"
+          size="sm"
+          @click="router.push('/teacher/schedules')"
+        >
           管理课表
         </Button>
       </div>
@@ -127,10 +163,15 @@ const statCards = computed(() => [
               <span class="text-xs font-medium">{{ schedule.start_time }}</span>
             </div>
             <div class="flex-1">
-              <p class="font-medium text-white">{{ schedule.course_name }}</p>
+              <p class="font-medium text-white">
+                {{ schedule.course_name }}
+              </p>
               <p class="text-sm text-white/60">
                 {{ schedule.class_name }}
-                <span v-if="schedule.classroom" class="inline-flex items-center gap-1 ml-2">
+                <span
+                  v-if="schedule.classroom"
+                  class="inline-flex items-center gap-1 ml-2"
+                >
                   <MapPin class="h-3 w-3" />
                   {{ schedule.classroom }}
                 </span>

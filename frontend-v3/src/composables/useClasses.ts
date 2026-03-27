@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/vue-query'
 import { classesApi } from '@/api/classes'
 import { studentsApi } from '@/api/students'
-import { computed, unref, type MaybeRefOrGetter } from 'vue'
+import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 
 /**
  * 班级数据 composable - FE-003 修复后
@@ -92,11 +92,11 @@ export function useClassStudents(className: MaybeRefOrGetter<string>) {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['class-students', className],
     queryFn: async () => {
-      const name = unref(className)
+      const name = toValue(className)
       // FE-003: 直接获取数据，错误自动抛出
       return await classesApi.getStudentsByClass(name)
     },
-    enabled: () => !!unref(className),
+    enabled: () => !!toValue(className),
   })
 
   return {

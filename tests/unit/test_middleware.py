@@ -158,3 +158,65 @@ class TestAuditLogMiddlewareIntegration:
         response = await middleware.dispatch(mock_request, mock_call_next)
         
         assert response == mock_response
+
+
+class TestAuditLogAsyncSave:
+    """测试审计日志异步保存（性能优化）"""
+    
+    @pytest.mark.asyncio
+    async def test_save_audit_log_creates_async_task(self):
+        """测试保存审计日志创建异步任务 - 性能优化验证"""
+        import asyncio
+        from unittest.mock import patch
+        from app.core.middleware import _save_audit_log_async
+        
+        middleware = AuditLogMiddleware(Mock())
+        
+        mock_request = Mock()
+        mock_request.method = "POST"
+        mock_request.url.path = "/api/login"
+        mock_request.client = Mock(host="127.0.0.1")
+        mock_request.headers = {}
+        mock_request.state = Mock()
+        mock_request.state.user = None
+        
+        mock_response = Mock()
+        mock_response.status_code = 200
+        
+        audit_data = {
+            "user_id": "1",
+            "user_name": "admin",
+            "role": "admin",
+            "method": "POST",
+            "path": "/api/login",
+            "ip_address": "127.0.0.1",
+            "user_agent": None,
+        }
+        
+        # 验证创建后台任务，不阻塞响应
+        with patch("app.core.middleware.asyncio.create_task") as mock_create_task:
+            await middleware._save_audit_log(mock_request, audit_data, mock_response)
+            
+            # 验证 create_task 被调用（异步写入）
+            mock_create_task.assert_called_once()
+            
+            # 验证传入的是异步函数
+            call_args = mock_create_task.call_args[0][0]
+            import inspect
+            assert inspect.iscoroutine(call_args)
+
+    @pytest.mark.asyncio
+    async def test_async_save_handles_exception_silently(self):
+        """测试异步保存异常被静默处理 - 不影响主业务"""
+        from app.core.middleware import _save_audit_log_async
+        
+        # 传入无效数据，应该捕获异常不抛出
+        audit_data = {
+            "invalid_field": "test",  # 无效字段
+        }
+        
+        # 不应抛出异常
+        await _save_audit_log_async(audit_data)
+        
+        # 断言通过即表示异常被正确捕获
+        assert True

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { computed } from 'vue'
 import { studentsApi } from '@/api'
+import { useToast } from './useToast'
 import type { UpdateScoreRequest, CreateStudentRequest, Student } from '@/types'
 
 /**
@@ -74,11 +75,19 @@ export function useScoreUpdate() {
     },
 
     /**
-     * 错误处理 - 回滚到旧数据
+     * 错误处理 - 回滚到旧数据并显示错误提示
      */
-    onError: (_err, _variables, context) => {
+    onError: (err: unknown, _variables, context) => {
+      // 回滚数据
       if (context?.previousStudents) {
         queryClient.setQueryData(['students'], context.previousStudents)
+      }
+      
+      // 处理409并发冲突错误（乐观锁）
+      const error = err as { response?: { status: number }; message?: string }
+      const { warning } = useToast()
+      if (error.response?.status === 409) {
+        warning('数据已被其他用户修改，请刷新后重试')
       }
     },
 

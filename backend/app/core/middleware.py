@@ -1,11 +1,40 @@
 """
-审计日志中间件 - 自动记录敏感操作
+审计日志中间件 - 自动记录敏感操作（异步优化）
+
+修复内容：使用 asyncio.create_task 将审计日志写入改为后台任务，
+避免阻塞主请求响应，提升高并发性能。
 """
+import asyncio
 import re
 from typing import List, Optional, Dict, Any
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
+
+
+async def _save_audit_log_async(audit_data: Dict[str, Any]) -> None:
+    """
+    异步保存审计日志（后台任务）- 性能优化
+    
+    使用独立的会话和异常处理，确保失败不影响主业务。
+    通过 asyncio.create_task 在后台执行，不阻塞主请求响应。
+    
+    Args:
+        audit_data: 审计日志数据字典
+    """
+    try:
+        from app.core.db import engine
+        from sqlmodel import Session
+        from app.models import AuditLog
+        
+        with Session(engine) as session:
+            audit_log = AuditLog(**audit_data)
+            session.add(audit_log)
+            session.commit()
+    except Exception as e:
+        # 审计日志失败不应影响主业务，仅记录错误
+        import logging
+        logging.getLogger(__name__).error(f"审计日志异步写入失败: {e}")
 
 
 class AuditLogMiddleware(BaseHTTPMiddleware):
@@ -110,10 +139,17 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         return None
     
     async def _save_audit_log(self, request: Request, audit_data: Dict[str, Any], response):
-        """保存审计日志"""
-        from app.core.db import engine
-        from sqlmodel import Session
-        from app.models import AuditLog
+        """
+        保存审计日志（异步优化）
+        
+        将数据库写入改为后台任务，使用 asyncio.create_task 不阻塞主请求。
+        这样可以显著降低高并发场景下的请求延迟。
+        
+        Args:
+            request: FastAPI请求对象
+            audit_data: 基础审计数据（用户、方法、路径等）
+            response: 响应对象
+        """
         from datetime import datetime
         
         audit_data.update({
@@ -125,16 +161,8 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             "created_at": datetime.now(),
         })
         
-        # 保存审计日志（不阻塞响应）
-        try:
-            with Session(engine) as session:
-                audit_log = AuditLog(**audit_data)
-                session.add(audit_log)
-                session.commit()
-        except Exception as e:
-            # 审计日志记录失败不应影响主业务
-            import logging
-            logging.getLogger(__name__).error(f"审计日志记录失败: {e}")
+        # 创建后台任务异步写入，不等待完成（性能优化）
+        asyncio.create_task(_save_audit_log_async(audit_data))
     
     def _get_action_name(self, method: str, path: str) -> str:
         """获取操作名称"""

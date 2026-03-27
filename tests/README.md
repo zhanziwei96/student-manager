@@ -1,39 +1,69 @@
 # ClassHub 测试指南
 
-## 测试结构（新架构）
+> 最后更新时间：2026-03-27
+
+## 测试结构
 
 ```
 tests/
-├── README.md                 # 本文件
-├── conftest.py              # 全局 pytest 配置和 Fixtures
-├── pytest.ini              # pytest 配置文件
-├── integration/             # 集成测试（API 层）
-│   ├── conftest.py         # 集成测试配置
-│   ├── test_auth_api.py    # 认证 API 测试
-│   ├── test_student_api.py # 学生管理 API 测试
-│   ├── test_user_api.py    # 用户管理 API 测试
-│   └── test_smoke.py       # 冒烟测试
-└── unit/                    # 单元测试
-    ├── crud/               # CRUD 操作测试
-    │   ├── test_student.py # 学生 CRUD 测试
-    │   ├── test_user.py    # 用户 CRUD 测试
-    │   └── test_checkin.py # 签到 CRUD 测试
-    ├── models/             # 模型测试
-    │   ├── test_student.py # 学生模型测试
-    │   └── test_user.py    # 用户模型测试
-    └── test_security.py    # 安全工具测试
+├── README.md                      # 本文件
+├── conftest.py                   # 全局 pytest 配置和 Fixtures
+├── pytest.ini                   # pytest 配置文件
+├── unit/                         # 单元测试（233+ 测试用例）
+│   ├── crud/                    # CRUD 操作测试
+│   │   ├── test_audit.py       # 审计日志 CRUD
+│   │   ├── test_checkin.py     # 签到 CRUD
+│   │   ├── test_concurrent_login_failure.py  # 并发登录失败保护（BE-008）
+│   │   ├── test_concurrent_score_update.py   # 并发分数更新保护（BE-008）
+│   │   ├── test_student.py     # 学生 CRUD
+│   │   ├── test_student_permission.py  # 学生权限测试
+│   │   └── test_user.py        # 用户 CRUD
+│   ├── models/                  # 模型测试
+│   │   ├── test_course_schedule.py  # 课程表模型
+│   │   ├── test_student.py     # 学生模型
+│   │   └── test_user.py        # 用户模型
+│   ├── test_config.py          # 配置加载测试
+│   ├── test_event_handlers.py  # 事件处理器测试
+│   ├── test_events.py          # 领域事件测试
+│   ├── test_exceptions.py      # 异常处理测试
+│   ├── test_jwt.py             # JWT 工具测试
+│   ├── test_jwt_cookie_secure.py  # Cookie 安全测试
+│   ├── test_jwt_deps.py        # JWT 依赖测试
+│   ├── test_middleware.py      # 审计中间件测试
+│   ├── test_security.py        # 安全工具测试
+│   └── test_upload.py          # 文件上传安全测试
+├── integration/                  # 集成测试（97 测试用例）
+│   ├── conftest.py             # 集成测试配置
+│   ├── test_checkin_api_enhanced.py   # 签到 API 测试
+│   ├── test_jwt_auth.py        # JWT 认证测试
+│   ├── test_login_api_enhanced.py     # 登录 API 测试
+│   ├── test_rate_limit.py      # 限流测试
+│   ├── test_schedule_api.py    # 课表 API 测试
+│   ├── test_smoke.py           # 冒烟测试
+│   ├── test_students_api_enhanced.py  # 学生 API 测试
+│   ├── test_system_api.py      # 系统 API 测试
+│   ├── test_user_api.py        # 用户管理 API 测试
+│   └── test_users_api_enhanced.py     # 用户 API 增强测试
+└── e2e/                          # E2E 测试（Playwright）
+    └── README.md                # E2E 测试说明
 ```
 
 ## 测试统计
 
 | 层级 | 测试文件数 | 测试用例数 | 说明 |
 |------|-----------|-----------|------|
-| Unit - CRUD | 3 | 29 | 数据库操作测试 |
-| Unit - Models | 2 | 10 | 数据模型测试 |
-| Unit - Security | 1 | 5 | 安全工具测试 |
-| **Unit Total** | **6** | **44** | 快速、独立运行 |
-| Integration | 4 | 24 | API 集成测试 |
-| **Total** | **10** | **68** | **全部通过** |
+| Unit - CRUD | 7 | ~80 | 数据库操作测试 |
+| Unit - Models | 3 | ~20 | 数据模型测试 |
+| Unit - Core | 10 | ~133 | 核心模块测试（JWT、安全、事件等） |
+| **Unit Total** | **20** | **233+** | 快速、独立运行 |
+| Integration | 11 | 97 | API 集成测试 |
+| **Backend Total** | **31** | **330** | **后端全部测试** |
+
+### 测试覆盖率
+
+- **代码覆盖率**: 89%
+- **测试通过率**: 100% (330/330)
+- **失败测试**: 0（已修复 `test_teacher_can_import`）
 
 ## 运行测试
 
@@ -73,17 +103,26 @@ pytest tests/unit/crud -v
 # 模型测试
 pytest tests/unit/models -v
 
-# 安全工具测试
+# 并发保护测试（BE-008）
+pytest tests/unit/crud/test_concurrent_*.py -v
+
+# JWT 测试
+pytest tests/unit/test_jwt.py -v
+pytest tests/unit/test_jwt_deps.py -v
+
+# 安全测试
 pytest tests/unit/test_security.py -v
+pytest tests/unit/test_upload.py -v
 
 # 认证相关
-pytest tests/integration/test_auth_api.py -v
+pytest tests/integration/test_jwt_auth.py -v
+pytest tests/integration/test_login_api_enhanced.py -v
 
 # 学生管理
-pytest tests/integration/test_student_api.py -v
+pytest tests/integration/test_students_api_enhanced.py -v
 
 # 用户管理
-pytest tests/integration/test_user_api.py -v
+pytest tests/integration/test_users_api_enhanced.py -v
 ```
 
 ### 4. 查看测试覆盖率
@@ -97,6 +136,12 @@ pytest tests/ --cov=app --cov-report=html
 
 # 查看报告
 open htmlcov/index.html
+
+# 终端显示覆盖率
+pytest tests/ --cov=app --cov-report=term
+
+# 显示覆盖率缺口
+pytest tests/ --cov=app --cov-report=term-missing
 ```
 
 ## 测试配置
@@ -205,6 +250,23 @@ curl -I http://localhost:5173
 | 4.4 | 重置密码 | 密码重置成功 |
 | 4.5 | 删除用户 | 用户从列表移除 |
 
+## 新增测试文件说明
+
+### 并发保护测试（BE-008）
+
+| 测试文件 | 测试数 | 说明 |
+|----------|--------|------|
+| `test_concurrent_score_update.py` | 4 | 乐观锁防止并发更新数据丢失 |
+| `test_concurrent_login_failure.py` | 7 | 并发登录失败计数保护 |
+
+### 安全测试
+
+| 测试文件 | 测试数 | 说明 |
+|----------|--------|------|
+| `test_upload.py` | ~15 | 文件类型白名单、路径遍历防护 |
+| `test_jwt_cookie_secure.py` | ~8 | Cookie 安全属性验证 |
+| `test_middleware.py` | ~10 | 审计日志中间件 |
+
 ## 添加新测试
 
 ### 添加 CRUD 单元测试
@@ -267,6 +329,8 @@ jobs:
         run: pytest tests/unit -v
       - name: Run integration tests
         run: pytest tests/integration -v
+      - name: Generate coverage
+        run: pytest tests/ --cov=app --cov-report=xml
 ```
 
 ## 常见问题
@@ -297,3 +361,9 @@ def test_debug(session):
 ## 维护者
 
 如有问题，请联系开发团队。
+
+---
+
+**测试框架**: pytest + pytest-asyncio  
+**测试覆盖率**: 89%  
+**最后更新**: 2026-03-27

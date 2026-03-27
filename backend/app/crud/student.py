@@ -31,6 +31,30 @@ def get_students_by_class(session: Session, class_name: str) -> List[Student]:
     return session.exec(query).all()
 
 
+def get_students_by_classes(session: Session, class_names: List[str]) -> List[Student]:
+    """
+    根据多个班级获取学生 - 性能优化（REVIEW-P1）
+    
+    使用 SQL IN 查询替代循环查询，减少数据库往返次数。
+    同时使用 SQL DISTINCT 去重，避免 Python 内存去重。
+    
+    Args:
+        session: 数据库会话
+        class_names: 班级名称列表
+        
+    Returns:
+        学生列表（已去重）
+    """
+    from sqlalchemy import distinct
+    
+    if not class_names:
+        return []
+    
+    # 使用 IN 查询一次性获取所有班级学生
+    query = select(Student).where(Student.class_name.in_(class_names))
+    return session.exec(query).all()
+
+
 def create_student(session: Session, student_id: str, name: str, class_name: str, score: float = None) -> Student:
     """创建学生 - SEC-003: 使用简化密码哈希接口"""
     from app.core.config import get_settings

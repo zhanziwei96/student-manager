@@ -1,7 +1,7 @@
 # ClassHub 设计体系 (Design System)
 
-> 版本: 1.0.0  
-> 更新日期: 2026-03-23  
+> 版本: 1.1.0  
+> 更新日期: 2026-03-27  
 > 适用范围: frontend-v3 全站
 
 ---
@@ -345,14 +345,161 @@ Page
 
 ---
 
-## 12. 命名规范
+## 12. Teleport 使用规范
 
-### 12.1 CSS 类名
+### 12.1 使用场景
+Teleport 用于将组件渲染到 DOM 的其他位置，避免 z-index 和定位问题。
+
+### 12.2 规范要求
+
+#### 模态框和浮层必须使用 Teleport
+```vue
+<template>
+  <Teleport to="body">
+    <div v-if="visible" class="modal-overlay">
+      <div class="modal-content">
+        <!-- 模态框内容 -->
+      </div>
+    </div>
+  </Teleport>
+</template>
+```
+
+#### SSR 安全封装
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+const isMounted = ref(false)
+
+onMounted(() => {
+  isMounted.value = true
+})
+</script>
+
+<template>
+  <Teleport to="body" v-if="isMounted">
+    <!-- 只在客户端渲染的内容 -->
+  </Teleport>
+</template>
+```
+
+### 12.3 目标位置
+| 目标 | 用途 |
+|------|------|
+| `to="body"` | 全局模态框、Toast、Dialog |
+| `to="#modal-container"` | 特定容器内的模态框 |
+
+---
+
+## 13. SSR 安全检查说明
+
+### 13.1 问题背景
+服务端渲染（SSR）时，`window`、`document` 等浏览器对象不存在，直接访问会导致错误。
+
+### 13.2 安全模式
+
+#### 使用环境检测
+```typescript
+// ✅ 正确：检测环境后再访问浏览器对象
+const isClient = typeof window !== 'undefined'
+
+if (isClient) {
+  // 安全访问 window/document
+  localStorage.setItem('key', value)
+}
+```
+
+#### 使用 onMounted 钩子
+```vue
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+
+const clientData = ref('')
+
+onMounted(() => {
+  // onMounted 只在客户端执行
+  clientData.value = localStorage.getItem('data') || ''
+})
+</script>
+```
+
+### 13.3 常见场景
+
+| 场景 | 解决方案 |
+|------|----------|
+| localStorage/sessionStorage | 在 onMounted 中访问 |
+| window/document | 使用 typeof 检测或 onMounted |
+| 浏览器 API (Notification) | 在 onMounted 中初始化 |
+| 第三方库（依赖 window）| 动态导入或客户端标记 |
+
+---
+
+## 14. 全局 Toast 系统
+
+### 14.1 系统概述
+使用全局 `useToast` composable 提供统一的 Toast 通知体验。
+
+### 14.2 使用方式
+
+#### 在组件中使用
+```vue
+<script setup lang="ts">
+import { useToast } from '@/composables/useToast'
+
+const { showToast } = useToast()
+
+const handleAction = () => {
+  showToast('操作成功', 'success')
+}
+</script>
+```
+
+#### 在 composable 中使用
+```typescript
+import { useToast } from '@/composables/useToast'
+
+export function useStudentActions() {
+  const { showToast } = useToast()
+  
+  const deleteStudent = async (id: string) => {
+    try {
+      await api.deleteStudent(id)
+      showToast('学生已删除', 'success')
+    } catch (error) {
+      showToast('删除失败', 'error')
+    }
+  }
+  
+  return { deleteStudent }
+}
+```
+
+### 14.3 Toast 类型
+| 类型 | 用途 | 颜色 |
+|------|------|------|
+| success | 操作成功 | 绿色 `#22c55e` |
+| error | 操作失败 | 红色 `#ef4444` |
+| warning | 警告提示 | 黄色 `#f59e0b` |
+| info | 普通信息 | 蓝色 `#3b82f6` |
+
+### 14.4 位置配置
+```typescript
+// Toast 默认位置
+position: 'top-right' | 'top-center' | 'top-left' | 
+          'bottom-right' | 'bottom-center' | 'bottom-left'
+```
+
+---
+
+## 15. 命名规范
+
+### 15.1 CSS 类名
 使用 Tailwind CSS 命名约定，自定义类名前加前缀避免冲突：
 - 组件类: `ch-` (ClassHub)
 - 工具类: 直接使用 Tailwind
 
-### 12.2 CSS 变量
+### 15.2 CSS 变量
 ```
 --color-{property}
 --space-{scale}
@@ -363,7 +510,7 @@ Page
 
 ---
 
-## 13. 文件组织
+## 16. 文件组织
 
 ```
 frontend-v3/
@@ -373,17 +520,28 @@ frontend-v3/
 │   │   ├── tokens.css         # CSS 变量定义
 │   │   ├── components.css     # 组件样式
 │   │   └── utilities.css      # 工具类
-│   └── components/ui/         # UI 组件
-│       ├── Button.vue
-│       ├── Card.vue
-│       ├── Input.vue
+│   ├── components/ui/         # UI 组件
+│   │   ├── Button.vue
+│   │   ├── Card.vue
+│   │   ├── Input.vue
+│   │   ├── Dialog.vue         # 使用 Teleport
+│   │   ├── Toast.vue          # 全局 Toast
+│   │   └── ...
+│   └── composables/           # Composables
+│       ├── useToast.ts        # 全局 Toast
 │       └── ...
 └── DESIGN_SYSTEM.md           # 本文档
 ```
 
 ---
 
-## 14. 更新日志
+## 17. 更新日志
+
+### v1.1.0 (2026-03-27)
+- 添加 Teleport 使用规范
+- 添加 SSR 安全检查说明
+- 添加全局 Toast 系统说明
+- 更新文件组织结构
 
 ### v1.0.0 (2026-03-23)
 - 初始版本

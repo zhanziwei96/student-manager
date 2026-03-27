@@ -2,6 +2,11 @@
 
 一个现代化的班级管理系统，采用前后端分离架构，支持网页签到、班级管理、分数统计等功能。
 
+> **前端健康度评分**: 8.7/10 🟢 (2026-03-27)  
+> 58 个 Vitest 测试全部通过 ✅ | P0 问题已修复 ✅
+
+---
+
 ## ✨ 功能特性
 
 - **👥 学生管理**：添加、删除、导入学生信息，支持 Excel 批量导入
@@ -14,18 +19,31 @@
 - **💾 数据安全**：SQLite 数据库存储，支持数据备份和恢复
 - **⚡ 性能优化**：内存限流 + 数据库索引
 
+---
+
 ## 🏗️ 技术架构
 
 ### 前端 (frontend-v3)
-- **Vue 3.5** - Composition API + TypeScript
+
+**技术栈**:
+- **Vue 3.5** - Composition API + `<script setup>` 语法
+- **TypeScript 5.0+** - 完整类型支持
 - **Tailwind CSS v4** - 原子化 CSS 框架
 - **Vue Router 4** - 路由管理
 - **Pinia** - 状态管理
-- **TanStack Query** - 服务端状态管理
+- **TanStack Query** - 服务端状态管理 + 缓存
 - **Vite 6** - 构建工具
 - **Lucide Vue** - 图标库
+- **Vitest** - 单元测试（58 个测试全部通过）
+
+**前端架构特点**:
+- Feature-based 代码组织
+- 全局 `useToast` 通知系统
+- Teleport 实现 SSR 安全的弹窗/Toast
+- 内存泄漏防护（已修复 P0 问题）
 
 ### 后端
+
 - **FastAPI** - Python 异步 Web 框架
 - **Python 3.11+** - 编程语言
 - **SQLite** - 轻量级数据库
@@ -43,6 +61,8 @@ API → CRUD → Models ← Core
 - **Models**: 数据模型、业务常量
 - **Core**: 配置、数据库连接、安全工具、异常处理
 
+---
+
 ## 📖 文档索引
 
 | 文档 | 说明 | 位置 |
@@ -55,6 +75,10 @@ API → CRUD → Models ← Core
 | [测试指南](.agents/TEST_GUIDE.md) | 测试运行、冒烟测试 | `.agents/TEST_GUIDE.md` |
 | [测试说明](tests/README.md) | 详细测试步骤、系统测试 | `tests/README.md` |
 | [迁移指南](migrations/README.md) | 完整迁移文档 | `migrations/README.md` |
+| [设计体系](frontend-v3/DESIGN_SYSTEM.md) | 前端设计系统规范 | `frontend-v3/DESIGN_SYSTEM.md` |
+| [前端架构](frontend-v3/docs/ARCHITECTURE.md) | Feature-based 架构指南 | `frontend-v3/docs/ARCHITECTURE.md` |
+
+---
 
 ## 🚀 快速开始
 
@@ -116,6 +140,64 @@ make stop
 make logs
 ```
 
+---
+
+## 🧪 测试
+
+### 后端测试
+
+```bash
+# 运行全部测试
+pytest tests/ -v
+
+# 仅单元测试
+pytest tests/unit -v
+
+# 仅集成测试
+pytest tests/integration -v
+
+# 生成覆盖率报告
+pytest tests/ --cov=backend/app --cov-report=html
+```
+
+### 前端测试
+
+```bash
+cd frontend-v3
+
+# 运行所有测试（58 个测试）
+pnpm test:run
+
+# 交互式测试模式
+pnpm test
+
+# 生成覆盖率报告
+npx vitest run --coverage
+```
+
+**前端测试统计**:
+- 14 个测试文件
+- 58 个测试用例
+- **全部通过** ✅
+
+### 运行冒烟测试
+
+```bash
+# 安装测试依赖
+pip install -r tests/requirements-test.txt
+
+# 运行所有冒烟测试
+python -m pytest tests/smoke/ -v
+
+# 只运行后端测试
+python -m pytest tests/smoke/ -v -m backend
+
+# 只运行前端测试
+python -m pytest tests/smoke/ -v -m frontend
+```
+
+---
+
 ## 🗄️ 环境配置
 
 ### 配置文件
@@ -157,6 +239,8 @@ curl http://localhost:5173
 # 验证配置
 python -c "from app.core.config import get_settings; print(get_settings().app.env)"
 ```
+
+---
 
 ## 📖 使用指南
 
@@ -200,6 +284,8 @@ python -c "from app.core.config import get_settings; print(get_settings().app.en
 
 支持的关键词：学号/学生号/id/编号/studentid、姓名/名字/name、班级/class/classname
 
+---
+
 ## 🔧 目录结构
 
 ```
@@ -213,19 +299,23 @@ student-manager/
 │   ├── data/                 # SQLite 数据库
 │   ├── main.py               # 后端入口
 │   └── requirements.txt      # Python 依赖
+│
 ├── frontend-v3/              # Vue3 + TypeScript 前端
 │   ├── src/
 │   │   ├── api/              # API 请求
-│   │   ├── components/ui/    # UI 组件库
-│   │   ├── composables/      # 组合式函数
+│   │   ├── components/       # 组件 (ui/ + common/)
+│   │   ├── composables/      # 组合式函数 (useToast 全局)
+│   │   ├── features/         # Feature-based 功能模块
 │   │   ├── views/            # 页面组件
 │   │   ├── stores/           # Pinia 状态管理
 │   │   ├── router/           # 路由配置
 │   │   └── styles/           # 样式文件
+│   ├── test/                 # Vitest 测试 (58 个测试)
 │   ├── package.json
-│   └── vite.config.ts
+│   └── vitest.config.ts      # Vitest 配置
+│
 ├── frontend/                 # 旧版前端 (不再维护)
-├── tests/                    # 测试套件
+├── tests/                    # 后端测试套件 (~340 个测试)
 │   ├── unit/                 # 单元测试
 │   └── integration/          # 集成测试
 ├── migrations/               # 数据库迁移脚本
@@ -233,6 +323,8 @@ student-manager/
 ├── Makefile                  # 常用命令
 └── README.md
 ```
+
+---
 
 ## 🔒 安全特性
 
@@ -243,6 +335,8 @@ student-manager/
 5. **审计日志**: 记录所有敏感操作
 6. **XSS 防护**: 输入过滤和输出转义
 7. **CORS 配置**: 跨域安全策略
+
+---
 
 ## 🛠️ API 接口
 
@@ -281,36 +375,7 @@ student-manager/
 
 完整 API 文档访问: http://localhost:8000/docs
 
-## 🧪 测试
-
-### 运行冒烟测试
-
-```bash
-# 安装测试依赖
-pip install -r tests/requirements-test.txt
-
-# 运行所有冒烟测试
-python -m pytest tests/smoke/ -v
-
-# 只运行后端测试
-python -m pytest tests/smoke/ -v -m backend
-
-# 只运行前端测试
-python -m pytest tests/smoke/ -v -m frontend
-```
-
-### 测试数据管理
-
-```bash
-# 初始化测试数据
-python tests/test_data_manager.py setup
-
-# 清理测试数据
-python tests/test_data_manager.py cleanup
-
-# 重置测试数据
-python tests/test_data_manager.py reset
-```
+---
 
 ## 💾 数据备份
 
@@ -328,6 +393,8 @@ cp data/student_manage.db backups/student_manage_$(date +%Y%m%d).db
 
 系统支持自动备份配置，备份文件存储在 `backup/data/` 目录。
 
+---
+
 ## 🐳 Docker 部署
 
 ```bash
@@ -341,12 +408,16 @@ docker-compose up -d
 docker-compose logs -f
 ```
 
+---
+
 ## 📱 使用场景
 
 - **课堂签到**：实时统计出勤情况
 - **活动签到**：快速导入名单，现场签到
 - **分数管理**：积分制教学，实时查看排名
 - **学生自查**：学生自主查询成绩和记录
+
+---
 
 ## 🔧 日常维护
 
@@ -359,7 +430,12 @@ ls -lh data/
 
 # 查看日志
 tail -f backend/logs/app.log
+
+# 运行前端测试
+cd frontend-v3 && pnpm test:run
 ```
+
+---
 
 ## 📚 相关文档
 
@@ -370,6 +446,10 @@ tail -f backend/logs/app.log
 | [TEST_PLAN.md](./TEST_PLAN.md) | 测试方案 |
 | [SECURITY_SOLUTION.md](./SECURITY_SOLUTION.md) | 安全解决方案 |
 | [OPTIMIZATION_STATUS.md](./OPTIMIZATION_STATUS.md) | 优化进度追踪 |
+| [DESIGN_SYSTEM.md](./frontend-v3/DESIGN_SYSTEM.md) | 前端设计系统 |
+| [ARCHITECTURE.md](./frontend-v3/docs/ARCHITECTURE.md) | 前端架构指南 |
+
+---
 
 ## 📄 许可
 
@@ -378,4 +458,4 @@ MIT License
 ---
 
 **版本**: v3.0  
-**最后更新**: 2026-03-23 (Frontend-v3 更新 - Tailwind v4 + TypeScript)
+**最后更新**: 2026-03-27 (前端健康度评分 8.7/10，58 个测试全部通过)

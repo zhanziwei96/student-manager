@@ -19,7 +19,7 @@
 | 7 | ❌ **禁止在非虚拟环境的 python 环境下运行 python 命令** | 模块找不到，环境混乱 |
 | 8 | ❌ **禁止修改后端代码后不检查/更新对应测试** | 测试失效，覆盖率下降，隐藏回归错误 |
 | 9 | ❌ **禁止修改 Vue/TS 文件后不创建或修改测试** | 前端类型变更无测试覆盖，类型回归错误 |
-| 9 | ❌ **禁止在未阅读完所有相关代码的情况下直接修复整改** | 破坏项目结构一致性，重复造轮子，引入不一致的实现 |
+| 10 | ❌ **禁止在未阅读完所有相关代码的情况下直接修复整改** | 破坏项目结构一致性，重复造轮子，引入不一致的实现 |
 
 ---
 
@@ -173,6 +173,47 @@ return {
 return {"success": True, "message": "用户创建成功"}
 ```
 
+### 密码验证接口 (强制)
+**SEC-003 修复后，必须使用新接口：**
+
+```python
+from app.core.security import verify_password, hash_password
+
+# 正确 - 新接口（bcrypt 自动处理盐值）
+is_valid = verify_password("plain_password", stored_hash)
+new_hash = hash_password("new_password")
+
+# 错误 - 旧接口已弃用，可能导致 SHA256 密码验证失败
+is_valid = verify_password_hash("plain_password", stored_hash, salt)  # 不要再用
+```
+
+### JWT 时区处理 (强制)
+**所有 JWT Token 的过期时间必须使用 Asia/Shanghai 时区**：
+
+```python
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+# 正确
+now = datetime.now(ZoneInfo("Asia/Shanghai"))
+expire = now + timedelta(hours=24)
+
+# 错误 - 可能导致时区不一致
+expire = datetime.utcnow() + timedelta(hours=24)
+```
+
+### 限流状态码 (强制)
+- 限流触发时必须返回 **429 Too Many Requests**，而非 503
+- 已修复：见 RATE-001
+
+```python
+# 正确 - 限流响应
+raise HTTPException(status_code=429, detail="请求过于频繁")
+
+# 错误 - 不要使用 503
+raise HTTPException(status_code=503, detail="服务不可用")  # 这是错的
+```
+
 ---
 
 ## 测试执行约束
@@ -277,5 +318,5 @@ python -c "from app.core.config import get_settings; print(get_settings().get_da
 
 ---
 
-**最后更新**: 2026-03-26
-**版本**: v2 (约束清单格式)
+**最后更新**: 2026-03-27
+**版本**: v3 (新增 SEC-003 修复说明、后端开发约束)

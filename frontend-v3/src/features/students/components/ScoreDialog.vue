@@ -56,7 +56,10 @@ const handleCancel = () => {
     @update:open="$emit('update:open', $event)"
   >
     <div class="space-y-4">
-      <p v-if="student" class="text-white/60">
+      <p
+        v-if="student"
+        class="text-white/60"
+      >
         更新 <span class="font-medium text-white">{{ student.name }}</span> 的分数
       </p>
       <div class="space-y-2">
@@ -78,7 +81,12 @@ const handleCancel = () => {
       </div>
     </div>
     <template #footer>
-      <Button variant="outline" @click="handleCancel">取消</Button>
+      <Button
+        variant="outline"
+        @click="handleCancel"
+      >
+        取消
+      </Button>
       <Button
         :loading="isLoading"
         @click="handleSubmit"

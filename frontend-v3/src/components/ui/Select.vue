@@ -20,7 +20,7 @@ interface Props {
   id?: string
   placeholder?: string
   disabled?: boolean
-  options: Option[]
+  options?: Option[]
 }
 
 const props = defineProps<Props>()
@@ -65,9 +65,15 @@ const onChange = (event: Event) => {
       :disabled="disabled"
       @change="onChange"
     >
-      <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
+      <option
+        v-if="placeholder"
+        value=""
+        disabled
+      >
+        {{ placeholder }}
+      </option>
       <option 
-        v-for="option in options" 
+        v-for="option in options || []" 
         :key="option.value" 
         :value="option.value"
         :disabled="option.disabled"
@@ -75,6 +81,7 @@ const onChange = (event: Event) => {
       >
         {{ option.label }}
       </option>
+      <slot />
     </select>
     <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
   </div>

@@ -74,7 +74,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="relative">
+  <div
+    ref="containerRef"
+    class="relative"
+  >
     <!-- Trigger -->
     <button
       type="button"
@@ -133,7 +136,7 @@ onUnmounted(() => {
             :placeholder="searchPlaceholder || '搜索...'"
             class="w-full rounded-md bg-white/5 py-1.5 pl-9 pr-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-primary/50"
             @click.stop
-          />
+          >
         </div>
       </div>
 

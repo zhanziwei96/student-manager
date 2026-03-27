@@ -28,7 +28,10 @@ const classes = computed(() =>
 </script>
 
 <template>
-  <label :class="classes" :for="$props.for">
+  <label
+    :class="classes"
+    :for="$props.for"
+  >
     <slot />
   </label>
 </template>

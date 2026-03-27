@@ -46,7 +46,10 @@ const isPositive = props.score > 0
     :disabled="disabled"
     @click="emit('click')"
   >
-    <component :is="iconComponent" class="h-4 w-4 opacity-80 group-hover:opacity-100" />
+    <component
+      :is="iconComponent"
+      class="h-4 w-4 opacity-80 group-hover:opacity-100"
+    />
     <span class="font-medium">{{ label }}</span>
     <span class="text-[10px] opacity-70">
       {{ score > 0 ? '+' : '' }}{{ score }}
