@@ -5,6 +5,7 @@ import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, useStudentFi
 import { DataContainer } from '@/components/ui'
 import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
+import { getErrorMessage } from '@/lib/error'
 
 /**
  * 教师学生管理页面 - FE-006 重构后
@@ -65,8 +66,8 @@ const handleQuickScore = async (student: Student, score: number, reason: string)
     await updateScore(student.student_id, score, reason)
     
     showSuccessToast(`${student.name} ${score > 0 ? '+' : ''}${score}分`)
-  } catch (err: any) {
-    showErrorToast(err.message || '调整分数失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '调整分数失败')
   }
 }
 
@@ -78,8 +79,8 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
 
     showSuccessToast(`${selectedStudent.value.name} 的分数已更新`)
     showScoreDialog.value = false
-  } catch (err: any) {
-    showErrorToast(err.message || '更新分数失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '更新分数失败')
   }
 }
 </script>

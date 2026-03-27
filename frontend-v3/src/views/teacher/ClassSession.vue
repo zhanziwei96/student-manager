@@ -8,6 +8,7 @@ import { Card, Button, Input, Select, Badge } from '@/components/ui'
 import { Play, Square, CheckCircle, Clock, Users, Search, GraduationCap, AlertTriangle } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
+import { getErrorMessage } from '@/lib/error'
 
 const className = ref('')
 const studentCode = ref('')
@@ -127,8 +128,8 @@ const handleStartSession = async () => {
   try {
     await startSession(className.value)
     showSuccessToast('课堂已开始！')
-  } catch (err: any) {
-    showErrorToast(err.message || '开始课堂失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '开始课堂失败')
   }
 }
 
@@ -137,8 +138,8 @@ const handleEndSession = async () => {
     await endSession()
     showSuccessToast('课堂已结束！')
     className.value = ''
-  } catch (err: any) {
-    showErrorToast(err.message || '结束课堂失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '结束课堂失败')
   }
 }
 
@@ -154,8 +155,8 @@ const handleCheckIn = async () => {
     studentCode.value = ''
     // 刷新签到记录
     refetchCheckins()
-  } catch (err: any) {
-    showErrorToast(err.message || '签到失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '签到失败')
   }
 }
 
@@ -165,8 +166,8 @@ const quickCheckIn = async (studentId: string) => {
     await checkIn(studentId)
     showSuccessToast('签到成功！')
     refetchCheckins()
-  } catch (err: any) {
-    showErrorToast(err.message || '签到失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '签到失败')
   }
 }
 </script>

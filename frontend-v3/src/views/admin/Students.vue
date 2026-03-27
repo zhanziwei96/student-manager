@@ -5,6 +5,7 @@ import { StudentFilters, useStudentFilters } from '@/features/students'
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer } from '@/components/ui'
 import { Plus } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
+import { getErrorMessage } from '@/lib/error'
 
 /**
  * 管理员学生管理页面 - FE-006 重构后
@@ -104,8 +105,8 @@ const handleAddStudent = async () => {
 
     showSuccessToast(`学生 ${newStudent.value.name} 添加成功`)
     showAddDialog.value = false
-  } catch (err: any) {
-    showErrorToast(err.message || '添加学生失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '添加学生失败')
   }
 }
 </script>

@@ -4,6 +4,7 @@ import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge } from '@/components/ui'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
+import { getErrorMessage } from '@/lib/error'
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
 const { data: classSession, isPending: isLoadingSession, hasActiveSession } = useStudentClassSession()
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
@@ -29,8 +30,9 @@ const handleCheckin = async () => {
     setTimeout(() => {
       showSuccessToast.value = false
     }, 3000)
-  } catch (err: any) {
-    // 错误由 mutation 处理
+  } catch (err: unknown) {
+    // 错误由 mutation 处理，这里捕获是为了防止未处理的 Promise 拒绝
+    console.error('签到失败:', getErrorMessage(err))
   }
 }
 

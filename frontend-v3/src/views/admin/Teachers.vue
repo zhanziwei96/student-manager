@@ -5,6 +5,7 @@ import { Plus, Search, Loader2, Trash2, Key } from 'lucide-vue-next'
 import { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from '@/composables/useTeachers'
 import { useToast } from '@/composables/useToast'
 import type { User } from '@/types'
+import { getErrorMessage } from '@/lib/error'
 
 // Toast
 const { showToast } = useToast()
@@ -94,8 +95,8 @@ const handleAddTeacher = async (e?: Event) => {
     })
     showToast('教师创建成功', 'success')
     showAddDialog.value = false
-  } catch (error: any) {
-    showToast(error.message || '创建失败', 'error')
+  } catch (error: unknown) {
+    showToast(getErrorMessage(error) || '创建失败', 'error')
   }
 }
 
@@ -126,8 +127,8 @@ const handleEditTeacher = async () => {
     })
     showToast('教师信息更新成功', 'success')
     showEditDialog.value = false
-  } catch (error: any) {
-    showToast(error.message || '更新失败', 'error')
+  } catch (error: unknown) {
+    showToast(getErrorMessage(error) || '更新失败', 'error')
   }
 }
 
@@ -147,8 +148,8 @@ const handleDeleteTeacher = async () => {
     await deleteTeacher(deletingTeacher.value.id)
     showToast('教师删除成功', 'success')
     showDeleteDialog.value = false
-  } catch (error: any) {
-    showToast(error.message || '删除失败', 'error')
+  } catch (error: unknown) {
+    showToast(getErrorMessage(error) || '删除失败', 'error')
   }
 }
 
@@ -196,8 +197,8 @@ const handleResetPassword = async () => {
     await usersApi.resetPassword(resettingTeacher.value.id, resetForm.value.newPassword)
     showToast('密码重置成功', 'success')
     showResetDialog.value = false
-  } catch (error: any) {
-    showToast(error.message || '密码重置失败', 'error')
+  } catch (error: unknown) {
+    showToast(getErrorMessage(error) || '密码重置失败', 'error')
   } finally {
     isResetting.value = false
   }

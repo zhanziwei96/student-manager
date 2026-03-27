@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer } from '@/components/ui'
 import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Loader2 } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
+import { getErrorMessage } from '@/lib/error'
 
 // 获取当前用户权限
 const authStore = useAuthStore()
@@ -97,8 +98,8 @@ const handleImport = async () => {
     } else {
       showSuccessToast(`成功导入 ${result.imported} 条课程`)
     }
-  } catch (err: any) {
-    showErrorToast(err.message || '导入失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '导入失败')
   }
 }
 
@@ -109,8 +110,8 @@ const handleDelete = async (id: number) => {
   try {
     await deleteSchedule(id)
     showSuccessToast('课程已删除')
-  } catch (err: any) {
-    showErrorToast(err.message || '删除失败')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '删除失败')
   }
 }
 </script>

@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { useToast } from '@/composables'
+import { getErrorMessage } from '@/lib/error'
+import type { UserRole } from '@/types'
 import { Button, Card, Input, Label } from '@/components/ui'
 import { GraduationCap, Lock, User } from 'lucide-vue-next'
 import { Toast } from '@/components/ui'
@@ -66,8 +68,8 @@ const handleSubmit = async () => {
     } else {
       throw new Error('无法获取用户角色信息')
     }
-  } catch (err: any) {
-    showError(err.message || '登录失败')
+  } catch (err: unknown) {
+    showError(getErrorMessage(err) || '登录失败')
   }
 }
 
@@ -106,7 +108,7 @@ const handleSubmit = async () => {
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10',
               ]"
-              @click="form.role = role.value as any"
+              @click="form.role = role.value as UserRole"
             >
               {{ role.label }}
             </button>

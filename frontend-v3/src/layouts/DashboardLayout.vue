@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { Button } from '@/components/ui'
@@ -22,7 +22,7 @@ const user = computed(() => authStore.user)
 
 // Navigation items based on role
 const navItems = computed(() => {
-  const items: { name: string; path: string; icon: any }[] = []
+  const items: { name: string; path: string; icon: Component }[] = []
 
   if (authStore.isAdmin) {
     items.push(
