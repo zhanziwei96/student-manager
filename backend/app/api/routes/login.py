@@ -223,12 +223,9 @@ async def change_password(
             ApiResponseConst.MESSAGE: MessageConst.OLD_PASSWORD_WRONG
         }
     
-    # 设置新密码 - SEC-003: 使用简化密码哈希接口
-    from app.core.security import hash_password
-    user_obj.password_hash = hash_password(data.new_password)
-    # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
-    session.add(user_obj)
-    session.commit()
+    # 设置新密码 - 使用CRUD层函数（架构分层修复）
+    from app.crud import update_user_password
+    update_user_password(session, user_obj, data.new_password)
     
     logger.info(f"密码修改成功: {user_id}")
     return {

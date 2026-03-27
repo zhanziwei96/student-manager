@@ -10,7 +10,7 @@ from app.core.config import HttpStatus
 from app.core.jwt import require_admin, get_current_user
 from app.crud import (
     get_user, get_user_by_username, get_users, create_user,
-    update_user, reset_password, delete_user
+    update_user, update_user_info as crud_update_user_info, reset_password, delete_user
 )
 from app.models import UserRoleConst
 from app.models.constants import (
@@ -99,24 +99,20 @@ async def update_user_info(
     if not user_obj:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='用户不存在')
     
-    if data.name:
-        user_obj.name = data.name
-    if data.role:
-        user_obj.role = data.role
-    if data.assigned_classes is not None:
-        import json
-        user_obj.assigned_classes = json.dumps(data.assigned_classes, ensure_ascii=False)
-    if data.is_account_enabled is not None:
-        user_obj.is_account_enabled = data.is_account_enabled
-    
-    session.add(user_obj)
-    session.commit()
-    session.refresh(user_obj)
+    # 调用CRUD层函数，业务逻辑封装在CRUD层（架构分层修复）
+    updated_user = crud_update_user_info(
+        session=session,
+        user=user_obj,
+        name=data.name,
+        role=data.role,
+        assigned_classes=data.assigned_classes,
+        is_account_enabled=data.is_account_enabled
+    )
     
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.USER_UPDATED,
-        ApiResponseConst.DATA: user_obj.model_dump()
+        ApiResponseConst.DATA: updated_user.model_dump()
     }
 
 

@@ -170,3 +170,76 @@ class TestUserCRUD:
         assert is_locked is False
         assert user.login_fail_count == 1
         assert user.locked_until is None
+
+    def test_update_user_info(self, session: Session):
+        """测试 update_user_info - 架构分层修复"""
+        from app.crud import update_user_info
+        
+        password_hash = hash_password("password123")
+        user = create_user(
+            session, 
+            "teacher_update", 
+            "原始姓名", 
+            password_hash,
+            role="teacher",
+            assigned_classes=["软件1班"]
+        )
+        
+        # 使用 update_user_info 更新用户信息
+        updated = update_user_info(
+            session=session,
+            user=user,
+            name="更新后的姓名",
+            role="admin",
+            assigned_classes=["软件1班", "软件2班"],
+            is_account_enabled=False
+        )
+        
+        assert updated.name == "更新后的姓名"
+        assert updated.role == "admin"
+        assert updated.get_assigned_classes() == ["软件1班", "软件2班"]
+        assert updated.is_account_enabled is False
+
+    def test_update_user_password(self, session: Session):
+        """测试 update_user_password - 架构分层修复"""
+        from app.crud import update_user_password
+        from app.core.security import verify_password
+        
+        password_hash = hash_password("old_password")
+        user = create_user(session, "teacher_pwd", "教师密码", password_hash)
+        
+        # 更新密码
+        update_user_password(session, user, "new_password123")
+        
+        # 验证新密码有效
+        assert verify_password("new_password123", user.password_hash) is True
+        assert verify_password("old_password", user.password_hash) is False
+
+    def test_update_user_info_partial(self, session: Session):
+        """测试 update_user_info 部分更新 - 架构分层修复"""
+        from app.crud import update_user_info
+        
+        password_hash = hash_password("password123")
+        user = create_user(
+            session, 
+            "teacher_partial", 
+            "原始姓名", 
+            password_hash,
+            role="teacher",
+            assigned_classes=["软件1班"]
+        )
+        original_role = user.role
+        
+        # 只更新 name，其他字段为 None（不应被修改）
+        updated = update_user_info(
+            session=session,
+            user=user,
+            name="仅更新姓名",
+            role=None,  # 不更新
+            assigned_classes=None,  # 不更新
+            is_account_enabled=None  # 不更新
+        )
+        
+        assert updated.name == "仅更新姓名"
+        assert updated.role == original_role  # 保持不变
+        assert updated.get_assigned_classes() == ["软件1班"]  # 保持不变

@@ -52,6 +52,45 @@ def update_user(session: Session, user: User) -> User:
     return user
 
 
+def update_user_info(
+    session: Session, 
+    user: User,
+    name: Optional[str] = None,
+    role: Optional[str] = None,
+    assigned_classes: Optional[List[str]] = None,
+    is_account_enabled: Optional[bool] = None
+) -> User:
+    """
+    更新用户信息 - 将业务逻辑从API层移到CRUD层
+    
+    Args:
+        session: 数据库会话
+        user: 用户对象
+        name: 姓名（可选）
+        role: 角色（可选）
+        assigned_classes: 负责班级列表（可选）
+        is_account_enabled: 是否启用账户（可选）
+        
+    Returns:
+        更新后的用户对象
+    """
+    import json
+    
+    if name is not None:
+        user.name = name
+    if role is not None:
+        user.role = role
+    if assigned_classes is not None:
+        user.assigned_classes = json.dumps(assigned_classes, ensure_ascii=False)
+    if is_account_enabled is not None:
+        user.is_account_enabled = is_account_enabled
+    
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
 def record_login_success(session: Session, user: User, ip: str) -> None:
     """
     记录登录成功 - 带乐观锁保护（BE-008 修复）
@@ -149,6 +188,25 @@ def reset_password(session: Session, user: User, password_hash: str) -> None:
     # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     user.locked_until = None
     user.login_fail_count = 0
+    session.add(user)
+    session.commit()
+
+
+def update_user_password(session: Session, user: User, new_password: str) -> None:
+    """
+    更新用户密码（用户自己修改）- SEC-003: 使用简化密码哈希接口
+    
+    与 reset_password 不同，此函数不清除锁定状态，
+    适用于用户主动修改密码场景。
+    
+    Args:
+        session: 数据库会话
+        user: 用户对象
+        new_password: 新密码（明文，函数内部进行哈希）
+    """
+    from app.core.security import hash_password
+    user.password_hash = hash_password(new_password)
+    # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     session.add(user)
     session.commit()
 

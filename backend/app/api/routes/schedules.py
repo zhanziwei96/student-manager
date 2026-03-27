@@ -17,6 +17,7 @@ from app.core.upload import (
     _validate_file_size,
 )
 from app.api.deps import get_current_user, require_login, require_admin, require_admin_or_teacher
+from app.crud import get_schedules as crud_get_schedules, delete_schedule as crud_delete_schedule
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
 from app.models.constants import ApiResponseConst, MessageConst, RoutePrefixConst
 
@@ -231,21 +232,18 @@ async def import_schedules(
 
 
 @router.delete("/schedules/{schedule_id}", response_model=dict)
-async def delete_schedule(
+async def delete_schedule_api(
     schedule_id: int,
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin)
 ):
-    """删除课程（仅管理员）"""
-    schedule = session.get(CourseSchedule, schedule_id)
-    if not schedule:
+    """删除课程（仅管理员）- 使用CRUD层函数"""
+    success = crud_delete_schedule(session, schedule_id)
+    if not success:
         raise HTTPException(
             status_code=HttpStatus.NOT_FOUND,
             detail="课程不存在"
         )
-    
-    session.delete(schedule)
-    session.commit()
     
     return {
         ApiResponseConst.SUCCESS: True,
