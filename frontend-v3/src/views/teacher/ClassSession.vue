@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useClassSession, useClassSessionStart, useClassSessionEnd, useStudentCheckIn, useActiveClassSessions, useToast } from '@/composables'
 import { useClasses, useClassStudents } from '@/composables/useClasses'
+import { useSchedules } from '@/composables/useSchedules'
 import { useTodayCheckins } from '@/composables/useCheckins'
 import { useAuthStore } from '@/stores'
 import { Card, Button, Input, Select, Badge } from '@/components/ui'
@@ -10,6 +11,7 @@ import { Toast } from '@/components/ui'
 import { getErrorMessage } from '@/lib/error'
 
 const className = ref('')
+const courseName = ref('')
 const studentCode = ref('')
 const searchQuery = ref('')
 
@@ -50,6 +52,16 @@ const availableClassOptions = computed(() => {
 
 // 获取班级列表
 const { data: classList } = useClasses()
+
+// 获取课程列表（用于选择）
+const { data: schedules } = useSchedules()
+
+// 可选的课程列表（根据教师分配的班级关联）
+const courseOptions = computed(() => {
+  if (!schedules.value) return []
+  const courseNames = new Set(schedules.value.map(s => s.course_name).filter(Boolean))
+  return Array.from(courseNames).map(name => ({ value: name, label: name }))
+})
 
 // 获取选中班级的学生列表
 const { data: classStudents, isPending: isLoadingStudents } = useClassStudents(computed(() => activeSession.value?.class_name || ''))
@@ -119,7 +131,7 @@ const handleStartSession = async () => {
   }
 
   try {
-    await startSession(className.value)
+    await startSession({ className: className.value, courseName: courseName.value || undefined })
     showSuccessToast('课堂已开始！')
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '开始课堂失败')
@@ -239,7 +251,7 @@ const quickCheckIn = async (studentId: string) => {
         开始新课堂
       </h3>
       <p class="text-sm text-white/60">
-        选择您要上课的班级
+        选择课程和班级开始上课
       </p>
       
       <!-- 显示班级占用状态 -->
@@ -261,20 +273,29 @@ const quickCheckIn = async (studentId: string) => {
         </ul>
       </div>
       
-      <div class="mt-4 flex gap-4">
-        <Select 
-          v-model="className" 
-          class="flex-1"
-          placeholder="请选择班级"
-          :options="availableClassOptions"
-        />
+      <div class="mt-4 space-y-4">
+        <div class="flex gap-4">
+          <Select 
+            v-model="courseName" 
+            class="flex-1"
+            placeholder="请选择课程（可选）"
+            :options="courseOptions"
+          />
+          <Select 
+            v-model="className" 
+            class="flex-1"
+            placeholder="请选择班级"
+            :options="availableClassOptions"
+          />
+        </div>
         <Button
           :loading="isStartingSession"
           :disabled="!className"
+          class="w-full"
           @click="handleStartSession"
         >
           <Play class="mr-2 h-4 w-4" />
-          开始
+          开始上课
         </Button>
       </div>
     </Card>

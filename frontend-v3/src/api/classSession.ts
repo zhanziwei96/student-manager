@@ -2,6 +2,7 @@ import { get, post } from '@/lib/api'
 import type { ClassSession, StartClassRequest } from '@/types'
 
 export interface ActiveClassSession {
+  course_name?: string
   class_name: string
   teacher_id: number
   teacher_name: string

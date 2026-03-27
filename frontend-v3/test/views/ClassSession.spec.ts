@@ -1,176 +1,191 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ref, computed } from 'vue'
-
 /**
- * ClassSession 渲染优化测试
- * REVIEW-P1: 验证 filter 已移入 computed，避免重复计算
+ * @vitest-environment jsdom
  */
-describe('ClassSession Computed Optimization', () => {
-  // 每次测试前重置数据，避免状态污染
-  let mockStudents: Array<{ id: number; student_id: string; name: string; checkedIn: boolean }>
-  
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import { ref, computed } from 'vue'
+import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
+import ClassSession from '@/views/teacher/ClassSession.vue'
+
+// Mock stores
+vi.mock('@/stores', () => ({
+  useAuthStore: () => ({
+    user: { id: 1, name: '张老师', role: 'teacher' }
+  })
+}))
+
+// Mock composables
+vi.mock('@/composables', () => ({
+  useClassSession: () => ({
+    data: ref(null)
+  }),
+  useClassSessionStart: () => ({
+    mutateAsync: vi.fn(),
+    isPending: ref(false)
+  }),
+  useClassSessionEnd: () => ({
+    mutateAsync: vi.fn(),
+    isPending: ref(false)
+  }),
+  useStudentCheckIn: () => ({
+    mutateAsync: vi.fn(),
+    isPending: ref(false)
+  }),
+  useActiveClassSessions: () => ({
+    data: ref([])
+  }),
+  useToast: () => ({
+    show: ref(false),
+    message: ref(''),
+    variant: ref('default'),
+    success: vi.fn(),
+    error: vi.fn(),
+    showErrorToast: vi.fn(),
+    showSuccessToast: vi.fn()
+  })
+}))
+
+vi.mock('@/composables/useClasses', () => ({
+  useClasses: () => ({
+    data: ref([
+      { name: '计算机1班', status: 'active' },
+      { name: '软件工程班', status: 'active' }
+    ])
+  }),
+  useClassStudents: () => ({
+    data: ref([]),
+    isPending: ref(false)
+  })
+}))
+
+vi.mock('@/composables/useCheckins', () => ({
+  useTodayCheckins: () => ({
+    data: ref([]),
+    refetch: vi.fn()
+  })
+}))
+
+vi.mock('@/composables/useSchedules', () => ({
+  useSchedules: () => ({
+    data: ref([
+      { id: 1, course_name: '高等数学', class_name: '计算机1班' },
+      { id: 2, course_name: '大学英语', class_name: '软件工程班' },
+      { id: 3, course_name: '程序设计', class_name: '计算机1班' }
+    ])
+  })
+}))
+
+// Mock components
+const MockCard = {
+  template: '<div class="mock-card"><slot /></div>'
+}
+
+const MockButton = {
+  props: ['loading', 'disabled', 'variant'],
+  template: '<button class="mock-button" :disabled="disabled"><slot /></button>'
+}
+
+const MockSelect = {
+  props: ['modelValue', 'placeholder', 'options'],
+  emits: ['update:modelValue'],
+  template: `
+    <select 
+      class="mock-select"
+      :value="modelValue"
+      @change="$emit('update:modelValue', $event.target.value)"
+    >
+      <option value="">{{ placeholder }}</option>
+      <option v-for="opt in options" :key="opt.value" :value="opt.value">
+        {{ opt.label }}
+      </option>
+    </select>
+  `
+}
+
+const MockInput = {
+  props: ['modelValue'],
+  emits: ['update:modelValue'],
+  template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
+}
+
+describe('ClassSession Course Selection', () => {
+  const createTestQueryClient = () => new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0, staleTime: 0 }
+    }
+  })
+
   beforeEach(() => {
-    mockStudents = [
-      { id: 1, student_id: 'S001', name: '张三', checkedIn: false },
-      { id: 2, student_id: 'S002', name: '李四', checkedIn: true },
-      { id: 3, student_id: 'S003', name: '王五', checkedIn: false },
-      { id: 4, student_id: 'S004', name: '赵六', checkedIn: true },
-    ]
+    vi.clearAllMocks()
   })
 
-  describe('computed grouping', () => {
-    it('should compute notCheckedInStudents correctly', () => {
-      const studentList = ref([...mockStudents])
-      
-      const notCheckedInStudents = computed(() => 
-        studentList.value.filter(s => !s.checkedIn)
-      )
-      
-      const checkedInStudents = computed(() => 
-        studentList.value.filter(s => s.checkedIn)
-      )
-      
-      expect(notCheckedInStudents.value).toHaveLength(2)
-      expect(notCheckedInStudents.value.map(s => s.name).sort()).toEqual(['张三', '王五'])
-      
-      expect(checkedInStudents.value).toHaveLength(2)
-      expect(checkedInStudents.value.map(s => s.name).sort()).toEqual(['李四', '赵六'])
+  const mountComponent = () => {
+    const queryClient = createTestQueryClient()
+    return mount(ClassSession, {
+      global: {
+        plugins: [[VueQueryPlugin, { queryClient }]],
+        stubs: {
+          Card: MockCard,
+          Button: MockButton,
+          Select: MockSelect,
+          Input: MockInput,
+          Badge: { template: '<span class="mock-badge"><slot /></span>' }
+        }
+      }
     })
+  }
 
-    it('should update computed when source data changes', () => {
-      const studentList = ref([...mockStudents])
-      
-      const notCheckedInStudents = computed(() => 
-        studentList.value.filter(s => !s.checkedIn)
-      )
-      
-      // 初始状态
-      expect(notCheckedInStudents.value).toHaveLength(2)
-      
-      // 修改数据
-      studentList.value[0].checkedIn = true
-      
-      // 重新计算后应该更新
-      expect(notCheckedInStudents.value).toHaveLength(1)
-    })
+  it('displays course selection dropdown', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
 
-    it('should handle search filtering correctly', () => {
-      const searchQuery = ref('张')
-      const studentList = ref([...mockStudents])
-      
-      const filteredStudents = computed(() => {
-        if (!searchQuery.value.trim()) return studentList.value
-        
-        const query = searchQuery.value.toLowerCase()
-        return studentList.value.filter(s => 
-          s.name.toLowerCase().includes(query) ||
-          s.student_id.toLowerCase().includes(query)
-        )
-      })
-      
-      expect(filteredStudents.value).toHaveLength(1)
-      expect(filteredStudents.value[0].name).toBe('张三')
-      
-      // 修改搜索词
-      searchQuery.value = 'S00'
-      expect(filteredStudents.value).toHaveLength(4)
-    })
-
-    it('should cache computed results (performance)', () => {
-      const filterFn = vi.fn((s: any) => !s.checkedIn)
-      const studentList = ref([...mockStudents])
-      
-      const notCheckedInStudents = computed(() => {
-        return studentList.value.filter(filterFn)
-      })
-      
-      // 多次访问 computed
-      const r1 = notCheckedInStudents.value
-      const r2 = notCheckedInStudents.value
-      const r3 = notCheckedInStudents.value
-      
-      // 数据未变，filter 应该只执行一次（针对每个元素）
-      expect(filterFn).toHaveBeenCalledTimes(4) // 每个元素一次
-      
-      // 但返回的引用应该相同（Vue computed 缓存）
-      expect(r1).toBe(r2)
-      expect(r2).toBe(r3)
-    })
+    // 验证课程选择下拉框存在
+    const selects = wrapper.findAll('.mock-select')
+    expect(selects.length).toBeGreaterThanOrEqual(2)
+    
+    // 验证占位符文字
+    expect(wrapper.text()).toContain('请选择课程（可选）')
   })
 
-  describe('group counting', () => {
-    it('should show correct count for each group', () => {
-      const studentList = ref([...mockStudents])
-      
-      const notCheckedInStudents = computed(() => 
-        studentList.value.filter(s => !s.checkedIn)
-      )
-      
-      const checkedInStudents = computed(() => 
-        studentList.value.filter(s => s.checkedIn)
-      )
-      
-      // 使用 computed 的长度显示计数
-      const notCheckedInCount = computed(() => notCheckedInStudents.value.length)
-      const checkedInCount = computed(() => checkedInStudents.value.length)
-      
-      expect(notCheckedInCount.value).toBe(2)
-      expect(checkedInCount.value).toBe(2)
-    })
+  it('displays available courses from schedules', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
 
-    it('should handle empty list', () => {
-      const studentList = ref([] as typeof mockStudents)
-      
-      const notCheckedInStudents = computed(() => 
-        studentList.value.filter(s => !s.checkedIn)
-      )
-      
-      const checkedInStudents = computed(() => 
-        studentList.value.filter(s => s.checkedIn)
-      )
-      
-      expect(notCheckedInStudents.value).toHaveLength(0)
-      expect(checkedInStudents.value).toHaveLength(0)
-    })
+    // 验证课程选项显示
+    expect(wrapper.text()).toContain('高等数学')
+    expect(wrapper.text()).toContain('大学英语')
+    expect(wrapper.text()).toContain('程序设计')
   })
 
-  describe('rendering optimization', () => {
-    it('should use computed for list grouping', () => {
-      // 验证优化模式：使用预计算的分组而非模板内 filter
-      const studentList = ref([...mockStudents])
-      
-      // REVIEW-P1: 推荐做法 - 预计算分组
-      const notCheckedInStudents = computed(() => 
-        studentList.value.filter(s => !s.checkedIn)
-      )
-      
-      const checkedInStudents = computed(() => 
-        studentList.value.filter(s => s.checkedIn)
-      )
-      
-      // 在模板中直接使用 notCheckedInStudents，而非 filteredStudents.filter(s => !s.checkedIn)
-      expect(notCheckedInStudents.value).toHaveLength(2)
-      expect(checkedInStudents.value).toHaveLength(2)
-    })
+  it('allows selecting both course and class', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    // 查找选择框
+    const selects = wrapper.findAll('.mock-select')
+    expect(selects.length).toBeGreaterThanOrEqual(2)
+
+    // 选择课程
+    await selects[0].setValue('高等数学')
+    await flushPromises()
+
+    // 选择班级
+    await selects[1].setValue('计算机1班')
+    await flushPromises()
+
+    // 验证值已设置
+    expect(selects[0].element.value).toBe('高等数学')
+    expect(selects[1].element.value).toBe('计算机1班')
   })
 
-  describe('sorting behavior', () => {
-    it('should sort students with not checked-in first', () => {
-      const students = [
-        { id: 1, name: 'A', checkedIn: true },
-        { id: 2, name: 'B', checkedIn: false },
-        { id: 3, name: 'C', checkedIn: true },
-        { id: 4, name: 'D', checkedIn: false },
-      ]
-      
-      const sortedStudents = [...students].sort((a, b) => 
-        (a.checkedIn === b.checkedIn ? 0 : a.checkedIn ? 1 : -1)
-      )
-      
-      expect(sortedStudents[0].checkedIn).toBe(false)
-      expect(sortedStudents[1].checkedIn).toBe(false)
-      expect(sortedStudents[2].checkedIn).toBe(true)
-      expect(sortedStudents[3].checkedIn).toBe(true)
-    })
+  it('displays start button with correct text', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    // 验证开始按钮
+    expect(wrapper.text()).toContain('开始上课')
   })
 })
+
+// 活跃课堂显示测试可以在集成测试中覆盖
+

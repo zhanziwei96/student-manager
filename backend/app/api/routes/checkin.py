@@ -28,6 +28,7 @@ class CheckinRequest(BaseModel):
 
 class StartClassRequest(BaseModel):
     class_name: str = Field(..., description="班级名称")
+    course_name: Optional[str] = Field(default=None, description="课程名称")
 
 
 @router.get("/class-session")
@@ -85,7 +86,7 @@ async def begin_class(
     
     # 开始新课堂
     teacher_name = user.get("name", "")
-    class_session = start_class(session, data.class_name, teacher_id, teacher_name)
+    class_session = start_class(session, data.class_name, teacher_id, teacher_name, data.course_name)
     
     return {
         ApiResponseConst.SUCCESS: True,
@@ -238,6 +239,7 @@ def get_active_class_sessions(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [
             {
+                'course_name': s.course_name,
                 'class_name': s.class_name,
                 'teacher_id': s.teacher_id,
                 'teacher_name': s.teacher_name,

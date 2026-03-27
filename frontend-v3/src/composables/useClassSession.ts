@@ -70,19 +70,29 @@ export function useClassSession() {
   return { data, isPending, error, refetch }
 }
 
+export interface StartClassParams {
+  className: string
+  courseName?: string
+}
+
 export function useClassSessionStart() {
   const queryClient = useQueryClient()
 
   const { mutateAsync, isPending, error } = useMutation({
-    mutationFn: async (className: string) => {
+    mutationFn: async (params: StartClassParams) => {
       // FE-003: 直接获取数据，错误自动抛出
-      const data = await classSessionApi.start({ class_name: className })
+      const data = await classSessionApi.start({ 
+        class_name: params.className,
+        course_name: params.courseName 
+      })
       // REVIEW-P1: 使用 SSR 安全的 localStorage
       safeLocalStorage.setItem('activeClassSession', JSON.stringify(data))
       return data
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['classSession'], data)
+      // 刷新活跃课堂列表，更新 Dashboard
+      queryClient.invalidateQueries({ queryKey: ['active-sessions'] })
     },
   })
 

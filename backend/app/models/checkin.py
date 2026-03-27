@@ -26,6 +26,7 @@ class ClassSession(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     session_code: Optional[str] = Field(default=None, description="课堂唯一代码", index=True)
+    course_name: Optional[str] = Field(default=None, description="课程名称")
     class_name: Optional[str] = Field(default=None, description="当前上课班级", index=True)
     teacher_id: Optional[int] = Field(default=None, description="上课教师ID", index=True)
     teacher_name: Optional[str] = Field(default=None, description="上课教师姓名")

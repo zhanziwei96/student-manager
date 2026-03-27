@@ -24,6 +24,13 @@ export interface ClassSessionStatus {
   start_time?: string
 }
 
+export interface ActiveClassSession {
+  course_name?: string
+  class_name: string
+  teacher_name: string
+  start_time: string
+}
+
 /**
  * 签到管理 API - FE-003 修复后
  *
@@ -56,4 +63,10 @@ export const checkinApi = {
    */
   getClassSessionForClass: (className: string): Promise<ClassSessionStatus> =>
     get(`/class-sessions/class/${encodeURIComponent(className)}`),
+
+  /**
+   * 获取所有活跃课堂列表（管理员Dashboard使用）
+   */
+  getActiveSessions: (): Promise<ActiveClassSession[]> =>
+    get('/class-sessions/active'),
 }

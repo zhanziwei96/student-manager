@@ -31,7 +31,7 @@ def get_class_session_by_class_name(session: Session, class_name: str) -> Option
     return session.exec(query).first()
 
 
-def start_class(session: Session, class_name: str, teacher_id: int = None, teacher_name: str = None) -> ClassSession:
+def start_class(session: Session, class_name: str, teacher_id: int = None, teacher_name: str = None, course_name: str = None) -> ClassSession:
     """开始上课 - 每次调用创建新的课堂记录"""
     # 结束该教师之前的活跃课堂
     end_class(session, teacher_id)
@@ -40,6 +40,7 @@ def start_class(session: Session, class_name: str, teacher_id: int = None, teach
     session_code = str(uuid.uuid4())[:8].upper()
     class_session = ClassSession(
         session_code=session_code,
+        course_name=course_name,
         class_name=class_name, 
         teacher_id=teacher_id,
         teacher_name=teacher_name,
