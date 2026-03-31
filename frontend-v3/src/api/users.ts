@@ -13,7 +13,7 @@ export interface UpdateTeacherRequest {
   name?: string
   role?: string
   assigned_classes?: string[]
-  is_active?: boolean
+  is_account_enabled?: boolean
 }
 
 /**
