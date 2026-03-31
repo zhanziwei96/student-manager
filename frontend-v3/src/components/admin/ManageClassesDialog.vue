@@ -29,9 +29,16 @@ const searchQuery = ref('')
 // 选中的班级
 const selectedClasses = ref<string[]>([])
 
-// 初始化选中的班级
-watch(() => props.teacher, (teacher) => {
-  if (teacher) {
+// 初始化选中的班级（只保留有效的班级名称）
+watch(() => [props.teacher, allClasses.value], ([teacher, classes]) => {
+  if (teacher && classes) {
+    // 获取所有有效的班级名称
+    const validClassNames = new Set(classes.map(c => c.name))
+    // 只保留教师 assigned_classes 中存在的班级
+    selectedClasses.value = (teacher.assigned_classes || []).filter(
+      name => validClassNames.has(name)
+    )
+  } else if (teacher) {
     selectedClasses.value = [...(teacher.assigned_classes || [])]
   } else {
     selectedClasses.value = []
