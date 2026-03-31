@@ -31,15 +31,20 @@ const selectedClasses = ref<string[]>([])
 
 // 初始化选中的班级（只保留有效的班级名称）
 watch(() => [props.teacher, allClasses.value], ([teacher, classes]) => {
+  // 防御性处理：确保 assigned_classes 是数组
+  const assignedClasses = Array.isArray(teacher?.assigned_classes) 
+    ? teacher.assigned_classes 
+    : []
+  
   if (teacher && classes) {
     // 获取所有有效的班级名称
     const validClassNames = new Set(classes.map(c => c.name))
     // 只保留教师 assigned_classes 中存在的班级
-    selectedClasses.value = (teacher.assigned_classes || []).filter(
+    selectedClasses.value = assignedClasses.filter(
       name => validClassNames.has(name)
     )
   } else if (teacher) {
-    selectedClasses.value = [...(teacher.assigned_classes || [])]
+    selectedClasses.value = [...assignedClasses]
   } else {
     selectedClasses.value = []
   }
