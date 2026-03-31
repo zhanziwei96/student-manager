@@ -45,6 +45,7 @@ def get_current_session(
             ApiResponseConst.SUCCESS: True,
             ApiResponseConst.DATA: {
                 'active': class_session.active,
+                'course_name': class_session.course_name,
                 'class_name': class_session.class_name,
                 'start_time': class_session.start_time
             }
@@ -216,6 +217,7 @@ def get_checkin_stats(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
             'active': True,
+            'course_name': class_session.course_name,
             'class_name': class_session.class_name,
             'total': total,
             'checked_in': checked_in,
@@ -270,6 +272,7 @@ async def get_class_session_for_student(
                 'id': class_session.id,
                 'session_code': class_session.session_code,
                 'active': True,
+                'course_name': class_session.course_name,
                 'class_name': class_session.class_name,
                 'teacher_name': class_session.teacher_name,
                 'start_time': class_session.start_time
