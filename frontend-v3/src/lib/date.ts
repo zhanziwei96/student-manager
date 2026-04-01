@@ -59,3 +59,37 @@ export function formatTime(date: string | Date): string {
     minute: '2-digit',
   })
 }
+
+/**
+ * 获取当前周次（基于基准日期）
+ * 基准设定：2026-03-30 是第4周的周一
+ * 根据当前日期与基准日期的差值计算周次
+ */
+export function getCurrentWeek(): number {
+  const now = new Date()
+  
+  // 基准设定: 2026-03-30 是第4周的周一
+  const referenceDate = new Date('2026-03-30') // 第4周周一
+  const referenceWeek = 4
+  
+  // 获取当前日期所在周的周一
+  const currentDay = now.getDay() // 0=周日, 1=周一, ...
+  const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1
+  const currentMonday = new Date(now)
+  currentMonday.setDate(now.getDate() - daysSinceMonday)
+  currentMonday.setHours(0, 0, 0, 0)
+  
+  // 获取基准日期的周一（已经是周一）
+  const baseMonday = new Date(referenceDate)
+  baseMonday.setHours(0, 0, 0, 0)
+  
+  // 计算两个周一之间的周数差
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000
+  const weekDiff = Math.floor((baseMonday.getTime() - currentMonday.getTime()) / msPerWeek)
+  
+  // 计算当前周次
+  const currentWeek = referenceWeek - weekDiff
+  
+  // 限制在 1-20 周范围内
+  return Math.max(1, Math.min(20, currentWeek))
+}

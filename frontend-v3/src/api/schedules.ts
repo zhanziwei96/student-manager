@@ -87,7 +87,8 @@ export const schedulesApi = {
    */
   assign: (id: number, teacherId: number, teacherName: string): Promise<void> =>
     put(`/schedules/${id}/assign`, null, {
-      params: { teacher_id: teacherId, teacher_name: teacherName }
+      teacher_id: teacherId,
+      teacher_name: teacherName
     }),
 
   /**

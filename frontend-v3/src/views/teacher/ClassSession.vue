@@ -7,6 +7,7 @@ import { useTodayCheckins } from '@/composables/useCheckins'
 import { useAuthStore } from '@/stores'
 import { Card, Button, Input, Select, Badge } from '@/components/ui'
 import { Play, Square, CheckCircle, Clock, Users, Search, GraduationCap, AlertTriangle } from 'lucide-vue-next'
+import { formatTime } from '@/lib/date'
 import { Toast } from '@/components/ui'
 import { getErrorMessage } from '@/lib/error'
 
@@ -85,10 +86,19 @@ const checkedInStudentIds = computed(() => {
 const studentListWithCheckin = computed(() => {
   if (!classStudents.value) return []
   
-  // 添加签到状态
+  // 创建签到时间映射
+  const checkinTimeMap = new Map<string, string>()
+  if (todayCheckins.value) {
+    todayCheckins.value.forEach(c => {
+      checkinTimeMap.set(c.student_id, c.checkin_time)
+    })
+  }
+  
+  // 添加签到状态和时间
   let students = classStudents.value.map(s => ({
     ...s,
-    checkedIn: checkedInStudentIds.value.has(s.student_id)
+    checkedIn: checkedInStudentIds.value.has(s.student_id),
+    checkinTime: checkinTimeMap.get(s.student_id)
   }))
   
   // 搜索过滤
@@ -408,93 +418,68 @@ const quickCheckIn = async (studentId: string) => {
           <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
         
+        <!-- 卡片网格布局 -->
         <div
           v-else-if="filteredStudents.length > 0"
-          class="divide-y divide-white/5"
+          class="p-4"
         >
-          <!-- 未签到学生组 - REVIEW-P1: 使用预计算 notCheckedInStudents -->
-          <div
-            v-if="notCheckedInStudents.length > 0"
-            class="p-4"
-          >
-            <div class="flex items-center gap-2 mb-3">
-              <div class="flex h-2 w-2 rounded-full bg-orange-400" />
-              <h4 class="text-sm font-medium text-white/80">
-                未签到
-              </h4>
-              <span class="text-xs text-white/40">{{ notCheckedInStudents.length }}人</span>
+          <!-- 统计标签 -->
+          <div class="flex items-center gap-4 mb-4">
+            <div class="flex items-center gap-2">
+              <div class="flex h-2 w-2 rounded-full bg-green-400" />
+              <span class="text-sm text-white/60">已签到 {{ checkedInStudents.length }}人</span>
             </div>
-            <div class="space-y-2">
-              <div
-                v-for="student in notCheckedInStudents"
-                :key="student.id"
-                class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/60">
-                    <span class="text-sm">{{ student.name.charAt(0) }}</span>
-                  </div>
-                  <div>
-                    <p class="text-sm font-medium text-white">
-                      {{ student.name }}
-                    </p>
-                    <p class="text-xs text-white/40">
-                      {{ student.student_id }}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  class="h-8 px-3 text-xs"
-                  :loading="isCheckingIn"
-                  @click="quickCheckIn(student.student_id)"
-                >
-                  <CheckCircle class="mr-1 h-3.5 w-3.5" />
-                  签到
-                </Button>
-              </div>
+            <div class="flex items-center gap-2">
+              <div class="flex h-2 w-2 rounded-full bg-red-400" />
+              <span class="text-sm text-white/60">未签到 {{ notCheckedInStudents.length }}人</span>
             </div>
           </div>
           
-          <!-- 已签到学生组 - REVIEW-P1: 使用预计算 checkedInStudents -->
-          <div
-            v-if="checkedInStudents.length > 0"
-            class="p-4"
-          >
-            <div class="flex items-center gap-2 mb-3">
-              <div class="flex h-2 w-2 rounded-full bg-green-400" />
-              <h4 class="text-sm font-medium text-white/80">
-                已签到
-              </h4>
-              <span class="text-xs text-white/40">{{ checkedInStudents.length }}人</span>
-            </div>
-            <div class="space-y-2">
-              <div
-                v-for="student in checkedInStudents"
-                :key="student.id"
-                class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/[0.03] transition-colors"
+          <!-- 学生卡片网格 -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div
+              v-for="student in filteredStudents"
+              :key="student.id"
+              class="relative rounded-lg border p-3 transition-all cursor-pointer group"
+              :class="[
+                student.checkedIn 
+                  ? 'bg-green-500/10 border-green-500/30 hover:border-green-500/50' 
+                  : 'bg-red-500/10 border-red-500/30 hover:border-red-500/50 hover:bg-red-500/15'
+              ]"
+              @click="!student.checkedIn && quickCheckIn(student.student_id)"
+            >
+              <!-- 签到状态图标 -->
+              <div 
+                class="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full"
+                :class="student.checkedIn ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'"
               >
-                <div class="flex items-center gap-3">
-                  <div class="flex h-9 w-9 items-center justify-center rounded-full bg-green-500/20 text-green-400">
-                    <CheckCircle class="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p class="text-sm font-medium text-white">
-                      {{ student.name }}
-                    </p>
-                    <p class="text-xs text-white/40">
-                      {{ student.student_id }}
-                    </p>
-                  </div>
+                <CheckCircle v-if="student.checkedIn" class="h-3 w-3" />
+                <span v-else class="text-xs">!</span>
+              </div>
+              
+              <!-- 学生信息 -->
+              <div class="flex flex-col items-center text-center">
+                <div 
+                  class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium mb-2"
+                  :class="student.checkedIn 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : 'bg-red-500/20 text-red-400 group-hover:bg-red-500/30'"
+                >
+                  {{ student.name.charAt(0) }}
                 </div>
-                <div class="flex items-center gap-2">
-                  <Badge
-                    variant="success"
-                    class="text-xs bg-green-500/10 text-green-400 border-green-500/30"
-                  >
-                    已签到
-                  </Badge>
-                </div>
+                <p 
+                  class="text-sm font-medium truncate w-full"
+                  :class="student.checkedIn ? 'text-green-400' : 'text-red-400'"
+                >
+                  {{ student.name }}
+                </p>
+                <p class="text-xs text-white/40 mt-0.5">{{ student.student_id }}</p>
+                <p v-if="student.checkedIn && student.checkinTime" class="text-xs text-white/50 mt-1">
+                  {{ formatTime(student.checkinTime) }}
+                </p>
+                <p v-else-if="!student.checkedIn" class="text-xs text-red-400/70 mt-1">
+                  点击签到
+                </p>
               </div>
             </div>
           </div>

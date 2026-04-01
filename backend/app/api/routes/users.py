@@ -48,9 +48,15 @@ async def list_users(
 ):
     """获取用户列表"""
     users = get_users(session, role)
+    # 将 assigned_classes 从 JSON 字符串解析为列表
+    result = []
+    for u in users:
+        user_data = u.model_dump()
+        user_data['assigned_classes'] = u.get_assigned_classes()
+        result.append(user_data)
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [u.model_dump() for u in users]
+        ApiResponseConst.DATA: result
     }
 
 
@@ -79,10 +85,13 @@ async def add_user(
         assigned_classes=data.assigned_classes
     )
     
+    # 将 assigned_classes 从 JSON 字符串解析为列表
+    user_data = user_obj.model_dump()
+    user_data['assigned_classes'] = user_obj.get_assigned_classes()
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.USER_CREATED,
-        ApiResponseConst.DATA: user_obj.model_dump()
+        ApiResponseConst.DATA: user_data
     }
 
 
@@ -109,10 +118,13 @@ async def update_user_info(
         is_account_enabled=data.is_account_enabled
     )
     
+    # 将 assigned_classes 从 JSON 字符串解析为列表
+    user_data = updated_user.model_dump()
+    user_data['assigned_classes'] = updated_user.get_assigned_classes()
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.USER_UPDATED,
-        ApiResponseConst.DATA: updated_user.model_dump()
+        ApiResponseConst.DATA: user_data
     }
 
 

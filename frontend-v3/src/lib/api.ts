@@ -120,12 +120,12 @@ export async function post<T>(url: string, body?: unknown): Promise<T> {
   return request<T>(url, { method: 'POST', body })
 }
 
-export async function put<T>(url: string, body?: unknown): Promise<T> {
-  return request<T>(url, { method: 'PUT', body })
+export async function put<T>(url: string, body?: unknown, params?: Record<string, unknown>): Promise<T> {
+  return request<T>(url, { method: 'PUT', body, query: params })
 }
 
-export async function del<T>(url: string): Promise<T> {
-  return request<T>(url, { method: 'DELETE' })
+export async function del<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+  return request<T>(url, { method: 'DELETE', query: params })
 }
 
 export async function patch<T>(url: string, body?: unknown): Promise<T> {

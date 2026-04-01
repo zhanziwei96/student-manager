@@ -4,8 +4,12 @@
 from datetime import datetime, date
 from typing import List, Optional
 import uuid
+from zoneinfo import ZoneInfo
 from sqlmodel import Session, select, func
 from app.models import CheckinRecord, ClassSession, ScoreLog
+
+# 上海时区
+SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 
 def get_class_session(session: Session, teacher_id: int = None) -> Optional[ClassSession]:
@@ -45,7 +49,7 @@ def start_class(session: Session, class_name: str, teacher_id: int = None, teach
         teacher_id=teacher_id,
         teacher_name=teacher_name,
         active=True, 
-        start_time=datetime.now()
+        start_time=datetime.now(SHANGHAI_TZ)
     )
     session.add(class_session)
     session.commit()
@@ -67,8 +71,8 @@ def end_class(session: Session, teacher_id: int = None) -> None:
     
     if class_session:
         class_session.active = False
-        class_session.end_time = datetime.now()
-        class_session.updated_at = datetime.now()
+        class_session.end_time = datetime.now(SHANGHAI_TZ)
+        class_session.updated_at = datetime.now(SHANGHAI_TZ)
         session.add(class_session)
         session.commit()
 
@@ -82,7 +86,7 @@ def get_today_checkins(session: Session, class_name: Optional[str] = None, sessi
         query_start = session_start
     else:
         # 否则查询今日开始
-        query_start = datetime.combine(date.today(), time.min)
+        query_start = datetime.combine(date.today(), time.min).replace(tzinfo=SHANGHAI_TZ)
     
     query = select(CheckinRecord).where(CheckinRecord.checkin_time >= query_start)
     if class_name:
@@ -156,7 +160,7 @@ def has_checked_in_today(session: Session, student_id: str, class_name: str = No
         query_start = session_start
     else:
         # 否则检查今日开始
-        query_start = datetime.combine(date.today(), time.min)
+        query_start = datetime.combine(date.today(), time.min).replace(tzinfo=SHANGHAI_TZ)
     
     query = select(CheckinRecord).where(
         CheckinRecord.student_id == student_id,

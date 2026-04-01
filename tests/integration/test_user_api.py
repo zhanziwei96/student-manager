@@ -17,6 +17,27 @@ class TestUserListAPI:
         assert data["success"] is True
         assert len(data["data"]) == 2
     
+    def test_list_users_assigned_classes_format(self, admin_client, admin_user, teacher_user):
+        """验证 assigned_classes 返回格式为列表而非 JSON 字符串"""
+        response = admin_client.get("/api/admin/users")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        
+        # 找到教师用户
+        teacher_data = None
+        for user in data["data"]:
+            if user["username"] == "teacher1":
+                teacher_data = user
+                break
+        
+        assert teacher_data is not None
+        # 关键验证：assigned_classes 必须是列表类型，不是字符串
+        assert isinstance(teacher_data["assigned_classes"], list)
+        assert "一班" in teacher_data["assigned_classes"]
+        assert "二班" in teacher_data["assigned_classes"]
+    
     def test_list_users_filter_by_role(self, admin_client, admin_user, teacher_user):
         """按角色筛选用户"""
         response = admin_client.get("/api/admin/users?role=teacher")

@@ -3,8 +3,17 @@
 """
 from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 from sqlmodel import SQLModel, Field
 from app.models.constants import CheckinTypeConst
+
+# 上海时区
+SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
+
+
+def get_shanghai_now() -> datetime:
+    """获取上海时区的当前时间"""
+    return datetime.now(SHANGHAI_TZ)
 
 
 class CheckinRecord(SQLModel, table=True):
@@ -17,7 +26,7 @@ class CheckinRecord(SQLModel, table=True):
     student_name: Optional[str] = Field(default=None, description="学生姓名")
     class_name: Optional[str] = Field(default=None, description="班级", index=True)
     checkin_type: str = Field(default=CheckinTypeConst.SELF, description="签到类型")
-    checkin_time: datetime = Field(default_factory=datetime.now, description="签到时间")
+    checkin_time: datetime = Field(default_factory=get_shanghai_now, description="签到时间")
 
 
 class ClassSession(SQLModel, table=True):
@@ -33,7 +42,7 @@ class ClassSession(SQLModel, table=True):
     start_time: Optional[datetime] = Field(default=None, description="开始时间")
     end_time: Optional[datetime] = Field(default=None, description="结束时间")
     active: bool = Field(default=False, description="是否上课中")
-    updated_at: datetime = Field(default_factory=datetime.now, description="更新时间")
+    updated_at: datetime = Field(default_factory=get_shanghai_now, description="更新时间")
 
 
 class ScoreLog(SQLModel, table=True):
