@@ -24,6 +24,7 @@ const isLoadingLocation = ref(false)
 const mapContainer = ref<HTMLDivElement | null>(null)
 const mapInstance = ref<any>(null)
 const mapMarker = ref<any>(null)
+const mapLoadError = ref(false)
 
 // 获取当前用户信息
 const authStore = useAuthStore()
@@ -277,6 +278,7 @@ const initMap = () => {
     }, 200)
   } catch (error) {
     console.error('地图初始化失败:', error)
+    mapLoadError.value = true
   }
 }
 
@@ -717,13 +719,24 @@ const quickCheckIn = async (studentId: string) => {
         <!-- 地图容器 -->
         <div class="relative">
           <div 
+            v-if="!mapLoadError"
             ref="mapContainer"
             class="w-full rounded-lg border border-white/20"
             style="height: 300px; background: linear-gradient(135deg, #1e3a5f 0%, #2d3748 100%);"
           />
+          <!-- 地图加载失败提示 -->
+          <div 
+            v-if="mapLoadError || !window.AMap"
+            class="w-full rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-center"
+            style="height: 300px;"
+          >
+            <AlertTriangle class="h-8 w-8 mx-auto mb-2 text-yellow-400" />
+            <p class="text-sm text-yellow-400">地图加载失败</p>
+            <p class="text-xs text-white/50 mt-1">请使用下方手动输入坐标</p>
+          </div>
           <!-- 地图加载提示 -->
           <div 
-            v-if="!mapInstance && !selectedLocation"
+            v-else-if="!mapInstance && !selectedLocation && !mapLoadError"
             class="absolute inset-0 flex flex-col items-center justify-center text-white/60 pointer-events-none"
           >
             <MapPin class="h-8 w-8 mb-2" />
