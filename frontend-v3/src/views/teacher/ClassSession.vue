@@ -755,19 +755,9 @@ const quickCheckIn = async (studentId: string) => {
             class="w-full rounded-lg border border-white/20"
             style="height: 300px; background: linear-gradient(135deg, #1e3a5f 0%, #2d3748 100%);"
           />
-          <!-- 地图加载失败提示 -->
-          <div 
-            v-if="mapLoadError || !window.AMap"
-            class="w-full rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-center"
-            style="height: 300px;"
-          >
-            <AlertTriangle class="h-8 w-8 mx-auto mb-2 text-yellow-400" />
-            <p class="text-sm text-yellow-400">地图加载失败</p>
-            <p class="text-xs text-white/50 mt-1">请使用下方手动输入坐标</p>
-          </div>
           <!-- 地图加载提示 -->
           <div 
-            v-else-if="!mapInstance && !selectedLocation && !mapLoadError"
+            v-if="!mapInstance && !selectedLocation && !mapLoadError"
             class="absolute inset-0 flex flex-col items-center justify-center text-white/60 pointer-events-none"
           >
             <MapPin class="h-8 w-8 mb-2" />
