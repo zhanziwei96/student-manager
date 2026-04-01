@@ -21,6 +21,9 @@ const showMapDialog = ref(false)
 const selectedLocation = ref<{ lat: number; lng: number; name: string } | null>(null)
 const checkinRadius = ref(100)
 const isLoadingLocation = ref(false)
+const mapContainer = ref<HTMLDivElement | null>(null)
+const mapInstance = ref<any>(null)
+const mapMarker = ref<any>(null)
 
 // 获取当前用户信息
 const authStore = useAuthStore()
@@ -217,6 +220,71 @@ const reverseGeocode = (lat: number, lng: number) => {
       // 失败则使用坐标
       selectedLocation.value!.name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
     })
+}
+
+// 初始化地图
+const initMap = () => {
+  if (!mapContainer.value || !window.AMap) return
+  
+  const center = selectedLocation.value 
+    ? [selectedLocation.value.lng, selectedLocation.value.lat]
+    : [115.580853, 27.963478] // 默认中心
+  
+  // 创建地图实例
+  mapInstance.value = new window.AMap.Map(mapContainer.value, {
+    zoom: 16,
+    center: center,
+    viewMode: '2D'
+  })
+  
+  // 如果已有选中位置，添加标记
+  if (selectedLocation.value) {
+    addMarker(selectedLocation.value.lng, selectedLocation.value.lat)
+  }
+  
+  // 点击地图事件
+  mapInstance.value.on('click', (e: any) => {
+    const lng = e.lnglat.getLng()
+    const lat = e.lnglat.getLat()
+    
+    selectedLocation.value = {
+      lat,
+      lng,
+      name: '选择的位置'
+    }
+    
+    // 添加/移动标记
+    addMarker(lng, lat)
+    
+    // 反向地理编码获取地址
+    reverseGeocode(lat, lng)
+  })
+}
+
+// 添加标记
+const addMarker = (lng: number, lat: number) => {
+  if (!mapInstance.value) return
+  
+  // 移除旧标记
+  if (mapMarker.value) {
+    mapInstance.value.remove(mapMarker.value)
+  }
+  
+  // 创建新标记
+  mapMarker.value = new window.AMap.Marker({
+    position: [lng, lat],
+    title: '签到位置'
+  })
+  
+  mapInstance.value.add(mapMarker.value)
+}
+
+// 在地图对话框打开时初始化
+const onMapDialogOpen = () => {
+  // 等待DOM更新后初始化地图
+  setTimeout(() => {
+    initMap()
+  }, 100)
 }
 
 // 确认开始课堂（带位置信息）
@@ -600,6 +668,7 @@ const quickCheckIn = async (studentId: string) => {
     <Dialog
       v-model:open="showMapDialog"
       title="选择签到位置"
+      @open="onMapDialogOpen"
     >
       <div class="space-y-4">
         <!-- 位置显示 -->
@@ -621,32 +690,42 @@ const quickCheckIn = async (studentId: string) => {
           <p>正在获取位置...</p>
         </div>
 
-        <div v-else class="text-center py-8 text-white/60">
-          <MapPin class="mx-auto h-8 w-8 mb-2 opacity-50" />
-          <p>点击地图选择签到位置</p>
+        <div v-else class="text-center py-4 text-white/60">
+          <MapPin class="mx-auto h-6 w-6 mb-1 opacity-50" />
+          <p class="text-sm">点击地图选择签到位置</p>
         </div>
 
-        <!-- 地图容器（简化版，使用输入框模拟） -->
-        <div class="rounded-lg border border-white/10 bg-white/5 p-4">
-          <label class="block text-sm text-white/60 mb-2">手动输入坐标（或点击获取位置）</label>
+        <!-- 地图容器 -->
+        <div 
+          ref="mapContainer"
+          class="w-full h-64 rounded-lg border border-white/20 bg-gray-800"
+          style="min-height: 256px;"
+        />
+
+        <!-- 手动输入（备选） -->
+        <div class="rounded-lg border border-white/10 bg-white/5 p-3">
+          <label class="block text-xs text-white/40 mb-2">手动调整（可选）</label>
           <div class="grid grid-cols-2 gap-2">
             <Input
               v-model="selectedLocation!.lat"
               type="number"
               step="0.000001"
               placeholder="纬度"
+              size="sm"
             />
             <Input
               v-model="selectedLocation!.lng"
               type="number"
               step="0.000001"
               placeholder="经度"
+              size="sm"
             />
           </div>
           <Input
             v-model="selectedLocation!.name"
             class="mt-2"
             placeholder="位置名称（如：机房312）"
+            size="sm"
           />
         </div>
 
