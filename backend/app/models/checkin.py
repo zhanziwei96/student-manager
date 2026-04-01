@@ -3,17 +3,12 @@
 """
 from datetime import datetime
 from typing import Optional
-from zoneinfo import ZoneInfo
 from sqlmodel import SQLModel, Field
 from app.models.constants import CheckinTypeConst
+from app.core.timezone import get_now
 
-# 上海时区
-SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
-
-
-def get_shanghai_now() -> datetime:
-    """获取上海时区的当前时间"""
-    return datetime.now(SHANGHAI_TZ)
+# 兼容性别名（向后兼容）
+get_shanghai_now = get_now
 
 
 class CheckinRecord(SQLModel, table=True):

@@ -70,6 +70,39 @@ class ApiResponseConst:
     MESSAGE: str = "message"
 
 
+# ==================== API 响应模型 ====================
+from typing import Any, Generic, Optional, TypeVar
+from pydantic import BaseModel, Field
+
+T = TypeVar("T")
+
+
+class ApiResponse(BaseModel, Generic[T]):
+    """通用 API 响应模型 - P1 修复：标准化响应结构"""
+    success: bool = Field(..., description="请求是否成功")
+    message: Optional[str] = Field(None, description="响应消息")
+    data: Optional[T] = Field(None, description="响应数据")
+
+
+class ApiSuccessResponse(BaseModel):
+    """成功响应模型（无数据）"""
+    success: bool = True
+    message: Optional[str] = None
+
+
+class ApiListResponse(BaseModel, Generic[T]):
+    """列表数据响应模型"""
+    success: bool = True
+    data: list[T] = Field(default_factory=list, description="列表数据")
+
+
+class ApiErrorResponse(BaseModel):
+    """错误响应模型"""
+    success: bool = False
+    message: str = Field(..., description="错误消息")
+    detail: Optional[str] = Field(None, description="详细错误信息")
+
+
 # ==================== 路由前缀 ====================
 class RoutePrefixConst:
     """API 路由前缀常量"""

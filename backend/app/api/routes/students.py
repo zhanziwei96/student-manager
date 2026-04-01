@@ -2,6 +2,7 @@
 学生管理 API - JWT 版本
 """
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException, Query, UploadFile, File, Body
 from pydantic import BaseModel, Field
 from sqlmodel import Session
@@ -14,7 +15,8 @@ from app.crud import (
 )
 from app.crud.checkin import get_class_session, get_today_checkins
 from app.models.constants import (
-    ApiResponseConst, MessageConst, RoutePrefixConst
+    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponse, ApiSuccessResponse, ApiListResponse
 )
 
 router = APIRouter(prefix=RoutePrefixConst.API, tags=["students"])
@@ -31,7 +33,70 @@ class UpdateScoreRequest(BaseModel):
     reason: str = Field(..., min_length=1, description="变动原因")
 
 
-@router.get("/students")
+class StudentWithCheckin(BaseModel):
+    """带签到状态的学生数据"""
+    id: Optional[int] = None
+    student_id: str
+    name: str
+    class_name: str
+    score: float
+    is_account_enabled: bool
+    checkin_status: str = "not_checked_in"
+    created_at: Optional[datetime] = None
+
+
+class ClassWithStatus(BaseModel):
+    """带状态的班级数据"""
+    name: str
+    status: str
+
+
+class ScoreLogResponse(BaseModel):
+    """分数日志响应"""
+    id: int
+    student_id: str
+    score_change: float
+    reason: str
+    changed_by: Optional[str] = None
+    created_at: datetime
+
+
+class StudentListResponse(ApiResponse[list[StudentWithCheckin]]):
+    """学生列表响应"""
+    pass
+
+
+class StudentDetailResponse(ApiResponse[dict]):
+    """学生详情响应"""
+    pass
+
+
+class StudentCreateResponse(ApiResponse[dict]):
+    """学生创建响应"""
+    pass
+
+
+class ScoreUpdateResponse(ApiResponse[dict]):
+    """分数更新响应"""
+    pass
+
+
+class ClassListResponse(ApiResponse[list[ClassWithStatus]]):
+    """班级列表响应"""
+    pass
+
+
+class ImportResponse(ApiSuccessResponse):
+    """导入响应"""
+    pass
+
+
+class ScoreLogListResponse(ApiResponse[list[ScoreLogResponse]]):
+    """分数日志列表响应"""
+    pass
+
+
+@router.get("/students", response_model=StudentListResponse)
 async def get_students_list(
     request: Request,
     class_name: Optional[str] = Query(None, description="班级名称"),
@@ -94,7 +159,7 @@ async def get_students_list(
     }
 
 
-@router.get("/students/{student_id}")
+@router.get("/students/{student_id}", response_model=StudentDetailResponse)
 async def get_student_info(
     request: Request,
     student_id: str,
@@ -122,7 +187,7 @@ async def get_student_info(
     }
 
 
-@router.post("/students")
+@router.post("/students", response_model=StudentCreateResponse)
 async def add_student(
     request: Request,
     data: CreateStudentRequest,
@@ -148,7 +213,7 @@ async def add_student(
     }
 
 
-@router.put("/students/{student_id}/score")
+@router.put("/students/{student_id}/score", response_model=ScoreUpdateResponse)
 async def update_score(
     request: Request,
     student_id: str,
@@ -176,7 +241,7 @@ async def update_score(
     }
 
 
-@router.delete("/students/{student_id}")
+@router.delete("/students/{student_id}", response_model=ApiSuccessResponse)
 async def remove_student(
     request: Request,
     student_id: str,
@@ -194,7 +259,7 @@ async def remove_student(
     }
 
 
-@router.get("/classes")
+@router.get("/classes", response_model=ClassListResponse)
 async def get_classes(
     request: Request,
     session: Session = Depends(get_session),
@@ -237,7 +302,7 @@ async def get_classes(
     }
 
 
-@router.post("/students/import")
+@router.post("/students/import", response_model=ImportResponse)
 async def import_students(
     request: Request,
     file: UploadFile = File(..., description="Excel文件 (.xlsx/.xls)"),
@@ -292,7 +357,7 @@ async def import_students(
             cleanup_file(file_path)
 
 
-@router.get("/students/{student_id}/scores")
+@router.get("/students/{student_id}/scores", response_model=ScoreLogListResponse)
 async def get_student_scores(
     request: Request,
     student_id: str,
@@ -314,7 +379,7 @@ class ResetStudentPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=1, description="新密码")
 
 
-@router.put("/students/{student_id}/reset-password")
+@router.put("/students/{student_id}/reset-password", response_model=ApiSuccessResponse)
 async def reset_student_password_api(
     request: Request,
     student_id: str,

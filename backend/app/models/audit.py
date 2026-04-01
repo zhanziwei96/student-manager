@@ -4,6 +4,7 @@
 from datetime import datetime
 from typing import Optional
 from sqlmodel import SQLModel, Field
+from app.core.timezone import get_now
 
 
 class AuditLog(SQLModel, table=True):
@@ -23,7 +24,7 @@ class AuditLog(SQLModel, table=True):
     user_agent: Optional[str] = Field(default=None, description="UserAgent")
     status_code: Optional[int] = Field(default=None, description="状态码")
     response_msg: Optional[str] = Field(default=None, description="响应消息")
-    created_at: datetime = Field(default_factory=datetime.now, description="创建时间", index=True)
+    created_at: datetime = Field(default_factory=get_now, description="创建时间", index=True)
 
 
 class SecurityAlert(SQLModel, table=True):
@@ -37,4 +38,4 @@ class SecurityAlert(SQLModel, table=True):
     related_user_id: Optional[int] = Field(default=None, description="相关用户ID")
     related_ip: Optional[str] = Field(default=None, description="相关IP")
     is_resolved: bool = Field(default=False, description="是否已解决", index=True)
-    created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
+    created_at: datetime = Field(default_factory=get_now, description="创建时间")

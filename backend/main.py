@@ -96,13 +96,16 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
     
-    # CORS配置
+    # CORS配置 - SEC-005: 收紧CORS策略，使用明确白名单
+    # 注意：allow_credentials=True 配合通配符存在安全风险，必须明确指定
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.security.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+        expose_headers=["X-Request-ID"],  # 允许前端读取的响应头
+        max_age=600,  # 预检请求缓存10分钟
     )
     
     # 审计日志中间件（记录敏感操作）

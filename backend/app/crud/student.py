@@ -116,24 +116,53 @@ def update_student_score(
     Raises:
         HTTPException: 409 冲突，如果检测到并发修改
     """
-    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session as SASession
     from fastapi import HTTPException
-    
+
     # 获取学生（使用 select 确保获取最新版本号）
     statement = select(Student).where(Student.student_id == student_id)
     student = session.exec(statement).first()
-    
+
     if not student:
         return None
-    
-    # 执行业务操作：更新分数（通过领域方法封装业务规则）
+
+    # 执行业务操作：计算新分数（通过领域方法封装业务规则）
     old_score, new_score = student.update_score(delta)
-    
-    # 乐观锁：递增版本号（BE-008 修复）
-    student.version += 1
-    
-    session.add(student)
-    
+
+    # 乐观锁：使用原生 UPDATE 检查 affected rows（BE-008 修复）
+    # 只有版本号匹配时才更新，否则说明有其他事务已修改
+    expected_version = student.version
+    new_version = expected_version + 1
+
+    # 使用底层 SQLAlchemy session.execute() 执行参数化 SQL
+    sa_session: SASession = session
+    result = sa_session.execute(
+        text("""
+            UPDATE students
+            SET score = :score, version = :new_version
+            WHERE student_id = :student_id AND version = :expected_version
+        """),
+        {
+            "score": new_score,
+            "new_version": new_version,
+            "student_id": student_id,
+            "expected_version": expected_version
+        }
+    )
+
+    # 检查是否有行被更新，如果没有说明版本号已变化（并发冲突）
+    if result.rowcount == 0:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="分数已被其他用户修改，请刷新后重试"
+        )
+
+    # 同步内存对象状态
+    student.version = new_version
+    student.score = new_score
+
     # 创建领域事件
     event = ScoreUpdated(
         student_id=student_id,
@@ -143,7 +172,7 @@ def update_student_score(
         reason=reason,
         operator=operator
     )
-    
+
     # 核心副作用：记录分数日志（必须在同一事务中）
     score_log = ScoreLog(
         student_id=student_id,
@@ -154,28 +183,8 @@ def update_student_score(
         operator=operator
     )
     session.add(score_log)
-    
-    # NOTE: 乐观锁实现说明
-    # 当前实现使用 version 字段递增来标识记录变更，但存在以下限制：
-    # 1. IntegrityError 捕获实际上不会触发，因为 version 字段没有唯一约束
-    # 2. 真正的乐观锁应使用 "UPDATE ... WHERE version = :expected_version" 模式
-    # 
-    # 不修复原因（业务评估）：
-    # - 业务场景：一个学生由一门课的一个老师管理，并发修改概率极低
-    # - 部署环境：SQLite 单进程部署，天然事务隔离，冲突可能性更小
-    # - 成本收益：修复成本 > 实际收益
-    # 
-    # 如需完整乐观锁保护，应：
-    # 1. 添加唯一约束 (student_id, version)，或
-    # 2. 使用原生 UPDATE with WHERE version = :version 检查 affected rows
-    try:
-        session.commit()
-    except IntegrityError:
-        session.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="分数已被其他用户修改，请刷新后重试"
-        )
+
+    session.commit()
     
     # 注册事务提交后的回调，用于处理其他非核心副作用
     # 使用 SQLAlchemy 的事件机制确保事件在事务成功提交后才发布

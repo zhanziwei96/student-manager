@@ -6,6 +6,8 @@ import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
+from app.core.timezone import get_now
+
 
 # ========== SEC-003: 新的简化接口 ==========
 
@@ -98,15 +100,17 @@ MAX_LOGIN_FAILURES = 10
 LOCKOUT_DURATION_MINUTES = 30
 
 
+from app.core.timezone import get_now
+
 def is_account_locked(locked_until: Optional[datetime]) -> bool:
     """检查账号是否处于锁定状态"""
     if not locked_until:
         return False
-    return locked_until > datetime.now()
+    return locked_until > get_now()
 
 
 def calculate_lockout_time(fail_count: int) -> Optional[datetime]:
     """计算账号锁定截止时间"""
     if fail_count >= MAX_LOGIN_FAILURES:
-        return datetime.now() + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+        return get_now() + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
     return None

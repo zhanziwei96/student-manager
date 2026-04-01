@@ -16,7 +16,8 @@ from app.core.jwt import (
 from app.crud import get_user_by_username, record_login_success, record_login_failure
 from app.models import User, UserRoleConst
 from app.models.constants import (
-    ApiResponseConst, MessageConst, RoutePrefixConst
+    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponse, ApiSuccessResponse
 )
 
 router = APIRouter(prefix=RoutePrefixConst.API, tags=["login"])
@@ -33,6 +34,26 @@ class LoginRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+
+class LoginUserData(BaseModel):
+    """登录响应的用户数据结构"""
+    id: str | int
+    username: str
+    name: str
+    role: str
+    class_name: Optional[str] = None
+    is_admin: Optional[bool] = None
+
+
+class LoginResponse(ApiResponse[LoginUserData]):
+    """登录响应模型"""
+    pass
+
+
+class MeResponse(ApiResponse[dict]):
+    """获取当前用户信息响应模型"""
+    pass
 
 
 async def check_rate_limit(request: Request, identifier: str) -> bool:
@@ -63,7 +84,7 @@ async def check_rate_limit(request: Request, identifier: str) -> bool:
     return True
 
 
-@router.post("/login")
+@router.post("/login", response_model=LoginResponse)
 async def login(
     request: Request,
     response: Response,  # 新增：用于设置 Cookie
@@ -179,7 +200,7 @@ async def login(
     }
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=ApiSuccessResponse)
 def logout(response: Response):
     """用户登出 - 清除 Cookie"""
     clear_token_cookie(response)
@@ -190,7 +211,7 @@ def logout(response: Response):
     }
 
 
-@router.post("/change-password")
+@router.post("/change-password", response_model=ApiSuccessResponse)
 async def change_password(
     request: Request,
     data: ChangePasswordRequest,
@@ -234,7 +255,7 @@ async def change_password(
     }
 
 
-@router.get("/me")
+@router.get("/me", response_model=MeResponse)
 async def get_me(user: dict = Depends(get_current_user)):
     """获取当前用户信息 - 从 JWT 解析"""
     return {

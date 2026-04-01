@@ -3,22 +3,62 @@
 
 修复内容：使用 asyncio.create_task 将审计日志写入改为后台任务，
 避免阻塞主请求响应，提升高并发性能。
+
+SEC-006: 添加任务队列管理，防止高并发下堆积过多后台任务
 """
 import asyncio
 import re
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
+
+# 任务队列管理 - 限制最大并发任务数
+MAX_CONCURRENT_AUDIT_TASKS = 50  # 最大并发审计任务数
+_audit_task_semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDIT_TASKS)
+
+# 使用线程池处理数据库操作，避免阻塞事件循环
+_audit_executor = ThreadPoolExecutor(max_workers=10, thread_name_prefix="audit_log_")
 
 
 async def _save_audit_log_async(audit_data: Dict[str, Any]) -> None:
     """
     异步保存审计日志（后台任务）- 性能优化
-    
+
     使用独立的会话和异常处理，确保失败不影响主业务。
     通过 asyncio.create_task 在后台执行，不阻塞主请求响应。
-    
+
+    SEC-006 改进：
+    - 添加信号量限制并发任务数，防止高并发下堆积过多任务
+    - 使用线程池处理数据库操作，避免阻塞事件循环
+    - 添加任务超时处理（5秒）
+
+    Args:
+        audit_data: 审计日志数据字典
+    """
+    # 使用信号量限制并发任务数
+    async with _audit_task_semaphore:
+        try:
+            # 在线程池中执行数据库操作，避免阻塞事件循环
+            loop = asyncio.get_event_loop()
+            await asyncio.wait_for(
+                loop.run_in_executor(_audit_executor, _save_audit_log_sync, audit_data),
+                timeout=5.0  # 5秒超时
+            )
+        except asyncio.TimeoutError:
+            import logging
+            logging.getLogger(__name__).warning("审计日志写入超时（5秒），任务已放弃")
+        except Exception as e:
+            # 审计日志失败不应影响主业务，仅记录错误
+            import logging
+            logging.getLogger(__name__).error(f"审计日志异步写入失败: {e}")
+
+
+def _save_audit_log_sync(audit_data: Dict[str, Any]) -> None:
+    """
+    同步保存审计日志（在线程池中执行）
+
     Args:
         audit_data: 审计日志数据字典
     """
@@ -26,15 +66,15 @@ async def _save_audit_log_async(audit_data: Dict[str, Any]) -> None:
         from app.core.db import engine
         from sqlmodel import Session
         from app.models import AuditLog
-        
+
         with Session(engine) as session:
             audit_log = AuditLog(**audit_data)
             session.add(audit_log)
             session.commit()
     except Exception as e:
-        # 审计日志失败不应影响主业务，仅记录错误
         import logging
-        logging.getLogger(__name__).error(f"审计日志异步写入失败: {e}")
+        logging.getLogger(__name__).error(f"审计日志同步写入失败: {e}")
+        raise  # 重新抛出以便上层捕获
 
 
 class AuditLogMiddleware(BaseHTTPMiddleware):
@@ -150,19 +190,29 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             audit_data: 基础审计数据（用户、方法、路径等）
             response: 响应对象
         """
-        from datetime import datetime
-        
+        from app.core.timezone import get_now
+
         audit_data.update({
             "action": self._get_action_name(audit_data["method"], audit_data["path"]),
             "resource": self._get_resource_name(audit_data["path"]),
             "resource_id": self._extract_resource_id(audit_data["path"]),
             "status_code": response.status_code,
             "response_msg": "成功" if response.status_code < 400 else "失败",
-            "created_at": datetime.now(),
+            "created_at": get_now(),
         })
-        
-        # 创建后台任务异步写入，不等待完成（性能优化）
-        asyncio.create_task(_save_audit_log_async(audit_data))
+
+        # SEC-006: 创建后台任务异步写入，添加错误处理和队列管理
+        task = asyncio.create_task(_save_audit_log_async(audit_data))
+
+        # 添加任务完成回调，捕获异常防止未处理异常警告
+        def _on_task_done(t: asyncio.Task) -> None:
+            try:
+                t.result()  # 这会抛出任务中的异常（如果有）
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"审计日志任务执行失败: {e}")
+
+        task.add_done_callback(_on_task_done)
     
     def _get_action_name(self, method: str, path: str) -> str:
         """获取操作名称"""

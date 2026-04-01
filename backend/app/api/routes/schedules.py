@@ -8,23 +8,55 @@ from sqlmodel import Session, select
 import pandas as pd
 from io import BytesIO
 
+from pydantic import BaseModel, Field
+
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.upload import (
-    _validate_filename,
-    _validate_extension,
-    _validate_content_type,
-    _validate_file_size,
+    validate_filename,
+    validate_extension,
+    validate_content_type,
+    validate_file_size,
 )
 from app.api.deps import get_current_user, require_login, require_admin, require_admin_or_teacher
 from app.crud import get_schedules as crud_get_schedules, delete_schedule as crud_delete_schedule
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
-from app.models.constants import ApiResponseConst, MessageConst, RoutePrefixConst
+from app.models.constants import (
+    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponse, ApiSuccessResponse, ApiListResponse
+)
 
 router = APIRouter(prefix=RoutePrefixConst.API, tags=["schedules"])
 
 
-@router.get("/schedules", response_model=dict)
+# 响应模型定义
+class ScheduleListResponse(ApiListResponse[CourseScheduleResponse]):
+    """课表列表响应"""
+    pass
+
+
+class ScheduleTodayResponse(ApiListResponse[CourseScheduleResponse]):
+    """今日课表响应"""
+    pass
+
+
+class ImportResultData(BaseModel):
+    """导入结果数据"""
+    imported: int
+    errors: list[dict]
+
+
+class ImportResponse(ApiResponse[ImportResultData]):
+    """导入响应"""
+    warning: Optional[str] = None
+
+
+class ScheduleSuccessResponse(ApiSuccessResponse):
+    """课表操作成功响应"""
+    pass
+
+
+@router.get("/schedules", response_model=ScheduleListResponse)
 async def get_schedules(
     class_name: Optional[str] = Query(None, description="按班级筛选"),
     teacher_id: Optional[int] = Query(None, description="按教师筛选"),
@@ -57,7 +89,7 @@ async def get_schedules(
     }
 
 
-@router.get("/schedules/today", response_model=dict)
+@router.get("/schedules/today", response_model=ScheduleTodayResponse)
 async def get_today_schedules(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
@@ -81,7 +113,7 @@ async def get_today_schedules(
     }
 
 
-@router.post("/schedules/import", response_model=dict)
+@router.post("/schedules/import", response_model=ImportResponse)
 async def import_schedules(
     file: UploadFile = File(..., description="Excel或CSV文件"),
     session: Session = Depends(get_session),
@@ -91,13 +123,13 @@ async def import_schedules(
     # SEC-001: 文件上传安全检查（使用 upload.py 安全模块）
     
     # 1. 验证文件名（路径遍历防护）
-    cleaned_filename = _validate_filename(file.filename or "unnamed")
+    cleaned_filename = validate_filename(file.filename or "unnamed")
     
     # 2. 验证扩展名白名单
-    _validate_extension(cleaned_filename, ['.xlsx', '.csv'])
+    validate_extension(cleaned_filename, ['.xlsx', '.csv'])
     
     # 3. 验证 MIME 类型
-    _validate_content_type(file.content_type, [
+    validate_content_type(file.content_type, [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # .xlsx
         'application/vnd.ms-excel',  # .xls
         'text/csv',  # .csv
@@ -105,9 +137,26 @@ async def import_schedules(
         'text/plain',  # CSV 有时被识别为 text/plain
     ])
     
-    # 4. 读取文件并验证大小
-    contents = await file.read()
-    _validate_file_size(len(contents), max_size_mb=10)
+    # 4. 流式读取文件并验证大小（SEC-007: 防止大文件内存耗尽）
+    # 先读取前1MB用于类型检测，如果超过限制则提前终止
+    max_size_bytes = 10 * 1024 * 1024  # 10MB
+    chunk_size = 1024 * 1024  # 1MB chunks
+    contents = bytearray()
+
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        contents.extend(chunk)
+
+        # 实时检查大小，超过限制立即报错
+        if len(contents) > max_size_bytes:
+            raise HTTPException(
+                status_code=HttpStatus.BAD_REQUEST,
+                detail=f"文件大小超过限制（最大 10MB）"
+            )
+
+    validate_file_size(len(contents), max_size_mb=10)
     
     # 使用清理后的文件名
     filename = cleaned_filename.lower()
@@ -180,7 +229,7 @@ async def import_schedules(
         )
 
 
-@router.delete("/schedules/{schedule_id}", response_model=dict)
+@router.delete("/schedules/{schedule_id}", response_model=ApiSuccessResponse)
 async def delete_schedule_api(
     schedule_id: int,
     session: Session = Depends(get_session),
@@ -200,7 +249,7 @@ async def delete_schedule_api(
     }
 
 
-@router.put("/schedules/{schedule_id}/assign", response_model=dict)
+@router.put("/schedules/{schedule_id}/assign", response_model=ApiSuccessResponse)
 async def assign_teacher_to_schedule(
     schedule_id: int,
     teacher_id: int,
@@ -229,7 +278,7 @@ async def assign_teacher_to_schedule(
     }
 
 
-@router.put("/schedules/{schedule_id}/unassign", response_model=dict)
+@router.put("/schedules/{schedule_id}/unassign", response_model=ApiSuccessResponse)
 async def unassign_teacher_from_schedule(
     schedule_id: int,
     session: Session = Depends(get_session),

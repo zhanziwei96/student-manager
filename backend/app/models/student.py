@@ -5,6 +5,7 @@
 from datetime import datetime
 from typing import Optional, List, Tuple
 from sqlmodel import SQLModel, Field, Relationship
+from app.core.timezone import get_now
 
 
 class StudentBase(SQLModel):
@@ -20,7 +21,7 @@ class Student(StudentBase, table=True):
     """学生表模型"""
     __tablename__ = "students"
     
-    created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
+    created_at: datetime = Field(default_factory=get_now, description="创建时间")
     last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
     password_hash: Optional[str] = Field(default=None, description="密码哈希 (bcrypt)")
     version: int = Field(default=1, description="乐观锁版本号")

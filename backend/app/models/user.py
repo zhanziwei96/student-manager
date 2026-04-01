@@ -8,6 +8,7 @@ from pydantic import field_validator
 import json
 
 from app.models.constants import UserRole, UserRoleConst
+from app.core.timezone import get_now
 
 
 class UserBase(SQLModel):
@@ -48,7 +49,7 @@ class User(UserBase, table=True):
     locked_until: Optional[datetime] = Field(default=None, description="锁定截止时间")
     last_login_ip: Optional[str] = Field(default=None, description="最后登录IP")
     last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
-    created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
+    created_at: datetime = Field(default_factory=get_now, description="创建时间")
     version: int = Field(default=1, description="乐观锁版本号")
     
     def is_admin(self) -> bool:

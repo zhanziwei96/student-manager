@@ -14,7 +14,8 @@ from app.crud import (
 )
 from app.models import UserRoleConst
 from app.models.constants import (
-    ApiResponseConst, MessageConst, RoutePrefixConst
+    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponse, ApiSuccessResponse, ApiListResponse
 )
 
 router = APIRouter(prefix=RoutePrefixConst.ADMIN, tags=["users"])
@@ -39,7 +40,29 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=6, description="新密码")
 
 
-@router.get("/users")
+# 响应模型定义
+class UserData(BaseModel):
+    """用户数据结构"""
+    id: int
+    username: str
+    name: str
+    role: str
+    is_account_enabled: bool
+    assigned_classes: list[str] = []
+    created_at: Optional[str] = None
+
+
+class UserListResponse(ApiListResponse[UserData]):
+    """用户列表响应"""
+    pass
+
+
+class UserDetailResponse(ApiResponse[UserData]):
+    """用户详情响应"""
+    pass
+
+
+@router.get("/users", response_model=UserListResponse)
 async def list_users(
     request: Request,
     role: Optional[str] = Query(None, description="角色过滤"),
@@ -60,7 +83,7 @@ async def list_users(
     }
 
 
-@router.post("/users")
+@router.post("/users", response_model=UserDetailResponse)
 async def add_user(
     request: Request,
     data: CreateUserRequest,
@@ -95,7 +118,7 @@ async def add_user(
     }
 
 
-@router.put("/users/{user_id}")
+@router.put("/users/{user_id}", response_model=UserDetailResponse)
 async def update_user_info(
     request: Request,
     user_id: int,
@@ -128,7 +151,7 @@ async def update_user_info(
     }
 
 
-@router.put("/users/{user_id}/reset-password")
+@router.put("/users/{user_id}/reset-password", response_model=ApiSuccessResponse)
 async def reset_user_password_api(
     request: Request,
     user_id: str,
@@ -158,7 +181,7 @@ async def reset_user_password_api(
     }
 
 
-@router.delete("/users/{user_id}")
+@router.delete("/users/{user_id}", response_model=ApiSuccessResponse)
 async def remove_user(
     request: Request,
     user_id: int,

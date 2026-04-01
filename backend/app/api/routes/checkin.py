@@ -2,6 +2,7 @@
 签到相关 API
 """
 from typing import Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
@@ -14,7 +15,8 @@ from app.crud import (
 from app.api.deps import require_login
 from app.core.jwt import get_current_user
 from app.models.constants import (
-    ApiResponseConst, MessageConst, RoutePrefixConst
+    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponse, ApiSuccessResponse
 )
 from app.models.checkin import ClassSession
 
@@ -39,7 +41,96 @@ class StartClassRequest(BaseModel):
     checkin_radius: Optional[int] = Field(default=100, description="签到半径（米）")
 
 
-@router.get("/class-session")
+class ClassSessionData(BaseModel):
+    """课堂会话数据"""
+    active: bool
+    course_name: Optional[str] = None
+    class_name: Optional[str] = None
+    start_time: Optional[datetime] = None
+
+
+class CheckinData(BaseModel):
+    """签到数据"""
+    id: int
+    student_id: str
+    student_name: str
+    class_name: str
+    checkin_time: datetime
+    checkin_type: str
+    session_id: int
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    distance: Optional[float] = None
+
+
+class CheckinStatsData(BaseModel):
+    """签到统计数据"""
+    active: bool
+    course_name: Optional[str] = None
+    class_name: Optional[str] = None
+    total: int
+    checked_in: int
+    not_checked_in: int
+    rate: float
+
+
+class ActiveSessionData(BaseModel):
+    """活跃课堂数据"""
+    course_name: Optional[str] = None
+    class_name: Optional[str] = None
+    teacher_id: int
+    teacher_name: Optional[str] = None
+    start_time: Optional[datetime] = None
+
+
+class StudentSessionData(BaseModel):
+    """学生端课堂数据"""
+    id: Optional[int] = None
+    session_code: Optional[str] = None
+    active: bool = True
+    course_name: Optional[str] = None
+    class_name: Optional[str] = None
+    teacher_name: Optional[str] = None
+    start_time: Optional[datetime] = None
+
+
+# 响应模型定义
+class ClassSessionResponse(ApiResponse[ClassSessionData]):
+    """课堂会话响应"""
+    pass
+
+
+class StartClassResponse(ApiResponse[dict]):
+    """开始课堂响应"""
+    pass
+
+
+class CheckinResponse(ApiResponse[CheckinData]):
+    """签到响应"""
+    pass
+
+
+class CheckinListResponse(ApiResponse[list[CheckinData]]):
+    """签到列表响应"""
+    pass
+
+
+class CheckinStatsResponse(ApiResponse[CheckinStatsData]):
+    """签到统计响应"""
+    pass
+
+
+class ActiveSessionsResponse(ApiResponse[list[ActiveSessionData]]):
+    """活跃课堂列表响应"""
+    pass
+
+
+class StudentSessionResponse(ApiResponse[StudentSessionData]):
+    """学生端课堂响应"""
+    pass
+
+
+@router.get("/class-session", response_model=ClassSessionResponse)
 def get_current_session(
     request: Request,
     session: Session = Depends(get_session),
@@ -64,7 +155,7 @@ def get_current_session(
     }
 
 
-@router.post("/class-session/start")
+@router.post("/class-session/start", response_model=StartClassResponse)
 async def begin_class(
     request: Request,
     data: StartClassRequest,
@@ -114,7 +205,7 @@ async def begin_class(
     }
 
 
-@router.post("/class-session/end")
+@router.post("/class-session/end", response_model=ApiSuccessResponse)
 async def finish_class(
     request: Request,
     session: Session = Depends(get_session),
@@ -131,7 +222,7 @@ async def finish_class(
     }
 
 
-@router.post("/checkin")
+@router.post("/checkin", response_model=CheckinResponse)
 def do_checkin(
     request: Request,
     data: CheckinRequest,
@@ -207,7 +298,7 @@ def do_checkin(
     }
 
 
-@router.get("/checkins/today")
+@router.get("/checkins/today", response_model=CheckinListResponse)
 def get_today_checkin_list(
     request: Request,
     class_name: Optional[str] = Query(None, description="班级名称"),
@@ -235,7 +326,7 @@ def get_today_checkin_list(
     }
 
 
-@router.get("/checkins/stats")
+@router.get("/checkins/stats", response_model=CheckinStatsResponse)
 def get_checkin_stats(
     request: Request,
     session: Session = Depends(get_session),
@@ -281,7 +372,7 @@ def get_checkin_stats(
     }
 
 
-@router.get("/class-sessions/active")
+@router.get("/class-sessions/active", response_model=ActiveSessionsResponse)
 def get_active_class_sessions(
     request: Request,
     session: Session = Depends(get_session)
@@ -306,7 +397,7 @@ def get_active_class_sessions(
     }
 
 
-@router.get("/class-sessions/class/{class_name}")
+@router.get("/class-sessions/class/{class_name}", response_model=StudentSessionResponse)
 async def get_class_session_for_student(
     class_name: str,
     request: Request,

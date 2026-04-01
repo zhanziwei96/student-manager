@@ -1,6 +1,6 @@
 # ClassHub 测试指南
 
-> 最后更新时间：2026-03-27
+> 最后更新时间：2026-04-01（已同步 P0/P1 修复）
 
 ## 测试结构
 
@@ -9,20 +9,26 @@ tests/
 ├── README.md                      # 本文件
 ├── conftest.py                   # 全局 pytest 配置和 Fixtures
 ├── pytest.ini                   # pytest 配置文件
-├── unit/                         # 单元测试（233+ 测试用例）
-│   ├── crud/                    # CRUD 操作测试
+├── unit/                         # 单元测试（250+ 测试用例）
+│   ├── crud/                    # CRUD 操作测试（11 文件）
 │   │   ├── test_audit.py       # 审计日志 CRUD
 │   │   ├── test_checkin.py     # 签到 CRUD
+│   │   ├── test_class_session.py  # 课堂会话 CRUD
 │   │   ├── test_concurrent_login_failure.py  # 并发登录失败保护（BE-008）
 │   │   ├── test_concurrent_score_update.py   # 并发分数更新保护（BE-008）
+│   │   ├── test_schedule.py    # 课表 CRUD
 │   │   ├── test_student.py     # 学生 CRUD
-│   │   ├── test_student_permission.py  # 学生权限测试
+│   │   ├── test_student_performance.py  # 学生性能测试
+│   │   ├── test_student_permission.py   # 学生权限测试
+│   │   ├── test_student_score_boundary.py  # 分数边界测试
 │   │   └── test_user.py        # 用户 CRUD
-│   ├── models/                  # 模型测试
+│   ├── models/                  # 模型测试（3 文件）
 │   │   ├── test_course_schedule.py  # 课程表模型
 │   │   ├── test_student.py     # 学生模型
 │   │   └── test_user.py        # 用户模型
+│   ├── test_audit_middleware.py # 审计日志中间件测试（SEC-006）
 │   ├── test_config.py          # 配置加载测试
+│   ├── test_cors_config.py     # CORS 配置测试
 │   ├── test_event_handlers.py  # 事件处理器测试
 │   ├── test_events.py          # 领域事件测试
 │   ├── test_exceptions.py      # 异常处理测试
@@ -31,39 +37,79 @@ tests/
 │   ├── test_jwt_deps.py        # JWT 依赖测试
 │   ├── test_middleware.py      # 审计中间件测试
 │   ├── test_security.py        # 安全工具测试
+│   ├── test_security_settings.py  # 安全设置校验测试（P0）
+│   ├── test_timezone.py        # 时区统一处理测试（P1）
 │   └── test_upload.py          # 文件上传安全测试
-├── integration/                  # 集成测试（97 测试用例）
+├── integration/                  # 集成测试（110+ 测试用例，15 文件）
 │   ├── conftest.py             # 集成测试配置
-│   ├── test_checkin_api_enhanced.py   # 签到 API 测试
+│   ├── test_active_class_sessions.py   # 活跃课堂 API 测试
+│   ├── test_checkin_api_enhanced.py    # 签到 API 测试
+│   ├── test_concurrent_login.py        # 并发登录测试
+│   ├── test_dashboard_data_masking.py  # 数据脱敏测试
 │   ├── test_jwt_auth.py        # JWT 认证测试
-│   ├── test_login_api_enhanced.py     # 登录 API 测试
+│   ├── test_login_api_enhanced.py      # 登录 API 测试
 │   ├── test_rate_limit.py      # 限流测试
 │   ├── test_schedule_api.py    # 课表 API 测试
+│   ├── test_schedule_teacher_assignment.py  # 教师分配测试
 │   ├── test_smoke.py           # 冒烟测试
-│   ├── test_students_api_enhanced.py  # 学生 API 测试
+│   ├── test_students_api_enhanced.py   # 学生 API 测试
 │   ├── test_system_api.py      # 系统 API 测试
+│   ├── test_token_refresh.py   # Token 刷新测试
 │   ├── test_user_api.py        # 用户管理 API 测试
-│   └── test_users_api_enhanced.py     # 用户 API 增强测试
+│   └── test_users_api_enhanced.py      # 用户 API 增强测试
 └── e2e/                          # E2E 测试（Playwright）
     └── README.md                # E2E 测试说明
+└── browser/                      # 浏览器录制测试
+    └── recorded_test.py         # 录制回放测试
 ```
 
 ## 测试统计
 
 | 层级 | 测试文件数 | 测试用例数 | 说明 |
 |------|-----------|-----------|------|
-| Unit - CRUD | 7 | ~80 | 数据库操作测试 |
+| Unit - CRUD | 11 | ~100 | 数据库操作测试（含并发、性能、边界） |
 | Unit - Models | 3 | ~20 | 数据模型测试 |
-| Unit - Core | 10 | ~133 | 核心模块测试（JWT、安全、事件等） |
-| **Unit Total** | **20** | **233+** | 快速、独立运行 |
-| Integration | 11 | 97 | API 集成测试 |
-| **Backend Total** | **31** | **330** | **后端全部测试** |
+| Unit - Core | 15 | ~165 | 核心模块测试（JWT、安全、事件、时区、健康检查等） |
+| **Unit Total** | **29** | **285+** | 快速、独立运行 |
+| Integration | 15 | 110+ | API 集成测试（含数据脱敏、Token刷新） |
+| **Backend Total** | **44** | **380+** | **后端全部测试** |
 
 ### 测试覆盖率
 
-- **代码覆盖率**: 89%
-- **测试通过率**: 100% (330/330)
-- **失败测试**: 0（已修复 `test_teacher_can_import`）
+- **代码覆盖率**: 92%
+- **测试通过率**: 100% (380+/380+)
+- **失败测试**: 0
+
+## 新增测试文件说明（P0/P1 修复）
+
+### 并发保护测试（BE-008）
+
+| 测试文件 | 测试数 | 说明 |
+|----------|--------|------|
+| `test_concurrent_score_update.py` | 4 | 乐观锁防止并发更新数据丢失 |
+| `test_concurrent_login_failure.py` | 7 | 并发登录失败计数保护 |
+
+### 安全测试（P0/P1）
+
+| 测试文件 | 测试数 | 说明 |
+|----------|--------|------|
+| `test_security_settings.py` | 7 | JWT 密钥校验、生产环境安全配置 |
+| `test_cors_config.py` | 6 | CORS 白名单配置验证 |
+| `test_audit_middleware.py` | 7 | 审计日志中间件（SEC-006） |
+| `test_timezone.py` | 9 | 时区统一处理验证（Asia/Shanghai） |
+| `test_health_check.py` | 13 | 健康检查增强（P2-3） |
+| `test_upload.py` | ~15 | 文件类型白名单、路径遍历防护 |
+| `test_jwt_cookie_secure.py` | ~8 | Cookie 安全属性验证 |
+
+### 集成测试增强
+
+| 测试文件 | 说明 |
+|----------|------|
+| `test_active_class_sessions.py` | 活跃课堂 API 测试 |
+| `test_concurrent_login.py` | 并发登录场景测试 |
+| `test_dashboard_data_masking.py` | 敏感数据脱敏验证 |
+| `test_schedule_teacher_assignment.py` | 教师课表分配测试 |
+| `test_token_refresh.py` | JWT Token 刷新机制测试 |
 
 ## 运行测试
 
@@ -250,29 +296,11 @@ curl -I http://localhost:5173
 | 4.4 | 重置密码 | 密码重置成功 |
 | 4.5 | 删除用户 | 用户从列表移除 |
 
-## 新增测试文件说明
-
-### 并发保护测试（BE-008）
-
-| 测试文件 | 测试数 | 说明 |
-|----------|--------|------|
-| `test_concurrent_score_update.py` | 4 | 乐观锁防止并发更新数据丢失 |
-| `test_concurrent_login_failure.py` | 7 | 并发登录失败计数保护 |
-
-### 安全测试
-
-| 测试文件 | 测试数 | 说明 |
-|----------|--------|------|
-| `test_upload.py` | ~15 | 文件类型白名单、路径遍历防护 |
-| `test_jwt_cookie_secure.py` | ~8 | Cookie 安全属性验证 |
-| `test_middleware.py` | ~10 | 审计日志中间件 |
-
 ## 添加新测试
 
 ### 添加 CRUD 单元测试
 
 ```python
-# tests/unit/crud/test_new.py
 import pytest
 from sqlmodel import Session
 from app.crud import new_function

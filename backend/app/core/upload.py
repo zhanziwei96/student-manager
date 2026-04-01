@@ -411,3 +411,16 @@ def cleanup_directory(directory: str, max_age_hours: int = 24) -> int:
     except Exception as e:
         logger.error(f"清理目录失败 {directory}: {e}")
         return 0
+
+
+# =============================================================================
+# 公开接口 - P1 修复：提供非下划线版本供外部调用
+# =============================================================================
+
+validate_filename = _validate_filename
+validate_extension = _validate_extension
+validate_content_type = _validate_content_type
+validate_file_size = _validate_file_size
+get_file_extension = _get_file_extension
+generate_safe_filename = _generate_safe_filename
+ensure_upload_directory = _ensure_upload_directory

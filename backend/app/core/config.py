@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Optional, List
 from functools import lru_cache
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -70,18 +70,38 @@ class DatabaseSettings(BaseSettings):
 class SecuritySettings(BaseSettings):
     """安全配置"""
     model_config = SettingsConfigDict(env_prefix="SECURITY_")
-    
+
     secret_key: str = Field(default="dev-secret-key-change-in-production", description="Session密钥")
     session_max_age: int = Field(default=86400, description="Session有效期（秒）")
     password_min_length: int = Field(default=6, description="密码最小长度")
     cors_origins: List[str] = Field(default=["http://localhost:3000"], description="CORS允许的来源")
-    
+
     # 登录安全设置
     max_login_failures: int = Field(default=10, description="最大登录失败次数")
     lockout_duration_minutes: int = Field(default=30, description="账号锁定时间（分钟）")
-    
+
     # Cookie 安全设置 (BE-006 修复)
     cookie_secure: bool = Field(default=False, description="Cookie Secure标志（生产环境应设为True）")
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        """校验密钥强度 - SEC-004: 生产环境强制使用强密钥"""
+        env = os.getenv("ENV", "production").lower()
+
+        if env == "production":
+            if v == "dev-secret-key-change-in-production":
+                raise ValueError(
+                    "生产环境 SECURITY_SECRET_KEY 必须使用自定义密钥，"
+                    "当前使用的是默认开发密钥。请设置环境变量 SECURITY_SECRET_KEY"
+                )
+            if len(v) < 32:
+                raise ValueError(
+                    f"生产环境 SECURITY_SECRET_KEY 长度必须至少32字符，"
+                    f"当前长度：{len(v)}"
+                )
+
+        return v
 
 
 class RateLimitSettings(BaseSettings):
