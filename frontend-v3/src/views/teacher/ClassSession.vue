@@ -300,8 +300,39 @@ const addMarker = (lng: number, lat: number) => {
   mapInstance.value.add(mapMarker.value)
 }
 
+// 检查高德地图是否加载完成
+const checkAMapLoaded = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    let attempts = 0
+    const maxAttempts = 50 // 最多等待5秒
+    
+    const check = () => {
+      attempts++
+      if (window.AMap && window.AMap.Map) {
+        resolve(true)
+      } else if (attempts >= maxAttempts) {
+        resolve(false)
+      } else {
+        setTimeout(check, 100)
+      }
+    }
+    
+    check()
+  })
+}
+
 // 在地图对话框打开时初始化
-const onMapDialogOpen = () => {
+const onMapDialogOpen = async () => {
+  mapLoadError.value = false
+  
+  // 等待高德地图脚本加载
+  const loaded = await checkAMapLoaded()
+  if (!loaded) {
+    console.error('高德地图脚本加载超时')
+    mapLoadError.value = true
+    return
+  }
+  
   // 等待DOM更新和对话框动画完成后初始化地图
   setTimeout(() => {
     initMap()
