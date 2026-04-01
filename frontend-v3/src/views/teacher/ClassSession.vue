@@ -195,11 +195,20 @@ const reverseGeocode = (lat: number, lng: number) => {
         const address = data.regeocode.formatted_address
         // 优先使用POI名称（如"XX大厦"），否则使用格式化地址
         const poi = data.regeocode.pois?.[0]?.name
-        const street = data.regeocode.addressComponent?.street
-        const township = data.regeocode.addressComponent?.township
+        const street = data.regeocode.addressComponent?.street || ''
+        const township = data.regeocode.addressComponent?.township || ''
+        const district = data.regeocode.addressComponent?.district || ''
+        const city = data.regeocode.addressComponent?.city || ''
         
-        // 组合位置名称：POI名称 > 街道 > 乡镇 > 格式化地址
-        selectedLocation.value!.name = poi || `${township}${street}` || address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+        // 组合位置名称：POI名称 > 城市+区+街道 > 格式化地址 > 坐标
+        let locationName = poi
+        if (!locationName) {
+          // 组合地址：城市 + 区 + 乡镇 + 街道
+          const parts = [city, district, township, street].filter(Boolean)
+          locationName = parts.join('') || address
+        }
+        
+        selectedLocation.value!.name = locationName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
       } else {
         selectedLocation.value!.name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
       }
