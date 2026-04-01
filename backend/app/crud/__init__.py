@@ -14,7 +14,7 @@ from app.crud.user import (
 from app.crud.checkin import (
     get_class_session, start_class, end_class,
     get_today_checkins, create_checkin, has_checked_in_today,
-    get_student_score_logs, count_today_checkins
+    get_student_score_logs, count_today_checkins, is_device_checked_in_session
 )
 from app.crud.schedule import (
     get_schedule, get_schedules, delete_schedule,
@@ -37,7 +37,7 @@ __all__ = [
     # Checkin
     "get_class_session", "start_class", "end_class",
     "get_today_checkins", "create_checkin", "has_checked_in_today",
-    "get_student_score_logs", "count_today_checkins",
+    "get_student_score_logs", "count_today_checkins", "is_device_checked_in_session",
     # Schedule
     "get_schedule", "get_schedules", "delete_schedule",
     "create_schedule", "import_schedules",

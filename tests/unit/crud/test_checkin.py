@@ -7,7 +7,7 @@ from sqlmodel import Session
 from app.crud import (
     get_class_session, start_class, end_class,
     get_today_checkins, create_checkin, has_checked_in_today,
-    get_student_score_logs
+    get_student_score_logs, is_device_checked_in_session
 )
 from app.models import ClassSession, CheckinRecord, ScoreLog
 
@@ -24,6 +24,28 @@ class TestClassSessionCRUD:
         assert class_session.start_time is not None
         assert class_session.teacher_id == 1
         assert class_session.teacher_name == "张老师"
+    
+    def test_start_class_with_location(self, session: Session):
+        """测试开始上课（带地理位置）"""
+        class_session = start_class(
+            session, 
+            "软件1班", 
+            teacher_id=1, 
+            teacher_name="张老师",
+            course_name="高等数学",
+            location_lat=39.90923,
+            location_lng=116.397428,
+            location_name="机房312",
+            checkin_radius=100
+        )
+        
+        assert class_session.active is True
+        assert class_session.class_name == "软件1班"
+        assert class_session.course_name == "高等数学"
+        assert class_session.location_lat == 39.90923
+        assert class_session.location_lng == 116.397428
+        assert class_session.location_name == "机房312"
+        assert class_session.checkin_radius == 100
     
     def test_get_class_session(self, session: Session):
         """测试获取上课状态 - 使用 teacher_id"""
@@ -95,6 +117,60 @@ class TestCheckinCRUD:
         # 按班级过滤
         checkins = get_today_checkins(session, class_name="软件1班")
         assert len(checkins) == 2
+    
+    def test_create_checkin_with_location(self, session: Session):
+        """测试创建签到记录（带位置和设备信息）"""
+        class_session = start_class(
+            session, "软件1班", teacher_id=1, teacher_name="张老师",
+            location_lat=39.90923, location_lng=116.397428
+        )
+        
+        checkin = create_checkin(
+            session,
+            student_id="S001",
+            student_name="张三",
+            class_name="软件1班",
+            session_id=class_session.id,
+            lat=39.90925,
+            lng=116.397430,
+            distance=2.5,
+            device_id="device123",
+            device_info='{"platform": "test"}'
+        )
+        
+        assert checkin.student_id == "S001"
+        assert checkin.checkin_lat == 39.90925
+        assert checkin.checkin_lng == 116.397430
+        assert checkin.checkin_distance == 2.5
+        assert checkin.device_id == "device123"
+        assert checkin.device_info == '{"platform": "test"}'
+    
+    def test_is_device_checked_in_session(self, session: Session):
+        """测试检查设备是否已在课堂签到"""
+        class_session = start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        
+        # 初始状态：设备未签到
+        assert is_device_checked_in_session(session, "device123", class_session.id) is False
+        
+        # 创建设备签到
+        create_checkin(
+            session, "S001", "张三", "软件1班", session_id=class_session.id,
+            device_id="device123"
+        )
+        
+        # 设备已签到
+        assert is_device_checked_in_session(session, "device123", class_session.id) is True
+        
+        # 其他设备未签到
+        assert is_device_checked_in_session(session, "device456", class_session.id) is False
+    
+    def test_is_device_checked_in_session_empty_device_id(self, session: Session):
+        """测试空设备ID检查"""
+        class_session = start_class(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        
+        # 空设备ID应返回False
+        assert is_device_checked_in_session(session, "", class_session.id) is False
+        assert is_device_checked_in_session(session, None, class_session.id) is False
 
 
 class TestScoreLogCRUD:
