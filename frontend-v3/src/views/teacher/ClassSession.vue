@@ -5,8 +5,8 @@ import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useSchedules } from '@/composables/useSchedules'
 import { useTodayCheckins } from '@/composables/useCheckins'
 import { useAuthStore } from '@/stores'
-import { Card, Button, Input, Select, Badge } from '@/components/ui'
-import { Play, Square, CheckCircle, Clock, Users, Search, GraduationCap, AlertTriangle } from 'lucide-vue-next'
+import { Card, Button, Input, Select, Badge, Dialog } from '@/components/ui'
+import { Play, Square, CheckCircle, Clock, Users, Search, GraduationCap, AlertTriangle, MapPin, Loader2 } from 'lucide-vue-next'
 import { formatTime } from '@/lib/date'
 import { Toast } from '@/components/ui'
 import { getErrorMessage } from '@/lib/error'
@@ -15,6 +15,12 @@ const className = ref('')
 const courseName = ref('')
 const studentCode = ref('')
 const searchQuery = ref('')
+
+// 地图选点相关
+const showMapDialog = ref(false)
+const selectedLocation = ref<{ lat: number; lng: number; name: string } | null>(null)
+const checkinRadius = ref(100)
+const isLoadingLocation = ref(false)
 
 // 获取当前用户信息
 const authStore = useAuthStore()
@@ -140,9 +146,71 @@ const handleStartSession = async () => {
     return
   }
 
+  // 打开地图选点对话框
+  showMapDialog.value = true
+  // 尝试获取当前位置作为默认位置
+  if (navigator.geolocation) {
+    isLoadingLocation.value = true
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        selectedLocation.value = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          name: '当前位置'
+        }
+        // 反向地理编码获取地址名称
+        reverseGeocode(position.coords.latitude, position.coords.longitude)
+        isLoadingLocation.value = false
+      },
+      () => {
+        // 定位失败，使用默认位置（学校中心）
+        selectedLocation.value = {
+          lat: 39.90923,  // 默认纬度（可根据学校位置调整）
+          lng: 116.397428, // 默认经度
+          name: '默认位置'
+        }
+        isLoadingLocation.value = false
+      },
+      { timeout: 5000 }
+    )
+  }
+}
+
+// 反向地理编码
+const reverseGeocode = (lat: number, lng: number) => {
+  // 使用高德地图逆地理编码API
+  fetch(`https://restapi.amap.com/v3/geocode/regeo?key=YOUR_AMAP_KEY&location=${lng},${lat}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === '1' && data.regeocode) {
+        const address = data.regeocode.formatted_address
+        const poi = data.regeocode.pois?.[0]?.name
+        selectedLocation.value!.name = poi || address || '未知位置'
+      }
+    })
+    .catch(() => {
+      // 失败则保留"当前位置"
+    })
+}
+
+// 确认开始课堂（带位置信息）
+const confirmStartSession = async () => {
+  if (!selectedLocation.value) {
+    showErrorToast('请选择签到位置')
+    return
+  }
+
   try {
-    await startSession({ className: className.value, courseName: courseName.value || undefined })
+    await startSession({
+      className: className.value,
+      courseName: courseName.value || undefined,
+      locationLat: selectedLocation.value.lat,
+      locationLng: selectedLocation.value.lng,
+      locationName: selectedLocation.value.name,
+      checkinRadius: checkinRadius.value
+    })
     showSuccessToast('课堂已开始！')
+    showMapDialog.value = false
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '开始课堂失败')
   }
@@ -223,7 +291,14 @@ const quickCheckIn = async (studentId: string) => {
               {{ activeSession.class_name }} • 开始于 {{ activeSession.start_time }}
             </p>
             <p
-              v-else
+              v-if="activeSession?.location_name"
+              class="text-sm text-blue-400 flex items-center gap-1"
+            >
+              <MapPin class="h-3 w-3" />
+              {{ activeSession.location_name }} ({{ activeSession.checkin_radius || 100 }}米范围)
+            </p>
+            <p
+              v-else-if="!isSessionActive"
               class="text-sm text-white/60"
             >
               选择班级开始新课堂
@@ -494,6 +569,100 @@ const quickCheckIn = async (studentId: string) => {
         </div>
       </Card>
     </template>
+
+    <!-- 地图选点对话框 -->
+    <Dialog
+      v-model:open="showMapDialog"
+      title="选择签到位置"
+    >
+      <div class="space-y-4">
+        <!-- 位置显示 -->
+        <div
+          v-if="selectedLocation"
+          class="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3"
+        >
+          <div class="flex items-center gap-2 text-sm text-blue-400">
+            <MapPin class="h-4 w-4" />
+            <span>{{ selectedLocation.name }}</span>
+          </div>
+          <div class="mt-1 text-xs text-white/40">
+            坐标: {{ selectedLocation.lat.toFixed(6) }}, {{ selectedLocation.lng.toFixed(6) }}
+          </div>
+        </div>
+
+        <div v-else-if="isLoadingLocation" class="text-center py-8 text-white/60">
+          <Loader2 class="mx-auto h-8 w-8 animate-spin mb-2" />
+          <p>正在获取位置...</p>
+        </div>
+
+        <div v-else class="text-center py-8 text-white/60">
+          <MapPin class="mx-auto h-8 w-8 mb-2 opacity-50" />
+          <p>点击地图选择签到位置</p>
+        </div>
+
+        <!-- 地图容器（简化版，使用输入框模拟） -->
+        <div class="rounded-lg border border-white/10 bg-white/5 p-4">
+          <label class="block text-sm text-white/60 mb-2">手动输入坐标（或点击获取位置）</label>
+          <div class="grid grid-cols-2 gap-2">
+            <Input
+              v-model="selectedLocation!.lat"
+              type="number"
+              step="0.000001"
+              placeholder="纬度"
+            />
+            <Input
+              v-model="selectedLocation!.lng"
+              type="number"
+              step="0.000001"
+              placeholder="经度"
+            />
+          </div>
+          <Input
+            v-model="selectedLocation!.name"
+            class="mt-2"
+            placeholder="位置名称（如：机房312）"
+          />
+        </div>
+
+        <!-- 签到半径 -->
+        <div>
+          <label class="block text-sm text-white/60 mb-2">
+            签到半径: {{ checkinRadius }} 米
+          </label>
+          <input
+            v-model="checkinRadius"
+            type="range"
+            min="50"
+            max="500"
+            step="10"
+            class="w-full"
+          />
+          <div class="flex justify-between text-xs text-white/40 mt-1">
+            <span>50米</span>
+            <span>500米</span>
+          </div>
+        </div>
+
+        <!-- 按钮 -->
+        <div class="flex gap-2 pt-2">
+          <Button
+            variant="outline"
+            class="flex-1"
+            @click="showMapDialog = false"
+          >
+            取消
+          </Button>
+          <Button
+            class="flex-1"
+            :loading="isStartingSession"
+            :disabled="!selectedLocation"
+            @click="confirmStartSession"
+          >
+            开始课堂
+          </Button>
+        </div>
+      </div>
+    </Dialog>
 
     <!-- Toast -->
     <Toast

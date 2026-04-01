@@ -35,7 +35,10 @@ def get_class_session_by_class_name(session: Session, class_name: str) -> Option
     return session.exec(query).first()
 
 
-def start_class(session: Session, class_name: str, teacher_id: int = None, teacher_name: str = None, course_name: str = None) -> ClassSession:
+def start_class(session: Session, class_name: str, teacher_id: int = None, 
+                teacher_name: str = None, course_name: str = None,
+                location_lat: float = None, location_lng: float = None,
+                location_name: str = None, checkin_radius: int = 100) -> ClassSession:
     """开始上课 - 每次调用创建新的课堂记录"""
     # 结束该教师之前的活跃课堂
     end_class(session, teacher_id)
@@ -49,7 +52,11 @@ def start_class(session: Session, class_name: str, teacher_id: int = None, teach
         teacher_id=teacher_id,
         teacher_name=teacher_name,
         active=True, 
-        start_time=datetime.now(SHANGHAI_TZ)
+        start_time=datetime.now(SHANGHAI_TZ),
+        location_lat=location_lat,
+        location_lng=location_lng,
+        location_name=location_name,
+        checkin_radius=checkin_radius
     )
     session.add(class_session)
     session.commit()
@@ -124,8 +131,10 @@ def count_today_checkins(session: Session, class_name: Optional[str] = None) -> 
 
 
 def create_checkin(session: Session, student_id: str, student_name: str, 
-                   class_name: str, session_id: int, checkin_type: str = None) -> CheckinRecord:
-    """创建签到记录 - 关联到具体课堂 session_id"""
+                   class_name: str, session_id: int, checkin_type: str = None,
+                   lat: float = None, lng: float = None, distance: float = None,
+                   device_id: str = None, device_info: str = None) -> CheckinRecord:
+    """创建签到记录 - 关联到具体课堂 session_id，包含位置和设备信息"""
     from app.models.constants import CheckinTypeConst
     if checkin_type is None:
         checkin_type = CheckinTypeConst.SELF
@@ -134,7 +143,12 @@ def create_checkin(session: Session, student_id: str, student_name: str,
         student_id=student_id,
         student_name=student_name,
         class_name=class_name,
-        checkin_type=checkin_type
+        checkin_type=checkin_type,
+        checkin_lat=lat,
+        checkin_lng=lng,
+        checkin_distance=distance,
+        device_id=device_id,
+        device_info=device_info
     )
     session.add(checkin)
     session.commit()
@@ -178,3 +192,14 @@ def get_student_score_logs(session: Session, student_id: str, limit: int = None)
         limit = get_settings().pagination.score_log_default_limit
     query = select(ScoreLog).where(ScoreLog.student_id == student_id).order_by(ScoreLog.created_at.desc()).limit(limit)
     return session.exec(query).all()
+
+
+def is_device_checked_in_session(session: Session, device_id: str, session_id: int) -> bool:
+    """检查设备是否已在指定课堂签到过"""
+    if not device_id:
+        return False
+    query = select(CheckinRecord).where(
+        CheckinRecord.device_id == device_id,
+        CheckinRecord.session_id == session_id
+    )
+    return session.exec(query).first() is not None

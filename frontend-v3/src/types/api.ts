@@ -171,11 +171,17 @@ export interface ClassSession {
   teacher_name?: string
   active: boolean
   checked_in_count?: number
+  location_name?: string
+  checkin_radius?: number
 }
 
 export interface StartClassRequest {
   class_name: string
   course_name?: string
+  location_lat?: number
+  location_lng?: number
+  location_name?: string
+  checkin_radius?: number
 }
 
 // 签到类型
@@ -192,6 +198,10 @@ export interface CheckinRecord {
   class_name: string
   checkin_time: string
   checkin_type?: string
+  checkin_lat?: number
+  checkin_lng?: number
+  checkin_distance?: number
+  device_id?: string
 }
 
 /**

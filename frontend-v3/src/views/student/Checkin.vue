@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useStudentProfile } from '@/composables/useStudentProfile'
-import { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
+import { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession, useGeolocation } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge } from '@/components/ui'
-import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
+import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck, MapPin } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
 const { data: classSession, isPending: isLoadingSession, hasActiveSession } = useStudentClassSession()
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
 const { hasCheckedIn, sessionCheckin } = useHasCheckedInSession(computed(() => classSession.value?.id))
+const { isLocating, locationError, getCurrentPosition } = useGeolocation()
 
 const showSuccessToast = ref(false)
 const successMessage = ref('')
 
 const canCheckin = computed(() => {
-  return hasActiveSession.value && !hasCheckedIn.value
+  return hasActiveSession.value && !hasCheckedIn.value && !isLocating.value
 })
 
 // 是否显示已签到状态（必须有活跃课堂且已签到）
@@ -24,7 +25,15 @@ const showCheckedInStatus = computed(() => {
 
 const handleCheckin = async () => {
   try {
-    await doCheckin()
+    // 1. 先获取GPS定位
+    const position = await getCurrentPosition()
+    if (!position) {
+      // 定位失败，不继续签到
+      return
+    }
+
+    // 2. 执行签到（带位置信息）
+    await doCheckin(position)
     showSuccessToast.value = true
     successMessage.value = '签到成功！'
     setTimeout(() => {
@@ -136,6 +145,20 @@ const formatTime = (time: string) => {
         </Badge>
       </div>
 
+      <!-- 签到位置信息 -->
+      <div
+        v-if="hasActiveSession && classSession?.location_name"
+        class="mt-4 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3"
+      >
+        <div class="flex items-center gap-2 text-sm text-blue-400">
+          <MapPin class="h-4 w-4" />
+          <span>签到地点: {{ classSession.location_name }}</span>
+          <span v-if="classSession.checkin_radius" class="text-white/40">
+            (允许范围 {{ classSession.checkin_radius }}米)
+          </span>
+        </div>
+      </div>
+
       <!-- Checkin Button -->
       <div
         v-if="hasActiveSession"
@@ -145,11 +168,12 @@ const formatTime = (time: string) => {
           v-if="canCheckin"
           size="lg"
           class="w-full"
-          :loading="isCheckingIn"
+          :loading="isCheckingIn || isLocating"
           @click="handleCheckin"
         >
-          <CheckCircle class="mr-2 h-5 w-5" />
-          立即签到
+          <CheckCircle v-if="!isLocating" class="mr-2 h-5 w-5" />
+          <Loader2 v-else class="mr-2 h-5 w-5 animate-spin" />
+          {{ isLocating ? '正在定位...' : '立即签到' }}
         </Button>
         
         <div 
@@ -167,6 +191,16 @@ const formatTime = (time: string) => {
       </div>
 
       <!-- Error Message -->
+      <div
+        v-if="locationError"
+        class="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3"
+      >
+        <div class="flex items-center gap-2 text-red-400">
+          <AlertCircle class="h-4 w-4" />
+          <span class="text-sm">{{ locationError }}</span>
+        </div>
+      </div>
+
       <div
         v-if="checkinError"
         class="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3"

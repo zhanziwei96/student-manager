@@ -27,6 +27,13 @@ class CheckinRecord(SQLModel, table=True):
     class_name: Optional[str] = Field(default=None, description="班级", index=True)
     checkin_type: str = Field(default=CheckinTypeConst.SELF, description="签到类型")
     checkin_time: datetime = Field(default_factory=get_shanghai_now, description="签到时间")
+    
+    # 地理位置和设备信息字段
+    checkin_lat: Optional[float] = Field(default=None, description="签到时纬度")
+    checkin_lng: Optional[float] = Field(default=None, description="签到时经度")
+    checkin_distance: Optional[float] = Field(default=None, description="与签到中心的距离（米）")
+    device_id: Optional[str] = Field(default=None, description="设备指纹ID", index=True)
+    device_info: Optional[str] = Field(default=None, description="设备信息JSON")
 
 
 class ClassSession(SQLModel, table=True):
@@ -43,6 +50,12 @@ class ClassSession(SQLModel, table=True):
     end_time: Optional[datetime] = Field(default=None, description="结束时间")
     active: bool = Field(default=False, description="是否上课中")
     updated_at: datetime = Field(default_factory=get_shanghai_now, description="更新时间")
+    
+    # 地理位置字段
+    location_lat: Optional[float] = Field(default=None, description="签到中心纬度")
+    location_lng: Optional[float] = Field(default=None, description="签到中心经度")
+    location_name: Optional[str] = Field(default=None, description="位置名称，如'机房312'")
+    checkin_radius: int = Field(default=100, description="允许签到半径（米），默认100米")
 
 
 class ScoreLog(SQLModel, table=True):

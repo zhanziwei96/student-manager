@@ -73,6 +73,10 @@ export function useClassSession() {
 export interface StartClassParams {
   className: string
   courseName?: string
+  locationLat?: number
+  locationLng?: number
+  locationName?: string
+  checkinRadius?: number
 }
 
 export function useClassSessionStart() {
@@ -83,7 +87,11 @@ export function useClassSessionStart() {
       // FE-003: 直接获取数据，错误自动抛出
       const data = await classSessionApi.start({ 
         class_name: params.className,
-        course_name: params.courseName 
+        course_name: params.courseName,
+        location_lat: params.locationLat,
+        location_lng: params.locationLng,
+        location_name: params.locationName,
+        checkin_radius: params.checkinRadius
       })
       // REVIEW-P1: 使用 SSR 安全的 localStorage
       safeLocalStorage.setItem('activeClassSession', JSON.stringify(data))

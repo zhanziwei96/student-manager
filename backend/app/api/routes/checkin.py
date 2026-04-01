@@ -24,11 +24,19 @@ router = APIRouter(prefix=RoutePrefixConst.API, tags=["checkin"])
 class CheckinRequest(BaseModel):
     student_id: str = Field(..., description="学号")
     student_name: str = Field(..., description="姓名")
+    lat: Optional[float] = Field(default=None, description="签到纬度")
+    lng: Optional[float] = Field(default=None, description="签到经度")
+    device_id: Optional[str] = Field(default=None, description="设备指纹ID")
+    device_info: Optional[str] = Field(default=None, description="设备信息JSON")
 
 
 class StartClassRequest(BaseModel):
     class_name: str = Field(..., description="班级名称")
     course_name: Optional[str] = Field(default=None, description="课程名称")
+    location_lat: Optional[float] = Field(default=None, description="签到中心纬度")
+    location_lng: Optional[float] = Field(default=None, description="签到中心经度")
+    location_name: Optional[str] = Field(default=None, description="位置名称")
+    checkin_radius: Optional[int] = Field(default=100, description="签到半径（米）")
 
 
 @router.get("/class-session")
@@ -87,7 +95,17 @@ async def begin_class(
     
     # 开始新课堂
     teacher_name = user.get("name", "")
-    class_session = start_class(session, data.class_name, teacher_id, teacher_name, data.course_name)
+    class_session = start_class(
+        session=session,
+        class_name=data.class_name,
+        teacher_id=teacher_id,
+        teacher_name=teacher_name,
+        course_name=data.course_name,
+        location_lat=data.location_lat,
+        location_lng=data.location_lng,
+        location_name=data.location_name,
+        checkin_radius=data.checkin_radius
+    )
     
     return {
         ApiResponseConst.SUCCESS: True,
@@ -117,33 +135,69 @@ async def finish_class(
 def do_checkin(
     request: Request,
     data: CheckinRequest,
-    session: Session = Depends(get_session),
+    db_session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """学生签到"""
+    """学生签到（带GPS地理围栏验证）"""
+    import math
+    from app.crud.checkin import get_class_session_by_class_name, has_checked_in_session, is_device_checked_in_session
+    
     # 验证学生
     from app.crud import get_student
-    student = get_student(session, data.student_id)
+    student = get_student(db_session, data.student_id)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
     
     # 检查学生所在班级是否有活跃课堂
-    from app.crud.checkin import get_class_session_by_class_name, has_checked_in_session
-    class_session = get_class_session_by_class_name(session, student.class_name)
+    class_session = get_class_session_by_class_name(db_session, student.class_name)
     if not class_session or not class_session.active:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
     
-    # 检查是否在当前课堂已签到（使用 session_id 精确检查）
-    if has_checked_in_session(session, data.student_id, class_session.id):
+    # 检查是否在当前课堂已签到
+    if has_checked_in_session(db_session, data.student_id, class_session.id):
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
     
-    # 创建签到记录（关联到具体课堂 session_id）
+    # 验证GPS定位（如果课堂设置了位置）
+    if class_session.location_lat is not None and class_session.location_lng is not None:
+        # 检查是否提供了GPS位置
+        if data.lat is None or data.lng is None:
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='请先开启GPS定位')
+        
+        # 计算与签到中心的距离（Haversine公式）
+        R = 6371000  # 地球半径（米）
+        lat1 = math.radians(class_session.location_lat)
+        lat2 = math.radians(data.lat)
+        delta_lat = math.radians(data.lat - class_session.location_lat)
+        delta_lng = math.radians(data.lng - class_session.location_lng)
+        
+        a = math.sin(delta_lat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lng/2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        distance = R * c
+        
+        # 检查是否在允许范围内
+        if distance > class_session.checkin_radius:
+            raise HTTPException(
+                status_code=HttpStatus.FORBIDDEN, 
+                detail=f'您不在签到范围内，距离签到点约{distance:.0f}米，允许范围{class_session.checkin_radius}米'
+            )
+    
+    # 验证设备唯一性（如果提供了设备ID）
+    if data.device_id:
+        if is_device_checked_in_session(db_session, data.device_id, class_session.id):
+            raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该设备已签到')
+    
+    # 创建签到记录
     checkin = create_checkin(
-        session,
+        db_session,
         data.student_id,
         data.student_name or student.name,
         class_session.class_name,
-        class_session.id  # 关联到当前课堂
+        class_session.id,
+        lat=data.lat,
+        lng=data.lng,
+        distance=distance if class_session.location_lat else None,
+        device_id=data.device_id,
+        device_info=data.device_info
     )
     
     return {
