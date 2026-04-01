@@ -12,7 +12,7 @@ from app.models import CheckinRecord, ClassSession, ScoreLog
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 
-def get_class_session(session: Session, teacher_id: int = None) -> Optional[ClassSession]:
+def get_class_session(session: Session, teacher_id: Optional[int] = None) -> Optional[ClassSession]:
     """获取上课状态
     
     如果提供 teacher_id，则返回该教师的活跃课堂
