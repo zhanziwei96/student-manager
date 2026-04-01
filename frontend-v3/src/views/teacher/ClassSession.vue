@@ -224,41 +224,60 @@ const reverseGeocode = (lat: number, lng: number) => {
 
 // 初始化地图
 const initMap = () => {
-  if (!mapContainer.value || !window.AMap) return
+  if (!mapContainer.value || !window.AMap) {
+    console.error('地图容器或AMap未就绪')
+    return
+  }
+  
+  // 如果地图已存在，先销毁
+  if (mapInstance.value) {
+    mapInstance.value.destroy()
+    mapInstance.value = null
+  }
   
   const center = selectedLocation.value 
     ? [selectedLocation.value.lng, selectedLocation.value.lat]
     : [115.580853, 27.963478] // 默认中心
   
-  // 创建地图实例
-  mapInstance.value = new window.AMap.Map(mapContainer.value, {
-    zoom: 16,
-    center: center,
-    viewMode: '2D'
-  })
-  
-  // 如果已有选中位置，添加标记
-  if (selectedLocation.value) {
-    addMarker(selectedLocation.value.lng, selectedLocation.value.lat)
-  }
-  
-  // 点击地图事件
-  mapInstance.value.on('click', (e: any) => {
-    const lng = e.lnglat.getLng()
-    const lat = e.lnglat.getLat()
+  try {
+    // 创建地图实例
+    mapInstance.value = new window.AMap.Map(mapContainer.value, {
+      zoom: 16,
+      center: center,
+      viewMode: '2D',
+      resizeEnable: true
+    })
     
-    selectedLocation.value = {
-      lat,
-      lng,
-      name: '选择的位置'
+    // 如果已有选中位置，添加标记
+    if (selectedLocation.value) {
+      addMarker(selectedLocation.value.lng, selectedLocation.value.lat)
     }
     
-    // 添加/移动标记
-    addMarker(lng, lat)
+    // 点击地图事件
+    mapInstance.value.on('click', (e: any) => {
+      const lng = e.lnglat.getLng()
+      const lat = e.lnglat.getLat()
+      
+      selectedLocation.value = {
+        lat,
+        lng,
+        name: '选择的位置'
+      }
+      
+      // 添加/移动标记
+      addMarker(lng, lat)
+      
+      // 反向地理编码获取地址
+      reverseGeocode(lat, lng)
+    })
     
-    // 反向地理编码获取地址
-    reverseGeocode(lat, lng)
-  })
+    // 强制刷新地图尺寸
+    setTimeout(() => {
+      mapInstance.value?.resize()
+    }, 200)
+  } catch (error) {
+    console.error('地图初始化失败:', error)
+  }
 }
 
 // 添加标记
@@ -281,10 +300,10 @@ const addMarker = (lng: number, lat: number) => {
 
 // 在地图对话框打开时初始化
 const onMapDialogOpen = () => {
-  // 等待DOM更新后初始化地图
+  // 等待DOM更新和对话框动画完成后初始化地图
   setTimeout(() => {
     initMap()
-  }, 100)
+  }, 300)
 }
 
 // 确认开始课堂（带位置信息）
@@ -696,11 +715,21 @@ const quickCheckIn = async (studentId: string) => {
         </div>
 
         <!-- 地图容器 -->
-        <div 
-          ref="mapContainer"
-          class="w-full h-64 rounded-lg border border-white/20 bg-gray-800"
-          style="min-height: 256px;"
-        />
+        <div class="relative">
+          <div 
+            ref="mapContainer"
+            class="w-full rounded-lg border border-white/20"
+            style="height: 300px; background: linear-gradient(135deg, #1e3a5f 0%, #2d3748 100%);"
+          />
+          <!-- 地图加载提示 -->
+          <div 
+            v-if="!mapInstance && !selectedLocation"
+            class="absolute inset-0 flex flex-col items-center justify-center text-white/60 pointer-events-none"
+          >
+            <MapPin class="h-8 w-8 mb-2" />
+            <p class="text-sm">点击地图选择位置</p>
+          </div>
+        </div>
 
         <!-- 手动输入（备选） -->
         <div class="rounded-lg border border-white/10 bg-white/5 p-3">
