@@ -18,7 +18,7 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse, ApiListResponse
 )
 
-router = APIRouter(prefix=RoutePrefixConst.ADMIN, tags=["users"])
+router = APIRouter(tags=["users"])
 
 
 class CreateUserRequest(BaseModel):

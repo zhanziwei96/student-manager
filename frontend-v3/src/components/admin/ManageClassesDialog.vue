@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Dialog, Button, Checkbox } from '@/components/ui'
+import { Dialog, Button } from '@/components/ui'
 import { Loader2, Search, BookOpen, Check, X, Users, Plus } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { useClasses } from '@/composables/useClasses'
 import { usersApi } from '@/api/users'
-import type { User, Class } from '@/types'
+import type { User } from '@/types'
 import { getErrorMessage } from '@/lib/error'
 
 const props = defineProps<{
@@ -16,6 +16,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:open': [value: boolean]
   'success': []
+  'update:teacher': [teacher: User]
 }>()
 
 const { showToast } = useToast()
@@ -136,7 +137,7 @@ const handleSave = async () => {
     })
     
     // 更新本地教师数据
-    props.teacher.assigned_classes = [...selectedClasses.value]
+    emit('update:teacher', { ...props.teacher, assigned_classes: [...selectedClasses.value] })
     originalClasses.value = [...selectedClasses.value]
     
     showToast('班级分配已更新', 'success')
@@ -163,13 +164,16 @@ const handleClose = () => {
 <template>
   <Dialog
     :open="open"
-    @update:open="handleClose"
     :title="`管理班级 - ${teacher?.name || ''}`"
     description="管理该教师负责的班级"
+    @update:open="handleClose"
   >
     <div class="space-y-4">
       <!-- 加载中 -->
-      <div v-if="isLoadingClasses" class="flex h-32 items-center justify-center">
+      <div
+        v-if="isLoadingClasses"
+        class="flex h-32 items-center justify-center"
+      >
         <Loader2 class="h-6 w-6 animate-spin text-primary" />
       </div>
 
@@ -195,11 +199,19 @@ const handleClose = () => {
             </Button>
           </div>
           
-          <div v-if="assignedClassesList.length === 0" class="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center">
-            <p class="text-sm text-white/40">暂无分配的班级</p>
+          <div
+            v-if="assignedClassesList.length === 0"
+            class="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center"
+          >
+            <p class="text-sm text-white/40">
+              暂无分配的班级
+            </p>
           </div>
           
-          <div v-else class="max-h-[120px] space-y-1.5 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.02] p-2">
+          <div
+            v-else
+            class="max-h-[120px] space-y-1.5 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.02] p-2"
+          >
             <div
               v-for="cls in assignedClassesList"
               :key="cls.name"
@@ -218,8 +230,8 @@ const handleClose = () => {
               <button
                 type="button"
                 class="ml-1 p-1 rounded hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                @click="removeClass(cls.name)"
                 title="移除"
+                @click="removeClass(cls.name)"
               >
                 <X class="h-3.5 w-3.5" />
               </button>
@@ -228,7 +240,7 @@ const handleClose = () => {
         </div>
 
         <!-- 分隔线 -->
-        <div class="border-t border-white/10"></div>
+        <div class="border-t border-white/10" />
 
         <!-- 可分配班级区域 -->
         <div class="space-y-2">
@@ -248,11 +260,14 @@ const handleClose = () => {
               type="text"
               placeholder="搜索班级..."
               class="w-full rounded-lg border border-white/10 bg-white/[0.02] py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/30 focus:border-primary focus:outline-none"
-            />
+            >
           </div>
 
           <!-- 批量操作 -->
-          <div v-if="availableClassesList.length > 0 && !searchQuery" class="flex gap-2">
+          <div
+            v-if="availableClassesList.length > 0 && !searchQuery"
+            class="flex gap-2"
+          >
             <Button
               type="button"
               variant="outline"
@@ -265,13 +280,19 @@ const handleClose = () => {
           </div>
 
           <!-- 可分配班级列表 -->
-          <div v-if="availableClassesList.length === 0" class="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center">
+          <div
+            v-if="availableClassesList.length === 0"
+            class="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center"
+          >
             <p class="text-sm text-white/40">
               {{ searchQuery ? '未找到匹配的班级' : '暂无可分配的班级' }}
             </p>
           </div>
           
-          <div v-else class="max-h-[160px] space-y-1.5 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.02] p-2">
+          <div
+            v-else
+            class="max-h-[160px] space-y-1.5 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.02] p-2"
+          >
             <div
               v-for="cls in availableClassesList"
               :key="cls.name"
@@ -303,11 +324,20 @@ const handleClose = () => {
           <div class="flex items-center justify-between">
             <p class="text-sm text-white/70">
               <span v-if="!changes.hasChanges">暂无变更</span>
-              <span v-else class="flex items-center gap-3">
-                <span v-if="changes.added.length > 0" class="text-green-400">
+              <span
+                v-else
+                class="flex items-center gap-3"
+              >
+                <span
+                  v-if="changes.added.length > 0"
+                  class="text-green-400"
+                >
                   +{{ changes.added.length }} 个新增
                 </span>
-                <span v-if="changes.removed.length > 0" class="text-red-400">
+                <span
+                  v-if="changes.removed.length > 0"
+                  class="text-red-400"
+                >
                   -{{ changes.removed.length }} 个移除
                 </span>
               </span>

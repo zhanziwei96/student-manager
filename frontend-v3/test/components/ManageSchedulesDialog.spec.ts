@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref, nextTick } from 'vue'
+import { ref } from 'vue'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import ManageSchedulesDialog from '@/components/admin/ManageSchedulesDialog.vue'
 
@@ -89,6 +89,20 @@ const MockButton = {
   `
 }
 
+// Define component instance type
+interface ManageSchedulesDialogInstance {
+  selectedScheduleIds: number[]
+  changes: { added: number[]; removed: number[]; hasChanges: boolean }
+  addSchedule: (id: number) => void
+  removeSchedule: (id: number) => void
+  addAllAvailableForDay: (day: number) => void
+  removeAllForDay: (day: number) => void
+  selectedClass: string
+  searchQuery: string
+  handleClose: () => void
+  isOccupiedByOther: (schedule: { id: number; teacher_id: number | null } | undefined) => boolean
+}
+
 describe('ManageSchedulesDialog', () => {
   const mockTeacher = {
     id: 2,
@@ -164,7 +178,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 初始状态：已分配 1 个
     expect(vm.selectedScheduleIds).toContain(1)
     expect(vm.selectedScheduleIds).not.toContain(2)
@@ -183,7 +197,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 初始状态
     expect(vm.selectedScheduleIds).toContain(1)
 
@@ -201,7 +215,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 周一有1个已分配，1个可分配（数据结构）
     expect(vm.selectedScheduleIds.length).toBe(1)
 
@@ -218,7 +232,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 初始：周一有1个已分配
     expect(vm.selectedScheduleIds).toContain(1)
 
@@ -235,7 +249,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 筛选一班
     vm.selectedClass = '一班'
     await flushPromises()
@@ -251,7 +265,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 搜索计算机
     vm.searchQuery = '计算机'
     await flushPromises()
@@ -274,7 +288,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 添加一个
     vm.addSchedule(2)
     // 移除一个
@@ -289,7 +303,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     vm.handleClose()
     await flushPromises()
 
@@ -301,7 +315,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     // 添加一个课程
     vm.addSchedule(2)
     await flushPromises()
@@ -326,7 +340,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     vm.addSchedule(2)
     await flushPromises()
 
@@ -346,7 +360,7 @@ describe('ManageSchedulesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as ManageSchedulesDialogInstance
     
     // id=3 被李老师占用（teacher_id=3，不是当前教师id=2）
     const occupiedSchedule = mockSchedules.value.find(s => s.id === 3)

@@ -19,7 +19,7 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse, ApiListResponse
 )
 
-router = APIRouter(prefix=RoutePrefixConst.API, tags=["students"])
+router = APIRouter(tags=["students"])
 
 
 class CreateStudentRequest(BaseModel):

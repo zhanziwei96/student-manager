@@ -14,7 +14,7 @@ from app.models.constants import (
     ApiResponse
 )
 
-router = APIRouter(prefix=RoutePrefixConst.API, tags=["system"])
+router = APIRouter(tags=["system"])
 
 
 # 响应模型定义

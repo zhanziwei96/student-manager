@@ -272,14 +272,22 @@ defineExpose({
       </div>
     </div>
 
-    <div v-else-if="isLoadingLocation" class="text-center py-8 text-white/60">
+    <div
+      v-else-if="isLoadingLocation"
+      class="text-center py-8 text-white/60"
+    >
       <Loader2 class="mx-auto h-8 w-8 animate-spin mb-2" />
       <p>正在获取位置...</p>
     </div>
 
-    <div v-else class="text-center py-4 text-white/60">
+    <div
+      v-else
+      class="text-center py-4 text-white/60"
+    >
       <MapPin class="mx-auto h-6 w-6 mb-1 opacity-50" />
-      <p class="text-sm">点击地图选择签到位置</p>
+      <p class="text-sm">
+        点击地图选择签到位置
+      </p>
     </div>
 
     <!-- 地图容器 -->
@@ -296,7 +304,9 @@ defineExpose({
         class="absolute inset-0 flex flex-col items-center justify-center text-white/60 pointer-events-none"
       >
         <MapPin class="h-8 w-8 mb-2" />
-        <p class="text-sm">点击地图选择位置</p>
+        <p class="text-sm">
+          点击地图选择位置
+        </p>
       </div>
     </div>
 
@@ -339,7 +349,7 @@ defineExpose({
         max="500"
         step="10"
         class="w-full"
-      />
+      >
       <div class="flex justify-between text-xs text-white/40 mt-1">
         <span>50米</span>
         <span>500米</span>

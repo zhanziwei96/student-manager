@@ -4,7 +4,6 @@ import { useStudents, useStudentCreate, useToast } from '@/composables'
 import { StudentFilters, useStudentFilters } from '@/features/students'
 import { Card, Button, Badge, Dialog, Input, Label, DataContainer } from '@/components/ui'
 import { Plus } from 'lucide-vue-next'
-import { Toast } from '@/components/ui'
 import { getErrorMessage } from '@/lib/error'
 
 /**
@@ -34,8 +33,8 @@ watch(() => students.value, (newData) => {
   }
 }, { immediate: true })
 
-// === Toast 状态 (REVIEW-P1: 使用全局 useToast composable) ===
-const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast } = useToast()
+// === Toast 状态 (队列模式) ===
+const { success: showSuccessToast, error: showErrorToast } = useToast()
 
 // === 添加学生对话框 ===
 const showAddDialog = ref(false)
@@ -272,12 +271,5 @@ const handleAddStudent = async () => {
         </Button>
       </template>
     </Dialog>
-
-    <!-- Toast -->
-    <Toast
-      v-model:show="show"
-      :message="toastMessage"
-      :variant="toastVariant"
-    />
   </div>
 </template>

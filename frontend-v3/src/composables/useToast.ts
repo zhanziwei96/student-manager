@@ -1,6 +1,13 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'info'
+export type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'info'
+
+export interface ToastItem {
+  id: string
+  message: string
+  variant: ToastVariant
+  duration: number
+}
 
 interface ToastOptions {
   message: string
@@ -8,44 +15,67 @@ interface ToastOptions {
   duration?: number
 }
 
-const show = ref(false)
-const message = ref('')
-const variant = ref<ToastVariant>('default')
-const duration = ref(3000)
+// 全局 toast 队列（单例模式）
+const toasts = ref<ToastItem[]>([])
+
+let idCounter = 0
+
+function generateId(): string {
+  return `toast-${Date.now()}-${++idCounter}`
+}
 
 /**
- * Toast notification composable
- * Provides a global toast notification system
+ * Toast notification composable - 队列模式
+ * 支持多条消息同时显示，先进先出
  */
 export function useToast() {
   const showToast = (options: ToastOptions | string, variantOrDuration?: ToastVariant | number, dur?: number) => {
+    let toastData: ToastOptions
+
     if (typeof options === 'string') {
       // 便捷调用: showToast('message', 'variant', duration)
-      message.value = options
-      variant.value = (variantOrDuration as ToastVariant) || 'default'
-      duration.value = dur || 3000
+      toastData = {
+        message: options,
+        variant: (variantOrDuration as ToastVariant) || 'default',
+        duration: dur || 3000,
+      }
     } else {
       // 标准调用: showToast({ message: '...', variant: '...' })
-      message.value = options.message
-      variant.value = options.variant || 'default'
-      duration.value = options.duration || 3000
+      toastData = {
+        message: options.message,
+        variant: options.variant || 'default',
+        duration: options.duration || 3000,
+      }
     }
-    show.value = true
+
+    const newToast: ToastItem = {
+      id: generateId(),
+      message: toastData.message,
+      variant: toastData.variant!,
+      duration: toastData.duration!,
+    }
+
+    toasts.value.push(newToast)
   }
 
-  const hideToast = () => {
-    show.value = false
+  const hideToast = (id: string) => {
+    const index = toasts.value.findIndex(t => t.id === id)
+    if (index > -1) {
+      toasts.value.splice(index, 1)
+    }
+  }
+
+  const clearAll = () => {
+    toasts.value = []
   }
 
   return {
-    // 状态（用于绑定到 Toast 组件）
-    show,
-    message,
-    variant,
-    duration,
+    // 状态
+    toasts: computed(() => toasts.value),
     // 操作方法
     showToast,
     hideToast,
+    clearAll,
     // 便捷方法
     success: (msg: string, dur?: number) => showToast({ message: msg, variant: 'success', duration: dur }),
     error: (msg: string, dur?: number) => showToast({ message: msg, variant: 'error', duration: dur }),
@@ -53,3 +83,6 @@ export function useToast() {
     info: (msg: string, dur?: number) => showToast({ message: msg, variant: 'info', duration: dur }),
   }
 }
+
+// 导出全局 toasts 引用，用于 ToastContainer 直接绑定
+export { toasts }

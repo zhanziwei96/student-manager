@@ -42,7 +42,7 @@ function isApiResponse(data: unknown): data is ApiResponse<unknown> {
  * 创建基础 API 客户端
  */
 export const api = ofetch.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   credentials: 'include',
   headers: {
     'Content-Type': 'application/json',
@@ -74,17 +74,19 @@ export const api = ofetch.create({
  * - 成功时返回 res.data
  * - 失败时抛出 Error(res.message)
  */
-async function request<T>(
-  url: string,
-  options?: Omit<NonNullable<Parameters<typeof api>[1]>, 'body' | 'responseType'> & { body?: unknown }
-): Promise<T> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const response = await api<ApiResponse<T>>(url, options as any)
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+  query?: Record<string, unknown>
+  body?: Record<string, unknown> | unknown[] | null
+}
+
+async function request<T>(url: string, options?: RequestOptions): Promise<T> {
+  const response = await api<ApiResponse<T>>(url, options ?? {})
 
   // 检查是否是 ApiResponse 格式
   if (!isApiResponse(response)) {
-    // 不是标准格式，直接返回
-    return response as T
+    // 不是标准格式，直接返回（类型收窄）
+    return response as unknown as T
   }
 
   // 检查 success 字段
@@ -93,19 +95,15 @@ async function request<T>(
   }
 
   // 返回 data
-  return response.data as T
+  return response.data as unknown as T
 }
 
 /**
  * 带原始响应的 API 请求
  * 需要手动检查 res.success 时使用（特殊场景）
  */
-async function requestRaw<T>(
-  url: string,
-  options?: Omit<NonNullable<Parameters<typeof api>[1]>, 'body' | 'responseType'> & { body?: unknown }
-): Promise<ApiResponse<T>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return api<ApiResponse<T>>(url, options as any)
+async function requestRaw<T>(url: string, options?: RequestOptions): Promise<ApiResponse<T>> {
+  return api<ApiResponse<T>>(url, options)
 }
 
 // HTTP 方法封装 - 自动处理响应

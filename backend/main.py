@@ -128,13 +128,16 @@ def create_app() -> FastAPI:
         login_router, students_router, users_router,
         checkin_router, system_router, schedules_router
     )
-    
-    app.include_router(login_router)
-    app.include_router(system_router)
-    app.include_router(students_router)
-    app.include_router(users_router)
-    app.include_router(checkin_router)
-    app.include_router(schedules_router)
+
+    # API v1 版本前缀
+    API_V1_PREFIX = "/api/v1"
+
+    app.include_router(login_router, prefix=API_V1_PREFIX)
+    app.include_router(system_router, prefix=API_V1_PREFIX)
+    app.include_router(students_router, prefix=API_V1_PREFIX)
+    app.include_router(users_router, prefix=API_V1_PREFIX)
+    app.include_router(checkin_router, prefix=API_V1_PREFIX)
+    app.include_router(schedules_router, prefix=API_V1_PREFIX)
     
     # 静态文件服务（生产环境）
     if os.path.exists(STATIC_DIR):

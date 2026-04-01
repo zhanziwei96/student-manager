@@ -153,7 +153,10 @@ const formatTime = (time: string) => {
         <div class="flex items-center gap-2 text-sm text-blue-400">
           <MapPin class="h-4 w-4" />
           <span>签到地点: {{ classSession.location_name }}</span>
-          <span v-if="classSession.checkin_radius" class="text-white/40">
+          <span
+            v-if="classSession.checkin_radius"
+            class="text-white/40"
+          >
             (允许范围 {{ classSession.checkin_radius }}米)
           </span>
         </div>
@@ -171,8 +174,14 @@ const formatTime = (time: string) => {
           :loading="isCheckingIn || isLocating"
           @click="handleCheckin"
         >
-          <CheckCircle v-if="!isLocating" class="mr-2 h-5 w-5" />
-          <Loader2 v-else class="mr-2 h-5 w-5 animate-spin" />
+          <CheckCircle
+            v-if="!isLocating"
+            class="mr-2 h-5 w-5"
+          />
+          <Loader2
+            v-else
+            class="mr-2 h-5 w-5 animate-spin"
+          />
           {{ isLocating ? '正在定位...' : '立即签到' }}
         </Button>
         

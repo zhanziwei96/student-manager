@@ -2,9 +2,6 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import { ref } from 'vue'
-import { VueQueryPlugin, QueryClient, useQueryClient } from '@tanstack/vue-query'
 
 // Mock API
 vi.mock('@/api', () => ({

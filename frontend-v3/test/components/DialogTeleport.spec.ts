@@ -208,7 +208,7 @@ describe('Dialog Teleport + SSR Safety', () => {
     expect(typeof Dialog).toBe('object')
     
     // 验证组件有 render 函数或 setup
-    const component = Dialog as any
+    const component = Dialog as Record<string, unknown>
     expect(component.render || component.setup).toBeDefined()
   })
 })

@@ -2,7 +2,7 @@
 import { computed, type Component } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores'
-import { Button } from '@/components/ui'
+import { Button, ToastContainer } from '@/components/ui'
 import {
   LayoutDashboard,
   Users,
@@ -128,5 +128,8 @@ const handleLogout = async () => {
         <RouterView />
       </div>
     </main>
+
+    <!-- Toast 通知容器（队列模式） -->
+    <ToastContainer />
   </div>
 </template>

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref, computed, nextTick } from 'vue'
+import { ref } from 'vue'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import ManageClassesDialog from '@/components/admin/ManageClassesDialog.vue'
 
@@ -166,7 +166,7 @@ describe('ManageClassesDialog', () => {
     expect(wrapper.text()).toContain('已分配班级')
     
     // 通过调用组件方法添加班级
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as Record<string, (name: string) => void>
     vm.addClass('一年级二班')
     await flushPromises()
 
@@ -179,7 +179,7 @@ describe('ManageClassesDialog', () => {
     await flushPromises()
 
     // 通过调用组件方法移除班级
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as Record<string, (name: string) => void>
     vm.removeClass('一年级一班')
     await flushPromises()
 
@@ -191,7 +191,7 @@ describe('ManageClassesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as Record<string, () => void>
     vm.addAllVisible()
     await flushPromises()
 
@@ -203,7 +203,7 @@ describe('ManageClassesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as Record<string, () => void>
     vm.removeAll()
     await flushPromises()
 
@@ -217,7 +217,7 @@ describe('ManageClassesDialog', () => {
     await flushPromises()
 
     // 设置搜索查询
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as unknown as { searchQuery: string }
     vm.searchQuery = '一年级'
     await flushPromises()
 
@@ -239,7 +239,7 @@ describe('ManageClassesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as unknown as { addClass: (name: string) => void; removeClass: (name: string) => void }
     // 添加一个班级
     vm.addClass('一年级二班')
     // 移除一个班级
@@ -254,7 +254,7 @@ describe('ManageClassesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as unknown as { handleClose: () => void }
     vm.handleClose()
     await flushPromises()
 
@@ -266,7 +266,12 @@ describe('ManageClassesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as unknown as {
+      addClass: (name: string) => void
+      handleClose: () => void
+      changes: { hasChanges: boolean }
+      selectedClasses: string[]
+    }
     // 添加一个班级
     vm.addClass('一年级二班')
     await flushPromises()
@@ -302,7 +307,7 @@ describe('ManageClassesDialog', () => {
     expect(wrapper.text()).toContain('暂无变更')
 
     // 添加变更后
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as unknown as { addClass: (name: string) => void }
     vm.addClass('一年级二班')
     await flushPromises()
 
@@ -318,7 +323,7 @@ describe('ManageClassesDialog', () => {
     await flushPromises()
 
     // 只应该显示存在的班级
-    const vm = wrapper.vm as any
+    const vm = wrapper.vm as unknown as { selectedClasses: string[]; assignedClassesList: { length: number } }
     expect(vm.selectedClasses).toEqual(['一年级一班'])
     expect(vm.assignedClassesList.length).toBe(1)
   })
@@ -327,8 +332,11 @@ describe('ManageClassesDialog', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    const vm = wrapper.vm as any
-    
+    const vm = wrapper.vm as unknown as {
+      changes: { added: string[]; removed: string[]; hasChanges: boolean }
+      addClass: (name: string) => void
+    }
+
     // 初始无变更
     expect(vm.changes.added).toEqual([])
     expect(vm.changes.removed).toEqual([])

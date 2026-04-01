@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onUnmounted, watch, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useScrollLock } from '@vueuse/core'
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-vue-next'
 
@@ -7,9 +8,8 @@ import { X } from 'lucide-vue-next'
  * Dialog 组件
  * 基于 ClassHub 设计体系 v1.0.0
  * 支持作为 form 使用，解决密码字段警告
- * 
- * REVIEW-P1: 使用 Teleport 将对话框挂载到 body，避免层级问题
- * 添加 onUnmounted 清理，防止内存泄漏
+ *
+ * 使用 useScrollLock 锁定 body 滚动，支持多 Dialog 同时打开
  */
 
 interface Props {
@@ -38,25 +38,18 @@ const teleportTarget = ref('body')
 // 检查是否在客户端环境（SSR 安全）
 const isClient = typeof window !== 'undefined'
 
-// Lock body scroll when open
+// 使用 useScrollLock 替代手动操作 body overflow
+// 自动处理多 Dialog 同时打开的情况（ref 计数器）
+const isLocked = useScrollLock(isClient ? document.body : null)
+
+// 同步 open 状态和滚动锁定
 watch(
   () => props.open,
   (isOpen) => {
-    if (!isClient) return
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    isLocked.value = isOpen
   },
   { immediate: true }
 )
-
-// 组件卸载时重置 body overflow（REVIEW-P1: 防止内存泄漏）
-onUnmounted(() => {
-  if (!isClient) return
-  document.body.style.overflow = ''
-})
 
 const overlayClasses = computed(() =>
   cn(

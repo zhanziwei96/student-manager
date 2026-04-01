@@ -5,13 +5,12 @@ import { useAuthStore } from '@/stores'
 import { useToast } from '@/composables'
 import { getErrorMessage } from '@/lib/error'
 import type { UserRole } from '@/types'
-import { Button, Card, Input, Label } from '@/components/ui'
+import { Button, Card, Input, Label, ToastContainer } from '@/components/ui'
 import { GraduationCap, Lock, User } from 'lucide-vue-next'
-import { Toast } from '@/components/ui'
 
 const authStore = useAuthStore()
 const router = useRouter()
-const { show, message: toastMessage, variant: toastVariant, success, error: showError } = useToast()
+const { success, error: showError } = useToast()
 
 const form = ref({
   username: '',
@@ -164,11 +163,7 @@ const handleSubmit = async () => {
       </form>
     </Card>
 
-    <!-- Toast -->
-    <Toast
-      v-model:show="show"
-      :message="toastMessage"
-      :variant="toastVariant"
-    />
+    <!-- Toast 通知容器（队列模式） -->
+    <ToastContainer />
   </div>
 </template>

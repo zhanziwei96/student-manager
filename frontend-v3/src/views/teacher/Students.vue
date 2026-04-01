@@ -3,7 +3,6 @@ import { ref, watch } from 'vue'
 import { useStudents, useToast } from '@/composables'
 import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, useStudentFilters } from '@/features/students'
 import { DataContainer } from '@/components/ui'
-import { Toast } from '@/components/ui'
 import type { Student } from '@/types'
 import { getErrorMessage } from '@/lib/error'
 
@@ -43,8 +42,8 @@ const showScoreDialog = ref(false)
 const defaultScore = ref(0)
 const defaultReason = ref('')
 
-// === Toast 状态 (REVIEW-P1: 使用全局 useToast composable) ===
-const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast } = useToast()
+// === Toast 状态 (队列模式) ===
+const { success: showSuccessToast, error: showErrorToast } = useToast()
 
 // === 快速分数选项 ===
 const quickScoreOptions = [
@@ -137,13 +136,6 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
       :default-score="defaultScore"
       :default-reason="defaultReason"
       @submit="handleUpdateScore"
-    />
-
-    <!-- Toast -->
-    <Toast
-      v-model:show="show"
-      :message="toastMessage"
-      :variant="toastVariant"
     />
   </div>
 </template>

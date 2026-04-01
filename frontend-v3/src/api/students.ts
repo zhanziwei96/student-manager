@@ -16,9 +16,6 @@ export const studentsApi = {
   getAll: (): Promise<Student[]> =>
     get('/students'),
 
-  getList: (): Promise<Student[]> =>
-    get('/students'),
-
   getById: (id: number): Promise<Student> =>
     get(`/students/${id}`),
 

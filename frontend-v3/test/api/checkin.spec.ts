@@ -2,7 +2,7 @@
  * 签到API测试
  */
 import { describe, it, expect } from 'vitest'
-import type { CheckinRequest, CheckinRecord, CheckinStats, ClassSessionStatus } from '@/types'
+import type { CheckinRequest, ClassSessionStatus } from '@/types'
 
 describe('Checkin API Types', () => {
   it('should validate CheckinRequest with GPS and device info', () => {

@@ -124,24 +124,38 @@ const statCards = computed(() => [
             当前活跃课堂
           </p>
         </div>
-        <Badge variant="primary" class="text-xs">
+        <Badge
+          variant="primary"
+          class="text-xs"
+        >
           {{ activeSessions?.length || 0 }} 个课堂
         </Badge>
       </div>
       
       <!-- Loading state -->
-      <div v-if="isLoadingSessions" class="mt-6 flex h-32 items-center justify-center">
+      <div
+        v-if="isLoadingSessions"
+        class="mt-6 flex h-32 items-center justify-center"
+      >
         <Loader2 class="h-6 w-6 animate-spin text-primary" />
       </div>
       
       <!-- Empty state -->
-      <div v-else-if="!activeSessions?.length" class="mt-6 flex h-32 flex-col items-center justify-center text-white/40">
+      <div
+        v-else-if="!activeSessions?.length"
+        class="mt-6 flex h-32 flex-col items-center justify-center text-white/40"
+      >
         <Clock class="mb-2 h-8 w-8" />
-        <p class="text-sm">暂无正在上课的课堂</p>
+        <p class="text-sm">
+          暂无正在上课的课堂
+        </p>
       </div>
       
       <!-- Active sessions list -->
-      <div v-else class="mt-6 space-y-3">
+      <div
+        v-else
+        class="mt-6 space-y-3"
+      >
         <div
           v-for="session in activeSessions"
           :key="session.class_name + session.teacher_name"

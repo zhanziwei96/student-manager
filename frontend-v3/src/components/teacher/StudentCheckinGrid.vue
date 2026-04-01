@@ -133,8 +133,14 @@ const handleQuickCheckIn = (student: Student) => {
             class="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full"
             :class="student.checkedIn ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'"
           >
-            <CheckCircle v-if="student.checkedIn" class="h-3 w-3" />
-            <span v-else class="text-xs">!</span>
+            <CheckCircle
+              v-if="student.checkedIn"
+              class="h-3 w-3"
+            />
+            <span
+              v-else
+              class="text-xs"
+            >!</span>
           </div>
 
           <!-- 学生信息 -->
@@ -153,11 +159,19 @@ const handleQuickCheckIn = (student: Student) => {
             >
               {{ student.name }}
             </p>
-            <p class="text-xs text-white/40 mt-0.5">{{ student.student_id }}</p>
-            <p v-if="student.checkedIn && student.checkinTime" class="text-xs text-white/50 mt-1">
+            <p class="text-xs text-white/40 mt-0.5">
+              {{ student.student_id }}
+            </p>
+            <p
+              v-if="student.checkedIn && student.checkinTime"
+              class="text-xs text-white/50 mt-1"
+            >
               {{ formatTime(student.checkinTime) }}
             </p>
-            <p v-else-if="!student.checkedIn" class="text-xs text-red-400/70 mt-1">
+            <p
+              v-else-if="!student.checkedIn"
+              class="text-xs text-red-400/70 mt-1"
+            >
               点击签到
             </p>
           </div>

@@ -26,7 +26,7 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse, ApiListResponse
 )
 
-router = APIRouter(prefix=RoutePrefixConst.API, tags=["schedules"])
+router = APIRouter(tags=["schedules"])
 
 
 # 响应模型定义

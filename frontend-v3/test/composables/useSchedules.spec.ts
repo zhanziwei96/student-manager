@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ref } from 'vue'
+import { describe, it, expect } from 'vitest'
 
 /**
  * useSchedules 类型安全测试
@@ -131,8 +130,6 @@ describe('useSchedules Type Safety', () => {
 
   describe('ImportResult interface', () => {
     it('should have correct structure', async () => {
-      const { schedulesApi } = await import('@/api/schedules')
-      
       // 验证 ImportResult 类型定义
       const importResult = {
         imported: 10,

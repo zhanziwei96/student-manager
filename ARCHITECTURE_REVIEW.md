@@ -108,17 +108,17 @@
 
 | # | 问题 | 位置 | 修复建议 | 工时 |
 |---|------|------|----------|------|
-| 12 | 类型断言过多 | `lib/api.ts:81-82` | 移除不必要的 any 和类型断言 | 1h |
-| 13 | 重复 API 方法 | `api/students.ts` | 合并 getAll 和 getList | 30min |
-| 14 | Dialog 内存泄漏风险 | `components/ui/Dialog.vue:42-53` | 使用 useScrollLock 替代手动操作 | 1h |
-| 15 | Toast 单例冲突 | `composables/useToast.ts` | 改为队列模式支持多条消息 | 2h |
+| 12 | ~~类型断言过多~~ ✅ | `lib/api.ts:81-82` | 移除不必要的 any 和类型断言 | 1h | 2026-04-01 |
+| 13 | ~~重复 API 方法~~ ✅ | `api/students.ts` | 合并 getAll 和 getList | 30min | 2026-04-01 |
+| 14 | ~~Dialog 内存泄漏风险~~ ✅ | `components/ui/Dialog.vue:42-53` | 使用 useScrollLock 替代手动操作 | 1h | 2026-04-01 |
+| 15 | ~~Toast 单例冲突~~ ✅ | `composables/useToast.ts` | 改为队列模式支持多条消息 | 2h | 2026-04-01 |
 
 ### 测试
 
 | # | 问题 | 位置 | 修复建议 | 工时 |
 |---|------|------|----------|------|
 | 16 | 测试文档与实际不同步 | `test/README.md` | 更新 README 与实际文件一致 | 1h |
-| 17 | 部分测试过于简单 | `useStudentCheckin.spec.ts` | 测试实际逻辑而非仅属性 | 2h |
+| 17 | ~~部分测试过于简单~~ ✅ | `useStudentCheckin.spec.ts` | 测试实际业务逻辑 | 2h | 2026-04-01 |
 | 18 | 缺少 E2E 测试 | - | 添加 Playwright 测试 | 8h |
 
 ---
@@ -142,10 +142,14 @@
    - 建议：添加数据库、文件系统依赖检查
    - 工时：2h
 
-4. **API 版本控制**
+4. ~~**API 版本控制**~~ ✅
    - 当前：无版本前缀
    - 建议：添加 `/api/v1/` 前缀
    - 工时：3h
+   - 完成：2026-04-01
+   - 修改文件：
+     - `backend/main.py` - 添加 `API_V1_PREFIX = "/api/v1"`
+     - `frontend-v3/src/lib/api.ts` - 更新 baseURL 为 `/api/v1`
 
 ### 前端
 
@@ -266,7 +270,10 @@
 
 ### 第三-四周（P2 架构改进）
 
-- [ ] 引入 Alembic 迁移工具（4h）
+- [x] **引入 Alembic 迁移工具** ✅（4h）2026-04-01
+- [x] **API 版本控制** ✅（3h）2026-04-01
+  - 后端：`/api/v1` 前缀
+  - 前端：`baseURL: '/api/v1'`
 - [ ] 添加 E2E 测试框架（8h）
 - [x] **增强健康检查**（2h）✅ 2026-04-01
   - 修改文件：`backend/app/api/routes/system.py`

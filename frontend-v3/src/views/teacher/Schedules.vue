@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from '@/composables/useSchedules'
 import { useClasses, useToast } from '@/composables'
 import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer } from '@/components/ui'
-import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, Square, X } from 'lucide-vue-next'
-import { Toast } from '@/components/ui'
+import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
 
@@ -67,8 +66,8 @@ const { mutateAsync: deleteSchedule, isPending: isDeleting } = useDeleteSchedule
 // 下载模板
 const { download: downloadTemplate } = useDownloadTemplate()
 
-// Toast (REVIEW-P1: 使用全局 useToast composable)
-const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast, showToast } = useToast()
+// Toast (队列模式)
+const { success: showSuccessToast, error: showErrorToast, showToast } = useToast()
 
 // 星期选项
 const weekDays = [
@@ -80,19 +79,6 @@ const weekDays = [
   { value: 6, label: '周六' },
   { value: 7, label: '周日' },
 ]
-
-// 按星期分组
-const schedulesByDay = computed(() => {
-  const grouped: Record<number, typeof schedules.value> = {
-    1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []
-  }
-  schedules.value.forEach(s => {
-    if (grouped[s.day_of_week]) {
-      grouped[s.day_of_week].push(s)
-    }
-  })
-  return grouped
-})
 
 // ========== 统计卡片数据 ==========
 // 总课程数
@@ -138,7 +124,7 @@ const conflicts = computed(() => {
       }
     })
     
-    teacherMap.forEach((teacherSchedules, teacherId) => {
+    teacherMap.forEach((teacherSchedules, _teacherId) => {
       // 检查时间重叠
       for (let i = 0; i < teacherSchedules.length; i++) {
         for (let j = i + 1; j < teacherSchedules.length; j++) {
@@ -168,7 +154,7 @@ const conflicts = computed(() => {
       }
     })
     
-    classroomMap.forEach((roomSchedules, classroom) => {
+    classroomMap.forEach((roomSchedules, _classroom) => {
       for (let i = 0; i < roomSchedules.length; i++) {
         for (let j = i + 1; j < roomSchedules.length; j++) {
           const s1 = roomSchedules[i]
@@ -348,8 +334,12 @@ const handleBatchDelete = async () => {
             <Layers class="h-5 w-5 text-primary" />
           </div>
           <div>
-            <p class="text-sm text-white/60">总课程数</p>
-            <p class="text-2xl font-bold text-white">{{ totalSchedules }}</p>
+            <p class="text-sm text-white/60">
+              总课程数
+            </p>
+            <p class="text-2xl font-bold text-white">
+              {{ totalSchedules }}
+            </p>
           </div>
         </div>
       </Card>
@@ -361,8 +351,12 @@ const handleBatchDelete = async () => {
             <Calendar class="h-5 w-5 text-green-400" />
           </div>
           <div>
-            <p class="text-sm text-white/60">本周课程（第{{ currentWeek }}周）</p>
-            <p class="text-2xl font-bold text-white">{{ thisWeekSchedules }}</p>
+            <p class="text-sm text-white/60">
+              本周课程（第{{ currentWeek }}周）
+            </p>
+            <p class="text-2xl font-bold text-white">
+              {{ thisWeekSchedules }}
+            </p>
           </div>
         </div>
       </Card>
@@ -383,7 +377,10 @@ const handleBatchDelete = async () => {
             />
           </div>
           <div>
-            <p class="text-sm" :class="conflictCount > 0 ? 'text-red-400' : 'text-white/60'">
+            <p
+              class="text-sm"
+              :class="conflictCount > 0 ? 'text-red-400' : 'text-white/60'"
+            >
               冲突检测
             </p>
             <p 
@@ -412,7 +409,10 @@ const handleBatchDelete = async () => {
             />
           </div>
           <div>
-            <p class="text-sm" :class="unassignedSchedules > 0 ? 'text-orange-400' : 'text-white/60'">
+            <p
+              class="text-sm"
+              :class="unassignedSchedules > 0 ? 'text-orange-400' : 'text-white/60'"
+            >
               未分配教师
             </p>
             <p 
@@ -541,7 +541,10 @@ const handleBatchDelete = async () => {
             </div>
 
             <!-- 批量操作栏 -->
-            <div v-if="isBatchMode && filteredSchedulesByDay[day.value].length > 0" class="flex items-center gap-2 py-2">
+            <div
+              v-if="isBatchMode && filteredSchedulesByDay[day.value].length > 0"
+              class="flex items-center gap-2 py-2"
+            >
               <Button
                 variant="outline"
                 size="sm"
@@ -603,7 +606,10 @@ const handleBatchDelete = async () => {
                   <AlertTriangle class="h-3.5 w-3.5" />
                 </div>
 
-                <div class="flex items-start justify-between" :class="{ 'pl-8': isBatchMode }">
+                <div
+                  class="flex items-start justify-between"
+                  :class="{ 'pl-8': isBatchMode }"
+                >
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
                       <BookOpen 
@@ -635,7 +641,10 @@ const handleBatchDelete = async () => {
                       </div>
                     </div>
                     <!-- 冲突提示 -->
-                    <div v-if="hasConflict(schedule)" class="mt-2">
+                    <div
+                      v-if="hasConflict(schedule)"
+                      class="mt-2"
+                    >
                       <div 
                         v-for="(conflict, idx) in getScheduleConflicts(schedule).slice(0, 1)" 
                         :key="idx"
@@ -741,7 +750,7 @@ const handleBatchDelete = async () => {
       <span class="text-sm text-white/80">
         已选择 <span class="font-bold text-primary">{{ selectedScheduleIds.length }}</span> 门课程
       </span>
-      <div class="h-4 w-px bg-white/10"></div>
+      <div class="h-4 w-px bg-white/10" />
       <Button
         variant="destructive"
         size="sm"
@@ -759,12 +768,5 @@ const handleBatchDelete = async () => {
         取消
       </Button>
     </div>
-
-    <!-- Toast -->
-    <Toast
-      v-model:show="show"
-      :message="toastMessage"
-      :variant="toastVariant"
-    />
   </div>
 </template>

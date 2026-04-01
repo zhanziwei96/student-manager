@@ -32,8 +32,12 @@ const checkinRate = computed(() => {
       <div class="flex items-center gap-3">
         <Users class="h-5 w-5 text-white/60" />
         <div>
-          <p class="text-xs text-white/50">班级人数</p>
-          <p class="text-xl font-bold text-white">{{ stats.total }}</p>
+          <p class="text-xs text-white/50">
+            班级人数
+          </p>
+          <p class="text-xl font-bold text-white">
+            {{ stats.total }}
+          </p>
         </div>
       </div>
     </Card>
@@ -45,10 +49,17 @@ const checkinRate = computed(() => {
           <CheckCircle class="h-4 w-4 text-green-400" />
         </div>
         <div>
-          <p class="text-xs text-white/50">已签到</p>
+          <p class="text-xs text-white/50">
+            已签到
+          </p>
           <div class="flex items-baseline gap-1">
-            <p class="text-xl font-bold text-green-400">{{ stats.checkedIn }}</p>
-            <span v-if="stats.total > 0" class="text-xs text-green-400/70">{{ checkinRate }}%</span>
+            <p class="text-xl font-bold text-green-400">
+              {{ stats.checkedIn }}
+            </p>
+            <span
+              v-if="stats.total > 0"
+              class="text-xs text-green-400/70"
+            >{{ checkinRate }}%</span>
           </div>
         </div>
       </div>
@@ -61,8 +72,12 @@ const checkinRate = computed(() => {
           <Clock class="h-4 w-4 text-red-400" />
         </div>
         <div>
-          <p class="text-xs text-white/50">未签到</p>
-          <p class="text-xl font-bold text-red-400">{{ stats.notCheckedIn }}</p>
+          <p class="text-xs text-white/50">
+            未签到
+          </p>
+          <p class="text-xl font-bold text-red-400">
+            {{ stats.notCheckedIn }}
+          </p>
         </div>
       </div>
     </Card>

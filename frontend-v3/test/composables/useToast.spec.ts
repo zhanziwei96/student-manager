@@ -1,138 +1,153 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useToast } from '@/composables/useToast'
+import { useToast, toasts } from '@/composables/useToast'
 
 /**
  * useToast composable 测试
- * REVIEW-P1: 验证全局 Toast 功能
+ * 验证队列模式 Toast 功能
  */
 describe('useToast', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    // 清空 toast 队列
+    toasts.value = []
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it('should initialize with default values', () => {
-    const { show, message, variant } = useToast()
+  it('should initialize with empty queue', () => {
+    const { toasts: toastList } = useToast()
 
-    expect(show.value).toBe(false)
-    expect(message.value).toBe('')
-    expect(variant.value).toBe('default')
+    expect(toastList.value).toEqual([])
   })
 
   it('should show toast with options object', () => {
-    const { show, message, variant, showToast } = useToast()
+    const { toasts: toastList, showToast } = useToast()
 
     showToast({ message: 'Test message', variant: 'success' })
 
-    expect(show.value).toBe(true)
-    expect(message.value).toBe('Test message')
-    expect(variant.value).toBe('success')
+    expect(toastList.value).toHaveLength(1)
+    expect(toastList.value[0].message).toBe('Test message')
+    expect(toastList.value[0].variant).toBe('success')
   })
 
   it('should support convenient string call signature', () => {
-    const { show, message, variant, showToast } = useToast()
+    const { toasts: toastList, showToast } = useToast()
 
     // 便捷调用: showToast('message', 'variant')
     showToast('Quick message', 'error')
 
-    expect(show.value).toBe(true)
-    expect(message.value).toBe('Quick message')
-    expect(variant.value).toBe('error')
+    expect(toastList.value).toHaveLength(1)
+    expect(toastList.value[0].message).toBe('Quick message')
+    expect(toastList.value[0].variant).toBe('error')
   })
 
   it('should support convenient call with duration', () => {
-    const { show, message, variant, showToast } = useToast()
+    const { toasts: toastList, showToast } = useToast()
 
     // 便捷调用: showToast('message', 'variant', duration)
     showToast('With duration', 'warning', 5000)
 
-    expect(show.value).toBe(true)
-    expect(message.value).toBe('With duration')
-    expect(variant.value).toBe('warning')
+    expect(toastList.value).toHaveLength(1)
+    expect(toastList.value[0].message).toBe('With duration')
+    expect(toastList.value[0].variant).toBe('warning')
+    expect(toastList.value[0].duration).toBe(5000)
   })
 
-  it('should hide toast', () => {
-    const { show, showToast, hideToast } = useToast()
+  it('should hide toast by id', () => {
+    const { toasts: toastList, showToast, hideToast } = useToast()
 
     showToast({ message: 'Test' })
-    expect(show.value).toBe(true)
+    expect(toastList.value).toHaveLength(1)
 
-    hideToast()
-    expect(show.value).toBe(false)
+    const toastId = toastList.value[0].id
+    hideToast(toastId)
+    expect(toastList.value).toHaveLength(0)
   })
 
   it('should provide success shortcut method', () => {
-    const { show, message, variant, success } = useToast()
+    const { toasts: toastList, success } = useToast()
 
     success('Success!')
 
-    expect(show.value).toBe(true)
-    expect(message.value).toBe('Success!')
-    expect(variant.value).toBe('success')
+    expect(toastList.value).toHaveLength(1)
+    expect(toastList.value[0].message).toBe('Success!')
+    expect(toastList.value[0].variant).toBe('success')
   })
 
   it('should provide error shortcut method', () => {
-    const { show, message, variant, error } = useToast()
+    const { toasts: toastList, error } = useToast()
 
     error('Error!')
 
-    expect(show.value).toBe(true)
-    expect(message.value).toBe('Error!')
-    expect(variant.value).toBe('error')
+    expect(toastList.value).toHaveLength(1)
+    expect(toastList.value[0].message).toBe('Error!')
+    expect(toastList.value[0].variant).toBe('error')
   })
 
   it('should provide warning shortcut method', () => {
-    const { show, message, variant, warning } = useToast()
+    const { toasts: toastList, warning } = useToast()
 
     warning('Warning!')
 
-    expect(show.value).toBe(true)
-    expect(message.value).toBe('Warning!')
-    expect(variant.value).toBe('warning')
+    expect(toastList.value).toHaveLength(1)
+    expect(toastList.value[0].message).toBe('Warning!')
+    expect(toastList.value[0].variant).toBe('warning')
   })
 
   it('should provide info shortcut method', () => {
-    const { show, message, variant, info } = useToast()
+    const { toasts: toastList, info } = useToast()
 
     info('Info!')
 
-    expect(show.value).toBe(true)
-    expect(message.value).toBe('Info!')
-    expect(variant.value).toBe('info')
+    expect(toastList.value).toHaveLength(1)
+    expect(toastList.value[0].message).toBe('Info!')
+    expect(toastList.value[0].variant).toBe('info')
   })
 
   it('should use default variant when not specified', () => {
-    const { variant, showToast } = useToast()
+    const { toasts: toastList, showToast } = useToast()
 
     showToast({ message: 'No variant' })
 
-    expect(variant.value).toBe('default')
+    expect(toastList.value[0].variant).toBe('default')
   })
 
   it('should use default duration when not specified', () => {
-    const { duration, showToast } = useToast()
+    const { toasts: toastList, showToast } = useToast()
 
     showToast({ message: 'No duration' })
 
-    expect(duration.value).toBe(3000)
+    expect(toastList.value[0].duration).toBe(3000)
   })
 
   it('should allow custom duration', () => {
-    const { duration, showToast } = useToast()
+    const { toasts: toastList, showToast } = useToast()
 
     showToast({ message: 'Custom duration', duration: 5000 })
 
-    expect(duration.value).toBe(5000)
+    expect(toastList.value[0].duration).toBe(5000)
   })
 
   it('should allow custom duration in shortcut methods', () => {
-    const { duration, success } = useToast()
+    const { toasts: toastList, success } = useToast()
 
     success('Quick', 1000)
 
-    expect(duration.value).toBe(1000)
+    expect(toastList.value[0].duration).toBe(1000)
+  })
+
+  it('should support multiple toasts in queue', () => {
+    const { toasts: toastList, success, error, info } = useToast()
+
+    success('First')
+    error('Second')
+    info('Third')
+
+    expect(toastList.value).toHaveLength(3)
+    expect(toastList.value[0].message).toBe('First')
+    expect(toastList.value[1].message).toBe('Second')
+    expect(toastList.value[2].message).toBe('Third')
   })
 })

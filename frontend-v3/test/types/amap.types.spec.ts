@@ -3,34 +3,68 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// Mock AMap classes
+function MockMap(this: Record<string, unknown>, _container: string | HTMLElement, _options?: unknown) {
+  if (!(this instanceof MockMap)) {
+    return new MockMap(_container, _options)
+  }
+  this.destroy = vi.fn()
+  this.resize = vi.fn()
+  this.setCenter = vi.fn()
+  this.setZoom = vi.fn()
+  this.getCenter = vi.fn().mockReturnValue({ getLng: () => 116.397428, getLat: () => 39.90923 })
+  this.getZoom = vi.fn().mockReturnValue(16)
+  this.add = vi.fn()
+  this.remove = vi.fn()
+  this.clearMap = vi.fn()
+  this.on = vi.fn()
+  this.off = vi.fn()
+}
+
+function MockMarker(this: Record<string, unknown>, _options?: unknown) {
+  if (!(this instanceof MockMarker)) {
+    return new MockMarker(_options)
+  }
+  this.setPosition = vi.fn()
+  this.getPosition = vi.fn().mockReturnValue({ getLng: () => 116.397428, getLat: () => 39.90923 })
+  this.setTitle = vi.fn()
+  this.setDraggable = vi.fn()
+  this.show = vi.fn()
+  this.hide = vi.fn()
+}
+
+function MockPixel(this: { x: number; y: number }, x: number, y: number) {
+  if (!(this instanceof MockPixel)) {
+    return new MockPixel(x, y)
+  }
+  this.x = x
+  this.y = y
+}
+
+function MockSize(this: { width: number; height: number }, width: number, height: number) {
+  if (!(this instanceof MockSize)) {
+    return new MockSize(width, height)
+  }
+  this.width = width
+  this.height = height
+}
+
+function MockIcon(this: Record<string, unknown>, options: Record<string, unknown>) {
+  if (!(this instanceof MockIcon)) {
+    return new MockIcon(options)
+  }
+  Object.assign(this, options)
+}
+
 describe('AMap 类型定义', () => {
   beforeEach(() => {
     // 模拟 window.AMap
     window.AMap = {
-      Map: vi.fn().mockImplementation(() => ({
-        destroy: vi.fn(),
-        resize: vi.fn(),
-        setCenter: vi.fn(),
-        setZoom: vi.fn(),
-        getCenter: vi.fn().mockReturnValue({ getLng: () => 116.397428, getLat: () => 39.90923 }),
-        getZoom: vi.fn().mockReturnValue(16),
-        add: vi.fn(),
-        remove: vi.fn(),
-        clearMap: vi.fn(),
-        on: vi.fn(),
-        off: vi.fn(),
-      })),
-      Marker: vi.fn().mockImplementation(() => ({
-        setPosition: vi.fn(),
-        getPosition: vi.fn().mockReturnValue({ getLng: () => 116.397428, getLat: () => 39.90923 }),
-        setTitle: vi.fn(),
-        setDraggable: vi.fn(),
-        show: vi.fn(),
-        hide: vi.fn(),
-      })),
-      Pixel: vi.fn().mockImplementation((x: number, y: number) => ({ x, y })),
-      Size: vi.fn().mockImplementation((width: number, height: number) => ({ width, height })),
-      Icon: vi.fn().mockImplementation((options) => ({ ...options })),
+      Map: vi.fn(MockMap) as unknown as AMapConstructor['Map'],
+      Marker: vi.fn(MockMarker) as unknown as AMapConstructor['Marker'],
+      Pixel: vi.fn(MockPixel) as unknown as AMapConstructor['Pixel'],
+      Size: vi.fn(MockSize) as unknown as AMapConstructor['Size'],
+      Icon: vi.fn(MockIcon) as unknown as AMapConstructor['Icon'],
     } as unknown as AMapConstructor
   })
 

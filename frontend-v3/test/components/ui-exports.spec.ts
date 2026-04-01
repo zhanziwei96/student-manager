@@ -25,7 +25,7 @@ describe('UI Components Exports', () => {
     const componentNames = ['Button', 'Checkbox', 'Dialog', 'Input', 'Label', 'Card', 'Badge', 'Select', 'Toast', 'DataContainer', 'SearchableSelect', 'StatCard']
     
     for (const name of componentNames) {
-      const component = (UI as Record<string, any>)[name]
+      const component = (UI as Record<string, unknown>)[name]
       expect(component).toBeDefined()
       // Vue components should have a render function or setup method
       expect(typeof component === 'object' || typeof component === 'function').toBe(true)

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import ClassSession from '@/views/teacher/ClassSession.vue'
 

@@ -20,7 +20,7 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse
 )
 
-router = APIRouter(prefix=RoutePrefixConst.API, tags=["login"])
+router = APIRouter(tags=["login"])
 
 settings = get_settings()
 

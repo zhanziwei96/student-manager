@@ -25,10 +25,10 @@ import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useSchedules } from '@/composables/useSchedules'
 import { useTodayCheckins } from '@/composables/useCheckins'
 import { useAuthStore } from '@/stores'
-import { Card, Button, Input, Select, Badge, Dialog } from '@/components/ui'
+import { Card, Button, Input, Select, Dialog } from '@/components/ui'
 import {
-  Play, Square, CheckCircle, Clock, Users,
-  Search, GraduationCap, AlertTriangle, MapPin
+  Play, Square, CheckCircle, Clock,
+  AlertTriangle, MapPin
 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 
@@ -70,7 +70,7 @@ const { data: todayCheckins, refetch: refetchCheckins } = useTodayCheckins(
   computed(() => activeSession.value?.class_name || '')
 )
 
-const { show, message: toastMessage, variant: toastVariant, success: showSuccessToast, error: showErrorToast } = useToast()
+const { success: showSuccessToast, error: showErrorToast } = useToast()
 
 // ===== 计算属性 =====
 const isSessionActive = computed(() => !!activeSession.value)
@@ -216,8 +216,12 @@ const handleQuickCheckIn = async (studentId: string) => {
   <div class="space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">课堂签到</h1>
-      <p class="text-white/60">管理您的活跃课堂</p>
+      <h1 class="text-2xl font-bold text-white">
+        课堂签到
+      </h1>
+      <p class="text-white/60">
+        管理您的活跃课堂
+      </p>
     </div>
 
     <!-- Session status -->
@@ -237,14 +241,23 @@ const handleQuickCheckIn = async (studentId: string) => {
             <h2 class="font-medium text-white">
               {{ isSessionActive ? '课堂进行中' : '暂无活跃课堂' }}
             </h2>
-            <p v-if="activeSession" class="text-sm text-white/60">
+            <p
+              v-if="activeSession"
+              class="text-sm text-white/60"
+            >
               {{ activeSession.class_name }} • 开始于 {{ activeSession.start_time }}
             </p>
-            <p v-if="activeSession?.location_name" class="text-sm text-blue-400 flex items-center gap-1">
+            <p
+              v-if="activeSession?.location_name"
+              class="text-sm text-blue-400 flex items-center gap-1"
+            >
               <MapPin class="h-3 w-3" />
               {{ activeSession.location_name }} ({{ activeSession.checkin_radius || 100 }}米范围)
             </p>
-            <p v-else-if="!isSessionActive" class="text-sm text-white/60">
+            <p
+              v-else-if="!isSessionActive"
+              class="text-sm text-white/60"
+            >
               选择班级开始新课堂
             </p>
           </div>
@@ -272,9 +285,16 @@ const handleQuickCheckIn = async (studentId: string) => {
     </Card>
 
     <!-- Start session form -->
-    <Card v-if="!isSessionActive" class="border-white/10 bg-white/[0.02] p-6">
-      <h3 class="font-medium text-white">开始新课堂</h3>
-      <p class="text-sm text-white/60">选择课程和班级开始上课</p>
+    <Card
+      v-if="!isSessionActive"
+      class="border-white/10 bg-white/[0.02] p-6"
+    >
+      <h3 class="font-medium text-white">
+        开始新课堂
+      </h3>
+      <p class="text-sm text-white/60">
+        选择课程和班级开始上课
+      </p>
 
       <!-- 班级占用状态 -->
       <div
@@ -286,7 +306,10 @@ const handleQuickCheckIn = async (studentId: string) => {
           以下班级正在被其他教师上课：
         </p>
         <ul class="mt-2 text-sm text-white/70 space-y-1">
-          <li v-for="cls in otherOccupiedClasses" :key="cls.class_name">
+          <li
+            v-for="cls in otherOccupiedClasses"
+            :key="cls.class_name"
+          >
             {{ cls.class_name }} - {{ cls.teacher_name || '其他教师' }} 老师
           </li>
         </ul>
@@ -328,8 +351,12 @@ const handleQuickCheckIn = async (studentId: string) => {
             <CheckCircle class="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 class="font-medium text-white">学生签到</h3>
-            <p class="text-sm text-white/60">输入学生学号进行签到</p>
+            <h3 class="font-medium text-white">
+              学生签到
+            </h3>
+            <p class="text-sm text-white/60">
+              输入学生学号进行签到
+            </p>
           </div>
         </div>
         <div class="mt-4 flex gap-4">
@@ -339,7 +366,10 @@ const handleQuickCheckIn = async (studentId: string) => {
             class="flex-1"
             @keyup.enter="handleCheckIn"
           />
-          <Button :loading="isCheckingIn" @click="handleCheckIn">
+          <Button
+            :loading="isCheckingIn"
+            @click="handleCheckIn"
+          >
             <CheckCircle class="mr-2 h-4 w-4" />
             签到
           </Button>
@@ -359,7 +389,10 @@ const handleQuickCheckIn = async (studentId: string) => {
     </template>
 
     <!-- Location picker dialog -->
-    <Dialog v-model:open="showMapDialog" title="选择签到位置">
+    <Dialog
+      v-model:open="showMapDialog"
+      title="选择签到位置"
+    >
       <LocationPicker
         ref="locationPickerRef"
         v-model="selectedLocation"
@@ -371,7 +404,10 @@ const handleQuickCheckIn = async (studentId: string) => {
     </Dialog>
 
     <!-- Toast -->
-    <Dialog v-model:open="show" title="提示">
+    <Dialog
+      v-model:open="show"
+      title="提示"
+    >
       <div :class="toastVariant === 'success' ? 'text-green-400' : 'text-red-400'">
         {{ toastMessage }}
       </div>

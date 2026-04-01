@@ -27,5 +27,8 @@ python-dotenv>=1.0.0
 # SQLModel
 sqlmodel>=0.0.21
 
+# 数据库迁移
+alembic>=1.13.0
+
 # 密码安全（替换 SHA256）
 bcrypt>=4.1.0

@@ -43,7 +43,7 @@ import { checkinApi } from '@/api/checkin'
 
 // Mock date utils
 vi.mock('@/lib/date', () => ({
-  formatDistanceToNow: vi.fn((date: string) => '10分钟前')
+  formatDistanceToNow: vi.fn((_date: string) => '10分钟前')
 }))
 
 const MockCard = {

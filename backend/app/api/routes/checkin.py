@@ -20,7 +20,7 @@ from app.models.constants import (
 )
 from app.models.checkin import ClassSession
 
-router = APIRouter(prefix=RoutePrefixConst.API, tags=["checkin"])
+router = APIRouter(tags=["checkin"])
 
 
 class CheckinRequest(BaseModel):
