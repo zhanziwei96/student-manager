@@ -176,20 +176,37 @@ const handleStartSession = async () => {
   }
 }
 
+// 高德地图Key（从环境变量获取）
+const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || ''
+
 // 反向地理编码
 const reverseGeocode = (lat: number, lng: number) => {
-  // 使用高德地图逆地理编码API
-  fetch(`https://restapi.amap.com/v3/geocode/regeo?key=YOUR_AMAP_KEY&location=${lng},${lat}`)
+  if (!AMAP_KEY) {
+    // 没有配置Key，使用坐标作为位置名称
+    selectedLocation.value!.name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+    return
+  }
+  
+  // 使用高德地图逆地理编码API（添加extensions=all获取POI信息）
+  fetch(`https://restapi.amap.com/v3/geocode/regeo?key=${AMAP_KEY}&location=${lng},${lat}&extensions=all&radius=100`)
     .then(res => res.json())
     .then(data => {
       if (data.status === '1' && data.regeocode) {
         const address = data.regeocode.formatted_address
+        // 优先使用POI名称（如"XX大厦"），否则使用格式化地址
         const poi = data.regeocode.pois?.[0]?.name
-        selectedLocation.value!.name = poi || address || '未知位置'
+        const street = data.regeocode.addressComponent?.street
+        const township = data.regeocode.addressComponent?.township
+        
+        // 组合位置名称：POI名称 > 街道 > 乡镇 > 格式化地址
+        selectedLocation.value!.name = poi || `${township}${street}` || address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+      } else {
+        selectedLocation.value!.name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
       }
     })
     .catch(() => {
-      // 失败则保留"当前位置"
+      // 失败则使用坐标
+      selectedLocation.value!.name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
     })
 }
 
