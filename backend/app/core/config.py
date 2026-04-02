@@ -11,12 +11,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def get_env_file_path() -> str:
     """获取环境文件的完整路径
-    
+
     根据 ENV 环境变量返回对应的环境文件完整路径。
     如果文件不存在，返回默认的 .env 文件路径。
     """
     env = os.getenv('ENV', 'production').lower()
-    base_dir = Path(__file__).parent.parent  # backend 目录
+    # config.py 在 app/core/，所以需要上溯两级到 backend 目录
+    base_dir = Path(__file__).parent.parent.parent
     env_files = {
         'development': base_dir / '.env.development',
         'testing': base_dir / '.env.testing',

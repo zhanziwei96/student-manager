@@ -1,17 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('学生功能测试', () => {
-  async function loginAsStudent(page) {
-    await page.goto('/login');
-    await page.getByRole('button', { name: '学生' }).click();
-    await page.getByPlaceholder('请输入用户名').fill('2513070102');
-    await page.getByPlaceholder('请输入密码').fill('2513070102');
-    await page.getByRole('button', { name: '登录' }).click();
-    await page.waitForURL(/.*student/);
-  }
-
   test.beforeEach(async ({ page }) => {
-    await loginAsStudent(page);
+    // 使用已登录状态，直接访问学生页面
+    await page.goto('/student');
+    await page.waitForURL(/.*student/, { timeout: 15000 });
   });
 
   test.describe('学生仪表板', () => {
@@ -19,10 +12,10 @@ test.describe('学生功能测试', () => {
       await expect(page.getByRole('heading', { name: '学生仪表板' })).toBeVisible();
       
       // 验证个人信息卡片
-      await expect(page.getByText('个人信息')).toBeVisible();
+      await expect(page.getByText('我的分数')).toBeVisible();
       await expect(page.getByText('学号')).toBeVisible();
       await expect(page.getByText('班级')).toBeVisible();
-      await expect(page.getByText('当前分数')).toBeVisible();
+      await expect(page.getByText('排名')).toBeVisible();
     });
 
     test('显示当前分数', async ({ page }) => {

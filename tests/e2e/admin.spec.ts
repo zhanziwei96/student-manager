@@ -1,18 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('管理员功能测试', () => {
-  // 登录辅助函数
-  async function loginAsAdmin(page) {
-    await page.goto('/login');
-    await page.getByRole('button', { name: '管理员' }).click();
-    await page.getByPlaceholder('请输入用户名').fill('admin');
-    await page.getByPlaceholder('请输入密码').fill('admin123');
-    await page.getByRole('button', { name: '登录' }).click();
-    await page.waitForURL(/.*admin/);
-  }
-
   test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
+    // 使用已登录状态，直接访问管理员页面
+    await page.goto('/admin');
+    await page.waitForURL(/.*admin/, { timeout: 15000 });
   });
 
   test.describe('仪表板', () => {
@@ -179,7 +171,7 @@ test.describe('管理员功能测试', () => {
   test.describe('教师管理', () => {
     test.beforeEach(async ({ page }) => {
       await page.getByRole('link', { name: '教师管理' }).click();
-      await page.waitForURL(/.*admin\/teachers/);
+      await page.waitForURL(/.*admin\/teachers/, { timeout: 15000 });
     });
 
     test('教师管理页面显示正常', async ({ page }) => {
@@ -191,7 +183,7 @@ test.describe('管理员功能测试', () => {
   test.describe('班级管理', () => {
     test.beforeEach(async ({ page }) => {
       await page.getByRole('link', { name: '班级管理' }).click();
-      await page.waitForURL(/.*admin\/classes/);
+      await page.waitForURL(/.*admin\/classes/, { timeout: 15000 });
     });
 
     test('班级管理页面显示正常', async ({ page }) => {

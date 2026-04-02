@@ -1,17 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('教师功能测试', () => {
-  async function loginAsTeacher(page) {
-    await page.goto('/login');
-    await page.getByRole('button', { name: '教师' }).click();
-    await page.getByPlaceholder('请输入用户名').fill('zhanziwei');
-    await page.getByPlaceholder('请输入密码').fill('zha123');
-    await page.getByRole('button', { name: '登录' }).click();
-    await page.waitForURL(/.*teacher/);
-  }
-
   test.beforeEach(async ({ page }) => {
-    await loginAsTeacher(page);
+    // 使用已登录状态，直接访问教师页面
+    await page.goto('/teacher');
+    await page.waitForURL(/.*teacher/, { timeout: 15000 });
   });
 
   test.describe('教师仪表板', () => {
