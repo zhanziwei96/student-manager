@@ -154,3 +154,23 @@ nginx.conf
 *.bak
 *.bak2
 *.backup
+
+# Database WAL files
+*.db-shm
+*.db-wal
+
+# Frontend build output
+frontend-v3/dist/
+
+# Test artifacts
+tests/browser/*.png
+tests/browser/*.json
+!tests/browser/.gitkeep
+
+# Coverage reports
+.coverage
+
+# Root level node_modules (should not exist)
+/package.json
+/package-lock.json
+/node_modules
