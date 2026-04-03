@@ -43,7 +43,7 @@ class TestTokenRefresh:
     def test_access_protected_route_with_valid_token(self, client: TestClient, teacher_user):
         """测试使用有效 Token 访问受保护接口"""
         # 登录获取 Token（使用 fixture 中的 teacher1 用户）
-        login_response = client.post("/api/login", json={
+        login_response = client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
@@ -54,14 +54,14 @@ class TestTokenRefresh:
         cookies = login_response.cookies
         
         # 访问受保护接口
-        response = client.get("/api/classes", cookies=cookies)
+        response = client.get("/api/v1/classes", cookies=cookies)
         assert response.status_code == 200
         assert response.json()["success"] is True
     
     def test_access_protected_route_without_token(self, client: TestClient):
         """测试不使用 Token 访问受保护接口"""
         # 访问受保护接口应失败
-        response = client.get("/api/classes")
+        response = client.get("/api/v1/classes")
         assert response.status_code == 401
     
     def test_token_claims_structure(self):

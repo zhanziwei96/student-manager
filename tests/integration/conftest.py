@@ -176,7 +176,7 @@ def sample_students(test_engine):
 @pytest.fixture
 def admin_client(client, admin_user):
     """已登录管理员的客户端"""
-    response = client.post("/api/login", json={
+    response = client.post("/api/v1/login", json={
         "username": "admin",
         "password": "admin123",
         "role": "admin"
@@ -189,7 +189,7 @@ def admin_client(client, admin_user):
 @pytest.fixture
 def teacher_client(client, teacher_user):
     """已登录教师的客户端"""
-    response = client.post("/api/login", json={
+    response = client.post("/api/v1/login", json={
         "username": "teacher1",
         "password": "teacher123",
         "role": "teacher"
@@ -201,7 +201,7 @@ def teacher_client(client, teacher_user):
 @pytest.fixture
 def student_client(client, student_user):
     """已登录学生的客户端"""
-    response = client.post("/api/login", json={
+    response = client.post("/api/v1/login", json={
         "username": "S001",
         "password": "student123",
         "role": "student"

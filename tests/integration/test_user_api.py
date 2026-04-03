@@ -10,7 +10,7 @@ class TestUserListAPI:
     
     def test_list_users_admin(self, admin_client, admin_user, teacher_user):
         """管理员获取用户列表"""
-        response = admin_client.get("/api/admin/users")
+        response = admin_client.get("/api/v1/users")
         
         assert response.status_code == 200
         data = response.json()
@@ -19,7 +19,7 @@ class TestUserListAPI:
     
     def test_list_users_assigned_classes_format(self, admin_client, admin_user, teacher_user):
         """验证 assigned_classes 返回格式为列表而非 JSON 字符串"""
-        response = admin_client.get("/api/admin/users")
+        response = admin_client.get("/api/v1/users")
         
         assert response.status_code == 200
         data = response.json()
@@ -40,7 +40,7 @@ class TestUserListAPI:
     
     def test_list_users_filter_by_role(self, admin_client, admin_user, teacher_user):
         """按角色筛选用户"""
-        response = admin_client.get("/api/admin/users?role=teacher")
+        response = admin_client.get("/api/v1/users?role=teacher")
         
         assert response.status_code == 200
         data = response.json()
@@ -49,13 +49,13 @@ class TestUserListAPI:
     
     def test_list_users_teacher_forbidden(self, teacher_client):
         """教师无权访问用户列表"""
-        response = teacher_client.get("/api/admin/users")
+        response = teacher_client.get("/api/v1/users")
         
         assert response.status_code == 403
     
     def test_list_users_unauthorized(self, client):
         """未授权访问"""
-        response = client.get("/api/admin/users")
+        response = client.get("/api/v1/users")
         
         assert response.status_code == 401
 
@@ -65,7 +65,7 @@ class TestUserCreateAPI:
     
     def test_create_user_success(self, admin_client):
         """成功创建用户"""
-        response = admin_client.post("/api/admin/users", json={
+        response = admin_client.post("/api/v1/users", json={
             "username": "newteacher",
             "password": "password123",
             "name": "新教师",
@@ -82,7 +82,7 @@ class TestUserCreateAPI:
     
     def test_create_user_duplicate_username(self, admin_client, admin_user):
         """用户名重复"""
-        response = admin_client.post("/api/admin/users", json={
+        response = admin_client.post("/api/v1/users", json={
             "username": "admin",
             "password": "password123",
             "name": "重复用户",
@@ -94,7 +94,7 @@ class TestUserCreateAPI:
     
     def test_create_user_validation_error(self, admin_client):
         """参数验证错误"""
-        response = admin_client.post("/api/admin/users", json={
+        response = admin_client.post("/api/v1/users", json={
             "username": "ab",  # 太短
             "password": "123",  # 太短
             "name": "测试"
@@ -104,7 +104,7 @@ class TestUserCreateAPI:
     
     def test_create_user_default_role(self, admin_client):
         """默认角色为教师"""
-        response = admin_client.post("/api/admin/users", json={
+        response = admin_client.post("/api/v1/users", json={
             "username": "defaultteacher",
             "password": "password123",
             "name": "默认教师"
@@ -120,7 +120,7 @@ class TestUserUpdateAPI:
     
     def test_update_user_success(self, admin_client, teacher_user):
         """成功更新用户"""
-        response = admin_client.put(f"/api/admin/users/{teacher_user.id}", json={
+        response = admin_client.put(f"/api/v1/users/{teacher_user.id}", json={
             "name": "更新的教师名",
             "assigned_classes": ["五班"]
         })
@@ -133,7 +133,7 @@ class TestUserUpdateAPI:
     
     def test_update_user_not_found(self, admin_client):
         """用户不存在"""
-        response = admin_client.put("/api/admin/users/9999", json={
+        response = admin_client.put("/api/v1/users/9999", json={
             "name": "不存在的用户"
         })
         
@@ -141,7 +141,7 @@ class TestUserUpdateAPI:
     
     def test_update_user_role(self, admin_client, teacher_user):
         """更新用户角色"""
-        response = admin_client.put(f"/api/admin/users/{teacher_user.id}", json={
+        response = admin_client.put(f"/api/v1/users/{teacher_user.id}", json={
             "role": "admin"
         })
         
@@ -155,7 +155,7 @@ class TestResetPasswordAPI:
     
     def test_reset_password_success(self, admin_client, teacher_user, test_engine):
         """成功重置密码"""
-        response = admin_client.put(f"/api/admin/users/{teacher_user.id}/reset-password", json={
+        response = admin_client.put(f"/api/v1/users/{teacher_user.id}/reset-password", json={
             "new_password": "resetpass123"
         })
         
@@ -173,7 +173,7 @@ class TestResetPasswordAPI:
     
     def test_reset_password_user_not_found(self, admin_client):
         """用户不存在"""
-        response = admin_client.put("/api/admin/users/9999/reset-password", json={
+        response = admin_client.put("/api/v1/users/9999/reset-password", json={
             "new_password": "newpass123"
         })
         
@@ -181,7 +181,7 @@ class TestResetPasswordAPI:
     
     def test_reset_password_validation_error(self, admin_client, teacher_user):
         """密码太短"""
-        response = admin_client.put(f"/api/admin/users/{teacher_user.id}/reset-password", json={
+        response = admin_client.put(f"/api/v1/users/{teacher_user.id}/reset-password", json={
             "new_password": "123"  # 太短
         })
         
@@ -193,7 +193,7 @@ class TestDeleteUserAPI:
     
     def test_delete_user_success(self, admin_client, teacher_user):
         """成功删除用户"""
-        response = admin_client.delete(f"/api/admin/users/{teacher_user.id}")
+        response = admin_client.delete(f"/api/v1/users/{teacher_user.id}")
         
         assert response.status_code == 200
         data = response.json()
@@ -201,26 +201,26 @@ class TestDeleteUserAPI:
         assert data["message"] == "用户删除成功"
         
         # 验证已删除
-        list_response = admin_client.get("/api/admin/users")
+        list_response = admin_client.get("/api/v1/users")
         users = list_response.json()["data"]
         assert not any(u["id"] == teacher_user.id for u in users)
     
     def test_delete_user_not_found(self, admin_client):
         """用户不存在"""
-        response = admin_client.delete("/api/admin/users/9999")
+        response = admin_client.delete("/api/v1/users/9999")
         
         assert response.status_code == 404
     
     def test_delete_self_forbidden(self, admin_client, admin_user):
         """不能删除自己"""
-        response = admin_client.delete(f"/api/admin/users/{admin_user.id}")
+        response = admin_client.delete(f"/api/v1/users/{admin_user.id}")
         
         assert response.status_code == 400
         assert "不能删除当前登录账号" in response.json()["message"]
     
     def test_delete_user_teacher_forbidden(self, teacher_client, admin_user):
         """教师无权删除用户"""
-        response = teacher_client.delete(f"/api/admin/users/{admin_user.id}")
+        response = teacher_client.delete(f"/api/v1/users/{admin_user.id}")
         
         assert response.status_code == 403
 
@@ -230,7 +230,7 @@ class TestUserPermissions:
     
     def test_teacher_cannot_create_user(self, teacher_client):
         """教师不能创建用户"""
-        response = teacher_client.post("/api/admin/users", json={
+        response = teacher_client.post("/api/v1/users", json={
             "username": "newuser",
             "password": "password123",
             "name": "新用户"
@@ -240,7 +240,7 @@ class TestUserPermissions:
     
     def test_teacher_cannot_update_user(self, teacher_client, admin_user):
         """教师不能更新用户"""
-        response = teacher_client.put(f"/api/admin/users/{admin_user.id}", json={
+        response = teacher_client.put(f"/api/v1/users/{admin_user.id}", json={
             "name": "试图修改"
         })
         
@@ -248,7 +248,7 @@ class TestUserPermissions:
     
     def test_teacher_cannot_reset_password(self, teacher_client, admin_user):
         """教师不能重置密码"""
-        response = teacher_client.put(f"/api/admin/users/{admin_user.id}/reset-password", json={
+        response = teacher_client.put(f"/api/v1/users/{admin_user.id}/reset-password", json={
             "new_password": "newpass123"
         })
         

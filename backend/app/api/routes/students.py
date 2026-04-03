@@ -55,9 +55,11 @@ class ScoreLogResponse(BaseModel):
     """分数日志响应"""
     id: int
     student_id: str
-    score_change: float
-    reason: str
-    changed_by: Optional[str] = None
+    delta: float = Field(..., description="分数变动值")
+    reason: Optional[str] = None
+    operator: Optional[str] = Field(None, description="操作人")
+    old_score: Optional[float] = None
+    new_score: Optional[float] = None
     created_at: datetime
 
 

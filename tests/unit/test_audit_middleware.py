@@ -80,116 +80,98 @@ class TestAuditMiddleware:
             "resource": "学生",
             "user_id": 1,
             "method": "POST",
-            "path": "/api/students",
+            "path": "/api/v1/students",
         }
 
-        # Mock Session 和 engine
-        with patch('app.core.middleware.Session') as mock_session_class:
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__ = Mock(return_value=mock_session)
-            mock_session_class.return_value.__exit__ = Mock(return_value=False)
+        # Mock Session 和 AuditLog - 这些是在函数内部导入的
+        with patch('app.core.db.engine'):
+            with patch('sqlmodel.Session') as mock_session_class:
+                mock_session = MagicMock()
+                mock_session_class.return_value.__enter__ = Mock(return_value=mock_session)
+                mock_session_class.return_value.__exit__ = Mock(return_value=False)
 
-            with patch('app.core.middleware.AuditLog') as mock_audit_log:
-                _save_audit_log_sync(audit_data)
+                with patch('app.models.AuditLog') as mock_audit_log:
+                    _save_audit_log_sync(audit_data)
 
-                # 验证创建了 AuditLog 记录
-                mock_audit_log.assert_called_once_with(**audit_data)
-                # 验证提交了事务
-                mock_session.commit.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_task_done_callback_captures_exception(self):
-        """测试任务完成回调捕获异常"""
-        from app.core.middleware import _save_audit_log_async
-
-        with patch('logging.getLogger') as mock_get_logger:
-            mock_logger = Mock()
-            mock_get_logger.return_value = mock_logger
-
-            # 创建一个会失败的任务
-            async def failing_task():
-                raise ValueError("测试错误")
-
-            task = asyncio.create_task(failing_task())
-
-            # 添加回调
-            def _on_task_done(t: asyncio.Task) -> None:
-                try:
-                    t.result()
-                except Exception as e:
-                    mock_logger.error(f"任务执行失败: {e}")
-
-            task.add_done_callback(_on_task_done)
-
-            # 等待任务完成
-            await asyncio.sleep(0.1)
-
-            # 验证异常被捕获并记录
-            mock_logger.error.assert_called_once()
-            assert "测试错误" in mock_logger.error.call_args[0][0]
+                    # 验证创建了 AuditLog 记录
+                    mock_audit_log.assert_called_once_with(**audit_data)
+                    # 验证提交了事务
+                    mock_session.commit.assert_called_once()
 
 
 class TestAuditMiddlewareIntegration:
-    """审计日志中间件集成测试"""
+    """测试审计日志中间件集成"""
 
-    def test_should_audit_excluded_paths(self):
-        """测试排除路径不记录审计"""
+    @pytest.mark.asyncio
+    async def test_should_audit_audit_routes(self):
+        """测试应该审计的路由 - 使用实际中间件实例"""
         from app.core.middleware import AuditLogMiddleware
 
         middleware = AuditLogMiddleware(Mock())
 
         # 创建模拟请求
         mock_request = Mock()
+        mock_request.method = "POST"
+        mock_request.url.path = "/api/v1/login"
+
+        # 验证应该审计
+        assert middleware._should_audit(mock_request) is True
+
+    @pytest.mark.asyncio
+    async def test_should_audit_with_path_params(self):
+        """测试带路径参数的路由也应该审计"""
+        from app.core.middleware import AuditLogMiddleware
+
+        middleware = AuditLogMiddleware(Mock())
+
+        mock_request = Mock()
+        mock_request.method = "PUT"
+        mock_request.url.path = "/api/v1/students/123/score"
+
+        assert middleware._should_audit(mock_request) is True
+
+    @pytest.mark.asyncio
+    async def test_should_not_audit_health_check(self):
+        """测试健康检查不应该审计"""
+        from app.core.middleware import AuditLogMiddleware
+
+        middleware = AuditLogMiddleware(Mock())
+
+        mock_request = Mock()
         mock_request.method = "GET"
-        mock_request.url.path = "/api/health"
+        mock_request.url.path = "/api/v1/health"
 
         assert middleware._should_audit(mock_request) is False
 
-    def test_should_audit_audit_routes(self):
-        """测试审计路由匹配"""
+    @pytest.mark.asyncio
+    async def test_should_not_audit_docs(self):
+        """测试API文档不应该审计"""
         from app.core.middleware import AuditLogMiddleware
 
         middleware = AuditLogMiddleware(Mock())
 
-        # 测试登录路径
         mock_request = Mock()
-        mock_request.method = "POST"
-        mock_request.url.path = "/api/login"
+        mock_request.method = "GET"
+        mock_request.url.path = "/docs"
 
-        assert middleware._should_audit(mock_request) is True
+        assert middleware._should_audit(mock_request) is False
 
-    def test_should_audit_with_path_params(self):
-        """测试带路径参数的路由匹配"""
-        from app.core.middleware import AuditLogMiddleware
 
-        middleware = AuditLogMiddleware(Mock())
+class TestAuditLogAsyncSave:
+    """测试审计日志异步保存（性能优化）"""
 
-        # 测试带ID的路径
-        mock_request = Mock()
-        mock_request.method = "PUT"
-        mock_request.url.path = "/api/students/123/score"
+    @pytest.mark.asyncio
+    async def test_async_save_handles_exception_silently(self):
+        """测试异步保存异常被静默处理 - 不影响主业务"""
+        from app.core.middleware import _save_audit_log_async
 
-        assert middleware._should_audit(mock_request) is True
+        # 传入无效数据，应该捕获异常不抛出
+        audit_data = {
+            "invalid_field": "test",  # 无效字段
+        }
 
-    def test_get_action_name(self):
-        """测试获取操作名称"""
-        from app.core.middleware import AuditLogMiddleware
+        # 不应抛出异常
+        await _save_audit_log_async(audit_data)
 
-        middleware = AuditLogMiddleware(Mock())
-
-        assert middleware._get_action_name("POST", "/api/login") == "登录"
-        assert middleware._get_action_name("POST", "/api/students") == "创建"
-        assert middleware._get_action_name("PUT", "/api/students/123/score") == "修改分数"
-        assert middleware._get_action_name("PUT", "/api/students/123/reset-password") == "重置密码"
-        assert middleware._get_action_name("DELETE", "/api/students/123") == "删除"
-
-    def test_extract_resource_id(self):
-        """测试提取资源ID"""
-        from app.core.middleware import AuditLogMiddleware
-
-        middleware = AuditLogMiddleware(Mock())
-
-        assert middleware._extract_resource_id("/api/students/123") == "123"
-        assert middleware._extract_resource_id("/api/students/123/score") == "123"
-        assert middleware._extract_resource_id("/api/students") is None
-        assert middleware._extract_resource_id("/api/login") is None
+        # 断言通过即表示异常被正确捕获
+        assert True

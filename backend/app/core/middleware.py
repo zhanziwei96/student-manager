@@ -88,25 +88,25 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
     # 支持 {id} 或 {student_id} 等路径参数占位符
     AUDIT_ROUTES = {
         "POST": [
-            "/api/login",
-            "/api/change-password",
-            "/api/students",
+            "/api/v1/login",
+            "/api/v1/change-password",
+            "/api/v1/students",
         ],
         "PUT": [
-            "/api/students/{id}/score",
-            "/api/students/{id}/reset-password",
-            "/admin/users/{id}",
-            "/admin/users/{id}/reset-password",
+            "/api/v1/students/{id}/score",
+            "/api/v1/students/{id}/reset-password",
+            "/api/v1/users/{id}",
+            "/api/v1/users/{id}/reset-password",
         ],
         "DELETE": [
-            "/api/students/{id}",
-            "/admin/users/{id}",
+            "/api/v1/students/{id}",
+            "/api/v1/users/{id}",
         ],
     }
-    
+
     def __init__(self, app: ASGIApp, exclude_paths: Optional[List[str]] = None):
         super().__init__(app)
-        self.exclude_paths = exclude_paths or ["/api/health", "/docs", "/openapi.json"]
+        self.exclude_paths = exclude_paths or ["/api/v1/health", "/docs", "/openapi.json"]
     
     async def dispatch(self, request: Request, call_next):
         # 判断是否需要记录审计
@@ -236,9 +236,9 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
     
     def _get_resource_name(self, path: str) -> str:
         """获取资源名称"""
-        if "/students/" in path or path == "/api/students":
+        if "/students/" in path or path == "/api/v1/students":
             return "学生"
-        elif "/users/" in path or "/admin/users" in path:
+        elif "/users/" in path or path == "/api/v1/users":
             return "用户"
         elif "/login" in path:
             return "系统"

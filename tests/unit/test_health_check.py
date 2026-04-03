@@ -20,7 +20,7 @@ class TestHealthCheckBasic:
         from main import app
 
         client = TestClient(app)
-        response = client.get("/api/health")
+        response = client.get("/api/v1/health")
         assert response.status_code == 200
 
         data = response.json()
@@ -39,7 +39,7 @@ class TestHealthCheckDetailed:
         from main import app
 
         client = TestClient(app)
-        response = client.get("/api/health/detailed")
+        response = client.get("/api/v1/health/detailed")
         assert response.status_code == 200
 
         data = response.json()
@@ -65,7 +65,7 @@ class TestHealthCheckDetailed:
         from main import app
 
         client = TestClient(app)
-        response = client.get("/api/health/detailed")
+        response = client.get("/api/v1/health/detailed")
         data = response.json()
 
         for dep in data["dependencies"]:
@@ -82,7 +82,7 @@ class TestHealthCheckDetailed:
         from main import app
 
         client = TestClient(app)
-        response = client.get("/api/health/detailed")
+        response = client.get("/api/v1/health/detailed")
         data = response.json()
 
         # 所有关键依赖都健康时，整体状态应为 healthy
@@ -103,7 +103,7 @@ class TestHealthCheckDetailed:
         from main import app
 
         client = TestClient(app)
-        response = client.get("/api/health/detailed")
+        response = client.get("/api/v1/health/detailed")
         data = response.json()
 
         # 运行时间应为正数
@@ -215,7 +215,7 @@ class TestHealthCheckIntegration:
 
         client = TestClient(app)
         start = time.time()
-        response = client.get("/api/health/detailed")
+        response = client.get("/api/v1/health/detailed")
         elapsed = time.time() - start
 
         assert response.status_code == 200
@@ -231,7 +231,7 @@ class TestHealthCheckIntegration:
         # 连续调用多次，检查结果一致
         responses = []
         for _ in range(3):
-            response = client.get("/api/health/detailed")
+            response = client.get("/api/v1/health/detailed")
             responses.append(response.json())
 
         # 所有响应的结构应一致

@@ -21,7 +21,7 @@ class TestRateLimitHttpSemantics:
         """
         # Mock check_rate_limit 返回 False 模拟限流触发
         with patch("app.api.routes.login.check_rate_limit", return_value=False):
-            response = client.post("/api/login", json={
+            response = client.post("/api/v1/login", json={
                 "username": "rate_limit_test_user",
                 "password": "wrong_password",
                 "role": "teacher"
@@ -40,7 +40,7 @@ class TestRateLimitHttpSemantics:
         测试限流禁用时请求正常通过（到达密码验证阶段）
         """
         # 限流禁用（默认状态），请求应该到达密码验证阶段（401 表示密码错误）
-        response = client.post("/api/login", json={
+        response = client.post("/api/v1/login", json={
             "username": "nonexistent_user",
             "password": "wrong_password",
             "role": "teacher"

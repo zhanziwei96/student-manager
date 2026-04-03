@@ -11,7 +11,7 @@ class TestCORSConfig:
     def test_cors_preflight_request(self, client):
         """测试CORS预检请求响应"""
         response = client.options(
-            "/api/health",
+            "/api/v1/health",
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
@@ -74,7 +74,7 @@ class TestCORSConfig:
         """测试不允许的HTTP方法"""
         # PATCH 方法不在白名单中
         response = client.options(
-            "/api/health",
+            "/api/v1/health",
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "PATCH",
@@ -88,7 +88,7 @@ class TestCORSConfig:
     def test_cors_max_age_cache(self, client):
         """测试预检请求缓存时间"""
         response = client.options(
-            "/api/health",
+            "/api/v1/health",
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "GET",

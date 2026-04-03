@@ -10,7 +10,7 @@ class TestCheckinAPIEnhanced:
     
     def test_start_class_as_teacher(self, teacher_client):
         """测试教师开始上课"""
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         
@@ -25,7 +25,7 @@ class TestCheckinAPIEnhanced:
         """测试班级已有活跃课堂时不能开始新课"""
         # 第一个教师开始上课
         from tests.integration.conftest import teacher_user
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         assert response.status_code == 200
@@ -36,13 +36,13 @@ class TestCheckinAPIEnhanced:
     def test_start_class_teacher_already_has_class(self, teacher_client):
         """测试教师已有活跃课堂时不能开始新课"""
         # 开始第一节课
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         assert response.status_code == 200
         
         # 尝试开始另一节课
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "二班"
         })
         
@@ -53,11 +53,11 @@ class TestCheckinAPIEnhanced:
     def test_get_class_session_as_teacher(self, teacher_client):
         """测试教师获取当前课堂状态"""
         # 先开始上课
-        teacher_client.post("/api/class-session/start", json={
+        teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         
-        response = teacher_client.get("/api/class-session")
+        response = teacher_client.get("/api/v1/class-session")
         
         assert response.status_code == 200
         data = response.json()
@@ -67,7 +67,7 @@ class TestCheckinAPIEnhanced:
     
     def test_get_class_session_not_started(self, teacher_client):
         """测试获取未开始上课的状态"""
-        response = teacher_client.get("/api/class-session")
+        response = teacher_client.get("/api/v1/class-session")
         
         assert response.status_code == 200
         data = response.json()
@@ -77,11 +77,11 @@ class TestCheckinAPIEnhanced:
     def test_end_class_as_teacher(self, teacher_client):
         """测试教师结束上课"""
         # 先开始上课
-        teacher_client.post("/api/class-session/start", json={
+        teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         
-        response = teacher_client.post("/api/class-session/end")
+        response = teacher_client.post("/api/v1/class-session/end")
         
         assert response.status_code == 200
         data = response.json()
@@ -90,20 +90,20 @@ class TestCheckinAPIEnhanced:
     def test_student_checkin(self, teacher_client, student_user, client):
         """测试学生签到 - 需要教师先开始上课"""
         # 教师开始上课
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         assert response.status_code == 200
         
         # 学生登录并签到（student_user fixture 的密码是 student123）
-        login_response = client.post("/api/login", json={
+        login_response = client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
         assert login_response.status_code == 200
         
-        response = client.post("/api/checkin", json={
+        response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1"
         })
@@ -116,13 +116,13 @@ class TestCheckinAPIEnhanced:
     def test_checkin_no_active_class(self, client, student_user):
         """测试没有活跃课堂时不能签到"""
         # 学生登录
-        client.post("/api/login", json={
+        client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
         
-        response = client.post("/api/checkin", json={
+        response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1"
         })
@@ -133,7 +133,7 @@ class TestCheckinAPIEnhanced:
     
     def test_get_today_checkins(self, teacher_client):
         """测试获取今日签到列表"""
-        response = teacher_client.get("/api/checkins/today")
+        response = teacher_client.get("/api/v1/checkins/today")
         
         assert response.status_code == 200
         data = response.json()
@@ -143,11 +143,11 @@ class TestCheckinAPIEnhanced:
     def test_get_checkin_stats(self, teacher_client, sample_students):
         """测试获取签到统计"""
         # 开始上课
-        teacher_client.post("/api/class-session/start", json={
+        teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         
-        response = teacher_client.get("/api/checkins/stats")
+        response = teacher_client.get("/api/v1/checkins/stats")
         
         assert response.status_code == 200
         data = response.json()
@@ -158,7 +158,7 @@ class TestCheckinAPIEnhanced:
     def test_get_active_class_sessions(self, client, sample_students):
         """测试获取所有活跃课堂"""
         # 不需要登录，公开接口
-        response = client.get("/api/class-sessions/active")
+        response = client.get("/api/v1/class-sessions/active")
         
         assert response.status_code == 200
         data = response.json()
@@ -168,13 +168,13 @@ class TestCheckinAPIEnhanced:
     def test_get_class_session_for_student(self, client, student_user):
         """测试学生获取班级课堂状态 - 需要登录"""
         # 学生登录（student_user fixture 创建的密码是 student123）
-        client.post("/api/login", json={
+        client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
         
-        response = client.get("/api/class-sessions/class/一班")
+        response = client.get("/api/v1/class-sessions/class/一班")
         
         assert response.status_code == 200
         data = response.json()
@@ -184,7 +184,7 @@ class TestCheckinAPIEnhanced:
     
     def test_start_class_with_location(self, teacher_client):
         """测试教师开始上课（带地理位置）"""
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班",
             "course_name": "高等数学",
             "location_lat": 39.90923,
@@ -205,7 +205,7 @@ class TestCheckinAPIEnhanced:
     def test_student_checkin_with_location_within_range(self, teacher_client, student_user, client):
         """测试学生在范围内签到（带GPS位置）"""
         # 教师开始上课并设置位置
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班",
             "location_lat": 39.90923,
             "location_lng": 116.397428,
@@ -215,14 +215,14 @@ class TestCheckinAPIEnhanced:
         assert response.status_code == 200
         
         # 学生登录
-        client.post("/api/login", json={
+        client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
         
         # 学生在范围内签到（距离约2米）
-        response = client.post("/api/checkin", json={
+        response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
             "lat": 39.90925,
@@ -237,7 +237,7 @@ class TestCheckinAPIEnhanced:
     def test_student_checkin_outside_range(self, teacher_client, student_user, client):
         """测试学生在范围外签到应被拒绝"""
         # 教师开始上课并设置位置
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班",
             "location_lat": 39.90923,
             "location_lng": 116.397428,
@@ -247,14 +247,14 @@ class TestCheckinAPIEnhanced:
         assert response.status_code == 200
         
         # 学生登录
-        client.post("/api/login", json={
+        client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
         
         # 学生在范围外签到（距离约10公里）
-        response = client.post("/api/checkin", json={
+        response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
             "lat": 39.99999,
@@ -269,7 +269,7 @@ class TestCheckinAPIEnhanced:
     def test_student_checkin_without_gps_when_required(self, teacher_client, student_user, client):
         """测试课堂要求GPS但未提供时应被拒绝"""
         # 教师开始上课并设置位置
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班",
             "location_lat": 39.90923,
             "location_lng": 116.397428,
@@ -279,14 +279,14 @@ class TestCheckinAPIEnhanced:
         assert response.status_code == 200
         
         # 学生登录
-        client.post("/api/login", json={
+        client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
         
         # 学生未提供GPS位置
-        response = client.post("/api/checkin", json={
+        response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
             "device_id": "device001"
@@ -299,20 +299,20 @@ class TestCheckinAPIEnhanced:
     def test_device_cannot_checkin_twice(self, teacher_client, student_user, client):
         """测试同一设备不能为多个学生签到"""
         # 教师开始上课
-        response = teacher_client.post("/api/class-session/start", json={
+        response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         assert response.status_code == 200
         
         # 学生登录
-        client.post("/api/login", json={
+        client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
         
         # 第一个学生用设备签到
-        response = client.post("/api/checkin", json={
+        response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
             "device_id": "shared_device"

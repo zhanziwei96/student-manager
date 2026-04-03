@@ -50,7 +50,7 @@ class TestDashboardDataMasking:
     def test_dashboard_public_endpoint_no_sensitive_data(self, client: TestClient, test_students):
         """测试公开仪表盘接口不返回敏感数据"""
         # 访问公开仪表盘接口
-        response = client.get("/api/dashboard")
+        response = client.get("/api/v1/dashboard")
         
         assert response.status_code == 200
         data = response.json()
@@ -75,7 +75,7 @@ class TestDashboardDataMasking:
     
     def test_score_ranking_anonymization(self, client: TestClient, test_students):
         """测试分数排行榜脱敏"""
-        response = client.get("/api/dashboard")
+        response = client.get("/api/v1/dashboard")
         
         assert response.status_code == 200
         data = response.json()
@@ -98,7 +98,7 @@ class TestDashboardDataMasking:
     
     def test_public_stats_endpoint(self, client: TestClient, test_students):
         """测试公开统计接口"""
-        response = client.get("/api/stats")
+        response = client.get("/api/v1/stats")
         
         # 公开接口可能需要认证，测试其行为一致性
         assert response.status_code in [200, 401]
@@ -171,7 +171,7 @@ class TestDataMaskingImplementation:
         # 此测试需要认证，暂时跳过具体实现
         
         # 访问学生列表（应脱敏）
-        # response = client.get("/api/students")
+        # response = client.get("/api/v1/students")
         
         # 验证脱敏
         pass

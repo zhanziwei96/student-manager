@@ -126,6 +126,10 @@ def _check_filesystem_health() -> DependencyStatus:
         db_path = Path(settings.get_database_path())
         db_dir = db_path.parent
 
+        # 如果目录不存在，尝试创建（测试环境需要）
+        if not db_dir.exists():
+            db_dir.mkdir(parents=True, exist_ok=True)
+
         # 检查目录是否存在且可写
         test_file = db_dir / ".health_check_tmp"
         test_file.write_text("test")
@@ -157,6 +161,10 @@ def _check_disk_space() -> DependencyStatus:
         settings = get_settings()
         db_path = Path(settings.get_database_path())
         db_dir = db_path.parent
+
+        # 如果目录不存在，尝试创建（测试环境需要）
+        if not db_dir.exists():
+            db_dir.mkdir(parents=True, exist_ok=True)
 
         # 获取磁盘使用情况
         stat = shutil.disk_usage(db_dir)
@@ -250,24 +258,24 @@ def health_check_detailed():
 
 @router.get("/stats", response_model=SystemStatsResponse)
 def get_stats(
-    request: Request, 
+    request: Request,
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取系统统计（需要登录）"""
-    from app.crud import get_students, get_all_classes
-    from app.crud.checkin import get_today_checkins
-    
-    students = get_students(session)
+    """获取系统统计（需要登录）- 使用 COUNT 查询优化性能"""
+    from app.crud import count_students, get_all_classes
+    from app.crud.checkin import count_today_checkins
+
+    total_students = count_students(session)
     classes = get_all_classes(session)
-    checkins = get_today_checkins(session)
-    
+    today_checkins = count_today_checkins(session)
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
-            'total_students': len(students),
+            'total_students': total_students,
             'total_classes': len(classes),
-            'today_checkins': len(checkins)
+            'today_checkins': today_checkins
         }
     }
 

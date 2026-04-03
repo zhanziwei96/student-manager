@@ -34,7 +34,7 @@ class TestScheduleTeacherAssignment:
     def test_assign_teacher_to_schedule_success(self, admin_client, sample_schedule):
         """测试成功分配教师到课程"""
         response = admin_client.put(
-            f"/api/schedules/{sample_schedule.id}/assign",
+            f"/api/v1/schedules/{sample_schedule.id}/assign",
             params={"teacher_id": 1, "teacher_name": "张老师"}
         )
         
@@ -47,7 +47,7 @@ class TestScheduleTeacherAssignment:
     def test_assign_teacher_to_nonexistent_schedule(self, admin_client):
         """测试为不存在的课程分配教师"""
         response = admin_client.put(
-            "/api/schedules/99999/assign",
+            "/api/v1/schedules/99999/assign",
             params={"teacher_id": 1, "teacher_name": "张老师"}
         )
         
@@ -62,13 +62,13 @@ class TestScheduleTeacherAssignment:
         """测试成功取消教师分配"""
         # 先分配教师
         admin_client.put(
-            f"/api/schedules/{sample_schedule.id}/assign",
+            f"/api/v1/schedules/{sample_schedule.id}/assign",
             params={"teacher_id": 1, "teacher_name": "张老师"}
         )
         
         # 再取消分配
         response = admin_client.put(
-            f"/api/schedules/{sample_schedule.id}/unassign"
+            f"/api/v1/schedules/{sample_schedule.id}/unassign"
         )
         
         assert response.status_code == 200
@@ -79,7 +79,7 @@ class TestScheduleTeacherAssignment:
     def test_unassign_teacher_from_nonexistent_schedule(self, admin_client):
         """测试为不存在的课程取消教师分配"""
         response = admin_client.put(
-            "/api/schedules/99999/unassign"
+            "/api/v1/schedules/99999/unassign"
         )
         
         assert response.status_code == 404
@@ -92,7 +92,7 @@ class TestScheduleTeacherAssignment:
     def test_assign_teacher_requires_admin(self, teacher_client, sample_schedule):
         """测试非管理员无法分配教师"""
         response = teacher_client.put(
-            f"/api/schedules/{sample_schedule.id}/assign",
+            f"/api/v1/schedules/{sample_schedule.id}/assign",
             params={"teacher_id": 1, "teacher_name": "张老师"}
         )
         
@@ -101,7 +101,7 @@ class TestScheduleTeacherAssignment:
     def test_unassign_teacher_requires_admin(self, teacher_client, sample_schedule):
         """测试非管理员无法取消教师分配"""
         response = teacher_client.put(
-            f"/api/schedules/{sample_schedule.id}/unassign"
+            f"/api/v1/schedules/{sample_schedule.id}/unassign"
         )
         
         assert response.status_code == 403
@@ -110,12 +110,12 @@ class TestScheduleTeacherAssignment:
         """测试教师分配信息持久化"""
         # 分配教师
         admin_client.put(
-            f"/api/schedules/{sample_schedule.id}/assign",
+            f"/api/v1/schedules/{sample_schedule.id}/assign",
             params={"teacher_id": 5, "teacher_name": "李老师"}
         )
         
         # 获取课表列表并验证
-        response = admin_client.get("/api/schedules", params={"teacher_id": 5})
+        response = admin_client.get("/api/v1/schedules", params={"teacher_id": 5})
         assert response.status_code == 200
         data = response.json()
         

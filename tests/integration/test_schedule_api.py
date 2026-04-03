@@ -54,7 +54,7 @@ def test_get_schedules_list(teacher_client, create_test_schedule):
     create_test_schedule(course_name="课程1", day_of_week=1)
     create_test_schedule(course_name="课程2", day_of_week=2)
     
-    response = teacher_client.get("/api/schedules")
+    response = teacher_client.get("/api/v1/schedules")
     
     assert response.status_code == 200
     data = response.json()
@@ -69,7 +69,7 @@ def test_get_schedules_with_filter(teacher_client, create_test_schedule):
     create_test_schedule(course_name="中药课程", class_name="2025中药学1班", day_of_week=1)
     
     # 按班级筛选
-    response = teacher_client.get("/api/schedules?class_name=2025康复治疗技术1班")
+    response = teacher_client.get("/api/v1/schedules?class_name=2025康复治疗技术1班")
     
     assert response.status_code == 200
     data = response.json()
@@ -82,7 +82,7 @@ def test_get_schedules_by_day(teacher_client, create_test_schedule):
     create_test_schedule(course_name="周一课程", day_of_week=1)
     create_test_schedule(course_name="周二课程", day_of_week=2)
     
-    response = teacher_client.get("/api/schedules?day_of_week=1")
+    response = teacher_client.get("/api/v1/schedules?day_of_week=1")
     
     assert response.status_code == 200
     data = response.json()
@@ -96,7 +96,7 @@ def test_get_today_schedules(teacher_client, create_test_schedule):
     today = datetime.now().isoweekday()
     create_test_schedule(course_name="今日课程", day_of_week=today)
     
-    response = teacher_client.get("/api/schedules/today")
+    response = teacher_client.get("/api/v1/schedules/today")
     
     assert response.status_code == 200
     data = response.json()
@@ -105,7 +105,7 @@ def test_get_today_schedules(teacher_client, create_test_schedule):
 
 def test_get_schedules_unauthorized(client):
     """测试未登录无法获取课表"""
-    response = client.get("/api/schedules")
+    response = client.get("/api/v1/schedules")
     
     assert response.status_code == 401
     data = response.json()
@@ -124,7 +124,7 @@ def test_import_schedules_csv(admin_client):
     file = io.BytesIO(csv_content.encode('utf-8'))
     
     response = admin_client.post(
-        "/api/schedules/import",
+        "/api/v1/schedules/import",
         files={"file": ("schedules.csv", file, "text/csv")}
     )
     
@@ -141,7 +141,7 @@ def test_import_schedules_invalid_format(admin_client):
     file = io.BytesIO(b"invalid content")
     
     response = admin_client.post(
-        "/api/schedules/import",
+        "/api/v1/schedules/import",
         files={"file": ("invalid.txt", file, "text/plain")}
     )
     
@@ -161,7 +161,7 @@ def test_import_schedules_missing_columns(admin_client):
     file = io.BytesIO(csv_content.encode('utf-8'))
     
     response = admin_client.post(
-        "/api/schedules/import",
+        "/api/v1/schedules/import",
         files={"file": ("schedules.csv", file, "text/csv")}
     )
     
@@ -175,7 +175,7 @@ def test_delete_schedule(admin_client, create_test_schedule):
     """测试删除课程"""
     schedule = create_test_schedule(course_name="待删除课程")
     
-    response = admin_client.delete(f"/api/schedules/{schedule.id}")
+    response = admin_client.delete(f"/api/v1/schedules/{schedule.id}")
     
     assert response.status_code == 200
     data = response.json()
@@ -185,7 +185,7 @@ def test_delete_schedule(admin_client, create_test_schedule):
 
 def test_delete_schedule_not_found(admin_client):
     """测试删除不存在的课程"""
-    response = admin_client.delete("/api/schedules/99999")
+    response = admin_client.delete("/api/v1/schedules/99999")
     
     assert response.status_code == 404
     data = response.json()
@@ -194,7 +194,7 @@ def test_delete_schedule_not_found(admin_client):
 
 def test_download_template(teacher_client):
     """测试下载导入模板"""
-    response = teacher_client.get("/api/schedules/template")
+    response = teacher_client.get("/api/v1/schedules/template")
     
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -210,7 +210,7 @@ def test_teacher_cannot_import(teacher_client):
     file = io.BytesIO(csv_content.encode('utf-8'))
     
     response = teacher_client.post(
-        "/api/schedules/import",
+        "/api/v1/schedules/import",
         files={"file": ("schedules.csv", file, "text/csv")}
     )
     
@@ -222,13 +222,13 @@ def test_teacher_cannot_import(teacher_client):
 def test_schedule_api_smoke(admin_client):
     """课表 API 冒烟测试"""
     # 1. 获取列表
-    response = admin_client.get("/api/schedules")
+    response = admin_client.get("/api/v1/schedules")
     assert response.status_code == 200
     
     # 2. 获取今日课表
-    response = admin_client.get("/api/schedules/today")
+    response = admin_client.get("/api/v1/schedules/today")
     assert response.status_code == 200
     
     # 3. 下载模板
-    response = admin_client.get("/api/schedules/template")
+    response = admin_client.get("/api/v1/schedules/template")
     assert response.status_code == 200

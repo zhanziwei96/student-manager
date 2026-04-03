@@ -20,7 +20,7 @@ class TestHttpExceptionHandler:
         request = Request(scope={
             "type": "http",
             "method": "GET",
-            "path": "/api/test",
+            "path": "/api/v1/test",
             "headers": []
         })
         
@@ -39,7 +39,7 @@ class TestHttpExceptionHandler:
         request = Request(scope={
             "type": "http",
             "method": "GET",
-            "path": "/api/test",
+            "path": "/api/v1/test",
             "headers": []
         })
         
@@ -61,7 +61,7 @@ class TestValidationExceptionHandler:
         request = Request(scope={
             "type": "http",
             "method": "POST",
-            "path": "/api/test",
+            "path": "/api/v1/test",
             "headers": []
         })
         
@@ -83,7 +83,7 @@ class TestValidationExceptionHandler:
         request = Request(scope={
             "type": "http",
             "method": "POST",
-            "path": "/api/test",
+            "path": "/api/v1/test",
             "headers": []
         })
         
@@ -109,7 +109,7 @@ class TestGenericExceptionHandler:
         request = Request(scope={
             "type": "http",
             "method": "GET",
-            "path": "/api/test",
+            "path": "/api/v1/test",
             "headers": []
         })
         

@@ -19,7 +19,7 @@ class TestConcurrentLogin:
     def test_same_account_multiple_login_tokens(self, client: TestClient, teacher_user):
         """测试同一账号多次登录产生不同 Token"""
         # 第一次登录（使用 fixture 中的 teacher1 用户）
-        response1 = client.post("/api/login", json={
+        response1 = client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
@@ -29,7 +29,7 @@ class TestConcurrentLogin:
         assert data1["success"] is True
         
         # 第二次登录（同一账号）
-        response2 = client.post("/api/login", json={
+        response2 = client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
@@ -46,7 +46,7 @@ class TestConcurrentLogin:
         """测试并发错误密码登录 - 失败计数应正确累加"""
         # 连续多次使用错误密码登录
         for i in range(3):
-            response = client.post("/api/login", json={
+            response = client.post("/api/v1/login", json={
                 "username": "teacher1",
                 "password": "wrong_password",
                 "role": "teacher"
@@ -54,7 +54,7 @@ class TestConcurrentLogin:
             assert response.status_code == 401
         
         # 使用正确密码登录应成功（尚未被锁定）
-        response = client.post("/api/login", json={
+        response = client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
@@ -65,7 +65,7 @@ class TestConcurrentLogin:
     def test_concurrent_api_access_with_same_token(self, client: TestClient, teacher_user):
         """测试使用同一 Token 并发访问 API"""
         # 先登录获取 Token
-        login_response = client.post("/api/login", json={
+        login_response = client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
@@ -77,7 +77,7 @@ class TestConcurrentLogin:
         
         # 使用同一 Token 并发访问受保护接口
         def make_request():
-            return client.get("/api/classes", cookies=cookies)
+            return client.get("/api/v1/classes", cookies=cookies)
         
         # 并发执行多个请求
         with ThreadPoolExecutor(max_workers=5) as executor:
@@ -98,7 +98,7 @@ class TestConcurrentLoginFailure:
         # 快速发送多个登录请求
         responses = []
         for i in range(10):
-            response = client.post("/api/login", json={
+            response = client.post("/api/v1/login", json={
                 "username": "teacher1",
                 "password": "wrong_password",
                 "role": "teacher"

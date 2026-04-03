@@ -9,7 +9,7 @@ class TestJWTLogin:
     
     def test_login_sets_http_only_cookie(self, jwt_client, jwt_admin_user):
         """测试登录设置 HttpOnly Cookie"""
-        response = jwt_client.post("/api/login", json={
+        response = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "admin123",
             "role": "admin"
@@ -28,7 +28,7 @@ class TestJWTLogin:
     
     def test_login_success_response(self, jwt_client, jwt_admin_user):
         """测试登录成功返回用户信息"""
-        response = jwt_client.post("/api/login", json={
+        response = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "admin123",
             "role": "admin"
@@ -42,7 +42,7 @@ class TestJWTLogin:
     
     def test_login_teacher(self, jwt_client, jwt_teacher_user):
         """测试教师登录"""
-        response = jwt_client.post("/api/login", json={
+        response = jwt_client.post("/api/v1/login", json={
             "username": "zhanziwei",
             "password": "zha123",
             "role": "teacher"
@@ -56,7 +56,7 @@ class TestJWTLogin:
     
     def test_login_wrong_password(self, jwt_client, jwt_admin_user):
         """测试密码错误"""
-        response = jwt_client.post("/api/login", json={
+        response = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "wrongpassword",
             "role": "admin"
@@ -72,7 +72,7 @@ class TestJWTProtectedRoutes:
     
     def test_access_without_cookie(self, jwt_client):
         """测试无 Cookie 访问受保护接口"""
-        response = jwt_client.get("/api/students")
+        response = jwt_client.get("/api/v1/students")
         
         assert response.status_code == 401
         data = response.json()
@@ -82,7 +82,7 @@ class TestJWTProtectedRoutes:
     def test_access_with_valid_cookie(self, jwt_client, jwt_admin_user):
         """测试使用有效 Cookie 访问受保护接口"""
         # 先登录
-        login_res = jwt_client.post("/api/login", json={
+        login_res = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "admin123",
             "role": "admin"
@@ -92,7 +92,7 @@ class TestJWTProtectedRoutes:
         cookie = login_res.headers.get("set-cookie")
         
         # 访问受保护接口
-        response = jwt_client.get("/api/students", headers={"Cookie": cookie})
+        response = jwt_client.get("/api/v1/students", headers={"Cookie": cookie})
         
         assert response.status_code == 200
         data = response.json()
@@ -101,7 +101,7 @@ class TestJWTProtectedRoutes:
     def test_access_with_invalid_cookie(self, jwt_client):
         """测试使用无效 Cookie 访问受保护接口"""
         response = jwt_client.get(
-            "/api/students",
+            "/api/v1/students",
             headers={"Cookie": "access_token=invalid.token.value"}
         )
         
@@ -116,7 +116,7 @@ class TestJWTMeEndpoint:
     def test_me_with_valid_token(self, jwt_client, jwt_admin_user):
         """测试使用有效 Token 获取用户信息"""
         # 登录
-        login_res = jwt_client.post("/api/login", json={
+        login_res = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "admin123",
             "role": "admin"
@@ -125,7 +125,7 @@ class TestJWTMeEndpoint:
         cookie = login_res.headers.get("set-cookie")
         
         # 获取用户信息
-        response = jwt_client.get("/api/me", headers={"Cookie": cookie})
+        response = jwt_client.get("/api/v1/me", headers={"Cookie": cookie})
         
         assert response.status_code == 200
         data = response.json()
@@ -137,7 +137,7 @@ class TestJWTMeEndpoint:
     
     def test_me_without_token(self, jwt_client):
         """测试无 Token 访问 /me"""
-        response = jwt_client.get("/api/me")
+        response = jwt_client.get("/api/v1/me")
         
         assert response.status_code == 401
 
@@ -148,7 +148,7 @@ class TestJWTLogout:
     def test_logout_clears_cookie(self, jwt_client, jwt_admin_user):
         """测试登出清除 Cookie"""
         # 先登录
-        login_res = jwt_client.post("/api/login", json={
+        login_res = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "admin123",
             "role": "admin"
@@ -157,7 +157,7 @@ class TestJWTLogout:
         cookie = login_res.headers.get("set-cookie")
         
         # 登出
-        logout_res = jwt_client.post("/api/logout", headers={"Cookie": cookie})
+        logout_res = jwt_client.post("/api/v1/logout", headers={"Cookie": cookie})
         
         assert logout_res.status_code == 200
         
@@ -169,7 +169,7 @@ class TestJWTLogout:
     def test_access_after_logout(self, jwt_client, jwt_admin_user):
         """测试登出后 Cookie 被清除"""
         # 登录
-        login_res = jwt_client.post("/api/login", json={
+        login_res = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "admin123",
             "role": "admin"
@@ -178,7 +178,7 @@ class TestJWTLogout:
         cookie = login_res.headers.get("set-cookie")
         
         # 登出
-        logout_res = jwt_client.post("/api/logout", headers={"Cookie": cookie})
+        logout_res = jwt_client.post("/api/v1/logout", headers={"Cookie": cookie})
         
         # 检查登出响应是否清除 Cookie
         set_cookie = logout_res.headers.get("set-cookie")
@@ -196,7 +196,7 @@ class TestJWTAdminOnlyRoutes:
     def test_admin_route_with_admin(self, jwt_client, jwt_admin_user):
         """测试管理员访问管理员接口"""
         # 登录管理员
-        login_res = jwt_client.post("/api/login", json={
+        login_res = jwt_client.post("/api/v1/login", json={
             "username": "admin",
             "password": "admin123",
             "role": "admin"
@@ -205,14 +205,14 @@ class TestJWTAdminOnlyRoutes:
         cookie = login_res.headers.get("set-cookie")
         
         # 访问管理员接口
-        response = jwt_client.get("/api/admin/users", headers={"Cookie": cookie})
+        response = jwt_client.get("/api/v1/users", headers={"Cookie": cookie})
         
         assert response.status_code == 200
     
     def test_admin_route_with_teacher(self, jwt_client, jwt_teacher_user):
         """测试教师访问管理员接口被拒绝"""
         # 登录教师
-        login_res = jwt_client.post("/api/login", json={
+        login_res = jwt_client.post("/api/v1/login", json={
             "username": "zhanziwei",
             "password": "zha123",
             "role": "teacher"
@@ -221,6 +221,6 @@ class TestJWTAdminOnlyRoutes:
         cookie = login_res.headers.get("set-cookie")
         
         # 尝试访问管理员接口
-        response = jwt_client.get("/api/admin/users", headers={"Cookie": cookie})
+        response = jwt_client.get("/api/v1/users", headers={"Cookie": cookie})
         
         assert response.status_code == 403

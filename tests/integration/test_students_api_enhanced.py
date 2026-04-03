@@ -10,7 +10,7 @@ class TestStudentsAPIEnhanced:
     
     def test_get_students_list_as_admin(self, admin_client, sample_students):
         """测试管理员获取所有学生列表"""
-        response = admin_client.get("/api/students")
+        response = admin_client.get("/api/v1/students")
         
         assert response.status_code == 200
         data = response.json()
@@ -19,7 +19,7 @@ class TestStudentsAPIEnhanced:
     
     def test_get_students_list_as_teacher(self, teacher_client, sample_students):
         """测试教师获取负责班级的学生列表"""
-        response = teacher_client.get("/api/students")
+        response = teacher_client.get("/api/v1/students")
         
         assert response.status_code == 200
         data = response.json()
@@ -29,7 +29,7 @@ class TestStudentsAPIEnhanced:
     
     def test_get_students_by_class_as_admin(self, admin_client, sample_students):
         """测试管理员按班级筛选学生"""
-        response = admin_client.get("/api/students?class_name=一班")
+        response = admin_client.get("/api/v1/students?class_name=一班")
         
         assert response.status_code == 200
         data = response.json()
@@ -38,7 +38,7 @@ class TestStudentsAPIEnhanced:
     
     def test_get_students_by_class_as_teacher_authorized(self, teacher_client, sample_students):
         """测试教师获取有权限的班级学生"""
-        response = teacher_client.get("/api/students?class_name=一班")
+        response = teacher_client.get("/api/v1/students?class_name=一班")
         
         assert response.status_code == 200
         data = response.json()
@@ -47,7 +47,7 @@ class TestStudentsAPIEnhanced:
     
     def test_get_students_by_class_as_teacher_unauthorized(self, teacher_client, sample_students):
         """测试教师获取无权限的班级学生"""
-        response = teacher_client.get("/api/students?class_name=三班")
+        response = teacher_client.get("/api/v1/students?class_name=三班")
         
         assert response.status_code == 403
         data = response.json()
@@ -55,7 +55,7 @@ class TestStudentsAPIEnhanced:
     
     def test_get_student_info(self, admin_client, student_user):
         """测试获取单个学生信息"""
-        response = admin_client.get("/api/students/S001")
+        response = admin_client.get("/api/v1/students/S001")
         
         assert response.status_code == 200
         data = response.json()
@@ -65,13 +65,13 @@ class TestStudentsAPIEnhanced:
     
     def test_get_student_info_not_found(self, admin_client):
         """测试获取不存在的学生"""
-        response = admin_client.get("/api/students/NOTEXIST")
+        response = admin_client.get("/api/v1/students/NOTEXIST")
         
         assert response.status_code == 404
     
     def test_create_student_as_admin(self, admin_client):
         """测试管理员创建学生"""
-        response = admin_client.post("/api/students", json={
+        response = admin_client.post("/api/v1/students", json={
             "student_id": "S100",
             "name": "新学生",
             "class_name": "一班"
@@ -85,7 +85,7 @@ class TestStudentsAPIEnhanced:
     
     def test_create_student_duplicate_id(self, admin_client, student_user):
         """测试创建重复学号的学生"""
-        response = admin_client.post("/api/students", json={
+        response = admin_client.post("/api/v1/students", json={
             "student_id": "S001",  # 已存在
             "name": "重复学生",
             "class_name": "一班"
@@ -98,7 +98,7 @@ class TestStudentsAPIEnhanced:
     
     def test_update_student_score_as_admin(self, admin_client, student_user):
         """测试管理员更新学生分数"""
-        response = admin_client.put("/api/students/S001/score", json={
+        response = admin_client.put("/api/v1/students/S001/score", json={
             "score_change": 5.0,
             "reason": "回答问题奖励"
         })
@@ -110,7 +110,7 @@ class TestStudentsAPIEnhanced:
     
     def test_update_student_score_negative(self, admin_client, student_user):
         """测试扣分"""
-        response = admin_client.put("/api/students/S001/score", json={
+        response = admin_client.put("/api/v1/students/S001/score", json={
             "score_change": -10.0,
             "reason": "迟到扣分"
         })
@@ -122,7 +122,7 @@ class TestStudentsAPIEnhanced:
     
     def test_update_student_score_not_found(self, admin_client):
         """测试更新不存在学生的分数"""
-        response = admin_client.put("/api/students/NOTEXIST/score", json={
+        response = admin_client.put("/api/v1/students/NOTEXIST/score", json={
             "score_change": 5.0,
             "reason": "测试"
         })
@@ -132,13 +132,13 @@ class TestStudentsAPIEnhanced:
     def test_delete_student_as_admin(self, admin_client):
         """测试管理员删除学生"""
         # 先创建一个学生
-        admin_client.post("/api/students", json={
+        admin_client.post("/api/v1/students", json={
             "student_id": "S999",
             "name": "待删除学生",
             "class_name": "一班"
         })
         
-        response = admin_client.delete("/api/students/S999")
+        response = admin_client.delete("/api/v1/students/S999")
         
         assert response.status_code == 200
         data = response.json()
@@ -146,13 +146,13 @@ class TestStudentsAPIEnhanced:
     
     def test_delete_student_not_found(self, admin_client):
         """测试删除不存在的学生"""
-        response = admin_client.delete("/api/students/NOTEXIST")
+        response = admin_client.delete("/api/v1/students/NOTEXIST")
         
         assert response.status_code == 404
     
     def test_reset_student_password_as_admin(self, admin_client, student_user):
         """测试管理员重置学生密码"""
-        response = admin_client.put("/api/students/S001/reset-password", json={
+        response = admin_client.put("/api/v1/students/S001/reset-password", json={
             "new_password": "reset123"
         })
         
@@ -161,7 +161,7 @@ class TestStudentsAPIEnhanced:
         assert data["success"] is True
         
         # 验证新密码可以登录
-        response = admin_client.post("/api/login", json={
+        response = admin_client.post("/api/v1/login", json={
             "username": "S001",
             "password": "reset123",
             "role": "student"
@@ -171,16 +171,16 @@ class TestStudentsAPIEnhanced:
     def test_get_student_scores_history(self, admin_client, student_user):
         """测试获取学生分数历史"""
         # 先更新几次分数
-        admin_client.put("/api/students/S001/score", json={
+        admin_client.put("/api/v1/students/S001/score", json={
             "score_change": 5.0,
             "reason": "第一次加分"
         })
-        admin_client.put("/api/students/S001/score", json={
+        admin_client.put("/api/v1/students/S001/score", json={
             "score_change": -3.0,
             "reason": "扣分"
         })
         
-        response = admin_client.get("/api/students/S001/scores")
+        response = admin_client.get("/api/v1/students/S001/scores")
         
         assert response.status_code == 200
         data = response.json()
@@ -191,7 +191,7 @@ class TestStudentsAPIEnhanced:
     
     def test_get_classes_as_admin(self, admin_client, sample_students):
         """测试管理员获取班级列表"""
-        response = admin_client.get("/api/classes")
+        response = admin_client.get("/api/v1/classes")
         
         assert response.status_code == 200
         data = response.json()
