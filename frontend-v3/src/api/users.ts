@@ -24,22 +24,22 @@ export interface UpdateTeacherRequest {
  */
 export const usersApi = {
   getAll: (role?: string): Promise<User[]> => {
-    const url = role ? `/admin/users?role=${role}` : '/admin/users'
+    const url = role ? `/users?role=${role}` : '/users'
     return get(url)
   },
 
   getTeachers: (): Promise<User[]> =>
-    get('/admin/users?role=teacher'),
+    get('/users?role=teacher'),
 
   create: (data: CreateTeacherRequest): Promise<User> =>
-    post('/admin/users', data),
+    post('/users', data),
 
   update: (id: number, data: UpdateTeacherRequest): Promise<User> =>
-    put(`/admin/users/${id}`, data),
+    put(`/users/${id}`, data),
 
   delete: (id: number): Promise<void> =>
-    del(`/admin/users/${id}`),
+    del(`/users/${id}`),
 
   resetPassword: (id: number, newPassword: string): Promise<void> =>
-    put(`/admin/users/${id}/reset-password`, { new_password: newPassword }),
+    put(`/users/${id}/reset-password`, { new_password: newPassword }),
 }

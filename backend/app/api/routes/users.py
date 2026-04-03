@@ -76,6 +76,11 @@ async def list_users(
     for u in users:
         user_data = u.model_dump()
         user_data['assigned_classes'] = u.get_assigned_classes()
+        # 将 datetime 转换为字符串
+        if user_data.get('created_at') and hasattr(user_data['created_at'], 'isoformat'):
+            user_data['created_at'] = user_data['created_at'].isoformat()
+        if user_data.get('last_login') and hasattr(user_data['last_login'], 'isoformat'):
+            user_data['last_login'] = user_data['last_login'].isoformat()
         result.append(user_data)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -111,6 +116,11 @@ async def add_user(
     # 将 assigned_classes 从 JSON 字符串解析为列表
     user_data = user_obj.model_dump()
     user_data['assigned_classes'] = user_obj.get_assigned_classes()
+    # 将 datetime 转换为字符串
+    if user_data.get('created_at') and hasattr(user_data['created_at'], 'isoformat'):
+        user_data['created_at'] = user_data['created_at'].isoformat()
+    if user_data.get('last_login') and hasattr(user_data['last_login'], 'isoformat'):
+        user_data['last_login'] = user_data['last_login'].isoformat()
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.USER_CREATED,
@@ -144,6 +154,12 @@ async def update_user_info(
     # 将 assigned_classes 从 JSON 字符串解析为列表
     user_data = updated_user.model_dump()
     user_data['assigned_classes'] = updated_user.get_assigned_classes()
+    # 将 datetime 转换为字符串 - 使用 mode='json' 确保正确序列化
+    from datetime import datetime
+    for field in ['created_at', 'last_login', 'locked_until']:
+        value = user_data.get(field)
+        if isinstance(value, datetime):
+            user_data[field] = value.isoformat()
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.USER_UPDATED,

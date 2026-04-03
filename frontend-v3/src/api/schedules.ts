@@ -54,7 +54,7 @@ export const schedulesApi = {
     const formData = new FormData()
     formData.append('file', file)
     
-    const res = await fetch('/api/schedules/import', {
+    const res = await fetch('/api/v1/schedules/import', {
       method: 'POST',
       body: formData,
       credentials: 'include'

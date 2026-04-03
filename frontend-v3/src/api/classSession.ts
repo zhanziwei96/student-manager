@@ -25,17 +25,6 @@ export const classSessionApi = {
   end: (): Promise<ClassSession> =>
     post('/class-session/end'),
 
-  getStudents: (): Promise<{
-    students: Array<{
-      id: number
-      student_id: string
-      name: string
-      checked_in: boolean
-      checkin_time?: string
-    }>
-  }> =>
-    get('/class-session/students'),
-
   getActiveSessions: (): Promise<ActiveClassSession[]> =>
     get('/class-sessions/active'),
 }
