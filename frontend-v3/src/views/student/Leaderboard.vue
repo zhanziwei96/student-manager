@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores'
 import { useLeaderboard } from '@/composables/useLeaderboard'
 import { Card, Badge, Button } from '@/components/ui'
-import { Trophy, Medal, Award, Users, School, Loader2, User } from 'lucide-vue-next'
+import { Trophy, Users, School, Loader2, User } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const currentStudentId = computed(() => authStore.user?.id)
@@ -14,13 +14,13 @@ const { isPending, students, myRank } = useLeaderboard(
   computed(() => ({ scope: activeTab.value, limit: 50 }))
 )
 
-// 前三名样式
+// 前三名样式 - 金银铜奖杯
 const getRankStyle = (rank: number) => {
   switch (rank) {
-    case 1: return { icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-400/20' }
-    case 2: return { icon: Medal, color: 'text-gray-300', bg: 'bg-gray-300/20' }
-    case 3: return { icon: Award, color: 'text-amber-600', bg: 'bg-amber-600/20' }
-    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10' }
+    case 1: return { icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-400/20', border: 'border-yellow-400/30' }  // 金牌
+    case 2: return { icon: Trophy, color: 'text-slate-300', bg: 'bg-slate-300/20', border: 'border-slate-300/30' }    // 银牌
+    case 3: return { icon: Trophy, color: 'text-orange-500', bg: 'bg-orange-500/20', border: 'border-orange-500/30' } // 铜牌
+    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', border: 'border-white/5' }
   }
 }
 
