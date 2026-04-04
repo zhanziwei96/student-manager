@@ -182,119 +182,45 @@ class TestCheckinAPIEnhanced:
         # 没有活跃课堂
         assert data["data"]["active"] is False
     
-    def test_start_class_with_location(self, teacher_client):
-        """测试教师开始上课（带地理位置）"""
+    def test_start_class_with_course_name(self, teacher_client):
+        """测试教师开始上课（带课程名称）"""
         response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班",
-            "course_name": "高等数学",
-            "location_lat": 39.90923,
-            "location_lng": 116.397428,
-            "location_name": "机房312",
-            "checkin_radius": 100
+            "course_name": "高等数学"
         })
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["data"]["active"] is True
-        assert data["data"]["location_lat"] == 39.90923
-        assert data["data"]["location_lng"] == 116.397428
-        assert data["data"]["location_name"] == "机房312"
-        assert data["data"]["checkin_radius"] == 100
-    
-    def test_student_checkin_with_location_within_range(self, teacher_client, student_user, client):
-        """测试学生在范围内签到（带GPS位置）"""
-        # 教师开始上课并设置位置
+        assert data["data"]["course_name"] == "高等数学"
+
+    def test_student_checkin_with_device(self, teacher_client, student_user, client):
+        """测试学生签到（带设备信息）"""
+        # 教师开始上课
         response = teacher_client.post("/api/v1/class-session/start", json={
-            "class_name": "一班",
-            "location_lat": 39.90923,
-            "location_lng": 116.397428,
-            "location_name": "机房312",
-            "checkin_radius": 100
+            "class_name": "一班"
         })
         assert response.status_code == 200
-        
+
         # 学生登录
         client.post("/api/v1/login", json={
             "username": "S001",
             "password": "student123",
             "role": "student"
         })
-        
-        # 学生在范围内签到（距离约2米）
+
+        # 学生签到（带设备信息）
         response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
-            "lat": 39.90925,
-            "lng": 116.397430,
-            "device_id": "device001"
+            "device_id": "device001",
+            "device_info": "{\"browser\": \"test\"}"
         })
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-    
-    def test_student_checkin_outside_range(self, teacher_client, student_user, client):
-        """测试学生在范围外签到应被拒绝"""
-        # 教师开始上课并设置位置
-        response = teacher_client.post("/api/v1/class-session/start", json={
-            "class_name": "一班",
-            "location_lat": 39.90923,
-            "location_lng": 116.397428,
-            "location_name": "机房312",
-            "checkin_radius": 100
-        })
-        assert response.status_code == 200
-        
-        # 学生登录
-        client.post("/api/v1/login", json={
-            "username": "S001",
-            "password": "student123",
-            "role": "student"
-        })
-        
-        # 学生在范围外签到（距离约10公里）
-        response = client.post("/api/v1/checkin", json={
-            "student_id": "S001",
-            "student_name": "学生1",
-            "lat": 39.99999,
-            "lng": 116.50000,
-            "device_id": "device001"
-        })
-        
-        assert response.status_code == 403
-        data = response.json()
-        assert "不在签到范围内" in data["message"]
-    
-    def test_student_checkin_without_gps_when_required(self, teacher_client, student_user, client):
-        """测试课堂要求GPS但未提供时应被拒绝"""
-        # 教师开始上课并设置位置
-        response = teacher_client.post("/api/v1/class-session/start", json={
-            "class_name": "一班",
-            "location_lat": 39.90923,
-            "location_lng": 116.397428,
-            "location_name": "机房312",
-            "checkin_radius": 100
-        })
-        assert response.status_code == 200
-        
-        # 学生登录
-        client.post("/api/v1/login", json={
-            "username": "S001",
-            "password": "student123",
-            "role": "student"
-        })
-        
-        # 学生未提供GPS位置
-        response = client.post("/api/v1/checkin", json={
-            "student_id": "S001",
-            "student_name": "学生1",
-            "device_id": "device001"
-        })
-        
-        assert response.status_code == 400
-        data = response.json()
-        assert "请先开启GPS定位" in data["message"]
     
     def test_device_cannot_checkin_twice(self, teacher_client, student_user, client):
         """测试同一设备不能为多个学生签到"""

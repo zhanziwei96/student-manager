@@ -57,7 +57,7 @@ logs:
 # 检查服务状态
 status:
 	@echo "=== 后端状态 ==="
-	@curl -s http://localhost:8000/health 2>/dev/null && echo " ✅ 后端运行中" || echo " ❌ 后端未运行"
+	@curl -s http://localhost:8000/api/v1/health 2>/dev/null && echo " ✅ 后端运行中" || echo " ❌ 后端未运行"
 	@echo ""
 	@echo "=== 前端状态 (frontend-v3) ==="
 	@curl -s http://localhost:5173 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"

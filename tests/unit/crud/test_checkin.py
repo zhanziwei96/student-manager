@@ -25,27 +25,19 @@ class TestClassSessionCRUD:
         assert class_session.teacher_id == 1
         assert class_session.teacher_name == "张老师"
     
-    def test_start_class_with_location(self, session: Session):
-        """测试开始上课（带地理位置）"""
+    def test_start_class_with_course_name(self, session: Session):
+        """测试开始上课（带课程名称）"""
         class_session = start_class(
-            session, 
-            "软件1班", 
-            teacher_id=1, 
+            session,
+            "软件1班",
+            teacher_id=1,
             teacher_name="张老师",
-            course_name="高等数学",
-            location_lat=39.90923,
-            location_lng=116.397428,
-            location_name="机房312",
-            checkin_radius=100
+            course_name="高等数学"
         )
-        
+
         assert class_session.active is True
         assert class_session.class_name == "软件1班"
         assert class_session.course_name == "高等数学"
-        assert class_session.location_lat == 39.90923
-        assert class_session.location_lng == 116.397428
-        assert class_session.location_name == "机房312"
-        assert class_session.checkin_radius == 100
     
     def test_get_class_session(self, session: Session):
         """测试获取上课状态 - 使用 teacher_id"""
@@ -118,30 +110,23 @@ class TestCheckinCRUD:
         checkins = get_today_checkins(session, class_name="软件1班")
         assert len(checkins) == 2
     
-    def test_create_checkin_with_location(self, session: Session):
-        """测试创建签到记录（带位置和设备信息）"""
+    def test_create_checkin_with_device(self, session: Session):
+        """测试创建签到记录（带设备信息）"""
         class_session = start_class(
-            session, "软件1班", teacher_id=1, teacher_name="张老师",
-            location_lat=39.90923, location_lng=116.397428
+            session, "软件1班", teacher_id=1, teacher_name="张老师"
         )
-        
+
         checkin = create_checkin(
             session,
             student_id="S001",
             student_name="张三",
             class_name="软件1班",
             session_id=class_session.id,
-            lat=39.90925,
-            lng=116.397430,
-            distance=2.5,
             device_id="device123",
             device_info='{"platform": "test"}'
         )
-        
+
         assert checkin.student_id == "S001"
-        assert checkin.checkin_lat == 39.90925
-        assert checkin.checkin_lng == 116.397430
-        assert checkin.checkin_distance == 2.5
         assert checkin.device_id == "device123"
         assert checkin.device_info == '{"platform": "test"}'
     

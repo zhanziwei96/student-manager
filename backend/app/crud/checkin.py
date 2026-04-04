@@ -35,28 +35,22 @@ def get_class_session_by_class_name(session: Session, class_name: str) -> Option
     return session.exec(query).first()
 
 
-def start_class(session: Session, class_name: str, teacher_id: int = None, 
-                teacher_name: str = None, course_name: str = None,
-                location_lat: float = None, location_lng: float = None,
-                location_name: str = None, checkin_radius: int = 100) -> ClassSession:
+def start_class(session: Session, class_name: str, teacher_id: int = None,
+                teacher_name: str = None, course_name: str = None) -> ClassSession:
     """开始上课 - 每次调用创建新的课堂记录"""
     # 结束该教师之前的活跃课堂
     end_class(session, teacher_id)
-    
+
     # 创建新课堂记录，生成唯一 session_code
     session_code = str(uuid.uuid4())[:8].upper()
     class_session = ClassSession(
         session_code=session_code,
         course_name=course_name,
-        class_name=class_name, 
+        class_name=class_name,
         teacher_id=teacher_id,
         teacher_name=teacher_name,
-        active=True, 
-        start_time=datetime.now(SHANGHAI_TZ),
-        location_lat=location_lat,
-        location_lng=location_lng,
-        location_name=location_name,
-        checkin_radius=checkin_radius
+        active=True,
+        start_time=datetime.now(SHANGHAI_TZ)
     )
     session.add(class_session)
     session.commit()
@@ -130,11 +124,10 @@ def count_today_checkins(session: Session, class_name: Optional[str] = None) -> 
     return result.one()
 
 
-def create_checkin(session: Session, student_id: str, student_name: str, 
+def create_checkin(session: Session, student_id: str, student_name: str,
                    class_name: str, session_id: int, checkin_type: str = None,
-                   lat: float = None, lng: float = None, distance: float = None,
                    device_id: str = None, device_info: str = None) -> CheckinRecord:
-    """创建签到记录 - 关联到具体课堂 session_id，包含位置和设备信息"""
+    """创建签到记录 - 关联到具体课堂 session_id，包含设备信息"""
     from app.models.constants import CheckinTypeConst
     if checkin_type is None:
         checkin_type = CheckinTypeConst.SELF
@@ -144,9 +137,6 @@ def create_checkin(session: Session, student_id: str, student_name: str,
         student_name=student_name,
         class_name=class_name,
         checkin_type=checkin_type,
-        checkin_lat=lat,
-        checkin_lng=lng,
-        checkin_distance=distance,
         device_id=device_id,
         device_info=device_info
     )

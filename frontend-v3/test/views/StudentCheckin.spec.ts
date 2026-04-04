@@ -32,9 +32,7 @@ vi.mock('@/composables/useStudentCheckin', () => ({
       active: true,
       course_name: '高等数学',
       teacher_name: '李老师',
-      start_time: '2026-04-01T10:00:00',
-      location_name: '机房312',
-      checkin_radius: 100
+      start_time: '2026-04-01T10:00:00'
     }),
     isPending: ref(false),
     hasActiveSession: ref(true)
@@ -43,19 +41,12 @@ vi.mock('@/composables/useStudentCheckin', () => ({
     mutateAsync: vi.fn(),
     isPending: ref(false),
     error: ref(null),
-    isSuccess: ref(false),
-    locationError: ref(null)
+    isSuccess: ref(false)
   }),
   useHasCheckedInSession: () => ({
     hasCheckedIn: ref(false),
     sessionCheckin: ref(null),
     isPending: ref(false)
-  }),
-  useGeolocation: () => ({
-    isLocating: ref(false),
-    locationError: ref(null),
-    position: ref(null),
-    getCurrentPosition: vi.fn().mockResolvedValue({ lat: 39.90923, lng: 116.397428 })
   })
 }))
 
@@ -110,16 +101,6 @@ describe('Student Checkin with GPS', () => {
       }
     })
   }
-
-  it('displays location info when active session has location', async () => {
-    const wrapper = mountComponent()
-    await flushPromises()
-
-    // 验证显示签到位置信息
-    expect(wrapper.text()).toContain('签到地点')
-    expect(wrapper.text()).toContain('机房312')
-    expect(wrapper.text()).toContain('100米')
-  })
 
   it('shows checkin button when session is active and not checked in', async () => {
     const wrapper = mountComponent()

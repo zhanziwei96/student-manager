@@ -1,5 +1,14 @@
 # 执行约束清单
 
+---
+
+**文档版本**: v4.1  
+**最后更新**: 2026-04-03  
+**适用版本**: v3.0.0+  
+**状态**: ✅ 已同步代码
+
+---
+
 > **警告**: 本文件中的约束是我每次处理请求前**必须**回顾的内容。
 > 不遵循这些约束会导致重复犯错。
 
@@ -33,7 +42,7 @@
 which python  # 确认是 miniconda 路径
 
 # 2. 服务状态检查 (必须)
-curl -s http://localhost:8000/api/health  # 后端是否已运行？
+curl -s http://localhost:8000/api/v1/health  # 后端是否已运行？
 curl -s http://localhost:5173 > /dev/null && echo "前端运行中"  # 前端是否已运行？
 
 # 3. 数据库路径确认 (涉及 DB 操作时必须)
@@ -61,7 +70,7 @@ ps aux | grep "python.*main.py" | grep -v grep  # 检查残留
 cd /home/yufeng/student-manager/backend
 conda run -n student-manage ENV=production python main.py &
 sleep 5
-curl -s http://localhost:8000/api/health  # 必须验证！
+curl -s http://localhost:8000/api/v1/health  # 必须验证！
 
 # 前端重启
 pkill -f "pnpm dev" 2>/dev/null || true

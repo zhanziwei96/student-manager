@@ -1,6 +1,6 @@
 # ClassHub 后端 - FastAPI + SQLModel 架构
 
-> **最后更新时间**: 2026-03-27  
+> **最后更新时间**: 2026-04-03  
 > **架构评分**: 8.5/10 🟢
 
 ## 架构概览
@@ -48,9 +48,9 @@
 
 ## 技术栈
 
-- **框架**: FastAPI 0.115+
+- **框架**: FastAPI 0.135+
 - **ASGI服务器**: Uvicorn
-- **ORM**: SQLModel (SQLAlchemy + Pydantic)
+- **ORM**: SQLModel 0.0.37 (SQLAlchemy + Pydantic)
 - **数据库**: SQLite3
 - **认证**: JWT + HttpOnly Cookie（python-jose）
 - **密码哈希**: bcrypt（SEC-003已修复）
@@ -148,10 +148,10 @@ FastAPI 自动生成 API 文档：
 
 | 方法 | 用途 | 示例 |
 |------|------|------|
-| GET | 获取资源 | `GET /api/students` |
-| POST | 创建资源 | `POST /api/students` |
-| PUT | 更新资源 | `PUT /api/students/{id}/score` |
-| DELETE | 删除资源 | `DELETE /api/students/{id}` |
+| GET | 获取资源 | `GET /api/v1/students` |
+| POST | 创建资源 | `POST /api/v1/students` |
+| PUT | 更新资源 | `PUT /api/v1/students/{id}/score` |
+| DELETE | 删除资源 | `DELETE /api/v1/students/{id}` |
 
 ### 统一响应格式
 
@@ -177,65 +177,65 @@ FastAPI 自动生成 API 文档：
 #### 系统
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/health` | 健康检查 |
-| GET | `/api/stats` | 系统统计（需登录） |
-| GET | `/api/dashboard` | 仪表盘数据（公开，脱敏） |
+| GET | `/api/v1/health` | 健康检查 |
+| GET | `/api/v1/stats` | 系统统计（需登录） |
+| GET | `/api/v1/dashboard` | 仪表盘数据（公开，脱敏） |
 
 #### 认证
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/login` | 用户登录（限流5次/分钟） |
-| POST | `/api/logout` | 用户登出 |
-| GET | `/api/me` | 当前用户信息 |
-| POST | `/api/change-password` | 修改密码 |
+| POST | `/api/v1/login` | 用户登录（限流5次/分钟） |
+| POST | `/api/v1/logout` | 用户登出 |
+| GET | `/api/v1/me` | 当前用户信息 |
+| POST | `/api/v1/change-password` | 修改密码 |
 
 #### 学生管理
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/students` | 获取学生列表 |
-| POST | `/api/students` | 添加学生 |
-| PUT | `/api/students/{student_id}/score` | 更新分数（限流10次/分钟，乐观锁保护） |
-| DELETE | `/api/students/{student_id}` | 删除学生 |
-| GET | `/api/students/{student_id}/scores` | 分数历史 |
-| PUT | `/api/students/{student_id}/reset-password` | 重置密码（管理员） |
-| POST | `/api/students/import` | Excel 导入 |
+| GET | `/api/v1/students` | 获取学生列表 |
+| POST | `/api/v1/students` | 添加学生 |
+| PUT | `/api/v1/students/{student_id}/score` | 更新分数（限流10次/分钟，乐观锁保护） |
+| DELETE | `/api/v1/students/{student_id}` | 删除学生 |
+| GET | `/api/v1/students/{student_id}/scores` | 分数历史 |
+| PUT | `/api/v1/students/{student_id}/reset-password` | 重置密码（管理员） |
+| POST | `/api/v1/students/import` | Excel 导入 |
 
 #### 班级
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/classes` | 获取班级列表 |
+| GET | `/api/v1/classes` | 获取班级列表 |
 
 #### 用户管理（管理员）
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/admin/users` | 用户列表 |
-| POST | `/admin/users` | 创建用户 |
-| PUT | `/admin/users/{user_id}` | 更新用户 |
-| PUT | `/admin/users/{user_id}/reset-password` | 重置密码 |
-| DELETE | `/admin/users/{user_id}` | 删除用户 |
+| GET | `/api/v1/admin/users` | 用户列表 |
+| POST | `/api/v1/admin/users` | 创建用户 |
+| PUT | `/api/v1/admin/users/{user_id}` | 更新用户 |
+| PUT | `/api/v1/admin/users/{user_id}/reset-password` | 重置密码 |
+| DELETE | `/api/v1/admin/users/{user_id}` | 删除用户 |
 
 #### 课堂管理
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/class-session` | 获取当前课堂状态 |
-| POST | `/api/class-session/start` | 开始上课 |
-| POST | `/api/class-session/end` | 结束上课 |
+| GET | `/api/v1/class-session` | 获取当前课堂状态 |
+| POST | `/api/v1/class-session/start` | 开始上课 |
+| POST | `/api/v1/class-session/end` | 结束上课 |
 
 #### 签到系统
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/checkin` | 学生签到（限流10次/分钟） |
-| POST | `/api/teacher-checkin` | 教师代签 |
-| GET | `/api/checkin/records` | 签到记录查询 |
-| GET | `/api/checkins/today` | 今日签到列表 |
-| GET | `/api/checkins/stats` | 签到统计 |
+| POST | `/api/v1/checkin` | 学生签到（限流10次/分钟） |
+| POST | `/api/v1/teacher-checkin` | 教师代签 |
+| GET | `/api/v1/checkin/records` | 签到记录查询 |
+| GET | `/api/v1/checkins/today` | 今日签到列表 |
+| GET | `/api/v1/checkins/stats` | 签到统计 |
 
 #### 课程表（开发中）
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/schedules` | 获取课程表 |
-| POST | `/api/schedules` | 创建课程（管理员） |
-| POST | `/api/schedules/import` | 导入课程表 |
+| GET | `/api/v1/schedules` | 获取课程表 |
+| POST | `/api/v1/schedules` | 创建课程（管理员） |
+| POST | `/api/v1/schedules/import` | 导入课程表 |
 
 ## 架构模式
 
@@ -290,7 +290,7 @@ from app.api.deps import require_teacher
 
 router = APIRouter()
 
-@router.put("/api/students/{student_id}/score")
+@router.put("/api/v1/students/{student_id}/score")
 def update_score(
     student_id: int,
     score_data: ScoreUpdate,
@@ -423,7 +423,7 @@ pytest tests/integration -v
 pytest tests/unit/crud/test_concurrent_*.py -v
 ```
 
-测试覆盖率：89%（330个测试中329个通过）
+测试覆盖率：89%（467 个测试全部通过）
 
 ## 架构特点
 
@@ -440,19 +440,25 @@ pytest tests/unit/crud/test_concurrent_*.py -v
 
 | 优先级 | 问题 | 位置 | 状态 |
 |--------|------|------|------|
-| 🔴 P0 | ScoreLog重复记录 | `crud/student.py:215-223` | 🔧 修复中 |
 | 🟡 P1 | API层直接操作Session | `users.py:112-114` | 📋 待优化 |
 | 🟡 P1 | 审计日志同步写入 | `middleware.py:128-137` | 📋 待优化 |
 
+### 已修复问题
+
+| 问题 | 修复时间 | 修复方案 |
+|------|----------|----------|
+| ScoreLog重复记录 | 2026-04-01 | CRUD层仅发布事件，事件处理器统一创建记录 |
+
 ## 相关文档
 
-- [AI 助手速查手册](../.agents/AGENTS.md)
+- [执行前检查清单](../.agents/CHECKLIST.md)
 - [配置管理指南](../.agents/CONFIG_GUIDE.md)
 - [部署指南](../.agents/DEPLOYMENT.md)
 - [常见错误速查](../.agents/ERRORS.md)
 - [测试指南](../tests/README.md)
-- [项目健康报告](../docs/project_health_report.md)
 - [优化方案](../docs/OPTIMIZATION_PLAN.md)
+- [需求规格](../docs/REQUIREMENTS.md)
+- [弃用说明](../docs/DEPRECATIONS.md)
 
 ---
 

@@ -86,7 +86,7 @@ sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM users WHERE version I
 **背景**: 
 - 系统已升级为 bcrypt 算法进行密码哈希
 - bcrypt 自动处理盐值，单独存储 `salt` 字段是冗余的
-- 参见 [SEC-003 安全升级](../docs/DEPRECATIONS.md#sec-003-密码安全升级)
+- 参见 [SEC-003 安全升级](../docs/DEPRECATIONS.md)
 
 **主要变更**:
 

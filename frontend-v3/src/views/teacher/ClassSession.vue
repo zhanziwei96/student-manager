@@ -8,7 +8,6 @@
  * - 处理业务逻辑和API调用
  *
  * 已拆分功能：
- * - LocationPicker.vue - 地图选点
  * - StudentCheckinGrid.vue - 学生列表
  * - CheckinStats.vue - 统计卡片
  */
@@ -25,15 +24,14 @@ import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useSchedules } from '@/composables/useSchedules'
 import { useTodayCheckins } from '@/composables/useCheckins'
 import { useAuthStore } from '@/stores'
-import { Card, Button, Input, Select, Dialog } from '@/components/ui'
+import { Card, Button, Input, Select } from '@/components/ui'
 import {
   Play, Square, CheckCircle, Clock,
-  AlertTriangle, MapPin
+  AlertTriangle
 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 
 // 子组件
-import LocationPicker from '@/components/teacher/LocationPicker.vue'
 import StudentCheckinGrid from '@/components/teacher/StudentCheckinGrid.vue'
 import CheckinStats from '@/components/teacher/CheckinStats.vue'
 
@@ -42,12 +40,6 @@ const className = ref('')
 const courseName = ref('')
 const studentCode = ref('')
 const searchQuery = ref('')
-
-// 地图对话框
-const showMapDialog = ref(false)
-const locationPickerRef = ref<InstanceType<typeof LocationPicker> | null>(null)
-const selectedLocation = ref<{ lat: number; lng: number; name: string } | null>(null)
-const checkinRadius = ref(100)
 
 // ===== 获取数据 =====
 const authStore = useAuthStore()
@@ -138,37 +130,18 @@ const checkinStats = computed(() => {
 })
 
 // ===== 事件处理 =====
-const handleStartSession = () => {
+const handleStartSession = async () => {
   if (!className.value) {
     showErrorToast('请选择班级')
-    return
-  }
-
-  showMapDialog.value = true
-  // 延迟初始化地图，等待对话框打开
-  setTimeout(() => {
-    locationPickerRef.value?.initialize()
-    locationPickerRef.value?.getCurrentPosition()
-  }, 100)
-}
-
-const confirmStartSession = async () => {
-  if (!selectedLocation.value) {
-    showErrorToast('请选择签到位置')
     return
   }
 
   try {
     await startSession({
       className: className.value,
-      courseName: courseName.value || undefined,
-      locationLat: selectedLocation.value.lat,
-      locationLng: selectedLocation.value.lng,
-      locationName: selectedLocation.value.name,
-      checkinRadius: checkinRadius.value
+      courseName: courseName.value || undefined
     })
     showSuccessToast('课堂已开始！')
-    showMapDialog.value = false
     className.value = ''
     courseName.value = ''
   } catch (err: unknown) {
@@ -246,13 +219,6 @@ const handleQuickCheckIn = async (studentId: string) => {
               class="text-sm text-white/60"
             >
               {{ activeSession.class_name }} • 开始于 {{ activeSession.start_time }}
-            </p>
-            <p
-              v-if="activeSession?.location_name"
-              class="text-sm text-blue-400 flex items-center gap-1"
-            >
-              <MapPin class="h-3 w-3" />
-              {{ activeSession.location_name }} ({{ activeSession.checkin_radius || 100 }}米范围)
             </p>
             <p
               v-else-if="!isSessionActive"
@@ -388,29 +354,5 @@ const handleQuickCheckIn = async (studentId: string) => {
       />
     </template>
 
-    <!-- Location picker dialog -->
-    <Dialog
-      v-model:open="showMapDialog"
-      title="选择签到位置"
-    >
-      <LocationPicker
-        ref="locationPickerRef"
-        v-model="selectedLocation"
-        v-model:radius="checkinRadius"
-        :loading="isStartingSession"
-        @confirm="confirmStartSession"
-        @cancel="showMapDialog = false"
-      />
-    </Dialog>
-
-    <!-- Toast -->
-    <Dialog
-      v-model:open="show"
-      title="提示"
-    >
-      <div :class="toastVariant === 'success' ? 'text-green-400' : 'text-red-400'">
-        {{ toastMessage }}
-      </div>
-    </Dialog>
   </div>
 </template>

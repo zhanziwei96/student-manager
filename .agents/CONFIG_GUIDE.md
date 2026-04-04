@@ -1,5 +1,14 @@
 # 配置管理指南
 
+---
+
+**文档版本**: v2.0  
+**最后更新**: 2026-04-03  
+**适用版本**: v3.0.0+  
+**状态**: ✅ 已同步代码
+
+---
+
 > **最后更新时间**: 2026-03-27
 
 ## 概述
@@ -17,10 +26,11 @@
 | `AppSettings` | 应用基础配置 | - | `settings.app.*` |
 | `DatabaseSettings` | 数据库配置 | `DATABASE_` | `settings.database.*` |
 | `SecuritySettings` | 安全配置 | `SECURITY_` | `settings.security.*` |
-| `JWTSettings` | JWT 认证配置 | `JWT_` | `settings.jwt.*` |
-| `ScoreSettings` | 分数配置 | `SCORE_` | `settings.score.*` |
-| `PaginationSettings` | 分页配置 | `PAGINATION_` | `settings.pagination.*` |
 | `RateLimitSettings` | 限流配置 | `RATE_LIMIT_` | `settings.rate_limit.*` |
+| `LogSettings` | 日志配置 | `LOG_` | `settings.log.*` |
+| `PaginationSettings` | 分页配置 | `PAGINATION_` | `settings.pagination.*` |
+| `ScoreSettings` | 分数配置 | `SCORE_` | `settings.score.*` |
+| `UploadSettings` | 文件上传配置 | `UPLOAD_` | `settings.upload.*` |
 
 ### 2. 配置优先级
 

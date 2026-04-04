@@ -24,6 +24,7 @@ from app.crud.audit import (
     create_audit_log, get_audit_logs, get_my_logs,
     create_security_alert, get_unresolved_alerts, resolve_alert, cleanup_old_audit_logs
 )
+from app.crud.leaderboard import get_leaderboard
 
 __all__ = [
     # Student
@@ -44,4 +45,6 @@ __all__ = [
     # Audit
     "create_audit_log", "get_audit_logs", "get_my_logs",
     "create_security_alert", "get_unresolved_alerts", "resolve_alert", "cleanup_old_audit_logs",
+    # Leaderboard
+    "get_leaderboard",
 ]

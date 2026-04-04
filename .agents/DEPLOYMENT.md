@@ -1,5 +1,14 @@
 # 快速部署指南
 
+---
+
+**文档版本**: v2.0  
+**最后更新**: 2026-04-03  
+**适用版本**: v3.0.0+  
+**状态**: ✅ 已同步代码
+
+---
+
 > **最后更新时间**: 2026-03-27
 
 ## 1. 环境检查
@@ -8,7 +17,7 @@
 
 ```bash
 # 检查后端是否已运行
-curl -s http://localhost:8000/api/health && echo "后端运行中 ✅"
+curl -s http://localhost:8000/api/v1/health && echo "后端运行中 ✅"
 
 # 检查前端是否已运行
 curl -s http://localhost:5173 > /dev/null && echo "前端运行中 ✅"
@@ -62,7 +71,7 @@ conda run -n student-manage ENV=production python main.py &
 sleep 5
 
 # 4. 验证启动
-curl -s http://localhost:8000/api/health  # 必须验证！
+curl -s http://localhost:8000/api/v1/health  # 必须验证！
 ```
 
 ### 前端重启
@@ -104,10 +113,10 @@ make logs
 
 ```bash
 # 1. 健康检查
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/v1/health
 
 # 2. 登录测试
-curl -X POST http://localhost:8000/api/login \
+curl -X POST http://localhost:8000/api/v1/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123","role":"admin"}'
 
@@ -190,7 +199,7 @@ source /home/yufeng/miniconda3/bin/activate student-manage
 which python  # 确认是 miniconda 路径
 
 # 2. 服务状态检查 (必须)
-curl -s http://localhost:8000/api/health  # 后端是否已运行？
+curl -s http://localhost:8000/api/v1/health  # 后端是否已运行？
 curl -s http://localhost:5173 > /dev/null && echo "前端运行中"  # 前端是否已运行？
 
 # 3. 数据库路径确认 (涉及 DB 操作时必须)

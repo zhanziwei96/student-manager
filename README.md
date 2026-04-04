@@ -2,9 +2,6 @@
 
 一个现代化的班级管理系统，采用前后端分离架构，支持网页签到、班级管理、分数统计等功能。
 
-> **前端健康度评分**: 8.7/10 🟢 (2026-03-27)  
-> 58 个 Vitest 测试全部通过 ✅ | P0 问题已修复 ✅
-
 ---
 
 ## ✨ 功能特性
@@ -30,11 +27,11 @@
 - **TypeScript 5.0+** - 完整类型支持
 - **Tailwind CSS v4** - 原子化 CSS 框架
 - **Vue Router 4** - 路由管理
-- **Pinia** - 状态管理
+- **Pinia 3** - 状态管理
 - **TanStack Query** - 服务端状态管理 + 缓存
 - **Vite 6** - 构建工具
 - **Lucide Vue** - 图标库
-- **Vitest** - 单元测试（58 个测试全部通过）
+- **Vitest** - 单元测试（130 个测试全部通过）
 
 **前端架构特点**:
 - Feature-based 代码组织
@@ -60,23 +57,6 @@ API → CRUD → Models ← Core
 - **CRUD**: 数据库操作层
 - **Models**: 数据模型、业务常量
 - **Core**: 配置、数据库连接、安全工具、异常处理
-
----
-
-## 📖 文档索引
-
-| 文档 | 说明 | 位置 |
-|------|------|------|
-| [AI助手速查手册](.agents/AGENTS.md) | 常用命令、快速检查清单 | `.agents/AGENTS.md` |
-| [快速部署指南](.agents/DEPLOYMENT.md) | 部署步骤、常见问题 | `.agents/DEPLOYMENT.md` |
-| [常见错误速查](.agents/ERRORS.md) | 错误记录、避坑指南 | `.agents/ERRORS.md` |
-| [配置管理说明](.agents/CONFIG_GUIDE.md) | 环境变量、配置优先级 | `.agents/CONFIG_GUIDE.md` |
-| [数据库迁移](.agents/DB_MIGRATION.md) | 旧数据库迁移步骤 | `.agents/DB_MIGRATION.md` |
-| [测试指南](.agents/TEST_GUIDE.md) | 测试运行、冒烟测试 | `.agents/TEST_GUIDE.md` |
-| [测试说明](tests/README.md) | 详细测试步骤、系统测试 | `tests/README.md` |
-| [迁移指南](migrations/README.md) | 完整迁移文档 | `migrations/README.md` |
-| [设计体系](frontend-v3/DESIGN_SYSTEM.md) | 前端设计系统规范 | `frontend-v3/DESIGN_SYSTEM.md` |
-| [前端架构](frontend-v3/docs/ARCHITECTURE.md) | Feature-based 架构指南 | `frontend-v3/docs/ARCHITECTURE.md` |
 
 ---
 
@@ -165,7 +145,7 @@ pytest tests/ --cov=backend/app --cov-report=html
 ```bash
 cd frontend-v3
 
-# 运行所有测试（58 个测试）
+# 运行所有测试（130 个测试）
 pnpm test:run
 
 # 交互式测试模式
@@ -175,10 +155,10 @@ pnpm test
 npx vitest run --coverage
 ```
 
-**前端测试统计**:
-- 14 个测试文件
-- 58 个测试用例
-- **全部通过** ✅
+**测试统计**:
+- 后端: 43 个测试文件，467 个测试用例 ✅
+- 前端: 16 个测试文件，130 个测试用例 ✅
+- **全部通过**
 
 ### 运行冒烟测试
 
@@ -217,12 +197,12 @@ DEBUG=true
 HOST=0.0.0.0
 PORT=8000
 
-# 数据库配置
-DB_PATH=./data/student_manage.db
-DB_TIMEOUT=30
+# 数据库配置（双下划线分隔嵌套属性）
+DATABASE__PATH=./data/class_system.db
+DATABASE__TIMEOUT=30
 
-# 安全配置
-SECURITY_SECRET_KEY=your-secret-key-change-in-production  # JWT 密钥
+# 安全配置（双下划线分隔嵌套属性）
+SECURITY__SECRET_KEY=your-secret-key-change-in-production  # JWT 密钥，生产环境必须修改
 ```
 
 ### 环境检查
@@ -231,13 +211,13 @@ SECURITY_SECRET_KEY=your-secret-key-change-in-production  # JWT 密钥
 
 ```bash
 # 检查后端
-curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/health
 
 # 检查前端
 curl http://localhost:5173
 
 # 验证配置
-python -c "from app.core.config import get_settings; print(get_settings().app.env)"
+python -c "from backend.app.core.config import get_settings; print(get_settings().app.env)"
 ```
 
 ---
@@ -302,20 +282,24 @@ student-manager/
 │
 ├── frontend-v3/              # Vue3 + TypeScript 前端
 │   ├── src/
-│   │   ├── api/              # API 请求
-│   │   ├── components/       # 组件 (ui/ + common/)
-│   │   ├── composables/      # 组合式函数 (useToast 全局)
+│   │   ├── api/              # API 请求封装
+│   │   ├── assets/           # 静态资源
+│   │   ├── components/       # 组件 (ui/ + admin/ + teacher/)
+│   │   ├── composables/      # 组合式函数
 │   │   ├── features/         # Feature-based 功能模块
-│   │   ├── views/            # 页面组件
-│   │   ├── stores/           # Pinia 状态管理
+│   │   ├── layouts/          # 布局组件
+│   │   ├── lib/              # 工具函数 (api/date/device/error/utils)
 │   │   ├── router/           # 路由配置
-│   │   └── styles/           # 样式文件
-│   ├── test/                 # Vitest 测试 (58 个测试)
+│   │   ├── stores/           # Pinia 状态管理
+│   │   ├── styles/           # 样式文件 (tokens/components)
+│   │   ├── types/            # TypeScript 类型定义
+│   │   └── views/            # 页面组件 (admin/teacher/student/)
+│   ├── test/                 # Vitest 测试 (130 个测试)
 │   ├── package.json
 │   └── vitest.config.ts      # Vitest 配置
 │
 ├── frontend/                 # 旧版前端 (不再维护)
-├── tests/                    # 后端测试套件 (~340 个测试)
+├── tests/                    # 后端测试套件 (467 个测试)
 │   ├── unit/                 # 单元测试
 │   └── integration/          # 集成测试
 ├── migrations/               # 数据库迁移脚本
@@ -341,37 +325,37 @@ student-manager/
 ## 🛠️ API 接口
 
 ### 用户认证
-- `POST /api/login` - 登录（限流 5/分钟）
-- `POST /api/logout` - 登出
-- `GET /api/me` - 获取当前用户信息
-- `POST /api/change-password` - 修改密码
+- `POST /api/v1/login` - 登录（限流 5/分钟）
+- `POST /api/v1/logout` - 登出
+- `GET /api/v1/me` - 获取当前用户信息
+- `POST /api/v1/change-password` - 修改密码
 
 ### 学生管理
-- `GET /api/students` - 获取学生列表（支持缓存）
-- `POST /api/students` - 添加学生
-- `DELETE /api/students/{id}` - 删除学生
-- `PUT /api/students/{id}/score` - 更新分数（限流 10/分钟）
-- `PUT /api/students/{id}/reset-password` - 重置学生密码
-- `POST /api/students/import` - Excel 批量导入
+- `GET /api/v1/students` - 获取学生列表（支持缓存）
+- `POST /api/v1/students` - 添加学生
+- `DELETE /api/v1/students/{id}` - 删除学生
+- `PUT /api/v1/students/{id}/score` - 更新分数（限流 10/分钟）
+- `PUT /api/v1/students/{id}/reset-password` - 重置学生密码
+- `POST /api/v1/students/import` - Excel 批量导入
 
 ### 签到系统
-- `POST /api/checkin` - 学生签到（限流 10/分钟）
-- `POST /api/teacher-checkin` - 教师代签
-- `GET /api/checkin/records` - 签到记录查询
+- `POST /api/v1/checkin` - 学生签到（限流 10/分钟）
+- `POST /api/v1/teacher-checkin` - 教师代签
+- `GET /api/v1/checkin/records` - 签到记录查询
 
 ### 课堂会话
-- `GET /api/class-session` - 获取当前课堂状态
-- `POST /api/class-session` - 设置/结束课堂
-- `GET /api/class-session/students` - 课堂学生签到状态
+- `GET /api/v1/class-session` - 获取当前课堂状态
+- `POST /api/v1/class-session` - 设置/结束课堂
+- `GET /api/v1/class-session/students` - 课堂学生签到状态
 
 ### 统计数据
-- `GET /api/stats` - 首页统计数据
-- `GET /api/score/logs` - 分数变更日志
-- `POST /api/student/query` - 学生自助查询
+- `GET /api/v1/stats` - 首页统计数据
+- `GET /api/v1/score/logs` - 分数变更日志
+- `POST /api/v1/student/query` - 学生自助查询
 
 ### 系统管理
-- `GET /health` - 健康检查
-- `GET /api/audit/logs` - 审计日志（仅管理员）
+- `GET /api/v1/health` - 健康检查
+- `GET /api/v1/audit/logs` - 审计日志（仅管理员）
 
 完整 API 文档访问: http://localhost:8000/docs
 
@@ -383,7 +367,7 @@ student-manager/
 
 ```bash
 # 备份数据库
-cp data/student_manage.db backups/student_manage_$(date +%Y%m%d).db
+cp backend/data/class_system.db backup/class_system_$(date +%Y%m%d).db
 
 # 或使用备份脚本
 ./backup/backup-data.sh
@@ -426,7 +410,7 @@ docker-compose logs -f
 ps aux | grep "python main.py"
 
 # 查看数据库大小
-ls -lh data/
+ls -lh backend/data/
 
 # 查看日志
 tail -f backend/logs/app.log
@@ -439,15 +423,48 @@ cd frontend-v3 && pnpm test:run
 
 ## 📚 相关文档
 
-| 文档 | 说明 |
-|------|------|
-| [AGENTS.md](./AGENTS.md) | AI 助手操作指南 |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | 详细部署指南 |
-| [TEST_PLAN.md](./TEST_PLAN.md) | 测试方案 |
-| [SECURITY_SOLUTION.md](./SECURITY_SOLUTION.md) | 安全解决方案 |
-| [OPTIMIZATION_STATUS.md](./OPTIMIZATION_STATUS.md) | 优化进度追踪 |
-| [DESIGN_SYSTEM.md](./frontend-v3/DESIGN_SYSTEM.md) | 前端设计系统 |
-| [ARCHITECTURE.md](./frontend-v3/docs/ARCHITECTURE.md) | 前端架构指南 |
+## 📚 文档地图
+
+### 入门指南
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| **项目简介** | 本文档 - 快速开始和功能介绍 | `README.md` |
+| [常见问题 FAQ](docs/FAQ.md) | 25个常见问题解答 | `docs/FAQ.md` |
+| [部署指南](.agents/DEPLOYMENT.md) | 环境搭建、服务启停 | `.agents/DEPLOYMENT.md` |
+
+### 开发规范
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| [CLAUDE.md](CLAUDE.md) | AI助手开发指南、关键约束 | `CLAUDE.md` |
+| [执行前检查清单](.agents/CHECKLIST.md) | 强制检查清单 | `.agents/CHECKLIST.md` |
+| [约束清单](.agents/ERRORS.md) | 完整约束和纠错记录 | `.agents/ERRORS.md` |
+| [配置管理](.agents/CONFIG_GUIDE.md) | 环境变量、多环境配置 | `.agents/CONFIG_GUIDE.md` |
+
+### 架构设计
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| [后端架构](backend/README.md) | FastAPI + SQLModel架构 | `backend/README.md` |
+| [前端架构](frontend-v3/docs/ARCHITECTURE.md) | Feature-based架构 | `frontend-v3/docs/ARCHITECTURE.md` |
+| [设计体系](frontend-v3/DESIGN_SYSTEM.md) | 前端设计系统规范 | `frontend-v3/DESIGN_SYSTEM.md` |
+| [优化方案](docs/OPTIMIZATION_PLAN.md) | 架构评分、优化路线图 | `docs/OPTIMIZATION_PLAN.md` |
+
+### 测试文档
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| [测试指南](.agents/TEST_GUIDE.md) | 完整测试指南 | `.agents/TEST_GUIDE.md` |
+| [后端测试](tests/README.md) | pytest测试说明 | `tests/README.md` |
+| [E2E测试](tests/e2e/README.md) | Playwright测试 | `tests/e2e/README.md` |
+
+### 参考文档
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| [常见问题](docs/FAQ.md) | 25个常见问题解答 | `docs/FAQ.md` |
+| [API变更日志](docs/API_CHANGELOG.md) | 接口变更历史 | `docs/API_CHANGELOG.md` |
+| [架构图](docs/ARCHITECTURE_DIAGRAMS.md) | 系统架构图、ER图 | `docs/ARCHITECTURE_DIAGRAMS.md` |
+| [需求规格](docs/REQUIREMENTS.md) | 功能需求、规划 | `docs/REQUIREMENTS.md` |
+| [弃用说明](docs/DEPRECATIONS.md) | API迁移指南 | `docs/DEPRECATIONS.md` |
+| [数据库迁移](migrations/README.md) | 迁移脚本说明 | `migrations/README.md` |
+| [文档维护指南](docs/DOCUMENTATION_GUIDE.md) | 文档维护规范 | `docs/DOCUMENTATION_GUIDE.md` |
 
 ---
 
@@ -457,5 +474,7 @@ MIT License
 
 ---
 
-**版本**: v3.0  
-**最后更新**: 2026-03-27 (前端健康度评分 8.7/10，58 个测试全部通过)
+**文档版本**: v3.0  
+**最后更新**: 2026-04-03  
+**适用版本**: v3.0.0+  
+**状态**: ✅ 已同步代码

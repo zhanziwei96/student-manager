@@ -171,17 +171,11 @@ export interface ClassSession {
   teacher_name?: string
   active: boolean
   checked_in_count?: number
-  location_name?: string
-  checkin_radius?: number
 }
 
 export interface StartClassRequest {
   class_name: string
   course_name?: string
-  location_lat?: number
-  location_lng?: number
-  location_name?: string
-  checkin_radius?: number
 }
 
 // 签到类型
@@ -198,9 +192,6 @@ export interface CheckinRecord {
   class_name: string
   checkin_time: string
   checkin_type?: string
-  checkin_lat?: number
-  checkin_lng?: number
-  checkin_distance?: number
   device_id?: string
 }
 
@@ -222,4 +213,25 @@ export interface ClassInfo {
 export interface ClassWithStats extends ClassInfo {
   student_count: number
   average_score: number
+}
+
+// 排行榜类型
+export interface LeaderboardStudent {
+  rank: number
+  student_id: string
+  name: string
+  class_name: string
+  score: number
+}
+
+export interface LeaderboardData {
+  scope: 'class' | 'school'
+  students: LeaderboardStudent[]
+  total: number
+  my_rank: {
+    rank: number
+    student_id: string
+    name: string
+    score: number
+  } | null
 }

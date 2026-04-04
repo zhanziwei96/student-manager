@@ -7,12 +7,14 @@ from app.api.routes.users import router as users_router
 from app.api.routes.checkin import router as checkin_router
 from app.api.routes.system import router as system_router
 from app.api.routes.schedules import router as schedules_router
+from app.api.routes.leaderboard import router as leaderboard_router
 
 __all__ = [
     "login_router",
-    "students_router", 
+    "students_router",
     "users_router",
     "checkin_router",
     "system_router",
     "schedules_router",
+    "leaderboard_router",
 ]

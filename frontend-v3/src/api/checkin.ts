@@ -13,8 +13,6 @@ export interface CheckinStats {
 export interface CheckinRequest {
   student_id: string
   student_name: string
-  lat?: number
-  lng?: number
   device_id?: string
   device_info?: string
 }
@@ -26,9 +24,6 @@ export interface ClassSessionStatus {
   class_name?: string
   teacher_name?: string
   start_time?: string
-  location_name?: string
-  checkin_radius?: number
-  require_location?: boolean
 }
 
 export interface ActiveClassSession {
@@ -36,8 +31,6 @@ export interface ActiveClassSession {
   class_name: string
   teacher_name: string
   start_time: string
-  location_name?: string
-  checkin_radius?: number
 }
 
 /**

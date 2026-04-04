@@ -41,15 +41,14 @@ export function useStudentClassSession(className?: string | Ref<string>) {
 }
 
 /**
- * 学生签到 - 执行签到（带GPS定位）- FE-003 修复后
+ * 学生签到 - 执行签到 - FE-003 修复后
  */
 export function useStudentSelfCheckin() {
   const queryClient = useQueryClient()
   const { data: studentProfile } = useStudentProfile()
-  const locationError = ref<string | null>(null)
 
   const { mutateAsync, isPending, error, isSuccess } = useMutation({
-    mutationFn: async (position?: { lat: number; lng: number }): Promise<CheckinRecord> => {
+    mutationFn: async (): Promise<CheckinRecord> => {
       if (!studentProfile.value) {
         throw new Error('未找到学生信息')
       }
@@ -62,8 +61,6 @@ export function useStudentSelfCheckin() {
       return await checkinApi.checkin({
         student_id: studentProfile.value.student_id,
         student_name: studentProfile.value.name,
-        lat: position?.lat,
-        lng: position?.lng,
         device_id: deviceId,
         device_info: deviceInfo,
       })
@@ -71,7 +68,6 @@ export function useStudentSelfCheckin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-class-session'] })
       queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
-      locationError.value = null
     },
   })
 
@@ -80,7 +76,6 @@ export function useStudentSelfCheckin() {
     isPending,
     error,
     isSuccess,
-    locationError,
   }
 }
 
