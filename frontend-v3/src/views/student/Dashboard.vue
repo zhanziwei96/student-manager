@@ -4,9 +4,11 @@ import { useAuthStore } from '@/stores'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudents, useStudentScoreLogs } from '@/composables'
 import { Card, Badge } from '@/components/ui'
-import { Star, TrendingUp, Users, Award, Loader2, AlertCircle } from 'lucide-vue-next'
+import { Star, TrendingUp, Users, Award, Loader2, AlertCircle, Trophy } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const { data: currentStudent, isPending, error } = useStudentProfile()
 const { data: allStudents } = useStudents()
 
@@ -92,10 +94,19 @@ function formatDate(dateStr: string): string {
           <div class="mt-4 flex items-center gap-2">
             <Badge
               variant="secondary"
-              class="bg-white/20"
+              class="bg-white/20 cursor-pointer hover:bg-white/30 transition-colors"
+              @click="router.push('/student/leaderboard')"
             >
               <TrendingUp class="mr-1 h-3 w-3" />
               排名 {{ rank }}
+            </Badge>
+            <Badge
+              variant="secondary"
+              class="bg-white/20 cursor-pointer hover:bg-white/30 transition-colors"
+              @click="router.push('/student/leaderboard')"
+            >
+              <Trophy class="mr-1 h-3 w-3" />
+              查看排行榜
             </Badge>
           </div>
         </div>
