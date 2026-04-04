@@ -52,8 +52,8 @@ describe('Leaderboard', () => {
 
   it('renders leaderboard title', () => {
     const wrapper = createWrapper()
-    expect(wrapper.text()).toContain('排行榜')
-    expect(wrapper.text()).toContain('查看班级和全校排名')
+    expect(wrapper.text()).toContain('班级排行榜')
+    expect(wrapper.text()).toContain('查看同班级同学排名')
   })
 
   it('displays tab buttons', () => {
@@ -92,5 +92,25 @@ describe('Leaderboard', () => {
     expect(wrapper.text()).toContain('95')
     expect(wrapper.text()).toContain('88')
     expect(wrapper.text()).toContain('82')
+  })
+
+  it('has different styles for top 3 ranks', () => {
+    const wrapper = createWrapper()
+    const rows = wrapper.findAll('tbody tr')
+
+    // 获取前三名的背景样式类
+    const rank1Bg = rows[0].find('.rounded-full')?.classes().join(' ') || ''
+    const rank2Bg = rows[1].find('.rounded-full')?.classes().join(' ') || ''
+    const rank3Bg = rows[2].find('.rounded-full')?.classes().join(' ') || ''
+
+    // 验证前三名样式不同
+    expect(rank1Bg).not.toBe(rank2Bg)
+    expect(rank2Bg).not.toBe(rank3Bg)
+    expect(rank1Bg).not.toBe(rank3Bg)
+
+    // 验证包含预期的颜色类
+    expect(rank1Bg).toContain('yellow')
+    expect(rank2Bg).toContain('slate')
+    expect(rank3Bg).toContain('orange')
   })
 })
