@@ -14,13 +14,13 @@ const { isPending, students, myRank } = useLeaderboard(
   computed(() => ({ scope: activeTab.value, limit: 50 }))
 )
 
-// 前三名样式 - 金银铜奖杯
+// 前三名样式 - 金银铜奖杯（高对比度）
 const getRankStyle = (rank: number) => {
   switch (rank) {
-    case 1: return { icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-400/20', border: 'border-yellow-400/30' }  // 金牌
-    case 2: return { icon: Trophy, color: 'text-slate-300', bg: 'bg-slate-300/20', border: 'border-slate-300/30' }    // 银牌
-    case 3: return { icon: Trophy, color: 'text-orange-500', bg: 'bg-orange-500/20', border: 'border-orange-500/30' } // 铜牌
-    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', border: 'border-white/5' }
+    case 1: return { icon: Trophy, color: 'text-amber-300', bg: 'bg-amber-400/30', ring: 'ring-amber-400/50', shadow: 'shadow-amber-400/20' }  // 🥇 金牌
+    case 2: return { icon: Trophy, color: 'text-gray-200', bg: 'bg-gray-300/25', ring: 'ring-gray-300/40', shadow: 'shadow-gray-300/15' }    // 🥈 银牌
+    case 3: return { icon: Trophy, color: 'text-orange-400', bg: 'bg-orange-400/25', ring: 'ring-orange-400/40', shadow: 'shadow-orange-400/15' } // 🥉 铜牌
+    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', ring: '', shadow: '' }
   }
 }
 
@@ -126,11 +126,11 @@ const isCurrentStudent = (studentId: string) => {
               <div class="flex items-center gap-2">
                 <div
                   v-if="getRankStyle(student.rank).icon"
-                  :class="['flex h-8 w-8 items-center justify-center rounded-full', getRankStyle(student.rank).bg]"
+                  :class="['flex h-8 w-8 items-center justify-center rounded-full ring-2', getRankStyle(student.rank).bg, getRankStyle(student.rank).ring, getRankStyle(student.rank).shadow]"
                 >
                   <component
                     :is="getRankStyle(student.rank).icon"
-                    class="h-4 w-4"
+                    class="h-5 w-5"
                     :class="getRankStyle(student.rank).color"
                   />
                 </div>
