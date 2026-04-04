@@ -105,7 +105,7 @@ def _get_student_rank(
     if scope == "class" and class_name:
         query = query.where(Student.class_name == class_name)
 
-    # 分数更高的学生数量 + 1 = 排名
+    # 分数更高的学生数量 + 1 = 排名（标准竞赛排名）
     higher_count = len(session.exec(query).all())
 
     return {
