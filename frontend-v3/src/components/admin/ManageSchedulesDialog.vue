@@ -41,16 +41,16 @@ const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六'
 
 // 初始化选中的课程
 watch(() => [props.teacher, allSchedules.value], ([teacher, schedules]) => {
-  if (!teacher) {
+  if (!teacher || !('id' in teacher)) {
     selectedScheduleIds.value = []
     originalScheduleIds.value = []
     return
   }
-  
-  if (schedules) {
-    const assignedIds = schedules
-      .filter(s => s.teacher_id === teacher.id)
-      .map(s => s.id)
+
+  if (schedules && Array.isArray(schedules)) {
+    const assignedIds = (schedules as { teacher_id: number | null; id: number }[])
+      .filter((s: { teacher_id: number | null }) => s.teacher_id === teacher.id)
+      .map((s: { id: number }) => s.id)
     selectedScheduleIds.value = [...assignedIds]
     originalScheduleIds.value = [...assignedIds]
   } else {
@@ -121,8 +121,9 @@ const groupedSchedules = computed(() => {
   
   // 每天内按开始时间排序
   Object.keys(groups).forEach(day => {
-    groups[Number(day)].assigned.sort((a, b) => a.start_time.localeCompare(b.start_time))
-    groups[day].available.sort((a, b) => a.start_time.localeCompare(b.start_time))
+    const dayNum = Number(day)
+    groups[dayNum].assigned.sort((a: CourseSchedule, b: CourseSchedule) => a.start_time.localeCompare(b.start_time))
+    groups[dayNum].available.sort((a: CourseSchedule, b: CourseSchedule) => a.start_time.localeCompare(b.start_time))
   })
   
   return groups

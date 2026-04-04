@@ -114,7 +114,7 @@ const studentListWithCheckin = computed(() => {
   })
 
   return classStudents.value.map(s => ({
-    id: s.id,
+    id: String(s.id),
     student_id: s.student_id,
     name: s.name,
     checkedIn: checkedInStudentIds.value.has(s.student_id),

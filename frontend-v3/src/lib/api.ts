@@ -114,20 +114,20 @@ export async function get<T>(
   return request<T>(url, { method: 'GET', query: params })
 }
 
-export async function post<T>(url: string, body?: unknown): Promise<T> {
-  return request<T>(url, { method: 'POST', body })
+export async function post<T, B = unknown>(url: string, body?: B): Promise<T> {
+  return request<T>(url, { method: 'POST', body: body as Record<string, unknown> | unknown[] | null })
 }
 
-export async function put<T>(url: string, body?: unknown, params?: Record<string, unknown>): Promise<T> {
-  return request<T>(url, { method: 'PUT', body, query: params })
+export async function put<T, B = unknown>(url: string, body?: B, params?: Record<string, unknown>): Promise<T> {
+  return request<T>(url, { method: 'PUT', body: body as Record<string, unknown> | unknown[] | null, query: params })
 }
 
 export async function del<T>(url: string, params?: Record<string, unknown>): Promise<T> {
   return request<T>(url, { method: 'DELETE', query: params })
 }
 
-export async function patch<T>(url: string, body?: unknown): Promise<T> {
-  return request<T>(url, { method: 'PATCH', body })
+export async function patch<T, B = unknown>(url: string, body?: B): Promise<T> {
+  return request<T>(url, { method: 'PATCH', body: body as Record<string, unknown> | unknown[] | null })
 }
 
 // 导出原始请求方法（特殊场景使用）

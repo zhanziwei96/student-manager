@@ -569,14 +569,13 @@ const handleBatchDelete = async () => {
               <Card
                 v-for="schedule in filteredSchedulesByDay[day.value]"
                 :key="schedule.id"
-                class="p-4 transition-colors relative"
-                :class="[
-                  hasConflict(schedule) 
-                    ? 'border-red-500/50 bg-red-500/5 hover:border-red-500/70' 
+                :class="(
+                  hasConflict(schedule)
+                    ? 'p-4 transition-colors relative border-red-500/50 bg-red-500/5 hover:border-red-500/70'
                     : isSelected(schedule.id)
-                      ? 'border-primary/50 bg-primary/5'
-                      : 'border-white/10 bg-white/[0.02] hover:border-white/20'
-                ]"
+                      ? 'p-4 transition-colors relative border-primary/50 bg-primary/5'
+                      : 'p-4 transition-colors relative border-white/10 bg-white/[0.02] hover:border-white/20'
+                )"
                 @click="isBatchMode && toggleSelectSchedule(schedule.id)"
               >
                 <!-- 批量选择框 -->
@@ -662,7 +661,7 @@ const handleBatchDelete = async () => {
 
                     <div class="mt-2 flex items-center gap-2">
                       <Badge
-                        :variant="hasConflict(schedule) ? 'destructive' : 'secondary'"
+                        :variant="hasConflict(schedule) ? 'error' : 'secondary'"
                         class="text-xs"
                       >
                         {{ schedule.teacher_name || '未分配教师' }}
