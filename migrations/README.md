@@ -172,6 +172,34 @@ sqlite3 backend/data/class_system.db < migrations/add_course_schedule.sql
 
 ---
 
+### 7. add_class_session_active_index.sql - 活跃课堂索引优化
+
+**用途**: 为 `class_session` 表的 `active` 字段添加索引，优化"正在上课"查询性能
+
+**背景**:
+- Admin 仪表盘需要实时显示活跃课堂列表
+- 缺少索引导致每次查询都进行全表扫描
+- 数据量增加后性能显著下降
+
+**主要变更**:
+
+| 表 | 变更内容 |
+|---|---------|
+| `class_session` | 添加 `idx_session_active` 索引 (active 字段) |
+
+**使用场景**: Admin 仪表盘"正在上课"模块加载缓慢
+
+```bash
+# 执行迁移
+sqlite3 backend/data/class_system.db < migrations/add_class_session_active_index.sql
+
+# 验证索引创建
+sqlite3 backend/data/class_system.db ".schema class_session"
+# 应包含: CREATE INDEX idx_session_active ON class_session(active)
+```
+
+---
+
 ## 迁移前检查清单
 
 - [ ] 已备份数据库
@@ -299,9 +327,10 @@ python backend/main.py
 | add_student_account.sql | 学生登录 | 推荐 | 3 |
 | add_version_optimistic_lock.sql | 乐观锁 | 推荐 | 4 |
 | add_course_schedule.sql | 课程表 | 可选 | 5 |
+| add_class_session_active_index.sql | 活跃课堂索引 | 性能优化 | 6 |
 | remove_salt_field.sql | 清理 salt | 可选 | 最后 |
 
 ---
 
-**文档版本**: 2026-03-27  
-**最后更新**: 新增 remove_salt_field.sql 迁移说明
+**文档版本**: 2026-04-04  
+**最后更新**: 新增 add_class_session_active_index.sql 活跃课堂索引优化

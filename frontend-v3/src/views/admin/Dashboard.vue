@@ -9,10 +9,13 @@ import { formatDistanceToNow } from '@/lib/date'
 
 const { data: stats, isPending, error } = useStats()
 
-// 获取正在上课的课堂列表
+// 获取正在上课的课堂列表 - 优化: 30秒刷新一次，窗口聚焦时不自动刷新
 const { data: activeSessions, isPending: isLoadingSessions } = useQuery({
   queryKey: ['active-sessions'],
   queryFn: () => checkinApi.getActiveSessions(),
+  staleTime: 30 * 1000, // 30秒内不重复请求
+  refetchInterval: 30 * 1000, // 每30秒自动刷新一次
+  refetchOnWindowFocus: false, // 窗口聚焦时不自动刷新
 })
 
 const statCards = computed(() => [
