@@ -17,10 +17,10 @@ const { isPending, students, myRank } = useLeaderboard(
 // 前三名样式 - 金银铜奖杯（高对比度）
 const getRankStyle = (rank: number) => {
   switch (rank) {
-    case 1: return { icon: Trophy, color: 'text-yellow-300', bg: 'bg-gradient-to-br from-yellow-400 to-amber-500', ring: 'ring-yellow-400', shadow: 'shadow-yellow-400/30', label: '🥇' }  // 金牌
-    case 2: return { icon: Trophy, color: 'text-slate-100', bg: 'bg-gradient-to-br from-slate-300 to-gray-400', ring: 'ring-slate-300', shadow: 'shadow-slate-300/30', label: '🥈' }    // 银牌
-    case 3: return { icon: Trophy, color: 'text-orange-300', bg: 'bg-gradient-to-br from-orange-400 to-red-500', ring: 'ring-orange-400', shadow: 'shadow-orange-400/30', label: '🥉' } // 铜牌
-    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', ring: 'ring-white/10', shadow: '', label: '' }
+    case 1: return { icon: Trophy, color: 'text-yellow-200', bg: 'bg-gradient-to-br from-yellow-300 to-yellow-600', ring: 'ring-yellow-400', shadow: 'shadow-yellow-500/40' }  // 🥇 金牌
+    case 2: return { icon: Trophy, color: 'text-blue-100', bg: 'bg-gradient-to-br from-slate-200 to-slate-500', ring: 'ring-slate-300', shadow: 'shadow-slate-400/30' }    // 🥈 银牌
+    case 3: return { icon: Trophy, color: 'text-orange-200', bg: 'bg-gradient-to-br from-orange-500 to-red-600', ring: 'ring-orange-500', shadow: 'shadow-orange-500/30' } // 🥉 铜牌
+    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', ring: 'ring-white/10', shadow: '' }
   }
 }
 
@@ -35,10 +35,10 @@ const isCurrentStudent = (studentId: string) => {
     <!-- Header -->
     <div>
       <h1 class="text-2xl font-bold text-white">
-        排行榜
+        {{ activeTab === 'class' ? '班级排行榜' : '全校排行榜' }}
       </h1>
       <p class="text-white/60">
-        查看班级和全校排名
+        {{ activeTab === 'class' ? '查看同班级同学排名' : '查看全校所有学生排名' }}
       </p>
     </div>
 
