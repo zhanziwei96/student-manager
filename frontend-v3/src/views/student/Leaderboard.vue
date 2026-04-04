@@ -116,7 +116,7 @@ const isCurrentStudent = (studentId: string) => {
         <tbody>
           <tr
             v-for="student in students"
-            :key="student.student_id"
+            :key="`${activeTab}-${student.student_id}`"
             :class="[
               'border-b border-white/5 last:border-0',
               isCurrentStudent(student.student_id) ? 'bg-primary/10' : 'hover:bg-white/[0.02]'
