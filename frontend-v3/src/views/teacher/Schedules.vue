@@ -288,39 +288,48 @@ const handleBatchDelete = async () => {
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-white">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="min-w-0">
+        <h1 class="text-xl sm:text-2xl font-bold text-white">
           课表管理
         </h1>
-        <p class="text-white/60">
+        <p class="text-sm text-white/60 mt-1">
           管理课程安排，支持批量导入
         </p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2 sm:flex-shrink-0">
         <!-- 批量模式切换 -->
         <Button
           v-if="isAdmin"
           :variant="isBatchMode ? 'default' : 'outline'"
+          size="sm"
+          class="min-h-[40px]"
           @click="toggleBatchMode"
         >
-          <CheckSquare class="mr-2 h-4 w-4" />
-          {{ isBatchMode ? '退出批量' : '批量操作' }}
+          <CheckSquare class="mr-1.5 h-4 w-4" />
+          <span class="hidden sm:inline">{{ isBatchMode ? '退出批量' : '批量操作' }}</span>
+          <span class="sm:hidden">批量</span>
         </Button>
         <Button
           v-if="isAdmin"
           variant="outline"
+          size="sm"
+          class="min-h-[40px]"
           @click="downloadTemplate"
         >
-          <Download class="mr-2 h-4 w-4" />
-          下载模板
+          <Download class="mr-1.5 h-4 w-4" />
+          <span class="hidden sm:inline">下载模板</span>
+          <span class="sm:hidden">模板</span>
         </Button>
         <Button
           v-if="isAdmin"
+          size="sm"
+          class="min-h-[40px]"
           @click="showImportDialog = true"
         >
-          <Upload class="mr-2 h-4 w-4" />
-          导入课表
+          <Upload class="mr-1.5 h-4 w-4" />
+          <span class="hidden sm:inline">导入课表</span>
+          <span class="sm:hidden">导入</span>
         </Button>
       </div>
     </div>
@@ -428,12 +437,12 @@ const handleBatchDelete = async () => {
 
     <!-- Filters -->
     <Card class="border-white/10 bg-white/[0.02] p-4">
-      <div class="flex flex-wrap items-end gap-4">
-        <div class="w-48">
+      <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-4">
+        <div class="w-full sm:w-48">
           <label class="mb-1 block text-sm text-white/60">班级</label>
           <select
             v-model="selectedClass"
-            class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
+            class="w-full min-h-[44px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
           >
             <option
               value=""
@@ -451,11 +460,11 @@ const handleBatchDelete = async () => {
             </option>
           </select>
         </div>
-        <div class="w-32">
+        <div class="w-full sm:w-32">
           <label class="mb-1 block text-sm text-white/60">星期</label>
           <select
             v-model="selectedDay"
-            class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
+            class="w-full min-h-[44px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
           >
             <option
               :value="undefined"
@@ -474,12 +483,12 @@ const handleBatchDelete = async () => {
           </select>
         </div>
         <!-- 周次筛选器 -->
-        <div class="w-40">
+        <div class="w-full sm:w-40">
           <label class="mb-1 block text-sm text-white/60">周次</label>
           <div class="flex items-center gap-2">
             <select
               v-model="selectedWeek"
-              class="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
+              class="flex-1 min-h-[44px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
             >
               <option
                 :value="undefined"
@@ -504,6 +513,7 @@ const handleBatchDelete = async () => {
           v-if="selectedWeek !== currentWeek"
           variant="outline"
           size="sm"
+          class="w-full sm:w-auto min-h-[44px] sm:min-h-[36px]"
           @click="selectedWeek = currentWeek"
         >
           <Calendar class="mr-1 h-4 w-4" />

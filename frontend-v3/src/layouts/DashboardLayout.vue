@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
+import { computed, type Component, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores'
-import { Button, ToastContainer } from '@/components/ui'
+import { Button, ToastContainer, MobileDrawer, BottomNav } from '@/components/ui'
 import {
   LayoutDashboard,
   Users,
@@ -13,12 +13,16 @@ import {
   School,
   CheckCircle,
   BookOpen,
+  Menu,
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const route = useRoute()
 
 const user = computed(() => authStore.user)
+const isAdmin = computed(() => authStore.isAdmin)
+
+const showMobileMenu = ref(false)
 
 // Navigation items based on role
 const navItems = computed(() => {
@@ -61,10 +65,26 @@ const handleLogout = async () => {
 
 <template>
   <div class="min-h-screen bg-background">
-    <!-- Sidebar -->
-    <aside
-      class="fixed left-0 top-0 z-40 h-screen w-64 border-r border-white/10 bg-[#0a0a0f] transition-transform"
-    >
+    <!-- 移动端：顶部导航栏 -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 h-14 z-40
+                   bg-[#0a0a0f] border-b border-white/10
+                   flex items-center justify-between px-4">
+      <div class="flex items-center gap-2">
+        <GraduationCap class="h-6 w-6 text-primary" />
+        <span class="text-lg font-bold text-white">智慧课堂</span>
+      </div>
+      <button
+        class="p-2 -mr-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 min-h-[44px] min-w-[44px] flex items-center justify-center"
+        @click="showMobileMenu = true"
+      >
+        <Menu class="h-6 w-6" />
+      </button>
+    </header>
+
+    <!-- 桌面端：固定侧边栏 -->
+    <aside class="hidden lg:block lg:fixed lg:left-0 lg:top-0 lg:z-40
+                  lg:h-screen lg:w-64
+                  border-r border-white/10 bg-[#0a0a0f]">
       <!-- Logo -->
       <div class="flex h-16 items-center border-b border-white/10 px-6">
         <GraduationCap class="h-8 w-8 text-primary" />
@@ -101,10 +121,7 @@ const handleLogout = async () => {
               : 'text-white/70 hover:bg-white/10 hover:text-white',
           ]"
         >
-          <component
-            :is="item.icon"
-            class="h-5 w-5"
-          />
+          <component :is="item.icon" class="h-5 w-5" />
           {{ item.name }}
         </RouterLink>
       </nav>
@@ -122,14 +139,20 @@ const handleLogout = async () => {
       </div>
     </aside>
 
-    <!-- Main content -->
-    <main class="ml-64 min-h-screen p-8">
+    <!-- 移动端：抽屉菜单 -->
+    <MobileDrawer v-model:open="showMobileMenu" />
+
+    <!-- 移动端：底部导航栏（仅学生/教师） -->
+    <BottomNav v-if="!isAdmin" class="lg:hidden" />
+
+    <!-- 主内容区：响应式边距 -->
+    <main class="min-h-screen p-4 pt-16 pb-20 lg:ml-64 lg:p-8 lg:pt-8 lg:pb-8">
       <div class="mx-auto max-w-7xl">
         <RouterView />
       </div>
     </main>
 
-    <!-- Toast 通知容器（队列模式） -->
+    <!-- Toast 通知容器 -->
     <ToastContainer />
   </div>
 </template>

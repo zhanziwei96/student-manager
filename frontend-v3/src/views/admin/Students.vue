@@ -145,8 +145,37 @@ const handleAddStudent = async () => {
       empty-text="未找到匹配的学生"
       @retry="refetch"
     >
-      <!-- Students table -->
-      <Card class="overflow-hidden border-white/10">
+      <!-- Mobile: Card List -->
+      <div class="lg:hidden space-y-3">
+        <Card
+          v-for="student in filteredStudents"
+          :key="student.id"
+          class="border-white/10 bg-white/[0.02] p-4"
+        >
+          <div class="flex items-start justify-between">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-white truncate">{{ student.name }}</span>
+                <Badge
+                  :variant="student.is_account_enabled ? 'success' : 'secondary'"
+                  class="text-xs flex-shrink-0"
+                >
+                  {{ student.is_account_enabled ? '启用' : '禁用' }}
+                </Badge>
+              </div>
+              <p class="text-sm text-white/60 mt-1">{{ student.student_id }}</p>
+              <p class="text-sm text-white/50 mt-0.5 truncate">{{ student.class_name }}</p>
+            </div>
+            <div class="text-right flex-shrink-0 ml-4">
+              <span class="text-xl font-bold text-primary">{{ student.score }}</span>
+              <p class="text-xs text-white/40">分</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <!-- Desktop: Table -->
+      <Card class="hidden lg:block overflow-hidden border-white/10">
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead>

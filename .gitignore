@@ -174,3 +174,9 @@ tests/browser/*.json
 /package.json
 /package-lock.json
 /node_modules
+
+# Playwright test screenshots
+.playwright-mcp/
+test-*.png
+mobile-*.png
+desktop-*.png

@@ -199,24 +199,24 @@ const handleQuickCheckIn = async (studentId: string) => {
 
     <!-- Session status -->
     <Card
-      class="border-white/10 p-6"
+      class="border-white/10 p-4 md:p-6"
       :class="isSessionActive ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02]'"
     >
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3 md:gap-4">
           <div
-            class="flex h-12 w-12 items-center justify-center rounded-full"
+            class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0"
             :class="isSessionActive ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/60'"
           >
-            <Clock class="h-6 w-6" />
+            <Clock class="h-5 w-5 md:h-6 md:w-6" />
           </div>
-          <div>
+          <div class="min-w-0 flex-1">
             <h2 class="font-medium text-white">
               {{ isSessionActive ? '课堂进行中' : '暂无活跃课堂' }}
             </h2>
             <p
               v-if="activeSession"
-              class="text-sm text-white/60"
+              class="text-sm text-white/60 truncate"
             >
               {{ activeSession.class_name }} • 开始于 {{ activeSession.start_time }}
             </p>
@@ -228,10 +228,11 @@ const handleQuickCheckIn = async (studentId: string) => {
             </p>
           </div>
         </div>
-        <div>
+        <div class="flex-shrink-0">
           <Button
             v-if="!isSessionActive"
             :loading="isStartingSession"
+            class="w-full sm:w-auto min-h-[44px]"
             @click="handleStartSession"
           >
             <Play class="mr-2 h-4 w-4" />
@@ -241,6 +242,7 @@ const handleQuickCheckIn = async (studentId: string) => {
             v-else
             variant="destructive"
             :loading="isEndingSession"
+            class="w-full sm:w-auto min-h-[44px]"
             @click="handleEndSession"
           >
             <Square class="mr-2 h-4 w-4" />
@@ -253,9 +255,9 @@ const handleQuickCheckIn = async (studentId: string) => {
     <!-- Start session form -->
     <Card
       v-if="!isSessionActive"
-      class="border-white/10 bg-white/[0.02] p-6"
+      class="border-white/10 bg-white/[0.02] p-4 md:p-6"
     >
-      <h3 class="font-medium text-white">
+      <h3 class="font-medium text-white text-base md:text-lg">
         开始新课堂
       </h3>
       <p class="text-sm text-white/60">
@@ -268,7 +270,7 @@ const handleQuickCheckIn = async (studentId: string) => {
         class="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg"
       >
         <p class="text-sm text-yellow-400 flex items-center gap-2">
-          <AlertTriangle class="h-4 w-4" />
+          <AlertTriangle class="h-4 w-4 flex-shrink-0" />
           以下班级正在被其他教师上课：
         </p>
         <ul class="mt-2 text-sm text-white/70 space-y-1">
@@ -282,16 +284,16 @@ const handleQuickCheckIn = async (studentId: string) => {
       </div>
 
       <div class="mt-4 space-y-4">
-        <div class="flex gap-4">
+        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <Select
             v-model="courseName"
-            class="flex-1"
+            class="w-full"
             placeholder="请选择课程（可选）"
             :options="courseOptions"
           />
           <Select
             v-model="className"
-            class="flex-1"
+            class="w-full"
             placeholder="请选择班级"
             :options="availableClassOptions"
           />
@@ -299,10 +301,10 @@ const handleQuickCheckIn = async (studentId: string) => {
         <Button
           :loading="isStartingSession"
           :disabled="!className"
-          class="w-full"
+          class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm"
           @click="handleStartSession"
         >
-          <Play class="mr-2 h-4 w-4" />
+          <Play class="mr-2 h-5 w-5 md:h-4 md:w-4" />
           开始上课
         </Button>
       </div>
@@ -311,12 +313,12 @@ const handleQuickCheckIn = async (studentId: string) => {
     <!-- Active session content -->
     <template v-if="isSessionActive">
       <!-- Check-in form -->
-      <Card class="border-white/10 bg-white/[0.02] p-6">
+      <Card class="border-white/10 bg-white/[0.02] p-4 md:p-6">
         <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 flex-shrink-0">
             <CheckCircle class="h-5 w-5 text-primary" />
           </div>
-          <div>
+          <div class="min-w-0 flex-1">
             <h3 class="font-medium text-white">
               学生签到
             </h3>
@@ -325,18 +327,19 @@ const handleQuickCheckIn = async (studentId: string) => {
             </p>
           </div>
         </div>
-        <div class="mt-4 flex gap-4">
+        <div class="mt-4 flex flex-col sm:flex-row gap-3 sm:gap-4">
           <Input
             v-model="studentCode"
             placeholder="请输入学生学号"
-            class="flex-1"
+            class="w-full"
             @keyup.enter="handleCheckIn"
           />
           <Button
             :loading="isCheckingIn"
+            class="w-full sm:w-auto min-h-[48px] md:min-h-[44px] flex-shrink-0"
             @click="handleCheckIn"
           >
-            <CheckCircle class="mr-2 h-4 w-4" />
+            <CheckCircle class="mr-2 h-5 w-5 md:h-4 md:w-4" />
             签到
           </Button>
         </div>

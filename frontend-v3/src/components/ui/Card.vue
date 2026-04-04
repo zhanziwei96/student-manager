@@ -32,7 +32,7 @@ const variantClasses = {
 
 const classes = computed(() =>
   cn(
-    'rounded-xl border p-6 text-white',
+    'rounded-xl border p-4 md:p-6 text-white',
     'transition-all duration-200 ease-out',
     variantClasses[props.variant],
     props.class

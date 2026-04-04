@@ -1,11 +1,21 @@
 /**
  * ClassHub 设计体系 - CSS Tokens
- * 版本: 1.0.0 (Tailwind v4)
- * 
+ * 版本: 2.0.0 (Tailwind v4) - 响应式设计
+ *
  * 注意: 使用 @theme inline 合并到默认主题，而非覆盖
  */
 
 @theme inline {
+  /* ========== 响应式断点 ========== */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* ========== 触摸目标标准 ========== */
+  --touch-target-min: 2.75rem;
+  --touch-target-comfort: 3rem;
+
   /* ========== 色彩系统 ========== */
   
   /* 主色调 */

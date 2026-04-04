@@ -94,88 +94,152 @@ const isCurrentStudent = (studentId: string) => {
       <Loader2 class="h-8 w-8 animate-spin text-primary" />
     </div>
 
-    <!-- Leaderboard Table -->
-    <Card
-      v-else
-      class="border-white/10 bg-white/[0.02] overflow-hidden"
-    >
-      <table class="w-full">
-        <thead>
-          <tr class="border-b border-white/10">
-            <th class="px-4 py-3 text-left text-sm font-medium text-white/60">排名</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-white/60">姓名</th>
-            <th
-              v-if="activeTab === 'school'"
-              class="px-4 py-3 text-left text-sm font-medium text-white/60"
-            >
-              班级
-            </th>
-            <th class="px-4 py-3 text-right text-sm font-medium text-white/60">分数</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="student in students"
-            :key="`${activeTab}-${student.student_id}`"
-            :class="[
-              'border-b border-white/5 last:border-0',
-              isCurrentStudent(student.student_id) ? 'bg-primary/10' : 'hover:bg-white/[0.02]'
-            ]"
-          >
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <div
-                  v-if="getRankStyle(student.rank).icon"
-                  :class="['flex h-8 w-8 items-center justify-center rounded-full ring-2', getRankStyle(student.rank).bg, getRankStyle(student.rank).ring, getRankStyle(student.rank).shadow]"
-                >
-                  <component
-                    :is="getRankStyle(student.rank).icon"
-                    class="h-5 w-5"
-                    :class="getRankStyle(student.rank).color"
-                  />
-                </div>
-                <span
-                  v-else
-                  class="flex h-8 w-8 items-center justify-center text-sm text-white/60"
-                >
-                  {{ student.rank }}
-                </span>
+    <!-- Leaderboard - Mobile: Cards, Desktop: Table -->
+    <template v-else>
+      <!-- Mobile: Card List -->
+      <div class="lg:hidden space-y-3">
+        <div
+          v-for="student in students"
+          :key="`${activeTab}-${student.student_id}`"
+          :class="[
+            'bg-white/[0.02] rounded-lg p-4 border border-white/10',
+            isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5' : ''
+          ]"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <!-- Rank -->
+              <div
+                v-if="getRankStyle(student.rank).icon"
+                :class="['flex h-10 w-10 items-center justify-center rounded-full ring-2 flex-shrink-0', getRankStyle(student.rank).bg, getRankStyle(student.rank).ring, getRankStyle(student.rank).shadow]"
+              >
+                <component
+                  :is="getRankStyle(student.rank).icon"
+                  class="h-5 w-5"
+                  :class="getRankStyle(student.rank).color"
+                />
               </div>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <span class="font-medium text-white">{{ student.name }}</span>
-                <Badge
-                  v-if="isCurrentStudent(student.student_id)"
-                  variant="primary"
-                  class="text-xs"
-                >
-                  我
-                </Badge>
+              <div
+                v-else
+                class="flex h-10 w-10 items-center justify-center text-base font-medium text-white/60 flex-shrink-0"
+              >
+                {{ student.rank }}
               </div>
-            </td>
-            <td
-              v-if="activeTab === 'school'"
-              class="px-4 py-3 text-white/60"
-            >
-              {{ student.class_name }}
-            </td>
-            <td class="px-4 py-3 text-right">
-              <span class="text-lg font-bold text-primary">
-                {{ student.score }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
 
-      <!-- Empty State -->
-      <div
-        v-if="students.length === 0"
-        class="py-12 text-center text-white/40"
-      >
-        暂无数据
+              <!-- Info -->
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-white">{{ student.name }}</span>
+                  <Badge
+                    v-if="isCurrentStudent(student.student_id)"
+                    variant="primary"
+                    class="text-xs"
+                  >
+                    我
+                  </Badge>
+                </div>
+                <p v-if="activeTab === 'school'" class="text-sm text-white/50">
+                  {{ student.class_name }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Score -->
+            <span class="text-xl font-bold text-primary">
+              {{ student.score }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-if="students.length === 0"
+          class="py-12 text-center text-white/40"
+        >
+          暂无数据
+        </div>
       </div>
-    </Card>
+
+      <!-- Desktop: Table -->
+      <Card class="hidden lg:block border-white/10 bg-white/[0.02] overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-white/10">
+              <th class="px-4 py-3 text-left text-sm font-medium text-white/60">排名</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-white/60">姓名</th>
+              <th
+                v-if="activeTab === 'school'"
+                class="px-4 py-3 text-left text-sm font-medium text-white/60"
+              >
+                班级
+              </th>
+              <th class="px-4 py-3 text-right text-sm font-medium text-white/60">分数</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="student in students"
+              :key="`${activeTab}-${student.student_id}`"
+              :class="[
+                'border-b border-white/5 last:border-0',
+                isCurrentStudent(student.student_id) ? 'bg-primary/10' : 'hover:bg-white/[0.02]'
+              ]"
+            >
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div
+                    v-if="getRankStyle(student.rank).icon"
+                    :class="['flex h-8 w-8 items-center justify-center rounded-full ring-2', getRankStyle(student.rank).bg, getRankStyle(student.rank).ring, getRankStyle(student.rank).shadow]"
+                  >
+                    <component
+                      :is="getRankStyle(student.rank).icon"
+                      class="h-5 w-5"
+                      :class="getRankStyle(student.rank).color"
+                    />
+                  </div>
+                  <span
+                    v-else
+                    class="flex h-8 w-8 items-center justify-center text-sm text-white/60"
+                  >
+                    {{ student.rank }}
+                  </span>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-white">{{ student.name }}</span>
+                  <Badge
+                    v-if="isCurrentStudent(student.student_id)"
+                    variant="primary"
+                    class="text-xs"
+                  >
+                    我
+                  </Badge>
+                </div>
+              </td>
+              <td
+                v-if="activeTab === 'school'"
+                class="px-4 py-3 text-white/60"
+              >
+                {{ student.class_name }}
+              </td>
+              <td class="px-4 py-3 text-right">
+                <span class="text-lg font-bold text-primary">
+                  {{ student.score }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div
+          v-if="students.length === 0"
+          class="py-12 text-center text-white/40"
+        >
+          暂无数据
+        </div>
+      </Card>
+    </template>
   </div>
 </template>

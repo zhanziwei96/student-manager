@@ -63,16 +63,16 @@ const contentClasses = computed(() =>
   cn(
     // 定位
     'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
-    // 尺寸
-    'w-full max-w-lg max-h-[85vh] overflow-y-auto',
+    // 尺寸 - 响应式
+    'w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
     // 样式
-    'rounded-xl border border-border bg-background-elevated p-6',
+    'rounded-xl border border-border bg-background-elevated p-4 sm:p-6',
     // 阴影
     'shadow-2xl',
     // 动画
     'transition-all duration-300 ease-out',
-    props.open 
-      ? 'opacity-100 scale-100' 
+    props.open
+      ? 'opacity-100 scale-100'
       : 'opacity-0 scale-95 pointer-events-none',
     props.class
   )
