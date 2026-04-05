@@ -22,13 +22,13 @@ def get_students(session: Session, class_name: Optional[str] = None) -> List[Stu
     query = select(Student)
     if class_name:
         query = query.where(Student.class_name == class_name)
-    return list(session.exec(query).all())
+    return session.exec(query).all()
 
 
 def get_students_by_class(session: Session, class_name: str) -> List[Student]:
     """根据班级获取学生"""
     query = select(Student).where(Student.class_name == class_name)
-    return list(session.exec(query).all())
+    return session.exec(query).all()
 
 
 def get_students_by_classes(session: Session, class_names: List[str]) -> List[Student]:
@@ -52,7 +52,7 @@ def get_students_by_classes(session: Session, class_names: List[str]) -> List[St
     
     # 使用 IN 查询一次性获取所有班级学生
     query = select(Student).where(Student.class_name.in_(class_names))
-    return list(session.exec(query).all())
+    return session.exec(query).all()
 
 
 def create_student(session: Session, student_id: str, name: str, class_name: str, score: Optional[float] = None) -> Student:

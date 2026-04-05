@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
-from app.core.jwt import require_login, require_admin, get_current_user
+from app.core.jwt import require_admin, get_current_user
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password
 )
 from app.crud.checkin import get_class_session, get_today_checkins
 from app.models.constants import (
-    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse
 )
 

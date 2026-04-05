@@ -4,19 +4,19 @@
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, Request, Response, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
 from app.core.logging import logger
 from app.core.jwt import (
     create_access_token, set_token_cookie, clear_token_cookie,
-    get_current_user, require_login
+    get_current_user
 )
 from app.crud import get_user_by_username, record_login_success, record_login_failure
-from app.models import User, UserRoleConst
+from app.models import UserRoleConst
 from app.models.constants import (
-    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse
 )
 
@@ -106,8 +106,7 @@ async def login(
     # 学生登录单独处理
     if data.role == UserRoleConst.STUDENT:
         from app.crud import get_student
-        from app.models import Student
-        
+
         student = get_student(session, username)
         if not student:
             raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
@@ -173,7 +172,8 @@ async def login(
         raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
     
     # 登录成功
-    record_login_success(session, user, request.client.host)
+    client_host = request.client.host if request.client else "unknown"
+    record_login_success(session, user, client_host)
     logger.info(f"用户登录成功: {username}, 角色: {user.role}")
     
     # 生成 JWT Token

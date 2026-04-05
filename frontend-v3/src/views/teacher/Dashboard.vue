@@ -95,10 +95,7 @@ const getCardTextMutedColor = (color: CardColor) => {
 
     <!-- Quick actions -->
     <div class="flex gap-3 mb-5">
-      <Button
-        class="shadow-lg shadow-primary/20"
-        @click="router.push('/teacher/session')"
-      >
+      <Button @click="router.push('/teacher/session')" class="shadow-lg shadow-primary/20">
         <Calendar class="mr-2 h-4 w-4" />
         开始上课
       </Button>
@@ -141,10 +138,7 @@ const getCardTextMutedColor = (color: CardColor) => {
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
-              <p
-                class="mt-3 text-xs font-medium"
-                :class="getCardTextMutedColor(card.color)"
-              >
+              <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor(card.color)">
                 {{ card.title }}
               </p>
               <p class="mt-1 text-2xl font-bold text-white">

@@ -80,10 +80,7 @@ const formatTime = (time: string) => {
           class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 shadow-inner"
           :style="{ backgroundColor: 'var(--card-purple-icon-bg)' }"
         >
-          <User
-            class="h-5 w-5 md:h-6 md:w-6"
-            :style="{ color: 'var(--card-purple-icon-text)' }"
-          />
+          <User class="h-5 w-5 md:h-6 md:w-6" :style="{ color: 'var(--card-purple-icon-text)' }" />
         </div>
         <div class="min-w-0 flex-1">
           <h2 class="font-medium text-white truncate">
@@ -142,10 +139,7 @@ const formatTime = (time: string) => {
             class="text-sm text-white/60 truncate"
           >
             {{ classSession.teacher_name || '教师' }} 老师正在上课
-            <span
-              v-if="classSession.start_time"
-              class="hidden sm:inline"
-            >· 已开始 {{ formatTime(classSession.start_time) }}</span>
+            <span v-if="classSession.start_time" class="hidden sm:inline">· 已开始 {{ formatTime(classSession.start_time) }}</span>
           </p>
           <p
             v-else
@@ -227,19 +221,13 @@ const formatTime = (time: string) => {
         <h3 class="font-medium text-white mb-4 text-base md:text-lg">
           签到说明
         </h3>
-        <ul
-          class="space-y-3 md:space-y-4 text-sm"
-          :style="{ color: 'var(--card-blue-icon-text)' }"
-        >
+        <ul class="space-y-3 md:space-y-4 text-sm" :style="{ color: 'var(--card-blue-icon-text)' }">
           <li class="flex items-start gap-3">
             <div
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
               :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
             >
-              <span
-                class="text-xs font-medium"
-                style="color: #fff"
-              >1</span>
+              <span class="text-xs font-medium" style="color: #fff">1</span>
             </div>
             <span class="leading-relaxed text-white/70">请在老师开启课堂后进行签到</span>
           </li>
@@ -248,10 +236,7 @@ const formatTime = (time: string) => {
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
               :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
             >
-              <span
-                class="text-xs font-medium"
-                style="color: #fff"
-              >2</span>
+              <span class="text-xs font-medium" style="color: #fff">2</span>
             </div>
             <span class="leading-relaxed text-white/70">每节课只能签到一次，不可重复签到</span>
           </li>
@@ -260,10 +245,7 @@ const formatTime = (time: string) => {
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
               :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
             >
-              <span
-                class="text-xs font-medium"
-                style="color: #fff"
-              >3</span>
+              <span class="text-xs font-medium" style="color: #fff">3</span>
             </div>
             <span class="leading-relaxed text-white/70">签到可获得课堂参与积分</span>
           </li>

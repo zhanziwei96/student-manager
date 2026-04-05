@@ -97,10 +97,9 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
     </div>
 
     <!-- Filters -->
-    <StudentFilters
+    <StudentFilters class="mb-5"
       v-model:search-query="filters.searchQuery"
       v-model:selected-class="filters.className"
-      class="mb-5"
       :class-options="classOptions"
       @update:search-query="setSearchQuery"
       @update:selected-class="setClassFilter"

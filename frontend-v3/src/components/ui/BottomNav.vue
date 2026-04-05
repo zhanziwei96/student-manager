@@ -49,10 +49,7 @@ const isActive = (path: string) => {
             : 'text-white/50'
         ]"
       >
-        <component
-          :is="item.icon"
-          class="h-6 w-6"
-        />
+        <component :is="item.icon" class="h-6 w-6" />
         <span class="text-xs truncate max-w-full px-1">{{ item.name }}</span>
       </RouterLink>
     </div>

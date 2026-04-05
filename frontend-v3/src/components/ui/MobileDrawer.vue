@@ -144,10 +144,7 @@ watch(() => route.path, () => {
               : 'text-white/70 hover:bg-white/10 hover:text-white'
           ]"
         >
-          <component
-            :is="item.icon"
-            class="h-6 w-6"
-          />
+          <component :is="item.icon" class="h-6 w-6" />
           {{ item.name }}
         </RouterLink>
       </nav>
@@ -159,18 +156,8 @@ watch(() => route.path, () => {
           class="w-full justify-start gap-3 text-white/70 h-12"
           @click="handleLogout"
         >
-          <svg
-            class="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            />
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
           退出登录
         </Button>

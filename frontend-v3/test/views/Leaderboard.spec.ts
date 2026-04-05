@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import Leaderboard from '@/views/student/Leaderboard.vue'
@@ -70,11 +70,10 @@ describe('Leaderboard', () => {
 
   it('displays student list', () => {
     const wrapper = createWrapper()
-    // 其他学生显示脱敏后的名字（李*四、王*五）
+    // 组件实现了姓名脱敏，非当前用户显示为 "李*四" 格式
     expect(wrapper.text()).toContain('李*四')
+    expect(wrapper.text()).toContain('张三')  // 当前用户显示完整姓名
     expect(wrapper.text()).toContain('王*五')
-    // 当前登录学生显示完整名字
-    expect(wrapper.text()).toContain('张三')
   })
 
   it('shows top 3 icons', () => {
@@ -110,9 +109,9 @@ describe('Leaderboard', () => {
     expect(rank2Bg).not.toBe(rank3Bg)
     expect(rank1Bg).not.toBe(rank3Bg)
 
-    // 验证包含预期的颜色类
-    expect(rank1Bg).toContain('yellow')
-    expect(rank2Bg).toContain('gray')
-    expect(rank3Bg).toContain('amber')
+    // 验证包含预期的颜色类（与实际组件实现匹配）
+    expect(rank1Bg).toContain('yellow')  // 金牌: bg-yellow-300
+    expect(rank2Bg).toContain('gray')    // 银牌: bg-gray-200
+    expect(rank3Bg).toContain('amber')   // 铜牌: bg-amber-400
   })
 })

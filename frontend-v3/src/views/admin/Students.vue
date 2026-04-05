@@ -164,18 +164,12 @@ const handleAddStudent = async () => {
                   {{ student.is_account_enabled ? '启用' : '禁用' }}
                 </Badge>
               </div>
-              <p class="text-sm text-white/60 mt-1">
-                {{ student.student_id }}
-              </p>
-              <p class="text-sm text-white/50 mt-0.5 truncate">
-                {{ student.class_name }}
-              </p>
+              <p class="text-sm text-white/60 mt-1">{{ student.student_id }}</p>
+              <p class="text-sm text-white/50 mt-0.5 truncate">{{ student.class_name }}</p>
             </div>
             <div class="text-right flex-shrink-0 ml-4">
               <span class="text-xl font-bold text-primary">{{ student.score }}</span>
-              <p class="text-xs text-white/40">
-                分
-              </p>
+              <p class="text-xs text-white/40">分</p>
             </div>
           </div>
         </Card>

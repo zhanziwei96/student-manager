@@ -140,7 +140,7 @@ uploads/*
 !uploads/.gitkeep
 data/*
 !data/.gitkeep
-backend/data/*
+backend/app/data/*
 !backend/data/.gitkeep
 node_modules
 

@@ -85,10 +85,7 @@ const trendBadgeStyle = computed<CSSProperties>(() => {
     <div class="relative z-10">
       <div class="flex items-start justify-between">
         <div>
-          <p
-            class="mt-3 text-xs font-medium"
-            :class="textMutedColor"
-          >
+          <p class="mt-3 text-xs font-medium" :class="textMutedColor">
             {{ title }}
           </p>
           <p class="mt-1 text-3xl font-bold text-white">

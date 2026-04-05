@@ -81,9 +81,7 @@ const maskName = (name: string, studentId: string) => {
             <User class="h-5 w-5 text-primary" />
           </div>
           <div>
-            <p class="text-sm text-white/60">
-              我的排名
-            </p>
+            <p class="text-sm text-white/60">我的排名</p>
             <p class="text-lg font-bold text-white">
               第 {{ myRank.rank }} 名
             </p>
@@ -93,9 +91,7 @@ const maskName = (name: string, studentId: string) => {
           <p class="text-2xl font-bold text-primary">
             {{ myRank.score }}
           </p>
-          <p class="text-sm text-white/40">
-            分
-          </p>
+          <p class="text-sm text-white/40">分</p>
         </div>
       </div>
       <!-- 动态背景装饰 -->
@@ -118,7 +114,10 @@ const maskName = (name: string, studentId: string) => {
         <Card
           v-for="student in students"
           :key="`${activeTab}-${student.student_id}`"
-          :class="isCurrentStudent(student.student_id) ? 'group transition-all duration-200 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/40' : 'group transition-all duration-200'"
+          class="group transition-all duration-200"
+          :class="[
+            isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/40' : ''
+          ]"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -152,10 +151,7 @@ const maskName = (name: string, studentId: string) => {
                     我
                   </Badge>
                 </div>
-                <p
-                  v-if="activeTab === 'school'"
-                  class="text-sm text-white/50"
-                >
+                <p v-if="activeTab === 'school'" class="text-sm text-white/50">
                   {{ student.class_name }}
                 </p>
               </div>
@@ -182,21 +178,15 @@ const maskName = (name: string, studentId: string) => {
         <table class="w-full">
           <thead>
             <tr class="border-b border-white/10">
-              <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
-                排名
-              </th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
-                姓名
-              </th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-white/60">排名</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-white/60">姓名</th>
               <th
                 v-if="activeTab === 'school'"
                 class="px-4 py-3 text-left text-sm font-medium text-white/60"
               >
                 班级
               </th>
-              <th class="px-4 py-3 text-right text-sm font-medium text-white/60">
-                分数
-              </th>
+              <th class="px-4 py-3 text-right text-sm font-medium text-white/60">分数</th>
             </tr>
           </thead>
           <tbody>

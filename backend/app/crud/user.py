@@ -26,7 +26,7 @@ def get_users(session: Session, role: Optional[str] = None) -> List[User]:
     return list(session.exec(query).all())
 
 
-def create_user(session: Session, username: str, name: str, password_hash: str, 
+def create_user(session: Session, username: str, name: str, password_hash: str,
                 role: str = UserRoleConst.TEACHER, assigned_classes: Optional[List[str]] = None) -> User:
     """创建用户 - SEC-003: 移除 salt 参数"""
     import json

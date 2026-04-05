@@ -137,10 +137,7 @@ const getTrendBadgeStyle = (color: CardColor) => {
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
-              <p
-                class="mt-3 text-xs font-medium"
-                :class="getCardTextMutedColor(card.color)"
-              >
+              <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor(card.color)">
                 {{ card.title }}
               </p>
               <p class="mt-1 text-2xl font-bold text-white">

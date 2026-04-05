@@ -100,8 +100,6 @@ MAX_LOGIN_FAILURES = 10
 LOCKOUT_DURATION_MINUTES = 30
 
 
-from app.core.timezone import get_now
-
 def is_account_locked(locked_until: Optional[datetime]) -> bool:
     """检查账号是否处于锁定状态"""
     if not locked_until:

@@ -5,17 +5,16 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.crud import (
     get_class_session, start_class, end_class,
-    get_today_checkins, create_checkin, has_checked_in_today
+    get_today_checkins, create_checkin
 )
-from app.api.deps import require_login
 from app.core.jwt import get_current_user
 from app.models.constants import (
-    ApiResponseConst, MessageConst, RoutePrefixConst,
+    ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse
 )
 from app.models.checkin import ClassSession
@@ -338,7 +337,7 @@ def get_active_class_sessions(
 ):
     """获取所有活跃课堂列表"""
     from sqlmodel import select
-    query = select(ClassSession).where(ClassSession.active == True)
+    query = select(ClassSession).where(ClassSession.active.is_(True))
     active_sessions = session.exec(query).all()
     
     return {

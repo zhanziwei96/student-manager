@@ -309,12 +309,21 @@ pytest tests/ -v
 
 ## 文档索引
 
+### 入门指南
+| 文档 | 说明 |
+|------|------|
+| `README.md` | 项目主文档（功能介绍、快速开始） |
+| `GETTING_STARTED.md` | 开发者快速开始指南（详细环境搭建） |
+| `docs/FAQ.md` | 常见问题解答（25个常见问题） |
+| `docs/GLOSSARY.md` | 术语表（专业术语和缩写） |
+
 ### 开发规范
 | 文档 | 说明 |
 |------|------|
+| `CLAUDE.md` | 本文件 - 快速参考和关键约束 |
+| `CONTRIBUTING.md` | 贡献者指南（如何参与项目） |
 | `.agents/CHECKLIST.md` | 执行前详细检查清单（服务重启完整流程） |
 | `.agents/ERRORS.md` | 完整约束清单和历史纠错记录 |
-| `CLAUDE.md` | 本文件 - 快速参考和关键约束 |
 
 ### 部署与配置
 | 文档 | 说明 |
@@ -326,14 +335,15 @@ pytest tests/ -v
 ### 项目文档
 | 文档 | 说明 |
 |------|------|
-| `README.md` | 项目主文档（功能介绍、快速开始、API列表） |
-| `docs/FAQ.md` | 常见问题解答（25个常见问题） |
+| `CHANGELOG.md` | 项目更新日志（版本变更记录） |
 | `docs/API_CHANGELOG.md` | API变更日志（接口变更历史） |
+| `docs/API_EXAMPLES.md` | API使用示例（cURL/Python/TS） |
 | `docs/ARCHITECTURE_DIAGRAMS.md` | 架构图（系统架构、ER图） |
 | `docs/REQUIREMENTS.md` | 需求规格说明书（功能需求、非功能需求） |
 | `docs/OPTIMIZATION_PLAN.md` | 项目优化方案（架构评分、优化路线图） |
 | `docs/DEPRECATIONS.md` | 弃用说明（API变更、迁移指南） |
 | `docs/DOCUMENTATION_GUIDE.md` | 文档维护指南 |
+| `docs/DOCUMENTATION_MAP.md` | 文档地图（完整文档导航） |
 
 ### 架构设计
 | 文档 | 说明 |

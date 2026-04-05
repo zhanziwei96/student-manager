@@ -421,21 +421,22 @@ cd frontend-v3 && pnpm test:run
 
 ---
 
-## 📚 相关文档
-
 ## 📚 文档地图
 
 ### 入门指南
 | 文档 | 说明 | 位置 |
 |------|------|------|
 | **项目简介** | 本文档 - 快速开始和功能介绍 | `README.md` |
+| [快速开始指南](GETTING_STARTED.md) | 开发者环境搭建详细指南 | `GETTING_STARTED.md` |
 | [常见问题 FAQ](docs/FAQ.md) | 25个常见问题解答 | `docs/FAQ.md` |
 | [部署指南](.agents/DEPLOYMENT.md) | 环境搭建、服务启停 | `.agents/DEPLOYMENT.md` |
+| [术语表](docs/GLOSSARY.md) | 专业术语和缩写解释 | `docs/GLOSSARY.md` |
 
 ### 开发规范
 | 文档 | 说明 | 位置 |
 |------|------|------|
 | [CLAUDE.md](CLAUDE.md) | AI助手开发指南、关键约束 | `CLAUDE.md` |
+| [贡献者指南](CONTRIBUTING.md) | 如何参与项目贡献 | `CONTRIBUTING.md` |
 | [执行前检查清单](.agents/CHECKLIST.md) | 强制检查清单 | `.agents/CHECKLIST.md` |
 | [约束清单](.agents/ERRORS.md) | 完整约束和纠错记录 | `.agents/ERRORS.md` |
 | [配置管理](.agents/CONFIG_GUIDE.md) | 环境变量、多环境配置 | `.agents/CONFIG_GUIDE.md` |
@@ -447,6 +448,15 @@ cd frontend-v3 && pnpm test:run
 | [前端架构](frontend-v3/docs/ARCHITECTURE.md) | Feature-based架构 | `frontend-v3/docs/ARCHITECTURE.md` |
 | [设计体系](frontend-v3/DESIGN_SYSTEM.md) | 前端设计系统规范 | `frontend-v3/DESIGN_SYSTEM.md` |
 | [优化方案](docs/OPTIMIZATION_PLAN.md) | 架构评分、优化路线图 | `docs/OPTIMIZATION_PLAN.md` |
+| [架构图](docs/ARCHITECTURE_DIAGRAMS.md) | 系统架构图、ER图 | `docs/ARCHITECTURE_DIAGRAMS.md` |
+
+### API 文档
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| [API使用示例](docs/API_EXAMPLES.md) | 详细的API调用示例 | `docs/API_EXAMPLES.md` |
+| [API变更日志](docs/API_CHANGELOG.md) | 接口变更历史 | `docs/API_CHANGELOG.md` |
+| [弃用说明](docs/DEPRECATIONS.md) | API迁移指南 | `docs/DEPRECATIONS.md` |
+| Swagger UI | 在线API文档 | http://localhost:8000/docs |
 
 ### 测试文档
 | 文档 | 说明 | 位置 |
@@ -455,16 +465,25 @@ cd frontend-v3 && pnpm test:run
 | [后端测试](tests/README.md) | pytest测试说明 | `tests/README.md` |
 | [E2E测试](tests/e2e/README.md) | Playwright测试 | `tests/e2e/README.md` |
 
-### 参考文档
+### 运维与部署
 | 文档 | 说明 | 位置 |
 |------|------|------|
-| [常见问题](docs/FAQ.md) | 25个常见问题解答 | `docs/FAQ.md` |
-| [API变更日志](docs/API_CHANGELOG.md) | 接口变更历史 | `docs/API_CHANGELOG.md` |
-| [架构图](docs/ARCHITECTURE_DIAGRAMS.md) | 系统架构图、ER图 | `docs/ARCHITECTURE_DIAGRAMS.md` |
-| [需求规格](docs/REQUIREMENTS.md) | 功能需求、规划 | `docs/REQUIREMENTS.md` |
-| [弃用说明](docs/DEPRECATIONS.md) | API迁移指南 | `docs/DEPRECATIONS.md` |
+| [部署指南](.agents/DEPLOYMENT.md) | 快速部署指南 | `.agents/DEPLOYMENT.md` |
+| [配置管理](.agents/CONFIG_GUIDE.md) | 环境变量配置 | `.agents/CONFIG_GUIDE.md` |
 | [数据库迁移](migrations/README.md) | 迁移脚本说明 | `migrations/README.md` |
-| [文档维护指南](docs/DOCUMENTATION_GUIDE.md) | 文档维护规范 | `docs/DOCUMENTATION_GUIDE.md` |
+
+### 项目规划
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| [需求规格](docs/REQUIREMENTS.md) | 功能需求、规划 | `docs/REQUIREMENTS.md` |
+| [更新日志](CHANGELOG.md) | 项目版本变更记录 | `CHANGELOG.md` |
+| [优化方案](docs/OPTIMIZATION_PLAN.md) | 架构优化路线图 | `docs/OPTIMIZATION_PLAN.md` |
+
+### 文档维护
+| 文档 | 说明 | 位置 |
+|------|------|------|
+| [文档地图](docs/DOCUMENTATION_MAP.md) | 完整文档导航 | `docs/DOCUMENTATION_MAP.md` |
+| [文档维护指南](docs/DOCUMENTATION_GUIDE.md) | 文档编写规范 | `docs/DOCUMENTATION_GUIDE.md` |
 
 ---
 
