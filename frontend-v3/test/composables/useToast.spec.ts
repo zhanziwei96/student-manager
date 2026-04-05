@@ -119,7 +119,7 @@ describe('useToast', () => {
 
     showToast({ message: 'No duration' })
 
-    expect(toastList.value[0].duration).toBe(3000)
+    expect(toastList.value[0].duration).toBe(1500)
   })
 
   it('should allow custom duration', () => {

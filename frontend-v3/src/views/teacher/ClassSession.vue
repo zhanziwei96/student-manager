@@ -346,7 +346,10 @@ const handleQuickCheckIn = async (studentId: string) => {
       </Card>
 
       <!-- Stats -->
-      <CheckinStats :stats="checkinStats" class="mb-5" />
+      <CheckinStats
+        :stats="checkinStats"
+        class="mb-5"
+      />
 
       <!-- Student list -->
       <StudentCheckinGrid
@@ -356,6 +359,5 @@ const handleQuickCheckIn = async (studentId: string) => {
         @quick-check-in="handleQuickCheckIn"
       />
     </template>
-
   </div>
 </template>

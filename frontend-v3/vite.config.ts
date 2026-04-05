@@ -27,13 +27,42 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'esbuild',
+    cssMinify: true,
     rollupOptions: {
       output: {
         manualChunks: {
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'query-vendor': ['@tanstack/vue-query'],
+          'query-vendor': ['@tanstack/vue-query', '@vueuse/core'],
+          'ui-vendor': ['radix-vue', 'class-variance-authority', 'tailwind-merge', 'clsx'],
+          'icon-vendor': ['lucide-vue-next'],
+        },
+        // 优化chunk文件名
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name || ''
+          if (info.endsWith('.css')) {
+            return 'assets/[name]-[hash][extname]'
+          }
+          return 'assets/[name]-[hash][extname]'
         },
       },
     },
+    // 优化构建性能
+    sourcemap: false,
+    // 压缩报告
+    reportCompressedSize: true,
+  },
+  // 优化依赖预构建
+  optimizeDeps: {
+    include: [
+      'vue',
+      'vue-router',
+      'pinia',
+      '@tanstack/vue-query',
+      '@vueuse/core',
+      'lucide-vue-next',
+      'radix-vue',
+    ],
   },
 })

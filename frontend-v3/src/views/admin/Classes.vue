@@ -174,8 +174,12 @@ const getScoreColor = (score: number) => {
                 </span>
               </div>
               <div>
-                <p class="font-medium text-white">{{ student.name }}</p>
-                <p class="font-mono text-xs text-white/50">{{ student.student_id }}</p>
+                <p class="font-medium text-white">
+                  {{ student.name }}
+                </p>
+                <p class="font-mono text-xs text-white/50">
+                  {{ student.student_id }}
+                </p>
               </div>
             </div>
             <span

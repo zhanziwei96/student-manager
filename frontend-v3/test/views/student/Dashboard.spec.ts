@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
@@ -84,8 +84,9 @@ describe('Student Dashboard', () => {
     const wrapper = createWrapper()
     await flushPromises()
 
-    const clickableElements = wrapper.findAll('.cursor-pointer')
-    const hasRankBadge = clickableElements.some(el => el.text().includes('排名'))
+    // 检查排名按钮是否存在并包含"排名"文本
+    const buttons = wrapper.findAll('button')
+    const hasRankBadge = buttons.some(el => el.text().includes('排名'))
     expect(hasRankBadge).toBe(true)
   })
 
@@ -93,8 +94,9 @@ describe('Student Dashboard', () => {
     const wrapper = createWrapper()
     await flushPromises()
 
-    const clickableElements = wrapper.findAll('.cursor-pointer')
-    const hasLeaderboardButton = clickableElements.some(el => el.text().includes('查看排行榜'))
+    // 检查查看排行榜按钮是否存在
+    const buttons = wrapper.findAll('button')
+    const hasLeaderboardButton = buttons.some(el => el.text().includes('查看排行榜'))
     expect(hasLeaderboardButton).toBe(true)
   })
 })
