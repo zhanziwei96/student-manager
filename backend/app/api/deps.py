@@ -3,7 +3,6 @@ API 依赖注入 - JWT 版本
 """
 from typing import Optional
 from fastapi import Request
-from sqlmodel import Session
 from app.core.db import get_session
 from app.core.jwt import (
     get_current_user as jwt_get_current_user,

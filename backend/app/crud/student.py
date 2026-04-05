@@ -55,7 +55,7 @@ def get_students_by_classes(session: Session, class_names: List[str]) -> List[St
     return session.exec(query).all()
 
 
-def create_student(session: Session, student_id: str, name: str, class_name: str, score: float = None) -> Student:
+def create_student(session: Session, student_id: str, name: str, class_name: str, score: Optional[float] = None) -> Student:
     """创建学生 - SEC-003: 使用简化密码哈希接口"""
     from app.core.config import get_settings
     from app.core.security import hash_password

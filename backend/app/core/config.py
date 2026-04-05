@@ -29,7 +29,7 @@ def get_env_file_path() -> str:
 
 def configure_environment() -> None:
     """配置环境 - 在应用启动前调用
-    
+
     根据 ENV 环境变量设置 ENV_FILE 环境变量，确保配置加载使用正确的环境文件。
     如果 ENV_FILE 已设置，则不会覆盖。
     """
@@ -39,7 +39,7 @@ def configure_environment() -> None:
 
 def _get_env_file() -> str:
     """获取环境文件路径 - 供 Settings 类使用
-    
+
     优先使用已设置的 ENV_FILE 环境变量，否则根据 ENV 计算。
     保持向后兼容性。
     """
@@ -63,7 +63,7 @@ class AppSettings(BaseSettings):
 class DatabaseSettings(BaseSettings):
     """数据库配置"""
     model_config = SettingsConfigDict(env_prefix="DATABASE_")
-    
+
     path: Optional[str] = Field(default=None, description="数据库文件路径")
     timeout: int = Field(default=30, description="连接超时（秒）")
 
@@ -108,7 +108,7 @@ class SecuritySettings(BaseSettings):
 class RateLimitSettings(BaseSettings):
     """限流配置"""
     model_config = SettingsConfigDict(env_prefix="RATE_LIMIT_")
-    
+
     enabled: bool = Field(default=True, description="是否启用限流（内存存储）")
     multiplier: int = Field(default=1, description="限流倍数因子")
     login_max_requests: int = Field(default=5, description="登录接口限流次数")
@@ -118,7 +118,7 @@ class RateLimitSettings(BaseSettings):
 class LogSettings(BaseSettings):
     """日志配置"""
     model_config = SettingsConfigDict(env_prefix="LOG_")
-    
+
     level: str = Field(default="INFO", description="日志级别")
     file: Optional[str] = Field(default=None, description="日志文件路径")
     max_file_bytes: int = Field(default=10*1024*1024, description="单个日志文件最大大小")
@@ -128,7 +128,7 @@ class LogSettings(BaseSettings):
 class PaginationSettings(BaseSettings):
     """分页配置"""
     model_config = SettingsConfigDict(env_prefix="PAGINATION_")
-    
+
     default_page_size: int = Field(default=20, description="默认每页数量")
     score_log_default_limit: int = Field(default=50, description="分数日志默认查询条数")
 
@@ -136,7 +136,7 @@ class PaginationSettings(BaseSettings):
 class ScoreSettings(BaseSettings):
     """分数配置"""
     model_config = SettingsConfigDict(env_prefix="SCORE_")
-    
+
     min_score: float = Field(default=0, description="最低分数")
     max_score: float = Field(default=100, description="最高分数")
     default_score: float = Field(default=70, description="学生默认分数")
@@ -145,13 +145,13 @@ class ScoreSettings(BaseSettings):
 class UploadSettings(BaseSettings):
     """文件上传配置 - SEC-001: 文件上传安全控制"""
     model_config = SettingsConfigDict(env_prefix="UPLOAD_")
-    
+
     # 允许的文件扩展名白名单
     allowed_extensions: List[str] = Field(
-        default=[".xlsx", ".xls"], 
+        default=[".xlsx", ".xls"],
         description="允许上传的文件扩展名"
     )
-    
+
     # 允许的文件MIME类型白名单
     allowed_content_types: List[str] = Field(
         default=[
@@ -160,13 +160,13 @@ class UploadSettings(BaseSettings):
         ],
         description="允许上传的文件MIME类型"
     )
-    
+
     # 文件大小限制 (MB)
     max_file_size_mb: int = Field(default=10, description="最大文件大小(MB)")
-    
+
     # 上传目录
     directory: str = Field(default="uploads", description="上传文件存储目录")
-    
+
     # 是否使用UUID重命名
     use_uuid_filename: bool = Field(default=True, description="使用UUID重命名文件")
 
@@ -179,7 +179,7 @@ class Settings(BaseSettings):
         extra="ignore",
         env_nested_delimiter='__'
     )
-    
+
     # 应用基础配置
     app: AppSettings = Field(default_factory=AppSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
@@ -189,19 +189,19 @@ class Settings(BaseSettings):
     pagination: PaginationSettings = Field(default_factory=PaginationSettings)
     score: ScoreSettings = Field(default_factory=ScoreSettings)
     upload: UploadSettings = Field(default_factory=UploadSettings)
-    
+
     @property
     def is_development(self) -> bool:
         return self.app.env.lower() == "development"
-    
+
     @property
     def is_testing(self) -> bool:
         return self.app.env.lower() == "testing"
-    
+
     @property
     def is_production(self) -> bool:
         return self.app.env.lower() == "production"
-    
+
     def get_database_path(self) -> str:
         """获取数据库路径"""
         if self.database.path:
@@ -235,7 +235,17 @@ def init_settings(env_file: Optional[str] = None) -> Settings:
     """初始化配置（指定环境文件）"""
     global _settings
     if env_file and os.path.exists(env_file):
-        _settings = Settings(_env_file=env_file)
+        # 临时修改环境变量来加载指定配置文件
+        original_env_file = os.environ.get('ENV_FILE')
+        os.environ['ENV_FILE'] = env_file
+        try:
+            _settings = Settings()
+        finally:
+            # 恢复原始环境变量
+            if original_env_file is not None:
+                os.environ['ENV_FILE'] = original_env_file
+            elif 'ENV_FILE' in os.environ:
+                del os.environ['ENV_FILE']
     else:
         _settings = Settings()
     return _settings
