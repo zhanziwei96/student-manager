@@ -54,6 +54,7 @@ watch(
 const overlayClasses = computed(() =>
   cn(
     'fixed inset-0 z-50 bg-black/80 backdrop-blur-sm',
+    'flex items-center justify-center',
     'transition-opacity duration-300 ease-out',
     props.open ? 'opacity-100' : 'opacity-0 pointer-events-none'
   )
@@ -61,10 +62,8 @@ const overlayClasses = computed(() =>
 
 const contentClasses = computed(() =>
   cn(
-    // 定位
-    'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
-    // 尺寸 - 响应式：移动端全宽减边距，桌面端限制最大宽度
-    'w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] sm:w-full sm:max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
+    // 定位 - 使用 flex 居中替代 transform
+    'relative w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] sm:w-full sm:max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
     // 样式
     'rounded-xl border border-border bg-background-elevated p-4 sm:p-6',
     // 阴影
@@ -95,16 +94,15 @@ const handleSubmit = (e: Event) => {
     v-if="isClient"
     :to="teleportTarget"
   >
-    <div 
+    <div
       v-if="open"
-      :class="overlayClasses" 
-      @click="close"
+      :class="overlayClasses"
+      @click.self="close"
     >
       <!-- Content -->
       <component
         :is="asForm ? 'form' : 'div'"
         :class="contentClasses"
-        @click.stop
         @submit="asForm ? handleSubmit : undefined"
       >
         <!-- Header -->
