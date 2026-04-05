@@ -115,6 +115,28 @@
   --color-error-soft-muted: rgba(224, 47, 68, 0.15);
   --color-info-soft: #5794f2;
   --color-info-soft-muted: rgba(87, 148, 242, 0.15);
+
+  /* ========== 卡片主题色变量 (动态主题用) ========== */
+  --card-blue-bg: rgba(59, 130, 246, 0.15);
+  --card-blue-border: rgba(59, 130, 246, 0.4);
+  --card-blue-icon-bg: rgba(96, 165, 250, 0.3);
+  --card-blue-icon-text: #93c5fd;
+  --card-blue-shadow: rgba(23, 37, 84, 0.3);
+  --card-blue-glow: rgba(59, 130, 246, 0.1);
+
+  --card-green-bg: rgba(34, 197, 94, 0.15);
+  --card-green-border: rgba(34, 197, 94, 0.4);
+  --card-green-icon-bg: rgba(74, 222, 128, 0.3);
+  --card-green-icon-text: #86efac;
+  --card-green-shadow: rgba(5, 46, 22, 0.3);
+  --card-green-glow: rgba(34, 197, 94, 0.1);
+
+  --card-purple-bg: rgba(168, 85, 247, 0.15);
+  --card-purple-border: rgba(168, 85, 247, 0.4);
+  --card-purple-icon-bg: rgba(192, 132, 252, 0.3);
+  --card-purple-icon-text: #d8b4fe;
+  --card-purple-shadow: rgba(59, 7, 100, 0.3);
+  --card-purple-glow: rgba(168, 85, 247, 0.1);
   
   /* 边框 */
   --color-border: rgba(255, 255, 255, 0.1);

@@ -33,10 +33,46 @@ function formatDate(dateStr: string): string {
     minute: '2-digit',
   })
 }
+
+// 获取卡片样式 - 使用 CSS 变量
+type CardColor = 'blue' | 'green' | 'purple'
+
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
+  }
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
+
+const getCardTextMutedColor = (color: CardColor) => {
+  const colors: Record<CardColor, string> = {
+    blue: 'text-blue-200/80',
+    green: 'text-green-200/80',
+    purple: 'text-purple-200/80',
+  }
+  return colors[color]
+}
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="space-y-5 px-4">
     <!-- Header -->
     <div class="px-1">
       <h1 class="text-2xl font-bold text-white tracking-tight">
@@ -77,7 +113,7 @@ function formatDate(dateStr: string): string {
     </div>
 
     <template v-else>
-      <!-- Score card - 增强视觉层次 -->
+      <!-- Score card -->
       <Card class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-6 shadow-xl shadow-primary/10">
         <div class="relative z-10">
           <div class="flex items-start justify-between">
@@ -115,49 +151,73 @@ function formatDate(dateStr: string): string {
         <div class="absolute -bottom-8 -left-4 h-28 w-28 rounded-full bg-accent-cyan/20 blur-3xl" />
       </Card>
 
-      <!-- Stats grid - 移动端2列，增加视觉层次 -->
+      <!-- Stats grid -->
       <div class="grid grid-cols-2 gap-3 sm:gap-4">
         <!-- 班级卡片 -->
-        <Card class="group relative overflow-hidden border-blue-500/40 bg-blue-500/15 p-4 shadow-lg shadow-blue-950/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-900/40 hover:bg-blue-500/20">
+        <Card
+          class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+          :style="getCardStyle('blue')"
+        >
           <div class="relative z-10">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-400/30 shadow-inner shadow-blue-400/20 transition-transform group-hover:scale-110">
-              <Users class="h-5 w-5 text-blue-200" />
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              :style="getCardIconStyle('blue')"
+            >
+              <Users class="h-5 w-5" />
             </div>
-            <p class="mt-3 text-xs text-blue-200/80 font-medium">
+            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor('blue')">
               班级
             </p>
             <p class="text-sm font-semibold text-white mt-0.5 truncate">
               {{ currentStudent.class_name }}
             </p>
           </div>
-          <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-blue-400/10 blur-2xl group-hover:bg-blue-400/20 transition-colors" />
+          <div
+            class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors group-hover:opacity-30"
+            :style="getCardGlowStyle('blue')"
+          />
         </Card>
 
         <!-- 学号卡片 -->
-        <Card class="group relative overflow-hidden border-purple-500/40 bg-purple-500/15 p-4 shadow-lg shadow-purple-950/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-purple-900/40 hover:bg-purple-500/20">
+        <Card
+          class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+          :style="getCardStyle('purple')"
+        >
           <div class="relative z-10">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-400/30 shadow-inner shadow-purple-400/20 transition-transform group-hover:scale-110">
-              <Award class="h-5 w-5 text-purple-200" />
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              :style="getCardIconStyle('purple')"
+            >
+              <Award class="h-5 w-5" />
             </div>
-            <p class="mt-3 text-xs text-purple-200/80 font-medium">
+            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor('purple')">
               学号
             </p>
             <p class="text-sm font-semibold text-white mt-0.5 font-mono tracking-wide">
               {{ currentStudent.student_id }}
             </p>
           </div>
-          <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-purple-400/10 blur-2xl group-hover:bg-purple-400/20 transition-colors" />
+          <div
+            class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors group-hover:opacity-30"
+            :style="getCardGlowStyle('purple')"
+          />
         </Card>
 
         <!-- 状态卡片 - 跨两列 -->
-        <Card class="group col-span-2 relative overflow-hidden border-green-500/40 bg-green-500/15 p-4 shadow-lg shadow-green-950/30 transition-all duration-300 hover:shadow-green-900/40 hover:bg-green-500/20">
+        <Card
+          class="group col-span-2 relative overflow-hidden p-4 shadow-lg transition-all duration-300"
+          :style="getCardStyle('green')"
+        >
           <div class="relative z-10 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-green-400/30 shadow-inner shadow-green-400/20 transition-transform group-hover:scale-110">
-                <TrendingUp class="h-5 w-5 text-green-200" />
+              <div
+                class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+                :style="getCardIconStyle('green')"
+              >
+                <TrendingUp class="h-5 w-5" />
               </div>
               <div>
-                <p class="text-xs text-green-200/80 font-medium">
+                <p class="text-xs font-medium" :class="getCardTextMutedColor('green')">
                   账户状态
                 </p>
                 <p class="text-sm font-semibold text-white mt-0.5">
@@ -170,11 +230,14 @@ function formatDate(dateStr: string): string {
               :class="currentStudent.is_account_enabled ? 'bg-green-400 shadow-green-400/50' : 'bg-gray-400 shadow-gray-400/50'"
             />
           </div>
-          <div class="absolute right-0 bottom-0 h-20 w-20 rounded-full bg-green-400/10 blur-2xl group-hover:bg-green-400/20 transition-colors" />
+          <div
+            class="absolute right-0 bottom-0 h-20 w-20 rounded-full blur-2xl transition-colors group-hover:opacity-30"
+            :style="getCardGlowStyle('green')"
+          />
         </Card>
       </div>
 
-      <!-- Recent activity - 优化列表样式 -->
+      <!-- Recent activity -->
       <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20">
         <div class="flex items-center justify-between">
           <div>
