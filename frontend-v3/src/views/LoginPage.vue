@@ -122,7 +122,7 @@ const handleSubmit = async () => {
         </div>
 
         <!-- Username -->
-        <div class="space-y-2">
+        <div class="space-y-2 mt-6">
           <Label for="username">用户名</Label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
