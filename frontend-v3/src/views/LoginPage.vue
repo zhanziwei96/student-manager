@@ -125,7 +125,9 @@ const handleSubmit = async () => {
         <div class="space-y-2">
           <Label for="username">用户名</Label>
           <div class="relative">
-            <User class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <User class="h-4 w-4 text-white/50" />
+            </div>
             <Input
               id="username"
               v-model="form.username"
@@ -140,7 +142,9 @@ const handleSubmit = async () => {
         <div class="space-y-2">
           <Label for="password">密码</Label>
           <div class="relative">
-            <Lock class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Lock class="h-4 w-4 text-white/50" />
+            </div>
             <Input
               id="password"
               v-model="form.password"
