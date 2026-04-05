@@ -63,8 +63,8 @@ const contentClasses = computed(() =>
   cn(
     // 定位
     'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
-    // 尺寸 - 响应式
-    'w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
+    // 尺寸 - 响应式：移动端全宽减边距，桌面端限制最大宽度
+    'w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] sm:w-full sm:max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
     // 样式
     'rounded-xl border border-border bg-background-elevated p-4 sm:p-6',
     // 阴影
@@ -108,8 +108,8 @@ const handleSubmit = (e: Event) => {
         @submit="asForm ? handleSubmit : undefined"
       >
         <!-- Header -->
-        <div 
-          v-if="title || $slots.title" 
+        <div
+          v-if="title || $slots.title"
           class="flex flex-col space-y-1.5 text-center sm:text-left mb-4"
         >
           <h3 class="text-lg font-semibold text-text-primary">
@@ -117,9 +117,9 @@ const handleSubmit = (e: Event) => {
               {{ title }}
             </slot>
           </h3>
-          <p 
-            v-if="description || $slots.description" 
-            class="text-sm text-text-secondary"
+          <p
+            v-if="description || $slots.description"
+            class="text-sm text-text-secondary break-words"
           >
             <slot name="description">
               {{ description }}
