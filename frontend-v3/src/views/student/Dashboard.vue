@@ -114,7 +114,7 @@ const getCardTextMutedColor = (color: CardColor) => {
 
     <template v-else>
       <!-- Score card -->
-      <Card class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-6 shadow-xl shadow-primary/10">
+      <Card class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-6 shadow-xl shadow-primary/10 mb-5">
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
@@ -152,7 +152,7 @@ const getCardTextMutedColor = (color: CardColor) => {
       </Card>
 
       <!-- Stats grid -->
-      <div class="grid grid-cols-2 gap-3 sm:gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-5">
         <!-- 班级卡片 -->
         <Card
           class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
@@ -238,7 +238,7 @@ const getCardTextMutedColor = (color: CardColor) => {
       </div>
 
       <!-- Recent activity -->
-      <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20">
+      <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20 mt-5">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-semibold text-white">
