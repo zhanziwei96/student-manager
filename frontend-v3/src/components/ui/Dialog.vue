@@ -97,12 +97,13 @@ const handleSubmit = (e: Event) => {
     <div
       v-if="open"
       :class="overlayClasses"
-      @click.self="close"
+      @click="close"
     >
       <!-- Content -->
       <component
         :is="asForm ? 'form' : 'div'"
         :class="contentClasses"
+        @click.stop
         @submit="asForm ? handleSubmit : undefined"
       >
         <!-- Header -->
