@@ -12,9 +12,10 @@ configure_environment()
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import get_settings
 from app.core.db import init_db
@@ -27,6 +28,34 @@ settings = get_settings()
 
 # 静态文件目录
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "../frontend/dist")
+
+
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    """
+    缓存控制中间件
+    - index.html: 禁止缓存（确保总是获取最新版本）
+    - 静态资源（CSS/JS）: 允许缓存1小时
+    """
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        path = request.url.path
+
+        # index.html 和根路径：完全禁止缓存
+        if path == "/" or path.endswith("index.html"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        # API 请求：禁止缓存
+        elif path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        # 其他静态资源（CSS/JS/图片）：允许缓存1小时
+        else:
+            response.headers["Cache-Control"] = "public, max-age=3600"
+
+        return response
 
 
 @asynccontextmanager
@@ -96,6 +125,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
     
+    # 缓存控制中间件（必须在 CORS 之前）
+    app.add_middleware(CacheControlMiddleware)
+
     # CORS配置 - SEC-005: 收紧CORS策略，使用明确白名单
     # 注意：allow_credentials=True 配合通配符存在安全风险，必须明确指定
     app.add_middleware(
