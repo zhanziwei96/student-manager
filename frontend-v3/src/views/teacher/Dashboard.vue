@@ -24,41 +24,69 @@ const statCards = computed(() => [
     title: '我的学生',
     value: stats.value?.total_students ?? 0,
     icon: Users,
-    color: 'text-blue-400',
+    color: 'blue',
     link: '/teacher/students',
   },
   {
     title: '活跃课堂',
     value: activeSessionsCount.value,
     icon: Calendar,
-    color: 'text-green-400',
+    color: 'green',
     link: '/teacher/session',
   },
   {
     title: '授课时长',
-    value: '-', // 后端暂无此数据
+    value: '-',
     icon: Clock,
-    color: 'text-purple-400',
+    color: 'purple',
     link: '/teacher',
   },
 ])
+
+// 获取卡片颜色配置
+const getCardColors = (color: string) => {
+  const colors: Record<string, { border: string; bg: string; iconBg: string; iconText: string; shadow: string }> = {
+    blue: {
+      border: 'border-blue-500/40',
+      bg: 'bg-blue-500/15',
+      iconBg: 'bg-blue-400/30',
+      iconText: 'text-blue-200',
+      shadow: 'shadow-blue-900/30',
+    },
+    green: {
+      border: 'border-green-500/40',
+      bg: 'bg-green-500/15',
+      iconBg: 'bg-green-400/30',
+      iconText: 'text-green-200',
+      shadow: 'shadow-green-900/30',
+    },
+    purple: {
+      border: 'border-purple-500/40',
+      bg: 'bg-purple-500/15',
+      iconBg: 'bg-purple-400/30',
+      iconText: 'text-purple-200',
+      shadow: 'shadow-purple-900/30',
+    },
+  }
+  return colors[color] || colors.blue
+}
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-5">
     <!-- Header -->
-    <div>
-      <h1 class="text-2xl font-bold text-white">
+    <div class="px-1">
+      <h1 class="text-2xl font-bold text-white tracking-tight">
         教师仪表板
       </h1>
-      <p class="text-white/60">
+      <p class="text-white/50 text-sm mt-1">
         欢迎回来，教师
       </p>
     </div>
 
     <!-- Quick actions -->
-    <div class="flex gap-4">
-      <Button @click="router.push('/teacher/session')">
+    <div class="flex gap-3">
+      <Button @click="router.push('/teacher/session')" class="shadow-lg shadow-primary/20">
         <Calendar class="mr-2 h-4 w-4" />
         开始上课
       </Button>
@@ -82,59 +110,64 @@ const statCards = computed(() => [
     <!-- Error state -->
     <div
       v-else-if="error"
-      class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400"
+      class="rounded-xl border border-red-500/30 bg-red-500/15 p-4 text-red-400"
     >
       加载统计数据失败: {{ error.message }}
     </div>
 
-    <!-- Stats grid -->
+    <!-- Stats grid - 移动端2列布局 -->
     <div
       v-else
-      class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+      class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3"
     >
       <Card
         v-for="card in statCards"
         :key="card.title"
-        class="group border-white/10 bg-white/[0.02] p-6 transition-colors hover:border-white/20"
+        class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+        :class="getCardColors(card.color).border + ' ' + getCardColors(card.color).bg + ' ' + getCardColors(card.color).shadow""
       >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-white/60">
-              {{ card.title }}
-            </p>
-            <p class="mt-1 text-3xl font-bold text-white">
-              {{ card.value }}
-            </p>
+        <div class="relative z-10">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-xs text-white/60">
+                {{ card.title }}
+              </p>
+              <p class="mt-1 text-2xl font-bold text-white">
+                {{ card.value }}
+              </p>
+            </div>
+            <div :class="['flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110', getCardColors(card.color).iconBg]">
+              <component
+                :is="card.icon"
+                :class="['h-5 w-5', getCardColors(card.color).iconText]"
+              />
+            </div>
           </div>
-          <div :class="['rounded-lg bg-white/5 p-3 transition-colors group-hover:bg-white/10', card.color]">
-            <component
-              :is="card.icon"
-              class="h-6 w-6"
-            />
+          <div class="mt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="p-0 h-auto text-xs text-white/70 hover:text-white"
+              @click="router.push(card.link)"
+            >
+              查看详情
+              <ArrowRight class="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+            </Button>
           </div>
         </div>
-        <div class="mt-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            class="p-0 text-primary hover:text-primary/80"
-            @click="router.push(card.link)"
-          >
-            查看详情
-            <ArrowRight class="ml-1 h-4 w-4" />
-          </Button>
-        </div>
+        <!-- 背景装饰 -->
+        <div :class="['absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30', getCardColors(card.color).iconBg]" />
       </Card>
     </div>
 
-    <!-- Today's schedule -->
-    <Card class="border-white/10 bg-white/[0.02] p-6">
-      <div class="flex items-center justify-between">
+    <!-- Today's schedule - 增强视觉层次 -->
+    <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20">
+      <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-lg font-semibold text-white">
             今日课表
           </h2>
-          <p class="text-sm text-white/60">
+          <p class="text-xs text-white/50 mt-0.5">
             {{ todayWeekDay }}的课程安排
           </p>
         </div>
@@ -146,31 +179,31 @@ const statCards = computed(() => [
           管理课表
         </Button>
       </div>
-      
+
       <DataContainer
         :loading="isLoadingSchedules"
-        :has-data="todaySchedules.length > 0"
+        :has-data="todaySchedules?.length > 0"
         empty-text="今天没有课程安排"
-        class="mt-4"
       >
-        <div class="space-y-3">
+        <div class="space-y-2.5">
           <div
             v-for="schedule in todaySchedules"
             :key="schedule.id"
-            class="flex items-center gap-4 rounded-lg border border-white/5 bg-white/[0.02] p-4"
+            class="group flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3.5 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/10"
           >
-            <div class="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <span class="text-xs font-medium">{{ schedule.start_time }}</span>
+            <div class="flex h-11 w-11 flex-col items-center justify-center rounded-xl bg-primary/20 text-primary shadow-inner">
+              <Clock class="h-3.5 w-3.5 mb-0.5" />
+              <span class="text-[10px] font-medium">{{ schedule.start_time?.slice(0, 5) }}</span>
             </div>
-            <div class="flex-1">
-              <p class="font-medium text-white">
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-white text-sm truncate">
                 {{ schedule.course_name }}
               </p>
-              <p class="text-sm text-white/60">
+              <p class="text-xs text-white/50 flex items-center gap-1.5">
                 {{ schedule.class_name }}
                 <span
                   v-if="schedule.classroom"
-                  class="inline-flex items-center gap-1 ml-2"
+                  class="inline-flex items-center gap-0.5"
                 >
                   <MapPin class="h-3 w-3" />
                   {{ schedule.classroom }}
@@ -179,6 +212,7 @@ const statCards = computed(() => [
             </div>
             <Button
               size="sm"
+              class="shadow-md"
               @click="router.push('/teacher/session')"
             >
               去上课
