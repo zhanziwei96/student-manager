@@ -45,7 +45,7 @@ def create_security_alert(session: Session, alert_type: str, severity: str,
 
 def get_unresolved_alerts(session: Session) -> List[SecurityAlert]:
     """获取未解决的安全警报"""
-    query = select(SecurityAlert).where(SecurityAlert.is_resolved == False).order_by(SecurityAlert.created_at.desc())
+    query = select(SecurityAlert).where(SecurityAlert.is_resolved .is_(False)).order_by(SecurityAlert.created_at.desc())
     return list(session.exec(query).all())
 
 
