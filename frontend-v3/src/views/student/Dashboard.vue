@@ -116,14 +116,14 @@ function formatDate(dateStr: string): string {
       </Card>
 
       <!-- Stats grid -->
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Card class="border-white/10 bg-white/[0.02] p-6">
+      <div class="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <Card class="border-blue-500/30 bg-blue-500/10 p-5 shadow-lg shadow-blue-900/10">
           <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/20">
-              <Users class="h-5 w-5 text-blue-400" />
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/30 shadow-inner shadow-blue-400/20">
+              <Users class="h-5 w-5 text-blue-300" />
             </div>
             <div>
-              <p class="text-sm text-white/60">
+              <p class="text-sm text-blue-200/70">
                 班级
               </p>
               <p class="font-medium text-white">
@@ -132,13 +132,13 @@ function formatDate(dateStr: string): string {
             </div>
           </div>
         </Card>
-        <Card class="border-white/10 bg-white/[0.02] p-6">
+        <Card class="border-purple-500/30 bg-purple-500/10 p-5 shadow-lg shadow-purple-900/10">
           <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/20">
-              <Award class="h-5 w-5 text-purple-400" />
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/30 shadow-inner shadow-purple-400/20">
+              <Award class="h-5 w-5 text-purple-300" />
             </div>
             <div>
-              <p class="text-sm text-white/60">
+              <p class="text-sm text-purple-200/70">
                 学号
               </p>
               <p class="font-medium text-white">
@@ -147,13 +147,13 @@ function formatDate(dateStr: string): string {
             </div>
           </div>
         </Card>
-        <Card class="border-white/10 bg-white/[0.02] p-6">
+        <Card class="border-green-500/30 bg-green-500/10 p-5 shadow-lg shadow-green-900/10">
           <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/20">
-              <TrendingUp class="h-5 w-5 text-green-400" />
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-green-500/30 shadow-inner shadow-green-400/20">
+              <TrendingUp class="h-5 w-5 text-green-300" />
             </div>
             <div>
-              <p class="text-sm text-white/60">
+              <p class="text-sm text-green-200/70">
                 状态
               </p>
               <Badge :variant="currentStudent.is_account_enabled ? 'success' : 'secondary'">
@@ -165,14 +165,14 @@ function formatDate(dateStr: string): string {
       </div>
 
       <!-- Recent activity -->
-      <Card class="border-white/10 bg-white/[0.02] p-6">
+      <Card class="border-white/20 bg-white/[0.05] p-5 shadow-lg shadow-black/20">
         <h2 class="text-lg font-semibold text-white">
           最近活动
         </h2>
         <p class="text-sm text-white/60">
           最新的分数变化
         </p>
-        
+
         <!-- Loading state -->
         <div
           v-if="logsLoading"
@@ -180,25 +180,25 @@ function formatDate(dateStr: string): string {
         >
           <Loader2 class="h-6 w-6 animate-spin text-primary" />
         </div>
-        
+
         <!-- Score logs list -->
         <div
           v-else-if="scoreLogs && scoreLogs.length > 0"
-          class="mt-6 space-y-4"
+          class="mt-6 space-y-3"
         >
           <div
             v-for="log in scoreLogs.slice(0, 5)"
-            :key="log.id" 
-            class="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-4"
+            :key="log.id"
+            class="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4 shadow-md shadow-black/10"
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-8 w-8 items-center justify-center rounded-full"
-                :class="log.delta >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'"
+                class="flex h-9 w-9 items-center justify-center rounded-xl shadow-inner"
+                :class="log.delta >= 0 ? 'bg-green-500/30 shadow-green-400/20' : 'bg-red-500/30 shadow-red-400/20'"
               >
                 <TrendingUp
-                  class="h-4 w-4" 
-                  :class="log.delta >= 0 ? 'text-green-400' : 'text-red-400'"
+                  class="h-4 w-4"
+                  :class="log.delta >= 0 ? 'text-green-300' : 'text-red-300'"
                 />
               </div>
               <div>
