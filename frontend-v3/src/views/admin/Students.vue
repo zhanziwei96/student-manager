@@ -111,9 +111,9 @@ const handleAddStudent = async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>
         <h1 class="text-2xl font-bold text-white">
           学生管理
@@ -133,6 +133,7 @@ const handleAddStudent = async () => {
       v-model:search-query="filters.searchQuery"
       v-model:selected-class="filters.className"
       :class-options="classOptions"
+      class="mb-5"
       @update:search-query="setSearchQuery"
       @update:selected-class="setClassFilter"
     />

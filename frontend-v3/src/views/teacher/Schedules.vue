@@ -286,9 +286,9 @@ const handleBatchDelete = async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
       <div class="min-w-0">
         <h1 class="text-xl sm:text-2xl font-bold text-white">
           课表管理
@@ -335,7 +335,7 @@ const handleBatchDelete = async () => {
     </div>
 
     <!-- 统计卡片 -->
-    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-5">
       <!-- 总课程数 -->
       <Card class="border-white/10 bg-white/[0.02] p-4">
         <div class="flex items-center gap-3">
@@ -436,7 +436,7 @@ const handleBatchDelete = async () => {
     </div>
 
     <!-- Filters -->
-    <Card class="border-white/10 bg-white/[0.02] p-4">
+    <Card class="border-white/10 bg-white/[0.02] p-4 mb-5">
       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-4">
         <div class="w-full sm:w-48">
           <label class="mb-1 block text-sm text-white/60">班级</label>

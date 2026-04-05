@@ -44,9 +44,9 @@ const formatTime = (timeStr: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>
         <h1 class="text-2xl font-bold text-white">
           签到管理
@@ -58,7 +58,7 @@ const formatTime = (timeStr: string) => {
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-5">
       <Card class="border-white/10 bg-white/[0.02] p-4">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
@@ -125,7 +125,7 @@ const formatTime = (timeStr: string) => {
     </div>
 
     <!-- Filters -->
-    <div class="flex flex-col gap-4 sm:flex-row">
+    <div class="flex flex-col gap-4 sm:flex-row mb-5">
       <div class="relative flex-1">
         <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
         <Input

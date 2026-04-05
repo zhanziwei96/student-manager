@@ -35,9 +35,9 @@ const getScoreColor = (score: number) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>
         <h1 class="text-2xl font-bold text-white">
           班级管理
@@ -49,7 +49,7 @@ const getScoreColor = (score: number) => {
     </div>
 
     <!-- Search -->
-    <div class="relative">
+    <div class="relative mb-5">
       <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
       <Input
         v-model="searchQuery"

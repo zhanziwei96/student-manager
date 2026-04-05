@@ -94,7 +94,7 @@ const getCardTextMutedColor = (color: CardColor) => {
     </div>
 
     <!-- Quick actions -->
-    <div class="flex gap-3">
+    <div class="flex gap-3 mb-5">
       <Button @click="router.push('/teacher/session')" class="shadow-lg shadow-primary/20">
         <Calendar class="mr-2 h-4 w-4" />
         开始上课

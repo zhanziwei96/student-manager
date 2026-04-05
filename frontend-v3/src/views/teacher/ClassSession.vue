@@ -186,9 +186,9 @@ const handleQuickCheckIn = async (studentId: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
-    <div>
+    <div class="mb-5">
       <h1 class="text-2xl font-bold text-white">
         课堂签到
       </h1>
@@ -199,7 +199,7 @@ const handleQuickCheckIn = async (studentId: string) => {
 
     <!-- Session status -->
     <Card
-      class="border-white/10 p-4 md:p-6"
+      class="border-white/10 p-4 md:p-6 mb-5"
       :class="isSessionActive ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02]'"
     >
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -255,7 +255,7 @@ const handleQuickCheckIn = async (studentId: string) => {
     <!-- Start session form -->
     <Card
       v-if="!isSessionActive"
-      class="border-white/10 bg-white/[0.02] p-4 md:p-6"
+      class="border-white/10 bg-white/[0.02] p-4 md:p-6 mb-5"
     >
       <h3 class="font-medium text-white text-base md:text-lg">
         开始新课堂
@@ -283,8 +283,8 @@ const handleQuickCheckIn = async (studentId: string) => {
         </ul>
       </div>
 
-      <div class="mt-4 space-y-4">
-        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+      <div class="mt-4">
+        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
           <Select
             v-model="courseName"
             class="w-full"
@@ -313,7 +313,7 @@ const handleQuickCheckIn = async (studentId: string) => {
     <!-- Active session content -->
     <template v-if="isSessionActive">
       <!-- Check-in form -->
-      <Card class="border-white/10 bg-white/[0.02] p-4 md:p-6">
+      <Card class="border-white/10 bg-white/[0.02] p-4 md:p-6 mb-5">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 flex-shrink-0">
             <CheckCircle class="h-5 w-5 text-primary" />
@@ -346,7 +346,7 @@ const handleQuickCheckIn = async (studentId: string) => {
       </Card>
 
       <!-- Stats -->
-      <CheckinStats :stats="checkinStats" />
+      <CheckinStats :stats="checkinStats" class="mb-5" />
 
       <!-- Student list -->
       <StudentCheckinGrid

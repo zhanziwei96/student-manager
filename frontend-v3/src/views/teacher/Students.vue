@@ -85,9 +85,9 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
-    <div>
+    <div class="mb-5">
       <h1 class="text-2xl font-bold text-white">
         我的学生
       </h1>
@@ -97,7 +97,7 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
     </div>
 
     <!-- Filters -->
-    <StudentFilters
+    <StudentFilters class="mb-5"
       v-model:search-query="filters.searchQuery"
       v-model:selected-class="filters.className"
       :class-options="classOptions"
