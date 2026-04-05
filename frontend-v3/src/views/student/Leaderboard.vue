@@ -41,9 +41,9 @@ const maskName = (name: string, studentId: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
-    <div>
+    <div class="mb-5">
       <h1 class="text-2xl font-bold text-white">
         {{ activeTab === 'class' ? '班级排行榜' : '全校排行榜' }}
       </h1>
@@ -53,7 +53,7 @@ const maskName = (name: string, studentId: string) => {
     </div>
 
     <!-- Tab Switch -->
-    <div class="flex gap-2">
+    <div class="flex gap-2 mb-5">
       <Button
         :variant="activeTab === 'class' ? 'default' : 'outline'"
         @click="activeTab = 'class'"
@@ -73,7 +73,7 @@ const maskName = (name: string, studentId: string) => {
     <!-- My Rank Card - 渐变主题 -->
     <Card
       v-if="myRank"
-      class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-4 shadow-xl shadow-primary/10"
+      class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-4 shadow-xl shadow-primary/10 mb-5"
     >
       <div class="relative z-10 flex items-center justify-between">
         <div class="flex items-center gap-3">

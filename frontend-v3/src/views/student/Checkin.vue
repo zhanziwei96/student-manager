@@ -46,7 +46,7 @@ const formatTime = (time: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Header -->
     <div>
       <h1 class="text-2xl font-bold text-white">
@@ -68,7 +68,7 @@ const formatTime = (time: string) => {
     <!-- Student Info Card - 紫色主题 -->
     <Card
       v-else-if="studentProfile"
-      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300"
+      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300 mb-5"
       :style="{
         backgroundColor: 'var(--card-purple-bg)',
         borderColor: 'var(--card-purple-border)',
@@ -105,7 +105,7 @@ const formatTime = (time: string) => {
 
     <!-- Checkin Status Card - 动态主题 -->
     <Card
-      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300"
+      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300 mb-5"
       :class="hasActiveSession ? '' : 'bg-white/[0.02] border-white/10'"
       :style="hasActiveSession ? {
         backgroundColor: 'var(--card-green-bg)',

@@ -127,7 +127,7 @@ const getCardTextMutedColor = (color: CardColor) => {
     <!-- Stats grid - 移动端2列布局 -->
     <div
       v-else
-      class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3"
+      class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 mb-5"
     >
       <Card
         v-for="card in statCards"
@@ -176,7 +176,7 @@ const getCardTextMutedColor = (color: CardColor) => {
     </div>
 
     <!-- Today's schedule - 增强视觉层次 -->
-    <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20">
+    <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20 mt-5">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-lg font-semibold text-white">
