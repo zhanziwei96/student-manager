@@ -28,6 +28,16 @@ const getRankStyle = (rank: number) => {
 const isCurrentStudent = (studentId: string) => {
   return studentId === String(currentStudentId.value)
 }
+
+// 姓名脱敏：张三→张*三、李小明→李*明
+const maskName = (name: string, studentId: string) => {
+  // 自己显示完整姓名
+  if (isCurrentStudent(studentId)) return name
+  // 其他人脱敏显示：姓氏 + * + 最后一个字
+  if (name.length <= 1) return name + '*'
+  if (name.length === 2) return name[0] + '*' + name[1]
+  return name[0] + '*' + name[name.length - 1]
+}
 </script>
 
 <template>
@@ -129,7 +139,7 @@ const isCurrentStudent = (studentId: string) => {
               <!-- Info -->
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="font-medium text-white">{{ student.name }}</span>
+                  <span class="font-medium text-white">{{ maskName(student.name, student.student_id) }}</span>
                   <Badge
                     v-if="isCurrentStudent(student.student_id)"
                     variant="primary"
@@ -207,7 +217,7 @@ const isCurrentStudent = (studentId: string) => {
               </td>
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <span class="font-medium text-white">{{ student.name }}</span>
+                  <span class="font-medium text-white">{{ maskName(student.name, student.student_id) }}</span>
                   <Badge
                     v-if="isCurrentStudent(student.student_id)"
                     variant="primary"
