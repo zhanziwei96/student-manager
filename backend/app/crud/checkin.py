@@ -20,7 +20,7 @@ def get_class_session(session: Session, teacher_id: Optional[int] = None) -> Opt
     if teacher_id:
         query = select(ClassSession).where(
             ClassSession.teacher_id == teacher_id,
-            ClassSession.active == True
+            ClassSession.active .is_(True)
         )
         return session.exec(query).first()
     return None
@@ -30,7 +30,7 @@ def get_class_session_by_class_name(session: Session, class_name: str) -> Option
     """根据班级名称获取活跃课堂"""
     query = select(ClassSession).where(
         ClassSession.class_name == class_name,
-        ClassSession.active == True
+        ClassSession.active .is_(True)
     )
     return session.exec(query).first()
 
@@ -64,7 +64,7 @@ def end_class(session: Session, teacher_id: Optional[int] = None) -> None:
         # 查找该教师的活跃课堂
         query = select(ClassSession).where(
             ClassSession.teacher_id == teacher_id,
-            ClassSession.active == True
+            ClassSession.active .is_(True)
         )
         class_session = session.exec(query).first()
     else:
