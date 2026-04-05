@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores'
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-const props = defineProps<{
+defineProps<{
   open: boolean
 }>()
 
