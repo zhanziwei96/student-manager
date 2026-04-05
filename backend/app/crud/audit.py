@@ -19,13 +19,13 @@ def create_audit_log(session: Session, **kwargs) -> AuditLog:
 def get_audit_logs(session: Session, limit: int = 100, offset: int = 0) -> List[AuditLog]:
     """获取审计日志列表"""
     query = select(AuditLog).order_by(AuditLog.created_at.desc()).offset(offset).limit(limit)
-    return session.exec(query).all()
+    return list(session.exec(query).all())
 
 
 def get_my_logs(session: Session, user_id: int, limit: int = 50) -> List[AuditLog]:
     """获取我的操作日志"""
     query = select(AuditLog).where(AuditLog.user_id == user_id).order_by(AuditLog.created_at.desc()).limit(limit)
-    return session.exec(query).all()
+    return list(session.exec(query).all())
 
 
 def create_security_alert(session: Session, alert_type: str, severity: str, 
@@ -46,7 +46,7 @@ def create_security_alert(session: Session, alert_type: str, severity: str,
 def get_unresolved_alerts(session: Session) -> List[SecurityAlert]:
     """获取未解决的安全警报"""
     query = select(SecurityAlert).where(SecurityAlert.is_resolved == False).order_by(SecurityAlert.created_at.desc())
-    return session.exec(query).all()
+    return list(session.exec(query).all())
 
 
 def resolve_alert(session: Session, alert_id: int) -> bool:
@@ -83,4 +83,4 @@ def cleanup_old_audit_logs(session: Session, retention_days: int = 90) -> int:
     )
     session.commit()
     
-    return result.rowcount
+    return result.rowcount  # type: ignore
