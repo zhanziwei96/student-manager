@@ -159,7 +159,7 @@ const handleSubmit = async () => {
         <!-- Submit button -->
         <Button
           type="submit"
-          class="w-full"
+          class="w-full mt-8"
           :loading="authStore.isLoggingIn"
         >
           登录
