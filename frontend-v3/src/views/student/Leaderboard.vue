@@ -14,12 +14,12 @@ const { isPending, students, myRank } = useLeaderboard(
   computed(() => ({ scope: activeTab.value, limit: 50 }))
 )
 
-// 前三名样式 - 金银铜奖杯（高对比度）
+// 前三名样式 - 金银铜奖杯（使用纯色背景，兼容移动端）
 const getRankStyle = (rank: number) => {
   switch (rank) {
-    case 1: return { icon: Trophy, color: 'text-yellow-200', bg: 'bg-gradient-to-br from-yellow-300 to-yellow-600', ring: 'ring-yellow-400', shadow: 'shadow-yellow-500/40' }  // 🥇 金牌
-    case 2: return { icon: Trophy, color: 'text-blue-100', bg: 'bg-gradient-to-br from-slate-200 to-slate-500', ring: 'ring-slate-300', shadow: 'shadow-slate-400/30' }    // 🥈 银牌
-    case 3: return { icon: Trophy, color: 'text-orange-200', bg: 'bg-gradient-to-br from-orange-500 to-red-600', ring: 'ring-orange-500', shadow: 'shadow-orange-500/30' } // 🥉 铜牌
+    case 1: return { icon: Trophy, color: 'text-yellow-900', bg: 'bg-yellow-400', ring: 'ring-yellow-300', shadow: 'shadow-yellow-500/50' }  // 🥇 金牌
+    case 2: return { icon: Trophy, color: 'text-slate-800', bg: 'bg-slate-300', ring: 'ring-slate-200', shadow: 'shadow-slate-400/40' }    // 🥈 银牌
+    case 3: return { icon: Trophy, color: 'text-orange-900', bg: 'bg-orange-400', ring: 'ring-orange-300', shadow: 'shadow-orange-500/40' } // 🥉 铜牌
     default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', ring: 'ring-white/10', shadow: '' }
   }
 }
