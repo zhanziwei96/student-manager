@@ -23,72 +23,75 @@ const statCards = computed(() => [
     value: stats.value?.total_students ?? 0,
     icon: Users,
     trend: '+12%',
-    color: 'blue',
+    color: 'blue' as CardColor,
   },
   {
     title: '活跃学生',
     value: stats.value?.active_students ?? 0,
     icon: GraduationCap,
     trend: '+5%',
-    color: 'green',
+    color: 'green' as CardColor,
   },
   {
     title: '班级总数',
     value: stats.value?.total_classes ?? 0,
     icon: BookOpen,
     trend: '0%',
-    color: 'purple',
+    color: 'purple' as CardColor,
   },
   {
     title: '平均分数',
     value: Math.round(stats.value?.average_score ?? 0),
     icon: TrendingUp,
     trend: '+2%',
-    color: 'orange',
+    color: 'orange' as CardColor,
   },
 ])
 
-// 获取卡片颜色配置
-const getCardColors = (color: string) => {
-  const colors: Record<string, { border: string; bg: string; iconBg: string; iconText: string; shadow: string; trendBg: string; trendText: string }> = {
-    blue: {
-      border: 'border-blue-500/40',
-      bg: 'bg-blue-500/15',
-      iconBg: 'bg-blue-400/30',
-      iconText: 'text-blue-200',
-      shadow: 'shadow-blue-900/30',
-      trendBg: 'bg-blue-400/20',
-      trendText: 'text-blue-300',
-    },
-    green: {
-      border: 'border-green-500/40',
-      bg: 'bg-green-500/15',
-      iconBg: 'bg-green-400/30',
-      iconText: 'text-green-200',
-      shadow: 'shadow-green-900/30',
-      trendBg: 'bg-green-400/20',
-      trendText: 'text-green-300',
-    },
-    purple: {
-      border: 'border-purple-500/40',
-      bg: 'bg-purple-500/15',
-      iconBg: 'bg-purple-400/30',
-      iconText: 'text-purple-200',
-      shadow: 'shadow-purple-900/30',
-      trendBg: 'bg-purple-400/20',
-      trendText: 'text-purple-300',
-    },
-    orange: {
-      border: 'border-orange-500/40',
-      bg: 'bg-orange-500/15',
-      iconBg: 'bg-orange-400/30',
-      iconText: 'text-orange-200',
-      shadow: 'shadow-orange-900/30',
-      trendBg: 'bg-orange-400/20',
-      trendText: 'text-orange-300',
-    },
+// 卡片颜色类型
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+// 获取卡片样式 - 使用 CSS 变量
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
   }
-  return colors[color] || colors.blue
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
+
+const getCardTextMutedColor = (color: CardColor) => {
+  const colors: Record<CardColor, string> = {
+    blue: 'text-blue-200/80',
+    green: 'text-green-200/80',
+    purple: 'text-purple-200/80',
+    orange: 'text-orange-200/80',
+  }
+  return colors[color]
+}
+
+const getTrendBadgeStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
+  }
 }
 </script>
 
@@ -129,29 +132,32 @@ const getCardColors = (color: string) => {
         v-for="card in statCards"
         :key="card.title"
         class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
-        :class="getCardColors(card.color).border + ' ' + getCardColors(card.color).bg + ' ' + getCardColors(card.color).shadow""
+        :style="getCardStyle(card.color)"
       >
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
-              <p class="text-xs text-white/60">
+              <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor(card.color)">
                 {{ card.title }}
               </p>
               <p class="mt-1 text-2xl font-bold text-white">
                 {{ card.value }}
               </p>
             </div>
-            <div :class="['flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110', getCardColors(card.color).iconBg]">
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              :style="getCardIconStyle(card.color)"
+            >
               <component
                 :is="card.icon"
-                :class="['h-5 w-5', getCardColors(card.color).iconText]"
+                class="h-5 w-5"
               />
             </div>
           </div>
           <div class="mt-3 flex items-center gap-2">
             <Badge
               class="text-xs px-2 py-0.5 border-0"
-              :class="getCardColors(card.color).trendBg + ' ' + getCardColors(card.color).trendText"
+              :style="getTrendBadgeStyle(card.color)"
             >
               {{ card.trend }}
             </Badge>
@@ -159,7 +165,10 @@ const getCardColors = (color: string) => {
           </div>
         </div>
         <!-- 背景装饰 -->
-        <div :class="['absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30', getCardColors(card.color).iconBg]" />
+        <div
+          class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30"
+          :style="getCardGlowStyle(card.color)"
+        />
       </Card>
     </div>
 

@@ -24,51 +24,60 @@ const statCards = computed(() => [
     title: '我的学生',
     value: stats.value?.total_students ?? 0,
     icon: Users,
-    color: 'blue',
+    color: 'blue' as CardColor,
     link: '/teacher/students',
   },
   {
     title: '活跃课堂',
     value: activeSessionsCount.value,
     icon: Calendar,
-    color: 'green',
+    color: 'green' as CardColor,
     link: '/teacher/session',
   },
   {
     title: '授课时长',
     value: '-',
     icon: Clock,
-    color: 'purple',
+    color: 'purple' as CardColor,
     link: '/teacher',
   },
 ])
 
-// 获取卡片颜色配置
-const getCardColors = (color: string) => {
-  const colors: Record<string, { border: string; bg: string; iconBg: string; iconText: string; shadow: string }> = {
-    blue: {
-      border: 'border-blue-500/40',
-      bg: 'bg-blue-500/15',
-      iconBg: 'bg-blue-400/30',
-      iconText: 'text-blue-200',
-      shadow: 'shadow-blue-900/30',
-    },
-    green: {
-      border: 'border-green-500/40',
-      bg: 'bg-green-500/15',
-      iconBg: 'bg-green-400/30',
-      iconText: 'text-green-200',
-      shadow: 'shadow-green-900/30',
-    },
-    purple: {
-      border: 'border-purple-500/40',
-      bg: 'bg-purple-500/15',
-      iconBg: 'bg-purple-400/30',
-      iconText: 'text-purple-200',
-      shadow: 'shadow-purple-900/30',
-    },
+// 卡片颜色类型
+type CardColor = 'blue' | 'green' | 'purple'
+
+// 获取卡片样式 - 使用 CSS 变量
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
   }
-  return colors[color] || colors.blue
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
+
+const getCardTextMutedColor = (color: CardColor) => {
+  const colors: Record<CardColor, string> = {
+    blue: 'text-blue-200/80',
+    green: 'text-green-200/80',
+    purple: 'text-purple-200/80',
+  }
+  return colors[color]
 }
 </script>
 
@@ -124,22 +133,25 @@ const getCardColors = (color: string) => {
         v-for="card in statCards"
         :key="card.title"
         class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
-        :class="getCardColors(card.color).border + ' ' + getCardColors(card.color).bg + ' ' + getCardColors(card.color).shadow""
+        :style="getCardStyle(card.color)"
       >
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
-              <p class="text-xs text-white/60">
+              <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor(card.color)">
                 {{ card.title }}
               </p>
               <p class="mt-1 text-2xl font-bold text-white">
                 {{ card.value }}
               </p>
             </div>
-            <div :class="['flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110', getCardColors(card.color).iconBg]">
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              :style="getCardIconStyle(card.color)"
+            >
               <component
                 :is="card.icon"
-                :class="['h-5 w-5', getCardColors(card.color).iconText]"
+                class="h-5 w-5"
               />
             </div>
           </div>
@@ -156,7 +168,10 @@ const getCardColors = (color: string) => {
           </div>
         </div>
         <!-- 背景装饰 -->
-        <div :class="['absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30', getCardColors(card.color).iconBg]" />
+        <div
+          class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30"
+          :style="getCardGlowStyle(card.color)"
+        />
       </Card>
     </div>
 

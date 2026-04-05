@@ -65,14 +65,22 @@ const formatTime = (time: string) => {
       <Loader2 class="h-8 w-8 animate-spin text-primary" />
     </div>
 
-    <!-- Student Info Card -->
+    <!-- Student Info Card - 紫色主题 -->
     <Card
       v-else-if="studentProfile"
-      class="border-white/10 bg-white/[0.02] p-4 md:p-6"
+      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300"
+      :style="{
+        backgroundColor: 'var(--card-purple-bg)',
+        borderColor: 'var(--card-purple-border)',
+        '--tw-shadow-color': 'var(--card-purple-shadow)'
+      }"
     >
-      <div class="flex items-center gap-3 md:gap-4">
-        <div class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/20 flex-shrink-0">
-          <User class="h-5 w-5 md:h-6 md:w-6 text-primary" />
+      <div class="flex items-center gap-3 md:gap-4 relative z-10">
+        <div
+          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 shadow-inner"
+          :style="{ backgroundColor: 'var(--card-purple-icon-bg)' }"
+        >
+          <User class="h-5 w-5 md:h-6 md:w-6" :style="{ color: 'var(--card-purple-icon-text)' }" />
         </div>
         <div class="min-w-0 flex-1">
           <h2 class="font-medium text-white truncate">
@@ -88,17 +96,30 @@ const formatTime = (time: string) => {
           </div>
         </div>
       </div>
+      <!-- 背景装饰 -->
+      <div
+        class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
+        :style="{ backgroundColor: 'var(--card-purple-glow)' }"
+      />
     </Card>
 
-    <!-- Checkin Status Card -->
+    <!-- Checkin Status Card - 动态主题 -->
     <Card
-      class="border-white/10 p-4 md:p-6"
-      :class="hasActiveSession ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02]'"
+      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300"
+      :class="hasActiveSession ? '' : 'bg-white/[0.02] border-white/10'"
+      :style="hasActiveSession ? {
+        backgroundColor: 'var(--card-green-bg)',
+        borderColor: 'var(--card-green-border)',
+        '--tw-shadow-color': 'var(--card-green-shadow)'
+      } : {}"
     >
-      <div class="flex items-center gap-3 md:gap-4">
+      <div class="flex items-center gap-3 md:gap-4 relative z-10">
         <div
-          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0"
-          :class="hasActiveSession ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/60'"
+          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 shadow-inner transition-transform"
+          :style="hasActiveSession ? {
+            backgroundColor: 'var(--card-green-icon-bg)',
+            color: 'var(--card-green-icon-text)'
+          } : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
         >
           <Clock
             v-if="!hasActiveSession"
@@ -130,12 +151,20 @@ const formatTime = (time: string) => {
         <Badge
           v-if="showCheckedInStatus"
           variant="success"
-          class="bg-green-500/20 text-green-400 border-green-500/30 flex-shrink-0"
+          class="flex-shrink-0 border-0"
+          :style="{ backgroundColor: 'var(--card-green-icon-bg)', color: 'var(--card-green-icon-text)' }"
         >
           <CalendarCheck class="mr-1 h-3 w-3" />
           已签到
         </Badge>
       </div>
+
+      <!-- 背景装饰 - 仅在活跃课堂时显示 -->
+      <div
+        v-if="hasActiveSession"
+        class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
+        :style="{ backgroundColor: 'var(--card-green-glow)' }"
+      />
 
       <!-- Checkin Button -->
       <div
@@ -179,31 +208,54 @@ const formatTime = (time: string) => {
       </div>
     </Card>
 
-    <!-- Checkin Tips -->
-    <Card class="border-white/10 bg-white/[0.02] p-4 md:p-6">
-      <h3 class="font-medium text-white mb-4 text-base md:text-lg">
-        签到说明
-      </h3>
-      <ul class="space-y-3 md:space-y-4 text-sm text-white/60">
-        <li class="flex items-start gap-3">
-          <div class="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span class="text-xs text-primary">1</span>
-          </div>
-          <span class="leading-relaxed">请在老师开启课堂后进行签到</span>
-        </li>
-        <li class="flex items-start gap-3">
-          <div class="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span class="text-xs text-primary">2</span>
-          </div>
-          <span class="leading-relaxed">每节课只能签到一次，不可重复签到</span>
-        </li>
-        <li class="flex items-start gap-3">
-          <div class="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span class="text-xs text-primary">3</span>
-          </div>
-          <span class="leading-relaxed">签到可获得课堂参与积分</span>
-        </li>
-      </ul>
+    <!-- Checkin Tips - 蓝色主题 -->
+    <Card
+      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300"
+      :style="{
+        backgroundColor: 'var(--card-blue-bg)',
+        borderColor: 'var(--card-blue-border)',
+        '--tw-shadow-color': 'var(--card-blue-shadow)'
+      }"
+    >
+      <div class="relative z-10">
+        <h3 class="font-medium text-white mb-4 text-base md:text-lg">
+          签到说明
+        </h3>
+        <ul class="space-y-3 md:space-y-4 text-sm" :style="{ color: 'var(--card-blue-icon-text)' }">
+          <li class="flex items-start gap-3">
+            <div
+              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
+              :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
+            >
+              <span class="text-xs font-medium" style="color: #fff">1</span>
+            </div>
+            <span class="leading-relaxed text-white/70">请在老师开启课堂后进行签到</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <div
+              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
+              :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
+            >
+              <span class="text-xs font-medium" style="color: #fff">2</span>
+            </div>
+            <span class="leading-relaxed text-white/70">每节课只能签到一次，不可重复签到</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <div
+              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
+              :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
+            >
+              <span class="text-xs font-medium" style="color: #fff">3</span>
+            </div>
+            <span class="leading-relaxed text-white/70">签到可获得课堂参与积分</span>
+          </li>
+        </ul>
+      </div>
+      <!-- 背景装饰 -->
+      <div
+        class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
+        :style="{ backgroundColor: 'var(--card-blue-glow)' }"
+      />
     </Card>
 
     <!-- Success Toast -->

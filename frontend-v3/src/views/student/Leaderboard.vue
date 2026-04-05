@@ -70,12 +70,12 @@ const maskName = (name: string, studentId: string) => {
       </Button>
     </div>
 
-    <!-- My Rank Card -->
+    <!-- My Rank Card - 渐变主题 -->
     <Card
       v-if="myRank"
-      class="border-primary/30 bg-primary/5 p-4"
+      class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-4 shadow-xl shadow-primary/10"
     >
-      <div class="flex items-center justify-between">
+      <div class="relative z-10 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
             <User class="h-5 w-5 text-primary" />
@@ -94,6 +94,9 @@ const maskName = (name: string, studentId: string) => {
           <p class="text-sm text-white/40">分</p>
         </div>
       </div>
+      <!-- 动态背景装饰 -->
+      <div class="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-primary/30 blur-3xl" />
+      <div class="absolute -bottom-8 -left-4 h-28 w-28 rounded-full bg-accent-cyan/20 blur-3xl" />
     </Card>
 
     <!-- Loading -->
@@ -111,9 +114,9 @@ const maskName = (name: string, studentId: string) => {
         <div
           v-for="student in students"
           :key="`${activeTab}-${student.student_id}`"
+          class="group rounded-xl border border-white/5 bg-white/[0.03] p-4 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/10"
           :class="[
-            'bg-white/[0.02] rounded-lg p-4 border border-white/10',
-            isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5' : ''
+            isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5 hover:bg-primary/10' : ''
           ]"
         >
           <div class="flex items-center justify-between">

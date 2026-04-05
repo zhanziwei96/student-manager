@@ -137,7 +137,15 @@
   --card-purple-icon-text: #d8b4fe;
   --card-purple-shadow: rgba(59, 7, 100, 0.3);
   --card-purple-glow: rgba(168, 85, 247, 0.1);
-  
+
+  /* 橙色主题 - 统计/警告 */
+  --card-orange-bg: rgba(249, 115, 22, 0.15);
+  --card-orange-border: rgba(249, 115, 22, 0.4);
+  --card-orange-icon-bg: rgba(251, 146, 60, 0.3);
+  --card-orange-icon-text: #fdba74;
+  --card-orange-shadow: rgba(124, 45, 18, 0.3);
+  --card-orange-glow: rgba(249, 115, 22, 0.1);
+
   /* 边框 */
   --color-border: rgba(255, 255, 255, 0.1);
   --color-border-hover: rgba(255, 255, 255, 0.2);
