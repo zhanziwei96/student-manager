@@ -255,7 +255,7 @@ const handleQuickCheckIn = async (studentId: string) => {
     <!-- Start session form -->
     <Card
       v-if="!isSessionActive"
-      class="border-white/10 bg-white/[0.02] p-4 md:p-6 mb-5"
+      class="p-4 md:p-6 mb-5"
     >
       <h3 class="font-medium text-white text-base md:text-lg">
         开始新课堂
@@ -313,7 +313,7 @@ const handleQuickCheckIn = async (studentId: string) => {
     <!-- Active session content -->
     <template v-if="isSessionActive">
       <!-- Check-in form -->
-      <Card class="border-white/10 bg-white/[0.02] p-4 md:p-6 mb-5">
+      <Card class="p-4 md:p-6 mb-5">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 flex-shrink-0">
             <CheckCircle class="h-5 w-5 text-primary" />

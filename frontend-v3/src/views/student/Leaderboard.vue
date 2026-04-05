@@ -111,12 +111,12 @@ const maskName = (name: string, studentId: string) => {
     <template v-else>
       <!-- Mobile: Card List -->
       <div class="lg:hidden space-y-3">
-        <div
+        <Card
           v-for="student in students"
           :key="`${activeTab}-${student.student_id}`"
-          class="group rounded-xl border border-white/5 bg-white/[0.03] p-4 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/10"
+          class="group transition-all duration-200"
           :class="[
-            isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5 hover:bg-primary/10' : ''
+            isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/40' : ''
           ]"
         >
           <div class="flex items-center justify-between">
@@ -162,7 +162,7 @@ const maskName = (name: string, studentId: string) => {
               {{ student.score }}
             </span>
           </div>
-        </div>
+        </Card>
 
         <!-- Empty State -->
         <div
@@ -174,7 +174,7 @@ const maskName = (name: string, studentId: string) => {
       </div>
 
       <!-- Desktop: Table -->
-      <Card class="hidden lg:block border-white/10 bg-white/[0.02] overflow-hidden">
+      <Card class="hidden lg:block overflow-hidden">
         <table class="w-full">
           <thead>
             <tr class="border-b border-white/10">

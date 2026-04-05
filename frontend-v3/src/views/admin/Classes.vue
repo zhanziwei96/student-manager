@@ -74,7 +74,7 @@ const getScoreColor = (score: number) => {
       <Card
         v-for="cls in filteredClasses"
         :key="cls.name"
-        class="border-white/10 bg-white/[0.02] p-6"
+        class="p-6"
       >
         <div class="flex items-start justify-between">
           <div class="flex items-center gap-3">

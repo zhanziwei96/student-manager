@@ -337,7 +337,7 @@ const handleBatchDelete = async () => {
     <!-- 统计卡片 -->
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-5">
       <!-- 总课程数 -->
-      <Card class="border-white/10 bg-white/[0.02] p-4">
+      <Card class="p-4">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
             <Layers class="h-5 w-5 text-primary" />
@@ -354,7 +354,7 @@ const handleBatchDelete = async () => {
       </Card>
 
       <!-- 本周课程 -->
-      <Card class="border-white/10 bg-white/[0.02] p-4">
+      <Card class="p-4">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
             <Calendar class="h-5 w-5 text-green-400" />
@@ -436,7 +436,7 @@ const handleBatchDelete = async () => {
     </div>
 
     <!-- Filters -->
-    <Card class="border-white/10 bg-white/[0.02] p-4 mb-5">
+    <Card class="p-4 mb-5">
       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-4">
         <div class="w-full sm:w-48">
           <label class="mb-1 block text-sm text-white/60">班级</label>
@@ -584,7 +584,7 @@ const handleBatchDelete = async () => {
                     ? 'p-4 transition-colors relative border-red-500/50 bg-red-500/5 hover:border-red-500/70'
                     : isSelected(schedule.id)
                       ? 'p-4 transition-colors relative border-primary/50 bg-primary/5'
-                      : 'p-4 transition-colors relative border-white/10 bg-white/[0.02] hover:border-white/20'
+                      : 'p-4 transition-colors relative hover:border-white/20'
                 )"
                 @click="isBatchMode && toggleSelectSchedule(schedule.id)"
               >
@@ -705,7 +705,7 @@ const handleBatchDelete = async () => {
       title="导入课表"
     >
       <div class="space-y-4">
-        <div class="rounded-lg border border-white/10 bg-white/[0.02] p-4">
+        <div class="rounded-lg border border-border bg-background-card p-4">
           <h4 class="mb-2 text-sm font-medium text-white">
             导入说明
           </h4>

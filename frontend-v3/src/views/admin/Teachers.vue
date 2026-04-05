@@ -269,7 +269,7 @@ const handleResetPassword = async () => {
       <Card
         v-for="teacher in filteredTeachers"
         :key="teacher.id"
-        class="border-white/10 bg-white/[0.02] p-6"
+        class="p-6"
       >
         <div class="flex items-start gap-4">
           <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">

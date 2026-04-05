@@ -151,7 +151,7 @@ const handleAddStudent = async () => {
         <Card
           v-for="student in filteredStudents"
           :key="student.id"
-          class="border-white/10 bg-white/[0.02] p-4"
+          class="p-4"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">

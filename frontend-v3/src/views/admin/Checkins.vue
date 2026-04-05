@@ -160,7 +160,7 @@ const formatTime = (timeStr: string) => {
     </div>
 
     <!-- Checkin List -->
-    <Card class="border-white/10 bg-white/[0.02]">
+    <Card>
       <div class="p-4 border-b border-white/10">
         <h3 class="font-medium text-white">
           今日签到记录

@@ -107,7 +107,7 @@ const features = [
           <div
             v-for="feature in features"
             :key="feature.title"
-            class="group rounded-2xl border border-white/10 bg-white/[0.02] p-6 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
+            class="group rounded-2xl border border-border bg-background-card p-6 transition-colors hover:border-border-hover hover:bg-background-hover"
           >
             <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
               <component
