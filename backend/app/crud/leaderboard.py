@@ -30,7 +30,7 @@ def get_leaderboard(
         }
     """
     # 构建查询
-    query = select(Student).where(Student.is_account_enabled == True)
+    query = select(Student).where(Student.is_account_enabled .is_(True))
 
     if scope == "class" and class_name:
         query = query.where(Student.class_name == class_name)
@@ -98,7 +98,7 @@ def _get_student_rank(
 
     # 计算该学生的排名
     query = select(Student).where(
-        Student.is_account_enabled == True,
+        Student.is_account_enabled .is_(True),
         Student.score > student.score
     )
 
