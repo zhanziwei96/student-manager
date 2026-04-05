@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useAuthStore } from '@/stores'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudents, useStudentScoreLogs } from '@/composables'
-import { Card, Badge } from '@/components/ui'
+import { Card } from '@/components/ui'
 import { Star, TrendingUp, Users, Award, Loader2, AlertCircle, Trophy } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
@@ -36,13 +36,13 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-5">
     <!-- Header -->
-    <div>
-      <h1 class="text-2xl font-bold text-white">
+    <div class="px-1">
+      <h1 class="text-2xl font-bold text-white tracking-tight">
         学生仪表板
       </h1>
-      <p class="text-white/60">
+      <p class="text-white/50 text-sm mt-1">
         欢迎回来，{{ authStore.user?.name }}
       </p>
     </div>
@@ -58,7 +58,7 @@ function formatDate(dateStr: string): string {
     <!-- Error state -->
     <div
       v-else-if="error"
-      class="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400"
+      class="rounded-xl border border-red-500/30 bg-red-500/15 p-4 text-red-400"
     >
       <div class="flex items-center gap-2">
         <AlertCircle class="h-5 w-5" />
@@ -69,7 +69,7 @@ function formatDate(dateStr: string): string {
     <!-- No data state -->
     <div
       v-else-if="!currentStudent"
-      class="rounded-lg border border-white/10 bg-white/[0.02] p-8 text-center"
+      class="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center"
     >
       <p class="text-white/60">
         未找到您的学生信息
@@ -77,101 +77,118 @@ function formatDate(dateStr: string): string {
     </div>
 
     <template v-else>
-      <!-- Score card -->
-      <Card class="relative overflow-hidden border-white/10 bg-gradient-to-br from-primary/20 to-accent-cyan/20 p-8">
+      <!-- Score card - 增强视觉层次 -->
+      <Card class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-6 shadow-xl shadow-primary/10">
         <div class="relative z-10">
-          <div class="flex items-center gap-3">
-            <Star class="h-8 w-8 text-yellow-400" />
+          <div class="flex items-start justify-between">
             <div>
-              <p class="text-sm text-white/80">
+              <p class="text-sm text-white/70 font-medium">
                 我的分数
               </p>
-              <p class="text-5xl font-bold text-white">
+              <p class="text-5xl font-bold text-white mt-1 tracking-tight">
                 {{ currentStudent.score }}
               </p>
             </div>
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-400/20 shadow-inner shadow-yellow-400/30">
+              <Star class="h-6 w-6 text-yellow-300 fill-yellow-300" />
+            </div>
           </div>
-          <div class="mt-4 flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              class="bg-white/20 cursor-pointer hover:bg-white/30 transition-colors"
+          <div class="mt-5 flex items-center gap-2">
+            <button
+              class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 active:scale-95"
               @click="router.push('/student/leaderboard')"
             >
-              <TrendingUp class="mr-1 h-3 w-3" />
+              <TrendingUp class="h-3.5 w-3.5" />
               排名 {{ rank }}
-            </Badge>
-            <Badge
-              variant="secondary"
-              class="bg-white/20 cursor-pointer hover:bg-white/30 transition-colors"
+            </button>
+            <button
+              class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 active:scale-95"
               @click="router.push('/student/leaderboard')"
             >
-              <Trophy class="mr-1 h-3 w-3" />
+              <Trophy class="h-3.5 w-3.5" />
               查看排行榜
-            </Badge>
+            </button>
           </div>
         </div>
-        <!-- Background decoration -->
-        <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
-        <div class="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
+        <!-- 动态背景装饰 -->
+        <div class="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-primary/30 blur-3xl" />
+        <div class="absolute -bottom-8 -left-4 h-28 w-28 rounded-full bg-accent-cyan/20 blur-3xl" />
       </Card>
 
-      <!-- Stats grid -->
-      <div class="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Card class="border-blue-500/30 bg-blue-500/10 p-5 shadow-lg shadow-blue-900/10">
-          <div class="flex items-center gap-3">
-            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/30 shadow-inner shadow-blue-400/20">
-              <Users class="h-5 w-5 text-blue-300" />
+      <!-- Stats grid - 移动端2列，增加视觉层次 -->
+      <div class="grid grid-cols-2 gap-3 sm:gap-4">
+        <!-- 班级卡片 -->
+        <Card class="group relative overflow-hidden border-blue-500/40 bg-blue-500/15 p-4 shadow-lg shadow-blue-950/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-900/40 hover:bg-blue-500/20">
+          <div class="relative z-10">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-400/30 shadow-inner shadow-blue-400/20 transition-transform group-hover:scale-110">
+              <Users class="h-5 w-5 text-blue-200" />
             </div>
-            <div>
-              <p class="text-sm text-blue-200/70">
-                班级
-              </p>
-              <p class="font-medium text-white">
-                {{ currentStudent.class_name }}
-              </p>
-            </div>
+            <p class="mt-3 text-xs text-blue-200/80 font-medium">
+              班级
+            </p>
+            <p class="text-sm font-semibold text-white mt-0.5 truncate">
+              {{ currentStudent.class_name }}
+            </p>
           </div>
+          <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-blue-400/10 blur-2xl group-hover:bg-blue-400/20 transition-colors" />
         </Card>
-        <Card class="border-purple-500/30 bg-purple-500/10 p-5 shadow-lg shadow-purple-900/10">
-          <div class="flex items-center gap-3">
-            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/30 shadow-inner shadow-purple-400/20">
-              <Award class="h-5 w-5 text-purple-300" />
+
+        <!-- 学号卡片 -->
+        <Card class="group relative overflow-hidden border-purple-500/40 bg-purple-500/15 p-4 shadow-lg shadow-purple-950/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-purple-900/40 hover:bg-purple-500/20">
+          <div class="relative z-10">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-400/30 shadow-inner shadow-purple-400/20 transition-transform group-hover:scale-110">
+              <Award class="h-5 w-5 text-purple-200" />
             </div>
-            <div>
-              <p class="text-sm text-purple-200/70">
-                学号
-              </p>
-              <p class="font-medium text-white">
-                {{ currentStudent.student_id }}
-              </p>
-            </div>
+            <p class="mt-3 text-xs text-purple-200/80 font-medium">
+              学号
+            </p>
+            <p class="text-sm font-semibold text-white mt-0.5 font-mono tracking-wide">
+              {{ currentStudent.student_id }}
+            </p>
           </div>
+          <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-purple-400/10 blur-2xl group-hover:bg-purple-400/20 transition-colors" />
         </Card>
-        <Card class="border-green-500/30 bg-green-500/10 p-5 shadow-lg shadow-green-900/10">
-          <div class="flex items-center gap-3">
-            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-green-500/30 shadow-inner shadow-green-400/20">
-              <TrendingUp class="h-5 w-5 text-green-300" />
+
+        <!-- 状态卡片 - 跨两列 -->
+        <Card class="group col-span-2 relative overflow-hidden border-green-500/40 bg-green-500/15 p-4 shadow-lg shadow-green-950/30 transition-all duration-300 hover:shadow-green-900/40 hover:bg-green-500/20">
+          <div class="relative z-10 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-green-400/30 shadow-inner shadow-green-400/20 transition-transform group-hover:scale-110">
+                <TrendingUp class="h-5 w-5 text-green-200" />
+              </div>
+              <div>
+                <p class="text-xs text-green-200/80 font-medium">
+                  账户状态
+                </p>
+                <p class="text-sm font-semibold text-white mt-0.5">
+                  {{ currentStudent.is_account_enabled ? '账户启用' : '账户禁用' }}
+                </p>
+              </div>
             </div>
-            <div>
-              <p class="text-sm text-green-200/70">
-                状态
-              </p>
-              <Badge :variant="currentStudent.is_account_enabled ? 'success' : 'secondary'">
-                {{ currentStudent.is_account_enabled ? '账户启用' : '账户禁用' }}
-              </Badge>
-            </div>
+            <div
+              class="h-2.5 w-2.5 rounded-full shadow-lg transition-all"
+              :class="currentStudent.is_account_enabled ? 'bg-green-400 shadow-green-400/50' : 'bg-gray-400 shadow-gray-400/50'"
+            />
           </div>
+          <div class="absolute right-0 bottom-0 h-20 w-20 rounded-full bg-green-400/10 blur-2xl group-hover:bg-green-400/20 transition-colors" />
         </Card>
       </div>
 
-      <!-- Recent activity -->
-      <Card class="border-white/20 bg-white/[0.05] p-5 shadow-lg shadow-black/20">
-        <h2 class="text-lg font-semibold text-white">
-          最近活动
-        </h2>
-        <p class="text-sm text-white/60">
-          最新的分数变化
-        </p>
+      <!-- Recent activity - 优化列表样式 -->
+      <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-white">
+              最近活动
+            </h2>
+            <p class="text-xs text-white/50 mt-0.5">
+              最新的分数变化记录
+            </p>
+          </div>
+          <div class="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <TrendingUp class="h-4 w-4 text-primary" />
+          </div>
+        </div>
 
         <!-- Loading state -->
         <div
@@ -184,44 +201,51 @@ function formatDate(dateStr: string): string {
         <!-- Score logs list -->
         <div
           v-else-if="scoreLogs && scoreLogs.length > 0"
-          class="mt-6 space-y-3"
+          class="mt-5 space-y-2.5"
         >
           <div
-            v-for="log in scoreLogs.slice(0, 5)"
+            v-for="(log, index) in scoreLogs.slice(0, 5)"
             :key="log.id"
-            class="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4 shadow-md shadow-black/10"
+            class="group flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.03] p-3.5 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/10"
+            :style="{ animationDelay: `${index * 50}ms` }"
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-9 w-9 items-center justify-center rounded-xl shadow-inner"
-                :class="log.delta >= 0 ? 'bg-green-500/30 shadow-green-400/20' : 'bg-red-500/30 shadow-red-400/20'"
+                class="flex h-8 w-8 items-center justify-center rounded-lg shadow-inner transition-transform group-hover:scale-110"
+                :class="log.delta >= 0 ? 'bg-emerald-500/25 shadow-emerald-400/20' : 'bg-rose-500/25 shadow-rose-400/20'"
               >
                 <TrendingUp
-                  class="h-4 w-4"
-                  :class="log.delta >= 0 ? 'text-green-300' : 'text-red-300'"
+                  class="h-4 w-4 transition-colors"
+                  :class="log.delta >= 0 ? 'text-emerald-300' : 'text-rose-300'"
                 />
               </div>
               <div>
-                <p class="text-sm text-white">
+                <p class="text-sm text-white/90 line-clamp-1">
                   {{ log.reason || '分数变更' }}
                 </p>
-                <p class="text-xs text-white/40">
+                <p class="text-[11px] text-white/40 mt-0.5">
                   {{ formatDate(log.created_at) }}
                 </p>
               </div>
             </div>
-            <Badge :variant="log.delta >= 0 ? 'success' : 'error'">
+            <span
+              class="text-sm font-bold tabular-nums"
+              :class="log.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+            >
               {{ log.delta >= 0 ? '+' : '' }}{{ log.delta }}
-            </Badge>
+            </span>
           </div>
         </div>
-        
+
         <!-- Empty state -->
         <div
           v-else
-          class="mt-6 text-center text-white/40"
+          class="mt-8 flex flex-col items-center justify-center py-6 text-white/40"
         >
-          暂无分数变更记录
+          <div class="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+            <TrendingUp class="h-5 w-5 opacity-50" />
+          </div>
+          <p class="text-sm">暂无分数变更记录</p>
         </div>
       </Card>
     </template>
