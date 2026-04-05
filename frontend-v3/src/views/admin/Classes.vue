@@ -160,7 +160,35 @@ const getScoreColor = (score: number) => {
         v-else-if="classStudents && classStudents.length > 0"
         class="max-h-[60vh] overflow-y-auto"
       >
-        <table class="w-full text-sm">
+        <!-- 移动端：卡片列表 -->
+        <div class="lg:hidden space-y-2">
+          <div
+            v-for="student in classStudents"
+            :key="student.id"
+            class="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-3"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
+                <span class="text-sm font-medium text-primary">
+                  {{ student.name.charAt(0) }}
+                </span>
+              </div>
+              <div>
+                <p class="font-medium text-white">{{ student.name }}</p>
+                <p class="font-mono text-xs text-white/50">{{ student.student_id }}</p>
+              </div>
+            </div>
+            <span
+              class="text-lg font-bold"
+              :class="getScoreColor(student.score)"
+            >
+              {{ student.score }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 桌面端：表格 -->
+        <table class="hidden lg:table w-full text-sm">
           <thead class="bg-white/5 text-white/70">
             <tr>
               <th class="px-4 py-2 text-left">
