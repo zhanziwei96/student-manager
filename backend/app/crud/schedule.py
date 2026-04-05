@@ -30,7 +30,7 @@ def get_schedules(
     if teacher_id:
         query = query.where(CourseSchedule.teacher_id == teacher_id)
     
-    return session.exec(query).all()
+    return list(session.exec(query).all())
 
 
 def delete_schedule(session: Session, schedule_id: int) -> bool:
