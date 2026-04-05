@@ -20,7 +20,7 @@ def get_class_session(session: Session, teacher_id: Optional[int] = None) -> Opt
     if teacher_id:
         query = select(ClassSession).where(
             ClassSession.teacher_id == teacher_id,
-            ClassSession.active == True
+            ClassSession.active .is_(True)
         )
         return session.exec(query).first()
     return None
@@ -30,13 +30,13 @@ def get_class_session_by_class_name(session: Session, class_name: str) -> Option
     """根据班级名称获取活跃课堂"""
     query = select(ClassSession).where(
         ClassSession.class_name == class_name,
-        ClassSession.active == True
+        ClassSession.active .is_(True)
     )
     return session.exec(query).first()
 
 
-def start_class(session: Session, class_name: str, teacher_id: int = None,
-                teacher_name: str = None, course_name: str = None) -> ClassSession:
+def start_class(session: Session, class_name: str, teacher_id: Optional[int] = None,
+                teacher_name: Optional[str] = None, course_name: Optional[str] = None) -> ClassSession:
     """开始上课 - 每次调用创建新的课堂记录"""
     # 结束该教师之前的活跃课堂
     end_class(session, teacher_id)
@@ -58,13 +58,13 @@ def start_class(session: Session, class_name: str, teacher_id: int = None,
     return class_session
 
 
-def end_class(session: Session, teacher_id: int = None) -> None:
+def end_class(session: Session, teacher_id: Optional[int] = None) -> None:
     """结束上课（根据教师ID）"""
     if teacher_id:
         # 查找该教师的活跃课堂
         query = select(ClassSession).where(
             ClassSession.teacher_id == teacher_id,
-            ClassSession.active == True
+            ClassSession.active .is_(True)
         )
         class_session = session.exec(query).first()
     else:
@@ -92,7 +92,7 @@ def get_today_checkins(session: Session, class_name: Optional[str] = None, sessi
     query = select(CheckinRecord).where(CheckinRecord.checkin_time >= query_start)
     if class_name:
         query = query.where(CheckinRecord.class_name == class_name)
-    return session.exec(query).all()
+    return list(session.exec(query).all())
 
 
 def count_today_checkins(session: Session, class_name: Optional[str] = None) -> int:
@@ -181,7 +181,7 @@ def get_student_score_logs(session: Session, student_id: str, limit: int = None)
         from app.core.config import get_settings
         limit = get_settings().pagination.score_log_default_limit
     query = select(ScoreLog).where(ScoreLog.student_id == student_id).order_by(ScoreLog.created_at.desc()).limit(limit)
-    return session.exec(query).all()
+    return list(session.exec(query).all())
 
 
 def is_device_checked_in_session(session: Session, device_id: str, session_id: int) -> bool:

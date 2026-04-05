@@ -235,7 +235,17 @@ def init_settings(env_file: Optional[str] = None) -> Settings:
     """初始化配置（指定环境文件）"""
     global _settings
     if env_file and os.path.exists(env_file):
-        _settings = Settings(_env_file=env_file)
+        # 临时修改环境变量来加载指定配置文件
+        original_env_file = os.environ.get('ENV_FILE')
+        os.environ['ENV_FILE' ] = env_file
+        try:
+            _settings = Settings()
+        finally:
+            # 恢复原始环境变量
+            if original_env_file is not None:
+                os.environ['ENV_FILE' ] = original_env_file
+            elif 'ENV_FILE' in os.environ:
+                del os.environ['ENV_FILE']
     else:
         _settings = Settings()
     return _settings

@@ -233,11 +233,11 @@ def _validate_file_size(size: int, max_size_mb: int) -> None:
 
 async def save_upload_file_securely(
     upload_file: UploadFile,
-    allowed_extensions: List[str] = None,
-    allowed_content_types: List[str] = None,
-    max_size_mb: int = None,
+    allowed_extensions: Optional[List[str]] = None,
+    allowed_content_types: Optional[List[str]] = None,
+    max_size_mb: Optional[int] = None,
     use_uuid: bool = True,
-    upload_directory: str = None,
+    upload_directory: Optional[str] = None,
     validate_content: bool = True
 ) -> Tuple[str, str]:
     """
