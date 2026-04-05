@@ -78,8 +78,8 @@ const handleSubmit = async () => {
   <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
     <!-- Background effects -->
     <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -left-1/4 -top-1/4 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[100px]" />
-      <div class="absolute -right-1/4 -bottom-1/4 h-[500px] w-[500px] rounded-full bg-accent-cyan/10 blur-[100px]" />
+      <div class="absolute -left-[30%] -top-[10%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-primary/10 blur-[80px] sm:blur-[100px]" />
+      <div class="absolute -right-[30%] -bottom-[10%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-accent-cyan/10 blur-[80px] sm:blur-[100px]" />
     </div>
 
     <!-- Login form -->
