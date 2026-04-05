@@ -62,8 +62,8 @@ const overlayClasses = computed(() =>
 
 const contentClasses = computed(() =>
   cn(
-    // 定位 - 使用 flex 居中替代 transform
-    'relative w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] sm:w-full sm:max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto',
+    // 定位 - 使用 flex 居中，移动端固定边距
+    'relative w-full max-w-lg mx-4 sm:mx-0 max-h-[90vh] overflow-y-auto',
     // 样式
     'rounded-xl border border-border bg-background-elevated p-4 sm:p-6',
     // 阴影
