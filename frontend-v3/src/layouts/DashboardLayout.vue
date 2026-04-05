@@ -66,9 +66,11 @@ const handleLogout = async () => {
 <template>
   <div class="min-h-screen bg-background">
     <!-- 移动端：顶部导航栏 -->
-    <header class="lg:hidden fixed top-0 left-0 right-0 h-14 z-40
+    <header
+      class="lg:hidden fixed top-0 left-0 right-0 h-14 z-40
                    bg-[#0a0a0f] border-b border-white/10
-                   flex items-center justify-between px-4">
+                   flex items-center justify-between px-4"
+    >
       <div class="flex items-center gap-2">
         <GraduationCap class="h-6 w-6 text-primary" />
         <span class="text-lg font-bold text-white">智慧课堂</span>
@@ -82,9 +84,11 @@ const handleLogout = async () => {
     </header>
 
     <!-- 桌面端：固定侧边栏 -->
-    <aside class="hidden lg:block lg:fixed lg:left-0 lg:top-0 lg:z-40
+    <aside
+      class="hidden lg:block lg:fixed lg:left-0 lg:top-0 lg:z-40
                   lg:h-screen lg:w-64
-                  border-r border-white/10 bg-[#0a0a0f]">
+                  border-r border-white/10 bg-[#0a0a0f]"
+    >
       <!-- Logo -->
       <div class="flex h-16 items-center border-b border-white/10 px-6">
         <GraduationCap class="h-8 w-8 text-primary" />
@@ -121,7 +125,10 @@ const handleLogout = async () => {
               : 'text-white/70 hover:bg-white/10 hover:text-white',
           ]"
         >
-          <component :is="item.icon" class="h-5 w-5" />
+          <component
+            :is="item.icon"
+            class="h-5 w-5"
+          />
           {{ item.name }}
         </RouterLink>
       </nav>
@@ -143,7 +150,10 @@ const handleLogout = async () => {
     <MobileDrawer v-model:open="showMobileMenu" />
 
     <!-- 移动端：底部导航栏（仅学生/教师） -->
-    <BottomNav v-if="!isAdmin" class="lg:hidden" />
+    <BottomNav
+      v-if="!isAdmin"
+      class="lg:hidden"
+    />
 
     <!-- 主内容区：响应式边距 -->
     <main class="min-h-screen p-4 pt-16 pb-20 lg:ml-64 lg:p-8 lg:pt-8 lg:pb-8">

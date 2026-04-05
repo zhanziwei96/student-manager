@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import Leaderboard from '@/views/student/Leaderboard.vue'
@@ -70,9 +70,11 @@ describe('Leaderboard', () => {
 
   it('displays student list', () => {
     const wrapper = createWrapper()
-    expect(wrapper.text()).toContain('李四')
+    // 其他学生显示脱敏后的名字（李*四、王*五）
+    expect(wrapper.text()).toContain('李*四')
+    expect(wrapper.text()).toContain('王*五')
+    // 当前登录学生显示完整名字
     expect(wrapper.text()).toContain('张三')
-    expect(wrapper.text()).toContain('王五')
   })
 
   it('shows top 3 icons', () => {
@@ -110,7 +112,7 @@ describe('Leaderboard', () => {
 
     // 验证包含预期的颜色类
     expect(rank1Bg).toContain('yellow')
-    expect(rank2Bg).toContain('slate')
-    expect(rank3Bg).toContain('orange')
+    expect(rank2Bg).toContain('gray')
+    expect(rank3Bg).toContain('amber')
   })
 })

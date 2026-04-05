@@ -165,7 +165,10 @@ const getCardTextMutedColor = (color: CardColor) => {
             >
               <Users class="h-5 w-5" />
             </div>
-            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor('blue')">
+            <p
+              class="mt-3 text-xs font-medium"
+              :class="getCardTextMutedColor('blue')"
+            >
               班级
             </p>
             <p class="text-sm font-semibold text-white mt-0.5 truncate">
@@ -190,7 +193,10 @@ const getCardTextMutedColor = (color: CardColor) => {
             >
               <Award class="h-5 w-5" />
             </div>
-            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor('purple')">
+            <p
+              class="mt-3 text-xs font-medium"
+              :class="getCardTextMutedColor('purple')"
+            >
               学号
             </p>
             <p class="text-sm font-semibold text-white mt-0.5 font-mono tracking-wide">
@@ -217,7 +223,10 @@ const getCardTextMutedColor = (color: CardColor) => {
                 <TrendingUp class="h-5 w-5" />
               </div>
               <div>
-                <p class="text-xs font-medium" :class="getCardTextMutedColor('green')">
+                <p
+                  class="text-xs font-medium"
+                  :class="getCardTextMutedColor('green')"
+                >
                   账户状态
                 </p>
                 <p class="text-sm font-semibold text-white mt-0.5">
@@ -308,7 +317,9 @@ const getCardTextMutedColor = (color: CardColor) => {
           <div class="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
             <TrendingUp class="h-5 w-5 opacity-50" />
           </div>
-          <p class="text-sm">暂无分数变更记录</p>
+          <p class="text-sm">
+            暂无分数变更记录
+          </p>
         </div>
       </Card>
     </template>
