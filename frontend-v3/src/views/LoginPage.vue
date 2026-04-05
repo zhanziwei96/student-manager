@@ -75,15 +75,15 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+  <div class="relative flex min-h-screen items-start sm:items-center justify-center overflow-hidden bg-background p-4 pt-16 sm:pt-4">
     <!-- Background effects -->
     <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -left-[30%] -top-[10%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-primary/10 blur-[80px] sm:blur-[100px]" />
-      <div class="absolute -right-[30%] -bottom-[10%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-accent-cyan/10 blur-[80px] sm:blur-[100px]" />
+      <div class="absolute -left-[30%] -top-[5%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-primary/10 blur-[80px] sm:blur-[100px]" />
+      <div class="absolute -right-[30%] top-[60%] sm:-bottom-[10%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-accent-cyan/10 blur-[80px] sm:blur-[100px]" />
     </div>
 
     <!-- Login form -->
-    <Card class="relative w-full max-w-md border-white/10 p-8 backdrop-blur-xl">
+    <Card class="relative w-full max-w-md border-white/10 p-6 sm:p-8 backdrop-blur-xl">
       <div class="flex flex-col items-center space-y-2 text-center">
         <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
           <GraduationCap class="h-7 w-7 text-primary" />
