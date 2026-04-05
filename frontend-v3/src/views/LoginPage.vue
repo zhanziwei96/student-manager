@@ -98,6 +98,7 @@ const handleSubmit = async () => {
 
       <form
         class="mt-8 space-y-6"
+        autocomplete="off"
         @submit.prevent="handleSubmit"
       >
         <!-- Role selection -->
@@ -131,6 +132,8 @@ const handleSubmit = async () => {
             <Input
               id="username"
               v-model="form.username"
+              type="text"
+              autocomplete="username"
               placeholder="请输入用户名"
               :class="['pl-10', errors.username && 'border-red-500 focus:border-red-500']"
               @input="errors.username = ''"
@@ -149,6 +152,7 @@ const handleSubmit = async () => {
               id="password"
               v-model="form.password"
               type="password"
+              autocomplete="current-password"
               placeholder="请输入密码"
               :class="['pl-10', errors.password && 'border-red-500 focus:border-red-500']"
               @input="errors.password = ''"
