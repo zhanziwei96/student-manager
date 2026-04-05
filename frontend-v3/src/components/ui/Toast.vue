@@ -20,7 +20,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   show: false,
   variant: 'default',
-  duration: 3000,
+  duration: 1500,
 })
 
 const emit = defineEmits<{
@@ -53,7 +53,7 @@ const iconMap: Record<ToastVariant, typeof CheckCircle> = {
 const classes = computed(() =>
   cn(
     'pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-lg border p-4 shadow-2xl',
-    'transition-all duration-300 ease-out',
+    'transition-all duration-500 ease-out',
     variantClasses[props.variant],
     isVisible.value
       ? 'opacity-100 translate-y-0'
@@ -88,7 +88,7 @@ const close = () => {
   closeTimeoutId.value = setTimeout(() => {
     emit('close')
     emit('update:show', false)
-  }, 300)
+  }, 500)
 }
 
 // 组件挂载时显示

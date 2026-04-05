@@ -37,14 +37,14 @@ export function useToast() {
       toastData = {
         message: options,
         variant: (variantOrDuration as ToastVariant) || 'default',
-        duration: dur || 3000,
+        duration: dur || 1500,
       }
     } else {
       // 标准调用: showToast({ message: '...', variant: '...' })
       toastData = {
         message: options.message,
         variant: options.variant || 'default',
-        duration: options.duration || 3000,
+        duration: options.duration || 1500,
       }
     }
 
@@ -77,7 +77,7 @@ export function useToast() {
     hideToast,
     clearAll,
     // 便捷方法
-    success: (msg: string, dur?: number) => showToast({ message: msg, variant: 'success', duration: dur }),
+    success: (msg: string, dur?: number) => showToast({ message: msg, variant: 'success', duration: dur || 1500 }),
     error: (msg: string, dur?: number) => showToast({ message: msg, variant: 'error', duration: dur }),
     warning: (msg: string, dur?: number) => showToast({ message: msg, variant: 'warning', duration: dur }),
     info: (msg: string, dur?: number) => showToast({ message: msg, variant: 'info', duration: dur }),
