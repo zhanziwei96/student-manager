@@ -8,6 +8,43 @@ import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, Al
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
 
+// ========== 课程类型颜色主题 ==========
+const courseTypeThemes = [
+  { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: 'text-blue-400', accent: 'bg-blue-500/20' },
+  { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: 'text-green-400', accent: 'bg-green-500/20' },
+  { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400', icon: 'text-purple-400', accent: 'bg-purple-500/20' },
+  { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400', icon: 'text-orange-400', accent: 'bg-orange-500/20' },
+] as const
+
+// 根据课程名称生成稳定的颜色索引
+const getCourseThemeIndex = (courseName: string): number => {
+  let hash = 0
+  for (let i = 0; i < courseName.length; i++) {
+    hash = courseName.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return Math.abs(hash) % courseTypeThemes.length
+}
+
+// 获取课程主题色
+const getCourseTheme = (courseName: string) => {
+  const index = getCourseThemeIndex(courseName)
+  return courseTypeThemes[index]
+}
+
+// 计算课程卡片样式
+const computedCourseCardClass = (schedule: typeof schedules.value[0]) => {
+  const theme = getCourseTheme(schedule.course_name)
+  const baseClass = 'flex-1 p-4 transition-all duration-200 relative overflow-hidden'
+
+  if (hasConflict(schedule)) {
+    return `${baseClass} border-red-500/50 bg-red-500/5 hover:border-red-500/70`
+  }
+  if (isSelected(schedule.id)) {
+    return `${baseClass} border-primary/50 bg-primary/5 ${theme.border} ${theme.bg}`
+  }
+  return `${baseClass} hover:border-white/20 ${theme.border} ${theme.bg}`
+}
+
 // 获取当前用户
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.isAdmin)
@@ -540,14 +577,16 @@ const handleBatchDelete = async () => {
             class="space-y-3"
           >
             <!-- Day Header -->
-            <div class="flex items-center gap-2">
-              <div class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-xs text-primary">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/20 text-sm font-bold text-primary shadow-lg shadow-primary/10">
                 {{ day.label.charAt(1) }}
               </div>
-              <h3 class="font-medium text-white">
+              <h3 class="text-lg font-semibold text-white">
                 {{ day.label }}
               </h3>
-              <span class="text-sm text-white/40">({{ filteredSchedulesByDay[day.value].length }}节课)</span>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 text-white/60 border border-white/10">
+                {{ filteredSchedulesByDay[day.value].length }} 节课
+              </span>
             </div>
 
             <!-- 批量操作栏 -->
@@ -574,125 +613,180 @@ const handleBatchDelete = async () => {
               </span>
             </div>
 
-            <!-- Courses -->
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <Card
-                v-for="schedule in filteredSchedulesByDay[day.value]"
-                :key="schedule.id"
-                :class="(
-                  hasConflict(schedule)
-                    ? 'p-4 transition-colors relative border-red-500/50 bg-red-500/5 hover:border-red-500/70'
-                    : isSelected(schedule.id)
-                      ? 'p-4 transition-colors relative border-primary/50 bg-primary/5'
-                      : 'p-4 transition-colors relative hover:border-white/20'
-                )"
-                @click="isBatchMode && toggleSelectSchedule(schedule.id)"
-              >
-                <!-- 批量选择框 -->
-                <div 
-                  v-if="isBatchMode"
-                  class="absolute top-3 left-3"
-                >
-                  <div 
-                    class="flex h-5 w-5 items-center justify-center rounded border transition-colors"
-                    :class="isSelected(schedule.id) 
-                      ? 'bg-primary border-primary' 
-                      : 'border-white/30 bg-white/5'"
-                  >
-                    <CheckSquare 
-                      v-if="isSelected(schedule.id)" 
-                      class="h-3.5 w-3.5 text-white" 
-                    />
-                  </div>
-                </div>
+            <!-- Courses Timeline -->
+            <div class="relative">
+              <!-- 时间线轴线 -->
+              <div class="absolute left-[7px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/10 via-white/5 to-transparent" />
 
-                <!-- 冲突标记 -->
-                <div 
-                  v-if="hasConflict(schedule)"
-                  class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white"
-                  title="存在冲突"
-                >
-                  <AlertTriangle class="h-3.5 w-3.5" />
-                </div>
-
+              <div class="space-y-3">
                 <div
-                  class="flex items-start justify-between"
-                  :class="{ 'pl-8': isBatchMode }"
+                  v-for="schedule in filteredSchedulesByDay[day.value]"
+                  :key="schedule.id"
+                  class="relative flex items-start gap-4"
+                  @click="isBatchMode && toggleSelectSchedule(schedule.id)"
                 >
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2">
-                      <BookOpen 
-                        class="h-4 w-4" 
-                        :class="hasConflict(schedule) ? 'text-red-400' : 'text-primary'"
-                      />
-                      <h4 
-                        class="font-medium"
-                        :class="hasConflict(schedule) ? 'text-red-400' : 'text-white'"
-                      >
-                        {{ schedule.course_name }}
-                      </h4>
-                    </div>
-                    <div class="mt-2 space-y-1 text-sm text-white/60">
-                      <div class="flex items-center gap-2">
-                        <Calendar class="h-3.5 w-3.5" />
-                        {{ schedule.class_name }}
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <Clock class="h-3.5 w-3.5" />
-                        {{ schedule.start_time }} - {{ schedule.end_time }}
-                      </div>
+                  <!-- 时间节点 -->
+                  <div class="relative flex flex-col items-center pt-2">
+                    <!-- 时间点指示器 -->
+                    <div
+                      class="w-4 h-4 rounded-full border-2 transition-all duration-200 z-10"
+                      :class="[
+                        hasConflict(schedule)
+                          ? 'bg-red-500 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                          : getCourseTheme(schedule.course_name).bg.replace('/10', '/20').replace('bg-', 'border-'),
+                        hasConflict(schedule)
+                          ? ''
+                          : getCourseTheme(schedule.course_name).border.replace('/30', '')
+                      ]"
+                    >
                       <div
-                        v-if="schedule.classroom"
-                        class="flex items-center gap-2"
+                        v-if="!hasConflict(schedule)"
+                        class="w-full h-full rounded-full"
+                        :class="getCourseTheme(schedule.course_name).bg.replace('/10', '/40')"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- 课程卡片 -->
+                  <Card
+                    :class="computedCourseCardClass(schedule)"
+                  >
+                    <!-- 主题色装饰条 -->
+                    <div
+                      v-if="!hasConflict(schedule)"
+                      class="absolute left-0 top-0 bottom-0 w-1 transition-all duration-200"
+                      :class="getCourseTheme(schedule.course_name).accent.replace('/20', '')"
+                    />
+
+                    <!-- 批量选择框 -->
+                    <div
+                      v-if="isBatchMode"
+                      class="absolute top-3 right-3"
+                    >
+                      <div
+                        class="flex h-5 w-5 items-center justify-center rounded border transition-colors"
+                        :class="isSelected(schedule.id)
+                          ? 'bg-primary border-primary'
+                          : 'border-white/30 bg-white/5'"
                       >
-                        <MapPin class="h-3.5 w-3.5" />
-                        {{ schedule.classroom }}
+                        <CheckSquare
+                          v-if="isSelected(schedule.id)"
+                          class="h-3.5 w-3.5 text-white"
+                        />
                       </div>
                     </div>
-                    <!-- 冲突提示 -->
+
+                    <!-- 冲突标记 -->
                     <div
                       v-if="hasConflict(schedule)"
-                      class="mt-2"
+                      class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-lg shadow-red-500/30"
+                      title="存在冲突"
                     >
-                      <div 
-                        v-for="(conflict, idx) in getScheduleConflicts(schedule).slice(0, 1)" 
-                        :key="idx"
-                        class="text-xs text-red-400 flex items-center gap-1"
-                      >
-                        <AlertTriangle class="h-3 w-3" />
-                        <span v-if="conflict.type === 'teacher'">
-                          教师时间冲突：{{ conflict.time }}
-                        </span>
-                        <span v-else>
-                          教室冲突：{{ conflict.time }}
-                        </span>
-                      </div>
+                      <AlertTriangle class="h-3.5 w-3.5" />
                     </div>
 
-                    <div class="mt-2 flex items-center gap-2">
-                      <Badge
-                        :variant="hasConflict(schedule) ? 'error' : 'secondary'"
-                        class="text-xs"
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1 min-w-0">
+                        <!-- 课程标题行 -->
+                        <div class="flex items-center gap-2 mb-2">
+                          <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg"
+                            :class="hasConflict(schedule) ? 'bg-red-500/10' : getCourseTheme(schedule.course_name).accent"
+                          >
+                            <BookOpen
+                              class="h-4 w-4"
+                              :class="hasConflict(schedule) ? 'text-red-400' : getCourseTheme(schedule.course_name).icon"
+                            />
+                          </div>
+                          <h4
+                            class="font-semibold text-base truncate"
+                            :class="hasConflict(schedule) ? 'text-red-400' : 'text-white'"
+                          >
+                            {{ schedule.course_name }}
+                          </h4>
+                        </div>
+
+                        <!-- 时间信息 - 突出显示 -->
+                        <div class="flex items-center gap-2 mb-3">
+                          <div
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium"
+                            :class="hasConflict(schedule) ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-white/80'"
+                          >
+                            <Clock class="h-3.5 w-3.5" />
+                            {{ schedule.start_time }} - {{ schedule.end_time }}
+                          </div>
+                        </div>
+
+                        <!-- 详细信息网格 -->
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                          <div class="flex items-center gap-2 text-white/60">
+                            <Calendar
+                              class="h-3.5 w-3.5"
+                              :class="hasConflict(schedule) ? 'text-red-400/60' : getCourseTheme(schedule.course_name).icon"
+                            />
+                            <span class="truncate">{{ schedule.class_name }}</span>
+                          </div>
+                          <div
+                            v-if="schedule.classroom"
+                            class="flex items-center gap-2 text-white/60"
+                          >
+                            <MapPin
+                              class="h-3.5 w-3.5"
+                              :class="hasConflict(schedule) ? 'text-red-400/60' : getCourseTheme(schedule.course_name).icon"
+                            />
+                            <span class="truncate">{{ schedule.classroom }}</span>
+                          </div>
+                        </div>
+
+                        <!-- 冲突提示 -->
+                        <div
+                          v-if="hasConflict(schedule)"
+                          class="mt-3"
+                        >
+                          <div
+                            v-for="(conflict, idx) in getScheduleConflicts(schedule).slice(0, 1)"
+                            :key="idx"
+                            class="text-xs text-red-400 flex items-center gap-1.5 bg-red-500/10 px-2 py-1.5 rounded-md"
+                          >
+                            <AlertTriangle class="h-3 w-3 flex-shrink-0" />
+                            <span v-if="conflict.type === 'teacher'">
+                              教师时间冲突：{{ conflict.time }}
+                            </span>
+                            <span v-else>
+                              教室冲突：{{ conflict.time }}
+                            </span>
+                          </div>
+                        </div>
+
+                        <!-- 底部标签 -->
+                        <div class="mt-3 flex items-center gap-2 flex-wrap">
+                          <Badge
+                            :variant="hasConflict(schedule) ? 'error' : 'secondary'"
+                            class="text-xs"
+                          >
+                            {{ schedule.teacher_name || '未分配教师' }}
+                          </Badge>
+                          <span class="text-xs text-white/40">
+                            第{{ schedule.week_start }}-{{ schedule.week_end }}周
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- 删除按钮 -->
+                      <Button
+                        v-if="isAdmin"
+                        variant="ghost"
+                        size="sm"
+                        class="h-8 w-8 p-0 text-white/40 hover:text-red-400 flex-shrink-0 ml-2"
+                        :loading="isDeleting"
+                        @click="handleDelete(schedule.id)"
                       >
-                        {{ schedule.teacher_name || '未分配教师' }}
-                      </Badge>
-                      <span class="text-xs text-white/40">
-                        第{{ schedule.week_start }}-{{ schedule.week_end }}周
-                      </span>
+                        <Trash2 class="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    v-if="isAdmin"
-                    variant="ghost"
-                    size="sm"
-                    class="h-8 w-8 p-0 text-white/40 hover:text-red-400"
-                    :loading="isDeleting"
-                    @click="handleDelete(schedule.id)"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                  </Button>
+                  </Card>
                 </div>
-              </Card>
+              </div>
             </div>
           </div>
         </div>
