@@ -2,7 +2,7 @@
 课表模型单元测试
 """
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.models.course_schedule import CourseSchedule
 
 
@@ -70,7 +70,7 @@ def test_course_schedule_all_weekdays(session: Session):
     session.commit()
     
     # 验证所有课程都已创建
-    schedules = session.query(CourseSchedule).all()
+    schedules = session.exec(select(CourseSchedule)).all()
     assert len(schedules) == 7
     
     # 验证星期几正确
@@ -110,8 +110,8 @@ def test_course_schedule_query_by_day(session: Session):
     session.commit()
     
     # 查询周一的课程
-    monday_schedules = session.query(CourseSchedule).filter(
-        CourseSchedule.day_of_week == 1
+    monday_schedules = session.exec(
+        select(CourseSchedule).where(CourseSchedule.day_of_week == 1)
     ).all()
     
     assert len(monday_schedules) == 2
@@ -149,8 +149,8 @@ def test_course_schedule_query_by_class(session: Session):
     session.commit()
     
     # 查询特定班级的课程
-    class_schedules = session.query(CourseSchedule).filter(
-        CourseSchedule.class_name == "2025康复治疗技术1班"
+    class_schedules = session.exec(
+        select(CourseSchedule).where(CourseSchedule.class_name == "2025康复治疗技术1班")
     ).all()
     
     assert len(class_schedules) == 2

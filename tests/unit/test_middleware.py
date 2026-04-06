@@ -204,6 +204,7 @@ class TestAuditLogAsyncSave:
             call_args = mock_create_task.call_args[0][0]
             import inspect
             assert inspect.iscoroutine(call_args)
+            call_args.close()  # 防止 never awaited warning
 
     @pytest.mark.asyncio
     async def test_async_save_handles_exception_silently(self):

@@ -22,15 +22,18 @@ from sqlmodel.pool import StaticPool
 @pytest.fixture(scope="function")
 def engine():
     """创建内存数据库引擎"""
-    engine = create_engine(
+    test_engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
     # 创建所有表
     from app.models import Student, User, CheckinRecord, CourseSession, ScoreLog, AuditLog, SecurityAlert, CourseSchedule
-    SQLModel.metadata.create_all(engine)
-    return engine
+    SQLModel.metadata.create_all(test_engine)
+    try:
+        yield test_engine
+    finally:
+        test_engine.dispose()
 
 
 @pytest.fixture(scope="function")
@@ -222,6 +225,8 @@ def jwt_client(monkeypatch):
     
     with TestClient(app) as test_client:
         yield test_client
+
+    test_engine.dispose()
 
 
 @pytest.fixture
