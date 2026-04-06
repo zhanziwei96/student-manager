@@ -26,7 +26,7 @@ class TestActiveClassSessionsAPI:
         """测试获取所有活跃课堂列表"""
         self._start_class_directly(test_engine, "计算机1班", "高等数学")
 
-        response = client.get("/api/v1/class-sessions/active")
+        response = client.get("/api/v1/course-sessions/active")
 
         assert response.status_code == 200
         data = response.json()
@@ -41,7 +41,7 @@ class TestActiveClassSessionsAPI:
 
     def test_get_active_class_sessions_returns_empty_list(self, client):
         """测试没有活跃课堂时返回空列表"""
-        response = client.get("/api/v1/class-sessions/active")
+        response = client.get("/api/v1/course-sessions/active")
 
         assert response.status_code == 200
         data = response.json()
@@ -50,7 +50,7 @@ class TestActiveClassSessionsAPI:
 
     def test_get_active_class_sessions_is_public(self, client):
         """测试获取活跃课堂是公开接口"""
-        response = client.get("/api/v1/class-sessions/active")
+        response = client.get("/api/v1/course-sessions/active")
 
         assert response.status_code == 200
         assert response.json()["success"] is True
@@ -62,7 +62,7 @@ class TestActiveClassSessionsAPI:
         self._start_class_directly(test_engine, "计算机1班", "高等数学")
 
         # 活跃列表中有该课堂
-        response = client.get("/api/v1/class-sessions/active")
+        response = client.get("/api/v1/course-sessions/active")
         assert len(response.json()["data"]) == 1
 
         # 结束上课
@@ -70,7 +70,7 @@ class TestActiveClassSessionsAPI:
             end_course_session(session, teacher_id=1)
 
         # 活跃列表为空
-        response = client.get("/api/v1/class-sessions/active")
+        response = client.get("/api/v1/course-sessions/active")
         assert response.json()["data"] == []
 
     def test_multiple_active_sessions(self, client, test_engine):
@@ -78,7 +78,7 @@ class TestActiveClassSessionsAPI:
         self._start_class_directly(test_engine, "计算机1班", "高等数学", teacher_id=1)
         self._start_class_directly(test_engine, "软件工程班", "数据结构", teacher_id=2)
 
-        response = client.get("/api/v1/class-sessions/active")
+        response = client.get("/api/v1/course-sessions/active")
 
         assert response.status_code == 200
         data = response.json()

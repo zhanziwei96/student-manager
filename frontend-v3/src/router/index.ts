@@ -71,7 +71,7 @@ const routes = [
       {
         path: 'session',
         name: 'TeacherSession',
-        component: () => import('@/views/teacher/ClassSession.vue'),
+        component: () => import('@/views/teacher/CourseSession.vue'),
       },
       {
         path: 'schedules',

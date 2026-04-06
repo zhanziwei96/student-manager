@@ -27,7 +27,7 @@ vi.mock('@/composables/useStudentProfile', () => ({
 }))
 
 vi.mock('@/composables/useStudentCheckin', () => ({
-  useStudentClassSession: () => ({
+  useStudentCourseSession: () => ({
     data: ref({
       active: true,
       course_name: '高等数学',

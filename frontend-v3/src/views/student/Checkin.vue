@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useStudentProfile } from '@/composables/useStudentProfile'
-import { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
+import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge } from '@/components/ui'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
@@ -36,7 +36,7 @@ const getGlowStyle = (color: CardColor) => {
   } as Record<string, string>
 }
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
-const { data: classSession, isPending: isLoadingSession, hasActiveSession } = useStudentClassSession()
+const { data: classSession, isPending: isLoadingSession, hasActiveSession } = useStudentCourseSession()
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
 const { hasCheckedIn, sessionCheckin } = useHasCheckedInSession(computed(() => classSession.value?.id))
 

@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ref, nextTick, h, defineComponent } from 'vue'
 import { mount } from '@vue/test-utils'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
-import type { Student, CheckinRecord, ClassSessionInfo } from '@/types'
+import type { Student, CheckinRecord, CourseSessionStatus } from '@/types'
 
 // Type for Vue Query mock return
 interface QueryResult<T> {
@@ -45,7 +45,7 @@ function withSetup<T>(composable: () => T): { result: T; unmount: () => void } {
 // Mock API
 vi.mock('@/api/checkin', () => ({
   checkinApi: {
-    getClassSessionForClass: vi.fn(),
+    getCourseSessionForClass: vi.fn(),
     checkin: vi.fn(),
   },
 }))
@@ -73,12 +73,12 @@ import { checkinApi } from '@/api/checkin'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useTodayCheckins } from '@/composables/useCheckins'
 import {
-  useStudentClassSession,
+  useStudentCourseSession,
   useStudentSelfCheckin,
   useHasCheckedInSession,
 } from '@/composables/useStudentCheckin'
 
-describe('useStudentClassSession', () => {
+describe('useStudentCourseSession', () => {
   const mockStudent: Student = {
     id: '1',
     student_id: 'S001',
@@ -87,14 +87,13 @@ describe('useStudentClassSession', () => {
     score: 100,
   }
 
-  const mockClassSession: ClassSessionInfo = {
-    session_id: 1,
+  const mockCourseSession: CourseSessionStatus = {
+    id: 1,
+    session_code: 'CS101',
     class_name: '计算机一班',
-    course_name: '软件工程',
-    teacher_id: 1,
     teacher_name: '李老师',
     active: true,
-    created_at: '2024-01-01T08:00:00Z',
+    start_time: '2024-01-01T08:00:00Z',
   }
 
   beforeEach(() => {
@@ -104,7 +103,7 @@ describe('useStudentClassSession', () => {
       isPending: ref(false),
       error: ref(null),
     } as QueryResult<Student>)
-    vi.mocked(checkinApi.getClassSessionForClass).mockResolvedValue(mockClassSession)
+    vi.mocked(checkinApi.getCourseSessionForClass).mockResolvedValue(mockCourseSession)
   })
 
   afterEach(() => {
@@ -112,24 +111,24 @@ describe('useStudentClassSession', () => {
   })
 
   it('当班级有活跃课堂时应返回会话信息', async () => {
-    const { result, unmount } = withSetup(() => useStudentClassSession())
+    const { result, unmount } = withSetup(() => useStudentCourseSession())
 
     // 等待 query 执行
     await new Promise((resolve) => setTimeout(resolve, 100))
     await nextTick()
 
-    expect(checkinApi.getClassSessionForClass).toHaveBeenCalledWith('计算机一班')
-    expect(result.data.value).toEqual(mockClassSession)
+    expect(checkinApi.getCourseSessionForClass).toHaveBeenCalledWith('计算机一班')
+    expect(result.data.value).toEqual(mockCourseSession)
     expect(result.hasActiveSession.value).toBe(true)
     unmount()
   })
 
   it('当传入特定班级名时应使用传入值而非学生班级', async () => {
-    const { unmount } = withSetup(() => useStudentClassSession(ref('计算机二班')))
+    const { unmount } = withSetup(() => useStudentCourseSession(ref('计算机二班')))
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(checkinApi.getClassSessionForClass).toHaveBeenCalledWith('计算机二班')
+    expect(checkinApi.getCourseSessionForClass).toHaveBeenCalledWith('计算机二班')
     unmount()
   })
 
@@ -140,19 +139,19 @@ describe('useStudentClassSession', () => {
       error: ref(null),
     } as QueryResult<Student>)
 
-    const { unmount } = withSetup(() => useStudentClassSession())
+    const { unmount } = withSetup(() => useStudentCourseSession())
 
-    expect(checkinApi.getClassSessionForClass).not.toHaveBeenCalled()
+    expect(checkinApi.getCourseSessionForClass).not.toHaveBeenCalled()
     unmount()
   })
 
   it('当班级无活跃课堂时hasActiveSession应为false', async () => {
-    vi.mocked(checkinApi.getClassSessionForClass).mockResolvedValue({
-      ...mockClassSession,
+    vi.mocked(checkinApi.getCourseSessionForClass).mockResolvedValue({
+      ...mockCourseSession,
       active: false,
     })
 
-    const { result, unmount } = withSetup(() => useStudentClassSession())
+    const { result, unmount } = withSetup(() => useStudentCourseSession())
 
     await new Promise((resolve) => setTimeout(resolve, 100))
     await nextTick()

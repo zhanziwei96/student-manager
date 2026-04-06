@@ -2,7 +2,7 @@
  * 签到API测试
  */
 import { describe, it, expect } from 'vitest'
-import type { CheckinRequest, ClassSessionStatus } from '@/types'
+import type { CheckinRequest, CourseSessionStatus } from '@/types'
 
 describe('Checkin API Types', () => {
   it('should validate CheckinRequest with GPS and device info', () => {
@@ -21,8 +21,8 @@ describe('Checkin API Types', () => {
     expect(request.device_id).toBe('device123')
   })
 
-  it('should validate ClassSessionStatus with location', () => {
-    const status: ClassSessionStatus = {
+  it('should validate CourseSessionStatus with location', () => {
+    const status: CourseSessionStatus = {
       active: true,
       location_name: '机房312',
       checkin_radius: 100,

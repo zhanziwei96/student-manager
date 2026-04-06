@@ -9,7 +9,7 @@ import type { CheckinRecord } from '@/types'
 /**
  * 学生签到 - 获取所在班级的活跃课堂状态 - FE-003 修复后
  */
-export function useStudentClassSession(className?: string | Ref<string>) {
+export function useStudentCourseSession(className?: string | Ref<string>) {
   const { data: studentProfile } = useStudentProfile()
 
   const targetClassName = computed(() => {
@@ -18,13 +18,13 @@ export function useStudentClassSession(className?: string | Ref<string>) {
   })
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['student-class-session', targetClassName],
+    queryKey: ['student-course-session', targetClassName],
     queryFn: async () => {
       const classNameValue = targetClassName.value
       if (!classNameValue) return null
 
       // FE-003: 直接获取数据，错误自动抛出
-      return await checkinApi.getClassSessionForClass(classNameValue)
+      return await checkinApi.getCourseSessionForClass(classNameValue)
     },
     enabled: computed(() => !!targetClassName.value),
     refetchInterval: 10000,
@@ -66,7 +66,7 @@ export function useStudentSelfCheckin() {
       })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-class-session'] })
+      queryClient.invalidateQueries({ queryKey: ['student-course-session'] })
       queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
     },
   })

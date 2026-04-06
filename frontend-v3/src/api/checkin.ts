@@ -17,7 +17,7 @@ export interface CheckinRequest {
   device_info?: string
 }
 
-export interface ClassSessionStatus {
+export interface CourseSessionStatus {
   id?: number
   session_code?: string
   active: boolean
@@ -26,7 +26,7 @@ export interface ClassSessionStatus {
   start_time?: string
 }
 
-export interface ActiveClassSession {
+export interface ActiveCourseSession {
   course_name?: string
   class_name: string
   teacher_name: string
@@ -63,12 +63,12 @@ export const checkinApi = {
   /**
    * 获取班级活跃课堂状态（学生端使用）
    */
-  getClassSessionForClass: (className: string): Promise<ClassSessionStatus> =>
-    get(`/class-sessions/class/${encodeURIComponent(className)}`),
+  getCourseSessionForClass: (className: string): Promise<CourseSessionStatus> =>
+    get(`/course-sessions/class/${encodeURIComponent(className)}`),
 
   /**
    * 获取所有活跃课堂列表（管理员Dashboard使用）
    */
-  getActiveSessions: (): Promise<ActiveClassSession[]> =>
-    get('/class-sessions/active'),
+  getActiveSessions: (): Promise<ActiveCourseSession[]> =>
+    get('/course-sessions/active'),
 }

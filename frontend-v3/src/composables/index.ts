@@ -5,7 +5,7 @@ export { useClasses, useClassStats, useClassStudents } from './useClasses'
 export { useCheckinStats, useTodayCheckins } from './useCheckins'
 export { useStudentProfile } from './useStudentProfile'
 export { useStudentScoreLogs } from './useStudentScoreLogs'
-export { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession } from './useStudentCheckin'
+export { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from './useStudentCheckin'
 export { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from './useTeachers'
 // 网络错误状态管理
 export { useNetworkError } from './useNetworkError'

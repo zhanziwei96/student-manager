@@ -93,7 +93,7 @@ class TestCheckinAPIEnhanced:
         self._start_class_directly(test_engine, "一班")
 
         # 不需要登录，公开接口
-        response = client.get("/api/v1/class-sessions/active")
+        response = client.get("/api/v1/course-sessions/active")
 
         assert response.status_code == 200
         data = response.json()
@@ -111,7 +111,7 @@ class TestCheckinAPIEnhanced:
             "role": "student"
         })
 
-        response = client.get("/api/v1/class-sessions/class/一班")
+        response = client.get("/api/v1/course-sessions/class/一班")
 
         assert response.status_code == 200
         data = response.json()

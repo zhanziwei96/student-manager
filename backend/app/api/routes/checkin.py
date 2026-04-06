@@ -220,8 +220,8 @@ def get_checkin_stats(
     }
 
 
-@router.get("/class-sessions/active", response_model=ActiveSessionsResponse)
-def get_active_class_sessions(
+@router.get("/course-sessions/active", response_model=ActiveSessionsResponse)
+def get_active_course_sessions(
     request: Request,
     session: Session = Depends(get_session)
 ):
@@ -245,8 +245,8 @@ def get_active_class_sessions(
     }
 
 
-@router.get("/class-sessions/class/{class_name}", response_model=StudentSessionResponse)
-async def get_class_session_for_student(
+@router.get("/course-sessions/class/{class_name}", response_model=StudentSessionResponse)
+async def get_course_session_for_student(
     class_name: str,
     request: Request,
     session: Session = Depends(get_session),
