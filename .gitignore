@@ -185,6 +185,7 @@ desktop-*.png
 # Claude Code worktrees and local settings
 .claude/
 .claude/worktrees/
+.worktrees/
 
 # Superpowers plugin temporary files
 .superpowers/
