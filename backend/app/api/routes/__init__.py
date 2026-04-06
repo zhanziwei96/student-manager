@@ -8,6 +8,8 @@ from app.api.routes.checkin import router as checkin_router
 from app.api.routes.system import router as system_router
 from app.api.routes.schedules import router as schedules_router
 from app.api.routes.leaderboard import router as leaderboard_router
+from app.api.routes.course_sessions import router as course_sessions_router
+from app.api.routes.schedule_adjustments import router as schedule_adjustments_router
 
 __all__ = [
     "login_router",
@@ -17,4 +19,6 @@ __all__ = [
     "system_router",
     "schedules_router",
     "leaderboard_router",
+    "course_sessions_router",
+    "schedule_adjustments_router",
 ]

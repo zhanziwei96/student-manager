@@ -158,7 +158,8 @@ def create_app() -> FastAPI:
     # 注册API路由（必须在静态文件之前）
     from app.api.routes import (
         login_router, students_router, users_router,
-        checkin_router, system_router, schedules_router, leaderboard_router
+        checkin_router, system_router, schedules_router, leaderboard_router,
+        course_sessions_router, schedule_adjustments_router
     )
 
     # API v1 版本前缀
@@ -173,6 +174,8 @@ def create_app() -> FastAPI:
     app.include_router(users_router, prefix=API_V1_PREFIX)
     app.include_router(checkin_router, prefix=API_V1_PREFIX)
     app.include_router(schedules_router, prefix=API_V1_PREFIX)
+    app.include_router(course_sessions_router, prefix=API_V1_PREFIX)
+    app.include_router(schedule_adjustments_router, prefix=API_V1_PREFIX)
     
     # 静态文件服务（生产环境）
     if os.path.exists(STATIC_DIR):
