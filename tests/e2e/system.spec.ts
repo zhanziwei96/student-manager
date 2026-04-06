@@ -50,7 +50,7 @@ test.describe('系统健康检查测试', () => {
     });
 
     test('登录API正常工作', async ({ request }) => {
-      const response = await request.post('http://localhost:8000/api/v1/auth/login', {
+      const response = await request.post('http://localhost:8000/api/v1/login', {
         data: {
           username: 'admin',
           password: 'admin123',
@@ -65,7 +65,7 @@ test.describe('系统健康检查测试', () => {
     });
 
     test('错误密码返回401', async ({ request }) => {
-      const response = await request.post('http://localhost:8000/api/v1/auth/login', {
+      const response = await request.post('http://localhost:8000/api/v1/login', {
         data: {
           username: 'admin',
           password: 'wrongpassword',
@@ -111,7 +111,7 @@ test.describe('系统健康检查测试', () => {
 
       // 监听API请求
       const apiResponsePromise = page.waitForResponse(response =>
-        response.url().includes('/api/v1/auth/login')
+        response.url().includes('/api/v1/login')
       );
 
       await page.getByRole('button', { name: '管理员' }).click();
