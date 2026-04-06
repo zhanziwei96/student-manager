@@ -18,6 +18,7 @@ class CourseScheduleBase(SQLModel):
     classroom: Optional[str] = Field(default=None, description="教室", max_length=50)
     week_start: int = Field(default=1, description="开始周次", ge=1)
     week_end: int = Field(default=20, description="结束周次", ge=1)
+    week_type: str = Field(default="all", description="周类型: all|odd|even|custom", max_length=20)
 
 
 class CourseSchedule(CourseScheduleBase, table=True):
@@ -46,3 +47,4 @@ class CourseScheduleImport(SQLModel):
     classroom: Optional[str] = None
     week_start: int = 1
     week_end: int = 20
+    week_type: Optional[str] = "all"
