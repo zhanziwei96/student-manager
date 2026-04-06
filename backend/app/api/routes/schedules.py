@@ -29,6 +29,16 @@ from app.models.constants import (
 router = APIRouter(tags=["schedules"])
 
 
+def _get_current_week_number():
+    """计算当前教学周次"""
+    now = datetime.now()
+    semester_start = datetime(now.year, 2, 1)
+    if now < semester_start:
+        semester_start = datetime(now.year - 1, 2, 1)
+    week = (now - semester_start).days // 7 + 1
+    return max(1, week)
+
+
 # 响应模型定义
 class ScheduleListResponse(ApiListResponse[CourseScheduleResponse]):
     """课表列表响应"""
@@ -95,21 +105,87 @@ async def get_today_schedules(
     user: dict = Depends(get_current_user)
 ):
     """获取今日课表"""
+    from app.crud.schedule_adjustment import get_adjustment
+    from app.crud.course_session import get_course_sessions_by_schedule_and_week
+
     # 获取今天是星期几 (1-7)
     today = datetime.now().isoweekday()
-    
+    current_week = _get_current_week_number()
+
     query = select(CourseSchedule).where(CourseSchedule.day_of_week == today)
-    
+
     # 教师只能查看自己的课表
     if user.get("role") == "teacher":
         query = query.where(CourseSchedule.teacher_id == int(user.get("sub", 0)))
-    
+
     query = query.order_by(CourseSchedule.start_time)
     schedules = session.exec(query).all()
-    
+
+    data = []
+    for schedule in schedules:
+        schedule_data = schedule.model_dump()
+        schedule_data["week_number"] = current_week
+
+        # 检查 week_type 是否匹配当前周
+        week_type = getattr(schedule, "week_type", "all")
+        week_type_match = True
+        session_status = "none"
+        active_session_id = None
+        adjustment = None
+
+        if week_type == "odd" and current_week % 2 == 0:
+            week_type_match = False
+            session_status = "skipped"
+        elif week_type == "even" and current_week % 2 == 1:
+            week_type_match = False
+            session_status = "skipped"
+
+        if week_type_match:
+            # 查询调整记录
+            adj = get_adjustment(session, schedule.id, current_week)
+            if adj:
+                adjustment = {
+                    "type": adj.type,
+                    "reason": adj.reason,
+                }
+                if adj.type in ("modify", "makeup"):
+                    adjustment.update({
+                        "new_date": adj.new_date.isoformat() if adj.new_date else None,
+                        "new_start_time": adj.new_start_time,
+                        "new_end_time": adj.new_end_time,
+                        "new_classroom": adj.new_classroom,
+                    })
+
+                if adj.type == "cancel":
+                    session_status = "cancelled"
+                elif adj.type == "modify":
+                    session_status = "adjusted"
+                elif adj.type == "makeup":
+                    session_status = "makeup"
+            else:
+                # 查询课程会话
+                cs = get_course_sessions_by_schedule_and_week(
+                    session, schedule.id, current_week
+                )
+                if cs:
+                    if cs.status == "active":
+                        session_status = "active"
+                        active_session_id = cs.id
+                    elif cs.status == "ended":
+                        session_status = "ended"
+                        active_session_id = cs.id
+                else:
+                    session_status = "none"
+
+        schedule_data["week_type_match"] = week_type_match
+        schedule_data["session_status"] = session_status
+        schedule_data["active_session_id"] = active_session_id
+        schedule_data["adjustment"] = adjustment
+        data.append(schedule_data)
+
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [s.model_dump() for s in schedules]
+        ApiResponseConst.DATA: data
     }
 
 
@@ -200,6 +276,7 @@ async def import_schedules(
                 'classroom': row.get('教室') if pd.notna(row.get('教室')) else None,
                 'week_start': int(row.get('开始周', 1)) if pd.notna(row.get('开始周')) else 1,
                 'week_end': int(row.get('结束周', 20)) if pd.notna(row.get('结束周')) else 20,
+                'week_type': row.get('周类型', 'all') if pd.notna(row.get('周类型')) else 'all',
             })
         
         # 调用CRUD层函数处理所有业务逻辑
@@ -318,7 +395,8 @@ def download_template():
         '结束时间': ['09:40', '11:40', '15:40'],
         '教室': ['机房312', '机房312', '机房312'],
         '开始周': [1, 1, 1],
-        '结束周': [16, 16, 16]
+        '结束周': [16, 16, 16],
+        '周类型': ['all', 'all', 'all']
     }
     
     df = pd.DataFrame(data)

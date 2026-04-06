@@ -64,7 +64,8 @@ def create_schedule(
     end_time: str,
     classroom: str,
     week_start: int,
-    week_end: int
+    week_end: int,
+    week_type: str = "all"
 ) -> CourseSchedule:
     """
     创建课表
@@ -81,12 +82,13 @@ def create_schedule(
         classroom: 教室
         week_start: 开始周
         week_end: 结束周
-        
+        week_type: 周类型（可选，默认 all）
+
     Returns:
         创建的课表对象
     """
     from datetime import datetime
-    
+
     schedule = CourseSchedule(
         course_name=course_name,
         class_name=class_name,
@@ -98,6 +100,7 @@ def create_schedule(
         classroom=classroom,
         week_start=week_start,
         week_end=week_end,
+        week_type=week_type,
         created_at=datetime.now().isoformat(),
         updated_at=datetime.now().isoformat()
     )
@@ -168,6 +171,7 @@ def import_schedules(
             classroom = str(record.get('classroom', '')).strip() if record.get('classroom') else None
             week_start = int(record.get('week_start', 1)) if record.get('week_start') else 1
             week_end = int(record.get('week_end', 20)) if record.get('week_end') else 20
+            week_type = str(record.get('week_type', 'all')).strip() if record.get('week_type') else 'all'
             
             # 查找教师ID
             teacher = session.exec(
@@ -201,6 +205,7 @@ def import_schedules(
                 classroom=classroom,
                 week_start=week_start,
                 week_end=week_end,
+                week_type=week_type,
                 created_at=datetime.now().isoformat(),
                 updated_at=datetime.now().isoformat()
             )
