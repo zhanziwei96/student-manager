@@ -5,6 +5,36 @@ import { useStudentClassSession, useStudentSelfCheckin, useHasCheckedInSession }
 import { Card, Button, Badge } from '@/components/ui'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
+
+// 卡片主题色类型
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+// 获取卡片样式
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+// 获取图标容器样式
+const getIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
+  } as Record<string, string>
+}
+
+// 获取背景装饰样式
+const getGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  } as Record<string, string>
+}
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
 const { data: classSession, isPending: isLoadingSession, hasActiveSession } = useStudentClassSession()
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
@@ -69,16 +99,12 @@ const formatTime = (time: string) => {
     <Card
       v-else-if="studentProfile"
       class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300 mb-5"
-      :style="{
-        backgroundColor: 'var(--card-purple-bg)',
-        borderColor: 'var(--card-purple-border)',
-        '--tw-shadow-color': 'var(--card-purple-shadow)'
-      }"
+      :style="getCardStyle('purple')"
     >
       <div class="flex items-center gap-3 md:gap-4 relative z-10">
         <div
           class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 shadow-inner"
-          :style="{ backgroundColor: 'var(--card-purple-icon-bg)' }"
+          :style="getIconStyle('purple')"
         >
           <User class="h-5 w-5 md:h-6 md:w-6" :style="{ color: 'var(--card-purple-icon-text)' }" />
         </div>
@@ -99,7 +125,7 @@ const formatTime = (time: string) => {
       <!-- 背景装饰 -->
       <div
         class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="{ backgroundColor: 'var(--card-purple-glow)' }"
+        :style="getGlowStyle('purple')"
       />
     </Card>
 
@@ -107,19 +133,12 @@ const formatTime = (time: string) => {
     <Card
       class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300 mb-5"
       :class="hasActiveSession ? '' : 'bg-white/[0.02] border-white/10'"
-      :style="hasActiveSession ? {
-        backgroundColor: 'var(--card-green-bg)',
-        borderColor: 'var(--card-green-border)',
-        '--tw-shadow-color': 'var(--card-green-shadow)'
-      } : {}"
+      :style="hasActiveSession ? getCardStyle('green') : {}"
     >
       <div class="flex items-center gap-3 md:gap-4 relative z-10">
         <div
           class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 shadow-inner transition-transform"
-          :style="hasActiveSession ? {
-            backgroundColor: 'var(--card-green-icon-bg)',
-            color: 'var(--card-green-icon-text)'
-          } : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
+          :style="hasActiveSession ? getIconStyle('green') : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
         >
           <Clock
             v-if="!hasActiveSession"
@@ -152,7 +171,7 @@ const formatTime = (time: string) => {
           v-if="showCheckedInStatus"
           variant="success"
           class="flex-shrink-0 border-0"
-          :style="{ backgroundColor: 'var(--card-green-icon-bg)', color: 'var(--card-green-icon-text)' }"
+          :style="getIconStyle('green')"
         >
           <CalendarCheck class="mr-1 h-3 w-3" />
           已签到
@@ -163,18 +182,18 @@ const formatTime = (time: string) => {
       <div
         v-if="hasActiveSession"
         class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="{ backgroundColor: 'var(--card-green-glow)' }"
+        :style="getGlowStyle('green')"
       />
 
-      <!-- Checkin Button -->
+      <!-- Checkin Button - 渐变色背景区域 -->
       <div
         v-if="hasActiveSession"
-        class="mt-4 md:mt-6"
+        class="mt-4 md:mt-6 p-4 rounded-xl bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent border border-green-500/20"
       >
         <Button
           v-if="canCheckin"
           size="lg"
-          class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm"
+          class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 border-0 shadow-lg shadow-green-500/25 transition-all duration-300"
           :loading="isCheckingIn"
           @click="handleCheckin"
         >
@@ -211,11 +230,7 @@ const formatTime = (time: string) => {
     <!-- Checkin Tips - 蓝色主题 -->
     <Card
       class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300"
-      :style="{
-        backgroundColor: 'var(--card-blue-bg)',
-        borderColor: 'var(--card-blue-border)',
-        '--tw-shadow-color': 'var(--card-blue-shadow)'
-      }"
+      :style="getCardStyle('blue')"
     >
       <div class="relative z-10">
         <h3 class="font-medium text-white mb-4 text-base md:text-lg">
@@ -225,7 +240,7 @@ const formatTime = (time: string) => {
           <li class="flex items-start gap-3">
             <div
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
-              :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
+              :style="getIconStyle('blue')"
             >
               <span class="text-xs font-medium" style="color: #fff">1</span>
             </div>
@@ -234,7 +249,7 @@ const formatTime = (time: string) => {
           <li class="flex items-start gap-3">
             <div
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
-              :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
+              :style="getIconStyle('blue')"
             >
               <span class="text-xs font-medium" style="color: #fff">2</span>
             </div>
@@ -243,7 +258,7 @@ const formatTime = (time: string) => {
           <li class="flex items-start gap-3">
             <div
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
-              :style="{ backgroundColor: 'var(--card-blue-icon-bg)' }"
+              :style="getIconStyle('blue')"
             >
               <span class="text-xs font-medium" style="color: #fff">3</span>
             </div>
@@ -254,7 +269,7 @@ const formatTime = (time: string) => {
       <!-- 背景装饰 -->
       <div
         class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="{ backgroundColor: 'var(--card-blue-glow)' }"
+        :style="getGlowStyle('blue')"
       />
     </Card>
 
