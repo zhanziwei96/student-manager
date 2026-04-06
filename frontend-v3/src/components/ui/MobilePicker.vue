@@ -35,19 +35,31 @@ const emit = defineEmits<{
 const isOpen = ref(false)
 const searchQuery = ref('')
 const isMobile = ref(false)
+const desktopPanelRef = ref<HTMLDivElement | null>(null)
 
 // 移动端检测
 const checkMobile = () => {
   isMobile.value = window.innerWidth < 768
 }
 
+const handleClickOutside = (event: MouseEvent) => {
+  if (!isMobile.value && isOpen.value) {
+    const target = event.target as HTMLElement
+    if (!target.closest('.mobile-picker-container')) {
+      close()
+    }
+  }
+}
+
 onMounted(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
+  document.removeEventListener('click', handleClickOutside)
 })
 
 // 计算属性
@@ -96,7 +108,7 @@ const isSelected = (option: MobilePickerOption) => {
 </script>
 
 <template>
-  <div class="relative">
+  <div class="relative mobile-picker-container">
     <!-- 触发器 -->
     <button
       type="button"
@@ -221,6 +233,57 @@ const isSelected = (option: MobilePickerOption) => {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- 桌面端下拉面板 -->
+    <div
+      v-if="isOpen && !isMobile"
+      ref="desktopPanelRef"
+      class="absolute z-50 top-full left-0 right-0 mt-1 bg-[#1a1a2e] border border-white/10 rounded-lg shadow-xl overflow-hidden"
+    >
+      <!-- 搜索框 -->
+      <div v-if="searchable" class="p-2 border-b border-white/10">
+        <div class="relative">
+          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="searchPlaceholder"
+            class="w-full h-9 pl-9 pr-3 rounded bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+            @keydown.esc="close"
+          >
+        </div>
+      </div>
+
+      <!-- 选项列表 -->
+      <div class="max-h-[300px] overflow-y-auto">
+        <div
+          v-for="(option, index) in filteredOptions"
+          :key="option.value"
+          :class="cn(
+            'flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-white/5',
+            index !== filteredOptions.length - 1 && 'border-b border-white/5',
+            isSelected(option) && 'bg-primary/10'
+          )"
+          @click="select(option)"
+        >
+          <div>
+            <div :class="cn('text-sm', isSelected(option) ? 'text-primary font-medium' : 'text-white')">
+              {{ option.label }}
+            </div>
+            <div v-if="option.subtitle" class="text-xs text-white/50 mt-0.5">
+              {{ option.subtitle }}
+            </div>
+          </div>
+          <Check
+            v-if="isSelected(option)"
+            class="h-4 w-4 text-primary"
+          />
+        </div>
+        <div v-if="filteredOptions.length === 0" class="py-6 text-center text-sm text-white/40">
+          未找到匹配选项
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
