@@ -33,6 +33,75 @@ import type { ClassSessionInfo } from '@/types'
 import StudentCheckinGrid from '@/components/teacher/StudentCheckinGrid.vue'
 import CheckinStats from '@/components/teacher/CheckinStats.vue'
 
+// ===== 辅助函数 =====
+
+/**
+ * 获取课堂状态样式
+ * @param isActive 是否进行中
+ * @returns 主题样式配置
+ */
+const getSessionStatusTheme = (isActive: boolean) => {
+  if (isActive) {
+    return {
+      cardBg: 'bg-green-500/5 border-green-500/20',
+      iconBg: 'bg-green-500/20 text-green-400',
+      icon: CheckCircle,
+      titleColor: 'text-green-400',
+      pulse: true
+    }
+  }
+  return {
+    cardBg: 'bg-white/[0.02] border-white/10',
+    iconBg: 'bg-white/10 text-white/60',
+    icon: Clock,
+    titleColor: 'text-white/80',
+    pulse: false
+  }
+}
+
+/**
+ * 获取签到率颜色
+ * @param rate 签到率 (0-100)
+ * @returns 颜色主题
+ */
+const getCheckinRateColor = (rate: number): string => {
+  if (rate >= 90) return 'text-green-400'
+  if (rate >= 70) return 'text-blue-400'
+  if (rate >= 50) return 'text-orange-400'
+  return 'text-red-400'
+}
+
+/**
+ * 获取签到率进度条颜色
+ * @param rate 签到率 (0-100)
+ * @returns 背景色类名
+ */
+const getCheckinRateBarColor = (rate: number): string => {
+  if (rate >= 90) return 'bg-green-400'
+  if (rate >= 70) return 'bg-blue-400'
+  if (rate >= 50) return 'bg-orange-400'
+  return 'bg-red-400'
+}
+
+/**
+ * 格式化持续时间
+ * @param startTime 开始时间字符串
+ * @returns 格式化后的持续时间 (如: 45分钟)
+ */
+const formatDuration = (startTime: string): string => {
+  if (!startTime) return ''
+  const start = new Date(startTime)
+  const now = new Date()
+  const diffMs = now.getTime() - start.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+
+  if (diffMins < 1) return '刚开始'
+  if (diffMins < 60) return `${diffMins}分钟`
+  const hours = Math.floor(diffMins / 60)
+  const mins = diffMins % 60
+  return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`
+}
+
 // ===== 状态定义 =====
 const className = ref('')
 const courseName = ref('')
@@ -269,6 +338,21 @@ const formatTime = (timeStr: string) => {
   const date = new Date(timeStr)
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
+
+// 课堂状态主题
+const sessionStatusTheme = computed(() => getSessionStatusTheme(!!isSessionActive.value))
+
+// 当前课堂签到率
+const currentCheckinRate = computed(() => {
+  if (checkinStats.value.total === 0) return 0
+  return Math.round((checkinStats.value.checkedIn / checkinStats.value.total) * 100)
+})
+
+// 当前课堂持续时间
+const sessionDuration = computed(() => {
+  if (!selectedSession.value?.start_time) return ''
+  return formatDuration(selectedSession.value.start_time)
+})
 </script>
 
 <template>
@@ -291,42 +375,81 @@ const formatTime = (timeStr: string) => {
       </p>
     </div>
 
-    <!-- Session status -->
+    <!-- Session status - 课堂状态卡片 -->
     <Card
-      class="border-white/10 p-4 md:p-6 mb-5"
-      :class="isSessionActive ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02]'"
+      class="border-white/10 p-4 md:p-6 mb-5 transition-all duration-300"
+      :class="sessionStatusTheme.cardBg"
     >
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3 md:gap-4">
+          <!-- 状态图标 -->
           <div
-            class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0"
-            :class="isSessionActive ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/60'"
+            class="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl flex-shrink-0 transition-all duration-300"
+            :class="sessionStatusTheme.iconBg"
           >
-            <Clock class="h-5 w-5 md:h-6 md:w-6" />
+            <component
+              :is="sessionStatusTheme.icon"
+              class="h-6 w-6 md:h-7 md:w-7"
+            />
+            <!-- 脉冲动画 - 课堂进行中 -->
+            <span
+              v-if="sessionStatusTheme.pulse"
+              class="absolute inline-flex h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-green-400/20 animate-ping"
+            />
           </div>
+
+          <!-- 状态信息 -->
           <div class="min-w-0 flex-1">
-            <h2 class="font-medium text-white">
-              {{ isSessionActive ? `课堂进行中 (${activeSessions?.length}个班级)` : '暂无活跃课堂' }}
-            </h2>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2
+                class="font-semibold text-lg"
+                :class="isSessionActive ? 'text-green-400' : 'text-white/80'"
+              >
+                {{ isSessionActive ? '课堂进行中' : '暂无活跃课堂' }}
+              </h2>
+              <!-- 多班级标签 -->
+              <Badge
+                v-if="isSessionActive && sessionCount > 1"
+                variant="secondary"
+                class="bg-green-500/20 text-green-400 border-green-500/30"
+              >
+                {{ sessionCount }}个班级
+              </Badge>
+              <!-- 持续时间标签 -->
+              <Badge
+                v-if="isSessionActive && sessionDuration"
+                variant="secondary"
+                class="bg-white/10 text-white/70"
+              >
+                <Clock class="h-3 w-3 mr-1" />
+                {{ sessionDuration }}
+              </Badge>
+            </div>
             <p
               v-if="!isSessionActive"
-              class="text-sm text-white/60"
+              class="text-sm text-white/60 mt-0.5"
             >
               选择班级开始新课堂
             </p>
             <p
               v-else-if="selectedSession"
-              class="text-sm text-white/60 truncate"
+              class="text-sm text-white/60 mt-0.5 truncate"
             >
-              当前: {{ selectedSession.class_name }} • 开始于 {{ formatTime(selectedSession.start_time) }}
+              <span class="text-white/80">{{ selectedSession.class_name }}</span>
+              <span class="mx-1.5 text-white/30">•</span>
+              <span>{{ selectedSession.course_name || '未命名课程' }}</span>
+              <span class="mx-1.5 text-white/30">•</span>
+              <span>开始于 {{ formatTime(selectedSession.start_time) }}</span>
             </p>
           </div>
         </div>
+
+        <!-- 操作按钮 -->
         <div class="flex-shrink-0 flex gap-2">
           <template v-if="!isSessionActive">
             <Button
               :loading="isStartingSession"
-              class="w-full sm:w-auto min-h-[44px]"
+              class="w-full sm:w-auto min-h-[44px] bg-green-500 hover:bg-green-600 text-white"
               @click="handleStartSession"
             >
               <Play class="mr-2 h-4 w-4" />
@@ -353,6 +476,29 @@ const formatTime = (timeStr: string) => {
               结束课堂
             </Button>
           </template>
+        </div>
+      </div>
+
+      <!-- 签到进度条 - 仅在活跃课堂显示 -->
+      <div
+        v-if="isSessionActive && checkinStats.total > 0"
+        class="mt-4 pt-4 border-t border-white/10"
+      >
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm text-white/60">签到进度</span>
+          <span
+            class="text-sm font-medium"
+            :class="getCheckinRateColor(currentCheckinRate)"
+          >
+            {{ checkinStats.checkedIn }}/{{ checkinStats.total }} ({{ currentCheckinRate }}%)
+          </span>
+        </div>
+        <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+          <div
+            class="h-full rounded-full transition-all duration-500 ease-out"
+            :class="getCheckinRateBarColor(currentCheckinRate)"
+            :style="{ width: `${currentCheckinRate}%` }"
+          />
         </div>
       </div>
     </Card>

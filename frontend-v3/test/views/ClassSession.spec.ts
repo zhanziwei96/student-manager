@@ -16,6 +16,11 @@ vi.mock('@/stores', () => ({
 
 // Mock composables
 vi.mock('@/composables', () => ({
+  useClassSessions: () => ({
+    data: ref([]),
+    error: ref(null),
+    refetch: vi.fn()
+  }),
   useClassSession: () => ({
     data: ref(null)
   }),
@@ -42,6 +47,11 @@ vi.mock('@/composables', () => ({
     error: vi.fn(),
     showErrorToast: vi.fn(),
     showSuccessToast: vi.fn()
+  }),
+  useNetworkError: () => ({
+    networkError: ref(null),
+    setError: vi.fn(),
+    clearError: vi.fn()
   })
 }))
 
@@ -114,6 +124,23 @@ const MockDialog = {
   template: '<div v-if="open" class="mock-dialog"><h3>{{ title }}</h3><slot /></div>'
 }
 
+const MockNetworkErrorBanner = {
+  props: ['message'],
+  emits: ['retry', 'dismiss'],
+  template: '<div v-if="message" class="mock-error-banner">{{ message }}</div>'
+}
+
+const MockCheckinStats = {
+  props: ['stats'],
+  template: '<div class="mock-checkin-stats"><slot /></div>'
+}
+
+const MockStudentCheckinGrid = {
+  props: ['students', 'loading', 'searchQuery'],
+  emits: ['update:searchQuery', 'quickCheckIn'],
+  template: '<div class="mock-student-grid"><slot /></div>'
+}
+
 describe('ClassSession Course Selection', () => {
   const createTestQueryClient = () => new QueryClient({
     defaultOptions: {
@@ -137,7 +164,10 @@ describe('ClassSession Course Selection', () => {
           Input: MockInput,
           Badge: { template: '<span class="mock-badge"><slot /></span>' },
           Dialog: MockDialog,
-          Toast: { template: '<div class="mock-toast" />' }
+          Toast: { template: '<div class="mock-toast" />' },
+          NetworkErrorBanner: MockNetworkErrorBanner,
+          CheckinStats: MockCheckinStats,
+          StudentCheckinGrid: MockStudentCheckinGrid
         }
       }
     })
