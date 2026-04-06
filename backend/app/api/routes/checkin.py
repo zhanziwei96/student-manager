@@ -3,14 +3,15 @@
 """
 from typing import Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, Request, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.crud import (
     get_class_session, start_class, end_class,
-    get_today_checkins, create_checkin
+    get_today_checkins, create_checkin,
+    get_teacher_active_sessions, get_class_session_by_class_name
 )
 from app.core.jwt import get_current_user
 from app.models.constants import (
@@ -32,6 +33,10 @@ class CheckinRequest(BaseModel):
 class StartClassRequest(BaseModel):
     class_name: str = Field(..., description="班级名称")
     course_name: Optional[str] = Field(default=None, description="课程名称")
+
+
+class EndClassRequest(BaseModel):
+    class_name: Optional[str] = Field(default=None, description="班级名称，不指定则结束所有活跃课堂")
 
 
 class ClassSessionData(BaseModel):
@@ -85,8 +90,8 @@ class StudentSessionData(BaseModel):
 
 
 # 响应模型定义
-class ClassSessionResponse(ApiResponse[ClassSessionData]):
-    """课堂会话响应"""
+class ClassSessionResponse(ApiResponse[list[ClassSessionData]]):
+    """课堂会话列表响应"""
     pass
 
 
@@ -126,22 +131,24 @@ def get_current_session(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取当前用户的上课状态"""
+    """获取当前用户的所有活跃课堂"""
     teacher_id = int(user.get("sub", 0))
-    class_session = get_class_session(session, teacher_id)
-    if class_session:
-        return {
-            ApiResponseConst.SUCCESS: True,
-            ApiResponseConst.DATA: {
-                'active': class_session.active,
-                'course_name': class_session.course_name,
-                'class_name': class_session.class_name,
-                'start_time': class_session.start_time
-            }
-        }
+    class_sessions = get_teacher_active_sessions(session, teacher_id)
+
+    sessions_data = []
+    for class_session in class_sessions:
+        sessions_data.append({
+            'id': class_session.id,
+            'active': class_session.active,
+            'course_name': class_session.course_name,
+            'class_name': class_session.class_name,
+            'start_time': class_session.start_time,
+            'session_code': class_session.session_code,
+        })
+
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: {'active': False}
+        ApiResponseConst.DATA: sessions_data
     }
 
 
@@ -156,7 +163,6 @@ async def begin_class(
     # 用户认证已通过 Depends(get_current_user) 完成
     
     # 检查该班级是否已有活跃课堂
-    from app.crud.checkin import get_class_session_by_class_name
     existing_session = get_class_session_by_class_name(session, data.class_name)
     if existing_session and existing_session.active:
         teacher_name = existing_session.teacher_name or "其他教师"
@@ -164,15 +170,8 @@ async def begin_class(
             status_code=HttpStatus.CONFLICT,
             detail=f'该班级正在被 {teacher_name} 老师上课，无法开始新课堂'
         )
-    
-    # 检查当前教师是否有其他活跃课堂
+
     teacher_id = int(user.get("sub", 0))
-    current_session = get_class_session(session, teacher_id)
-    if current_session and current_session.active and current_session.class_name != data.class_name:
-        raise HTTPException(
-            status_code=HttpStatus.CONFLICT,
-            detail=f'您正在 {current_session.class_name} 上课，请先结束当前课堂'
-        )
     
     # 开始新课堂
     teacher_name = user.get("name", "")
@@ -194,14 +193,22 @@ async def begin_class(
 @router.post("/class-session/end", response_model=ApiSuccessResponse)
 async def finish_class(
     request: Request,
+    data: EndClassRequest = Body(default_factory=EndClassRequest),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
     """结束上课"""
     # 用户认证已通过 Depends(get_current_user) 完成
-    
+
     teacher_id = int(user.get("sub", 0))
-    end_class(session, teacher_id)
+    ended = end_class(session, teacher_id, data.class_name)
+
+    if not ended:
+        raise HTTPException(
+            status_code=HttpStatus.BAD_REQUEST,
+            detail='没有活跃的课堂需要结束'
+        )
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.CLASS_ENDED

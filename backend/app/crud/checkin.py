@@ -35,12 +35,21 @@ def get_class_session_by_class_name(session: Session, class_name: str) -> Option
     return session.exec(query).first()
 
 
+def get_teacher_active_sessions(session: Session, teacher_id: int) -> List[ClassSession]:
+    """获取教师所有活跃课堂"""
+    query = select(ClassSession).where(
+        ClassSession.teacher_id == teacher_id,
+        ClassSession.active.is_(True)
+    )
+    return list(session.exec(query).all())
+
+
 def start_class(session: Session, class_name: str, teacher_id: Optional[int] = None,
                 teacher_name: Optional[str] = None, course_name: Optional[str] = None) -> ClassSession:
-    """开始上课 - 每次调用创建新的课堂记录"""
-    # 结束该教师之前的活跃课堂
-    end_class(session, teacher_id)
+    """开始上课 - 每次调用创建新的课堂记录
 
+    支持多班级并行上课，不再自动结束之前的课堂
+    """
     # 创建新课堂记录，生成唯一 session_code
     session_code = str(uuid.uuid4())[:8].upper()
     class_session = ClassSession(
@@ -58,24 +67,38 @@ def start_class(session: Session, class_name: str, teacher_id: Optional[int] = N
     return class_session
 
 
-def end_class(session: Session, teacher_id: Optional[int] = None) -> None:
-    """结束上课（根据教师ID）"""
-    if teacher_id:
-        # 查找该教师的活跃课堂
-        query = select(ClassSession).where(
-            ClassSession.teacher_id == teacher_id,
-            ClassSession.active.is_(True)
-        )
-        class_session = session.exec(query).first()
-    else:
-        return
-    
-    if class_session:
+def end_class(session: Session, teacher_id: Optional[int] = None, class_name: Optional[str] = None) -> bool:
+    """结束上课
+
+    Args:
+        teacher_id: 教师ID
+        class_name: 可选，指定结束哪个班级的课堂。如果不指定，则结束该教师所有活跃课堂
+
+    Returns:
+        bool: 是否成功结束至少一个课堂
+    """
+    query = select(ClassSession).where(
+        ClassSession.teacher_id == teacher_id,
+        ClassSession.active.is_(True)
+    )
+
+    if class_name:
+        query = query.where(ClassSession.class_name == class_name)
+
+    sessions = session.exec(query).all()
+
+    ended_any = False
+    for class_session in sessions:
         class_session.active = False
         class_session.end_time = datetime.now(SHANGHAI_TZ)
         class_session.updated_at = datetime.now(SHANGHAI_TZ)
         session.add(class_session)
+        ended_any = True
+
+    if ended_any:
         session.commit()
+
+    return ended_any
 
 
 def get_today_checkins(session: Session, class_name: Optional[str] = None, session_start: Optional[datetime] = None) -> List[CheckinRecord]:

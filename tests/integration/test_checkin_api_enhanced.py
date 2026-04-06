@@ -33,22 +33,33 @@ class TestCheckinAPIEnhanced:
         # 创建另一个教师并尝试开始同一班级的课
         # 这里简化测试，主要验证 API 返回 409
     
-    def test_start_class_teacher_already_has_class(self, teacher_client):
-        """测试教师已有活跃课堂时不能开始新课"""
+    def test_start_class_teacher_can_have_multiple_classes(self, teacher_client):
+        """测试教师可以同时管理多个班级课堂"""
         # 开始第一节课
         response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
         assert response.status_code == 200
-        
-        # 尝试开始另一节课
+
+        # 开始另一节课（不同班级）- 现在应该允许
         response = teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "二班"
         })
-        
-        assert response.status_code == 409
+
+        assert response.status_code == 200
         data = response.json()
-        assert data["success"] is False
+        assert data["success"] is True
+        assert data["data"]["class_name"] == "二班"
+
+        # 验证教师有两个活跃课堂
+        response = teacher_client.get("/api/v1/class-session")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 2
+        class_names = [s["class_name"] for s in data["data"]]
+        assert "一班" in class_names
+        assert "二班" in class_names
     
     def test_get_class_session_as_teacher(self, teacher_client):
         """测试教师获取当前课堂状态"""
@@ -80,12 +91,55 @@ class TestCheckinAPIEnhanced:
         teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
-        
-        response = teacher_client.post("/api/v1/class-session/end")
-        
+
+        response = teacher_client.post("/api/v1/class-session/end", json={
+            "class_name": "一班"
+        })
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+
+    def test_end_class_with_class_name(self, teacher_client):
+        """测试教师结束指定班级的课堂"""
+        # 开始两个班级的课
+        teacher_client.post("/api/v1/class-session/start", json={
+            "class_name": "一班"
+        })
+        teacher_client.post("/api/v1/class-session/start", json={
+            "class_name": "二班"
+        })
+
+        # 结束一班
+        response = teacher_client.post("/api/v1/class-session/end", json={
+            "class_name": "一班"
+        })
+        assert response.status_code == 200
+
+        # 验证只有二班还在活跃
+        response = teacher_client.get("/api/v1/class-session")
+        data = response.json()
+        assert len(data["data"]) == 1
+        assert data["data"][0]["class_name"] == "二班"
+
+    def test_end_all_classes(self, teacher_client):
+        """测试教师结束所有活跃课堂"""
+        # 开始两个班级的课
+        teacher_client.post("/api/v1/class-session/start", json={
+            "class_name": "一班"
+        })
+        teacher_client.post("/api/v1/class-session/start", json={
+            "class_name": "二班"
+        })
+
+        # 不指定班级，结束所有
+        response = teacher_client.post("/api/v1/class-session/end", json={})
+        assert response.status_code == 200
+
+        # 验证没有活跃课堂
+        response = teacher_client.get("/api/v1/class-session")
+        data = response.json()
+        assert len(data["data"]) == 0
     
     def test_student_checkin(self, teacher_client, student_user, client):
         """测试学生签到 - 需要教师先开始上课"""

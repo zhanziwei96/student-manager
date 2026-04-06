@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, RefreshCw, X } from 'lucide-vue-next'
-import { Button } from './Button'
+import Button from './Button.vue'
 
 interface Props {
   message?: string
