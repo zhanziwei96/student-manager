@@ -6,59 +6,59 @@ from typing import List, Optional
 import uuid
 from zoneinfo import ZoneInfo
 from sqlmodel import Session, select, func
-from app.models import CheckinRecord, ClassSession, ScoreLog
+from app.models import CheckinRecord, CourseSession, ScoreLog
 
 # 上海时区
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 
-def get_class_session(session: Session, teacher_id: Optional[int] = None) -> Optional[ClassSession]:
+def get_class_session(session: Session, teacher_id: Optional[int] = None) -> Optional[CourseSession]:
     """获取上课状态
-    
+
     如果提供 teacher_id，则返回该教师的活跃课堂
     """
     if teacher_id:
-        query = select(ClassSession).where(
-            ClassSession.teacher_id == teacher_id,
-            ClassSession.active.is_(True)
+        query = select(CourseSession).where(
+            CourseSession.teacher_id == teacher_id,
+            CourseSession.status == "active"
         )
         return session.exec(query).first()
     return None
 
 
-def get_class_session_by_class_name(session: Session, class_name: str) -> Optional[ClassSession]:
+def get_class_session_by_class_name(session: Session, class_name: str) -> Optional[CourseSession]:
     """根据班级名称获取活跃课堂"""
-    query = select(ClassSession).where(
-        ClassSession.class_name == class_name,
-        ClassSession.active.is_(True)
+    query = select(CourseSession).where(
+        CourseSession.class_name == class_name,
+        CourseSession.status == "active"
     )
     return session.exec(query).first()
 
 
-def get_teacher_active_sessions(session: Session, teacher_id: int) -> List[ClassSession]:
+def get_teacher_active_sessions(session: Session, teacher_id: int) -> List[CourseSession]:
     """获取教师所有活跃课堂"""
-    query = select(ClassSession).where(
-        ClassSession.teacher_id == teacher_id,
-        ClassSession.active.is_(True)
+    query = select(CourseSession).where(
+        CourseSession.teacher_id == teacher_id,
+        CourseSession.status == "active"
     )
     return list(session.exec(query).all())
 
 
 def start_class(session: Session, class_name: str, teacher_id: Optional[int] = None,
-                teacher_name: Optional[str] = None, course_name: Optional[str] = None) -> ClassSession:
+                teacher_name: Optional[str] = None, course_name: Optional[str] = None) -> CourseSession:
     """开始上课 - 每次调用创建新的课堂记录
 
     支持多班级并行上课，不再自动结束之前的课堂
     """
     # 创建新课堂记录，生成唯一 session_code
     session_code = str(uuid.uuid4())[:8].upper()
-    class_session = ClassSession(
+    class_session = CourseSession(
         session_code=session_code,
         course_name=course_name,
         class_name=class_name,
         teacher_id=teacher_id,
         teacher_name=teacher_name,
-        active=True,
+        status="active",
         start_time=datetime.now(SHANGHAI_TZ)
     )
     session.add(class_session)
@@ -77,19 +77,19 @@ def end_class(session: Session, teacher_id: Optional[int] = None, class_name: Op
     Returns:
         bool: 是否成功结束至少一个课堂
     """
-    query = select(ClassSession).where(
-        ClassSession.teacher_id == teacher_id,
-        ClassSession.active.is_(True)
+    query = select(CourseSession).where(
+        CourseSession.teacher_id == teacher_id,
+        CourseSession.status == "active"
     )
 
     if class_name:
-        query = query.where(ClassSession.class_name == class_name)
+        query = query.where(CourseSession.class_name == class_name)
 
     sessions = session.exec(query).all()
 
     ended_any = False
     for class_session in sessions:
-        class_session.active = False
+        class_session.status = "ended"
         class_session.end_time = datetime.now(SHANGHAI_TZ)
         class_session.updated_at = datetime.now(SHANGHAI_TZ)
         session.add(class_session)
@@ -104,14 +104,14 @@ def end_class(session: Session, teacher_id: Optional[int] = None, class_name: Op
 def get_today_checkins(session: Session, class_name: Optional[str] = None, session_start: Optional[datetime] = None) -> List[CheckinRecord]:
     """获取签到列表（支持按课堂开始时间筛选）"""
     from datetime import time
-    
+
     if session_start:
         # 如果提供了课堂开始时间，只查询该时间之后的签到
         query_start = session_start
     else:
         # 否则查询今日开始
         query_start = datetime.combine(date.today(), time.min).replace(tzinfo=SHANGHAI_TZ)
-    
+
     query = select(CheckinRecord).where(CheckinRecord.checkin_time >= query_start)
     if class_name:
         query = query.where(CheckinRecord.class_name == class_name)
@@ -120,29 +120,29 @@ def get_today_checkins(session: Session, class_name: Optional[str] = None, sessi
 
 def count_today_checkins(session: Session, class_name: Optional[str] = None) -> int:
     """使用 SQL COUNT 计算今日签到数（性能优化）
-    
+
     相比 get_today_checkins() + len()，此函数使用数据库聚合查询，
     不加载完整对象，内存占用更少，执行更快。
-    
+
     Args:
         session: 数据库会话
         class_name: 可选的班级名称筛选
-        
+
     Returns:
         int: 今日签到数
     """
     from sqlalchemy import func
     from datetime import time
-    
+
     today_start = datetime.combine(date.today(), time.min)
-    
+
     query = select(func.count()).select_from(CheckinRecord).where(
         CheckinRecord.checkin_time >= today_start
     )
-    
+
     if class_name:
         query = query.where(CheckinRecord.class_name == class_name)
-    
+
     result = session.exec(query)
     return result.one()
 
@@ -181,14 +181,14 @@ def has_checked_in_session(session: Session, student_id: str, session_id: int) -
 def has_checked_in_today(session: Session, student_id: str, class_name: Optional[str] = None, session_start: Optional[datetime] = None) -> bool:
     """检查是否已签到（支持按班级和课堂开始时间检查）- 兼容旧逻辑"""
     from datetime import time
-    
+
     if session_start:
         # 如果提供了课堂开始时间，只检查该时间之后的签到
         query_start = session_start
     else:
         # 否则检查今日开始
         query_start = datetime.combine(date.today(), time.min).replace(tzinfo=SHANGHAI_TZ)
-    
+
     query = select(CheckinRecord).where(
         CheckinRecord.student_id == student_id,
         CheckinRecord.checkin_time >= query_start
