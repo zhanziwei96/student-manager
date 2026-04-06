@@ -161,36 +161,6 @@ export interface DashboardData {
   top_students: Student[]
 }
 
-// 课堂会话类型
-export interface ClassSession {
-  id: number
-  course_name?: string
-  class_name: string
-  start_time: string
-  teacher_id: number
-  teacher_name?: string
-  active: boolean
-  checked_in_count?: number
-}
-
-/**
- * 课堂会话信息 - 多班级并行上课支持
- * 从 /api/v1/class-session 获取的课堂列表项
- */
-export interface ClassSessionInfo {
-  id: number
-  active: boolean
-  course_name?: string
-  class_name: string
-  start_time: string
-  session_code: string
-}
-
-export interface StartClassRequest {
-  class_name: string
-  course_name?: string
-}
-
 // 签到类型
 export interface CheckinRequest {
   student_code: string
