@@ -47,7 +47,7 @@ def _clear_all_data():
         tables = [
             "score_logs",
             "checkin_records",
-            "class_session",
+            "course_sessions",
             "course_schedules",
             "security_alerts",
             "audit_logs",

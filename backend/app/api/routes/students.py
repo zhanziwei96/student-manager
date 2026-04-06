@@ -13,7 +13,8 @@ from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password
 )
-from app.crud.checkin import get_class_session, get_today_checkins
+from app.crud.checkin import get_today_checkins
+from app.crud.course_session import get_active_course_session_by_class_name
 from app.models.constants import (
     ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse
@@ -137,8 +138,8 @@ async def get_students_list(
             students = get_students_by_classes(session, assigned_classes)
     
     # 获取当前课堂会话
-    class_session = get_class_session(session)
-    current_class = class_session.class_name if class_session and class_session.active else None
+    cs = get_active_course_session_by_class_name(session, class_name) if class_name else None
+    current_class = cs.class_name if cs and cs.status == "active" else None
     
     # 只获取当前课堂的签到记录（如果没有活跃课堂，则无人活跃）
     if current_class:
@@ -286,8 +287,8 @@ async def get_classes(
         class_names = user_obj.get_assigned_classes() if user_obj else []
     
     # 获取当前课堂会话状态
-    class_session = get_class_session(session)
-    current_class = class_session.class_name if class_session and class_session.active else None
+    cs = get_active_course_session_by_class_name(session, class_names[0]) if class_names else None
+    current_class = cs.class_name if cs and cs.status == "active" else None
     
     # 返回带状态的班级列表
     classes_with_status = [

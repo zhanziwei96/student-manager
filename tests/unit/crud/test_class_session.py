@@ -1,55 +1,54 @@
 """
-ClassSession CRUD 单元测试
+CourseSession CRUD 单元测试
 测试开始上课和获取课堂状态功能
 """
 import pytest
 from datetime import datetime
-from app.crud.checkin import start_class, get_class_session, end_class
-from app.models.checkin import ClassSession
+from app.crud.course_session import (
+    start_course_session,
+    get_teacher_active_course_sessions,
+    end_course_session,
+)
+from app.models import CourseSession
 
 
-class TestStartClass:
+class TestStartCourseSession:
     """测试开始上课功能"""
 
-    def test_start_class_with_course_name(self, session):
+    def test_start_course_session_with_course_name(self, session):
         """测试开始上课时传入 course_name 正确保存"""
-        # 执行
-        session = start_class(
+        cs = start_course_session(
             session=session,
             class_name="计算机1班",
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
         )
-        
-        # 验证
-        assert session.class_name == "计算机1班"
-        assert session.teacher_id == 1
-        assert session.teacher_name == "张老师"
-        assert session.course_name == "高等数学"
-        assert session.active is True
-        assert session.start_time is not None
-        assert session.session_code is not None
 
-    def test_start_class_without_course_name(self, session):
+        assert cs.class_name == "计算机1班"
+        assert cs.teacher_id == 1
+        assert cs.teacher_name == "张老师"
+        assert cs.course_name == "高等数学"
+        assert cs.status == "active"
+        assert cs.start_time is not None
+        assert cs.session_code is not None
+
+    def test_start_course_session_without_course_name(self, session):
         """测试开始上课时不传 course_name 默认为 None"""
-        # 执行
-        new_session = start_class(
+        cs = start_course_session(
             session=session,
             class_name="软件工程班",
             teacher_id=2,
             teacher_name="李老师"
         )
-        
-        # 验证
-        assert new_session.class_name == "软件工程班"
-        assert new_session.course_name is None
-        assert new_session.active is True
 
-    def test_start_class_allows_multiple_sessions(self, session):
+        assert cs.class_name == "软件工程班"
+        assert cs.course_name is None
+        assert cs.status == "active"
+
+    def test_start_course_session_allows_multiple_sessions(self, session):
         """测试教师可以同时开始多个班级的课程（多班级并行功能）"""
-        # 先开始一个课程
-        old_session = start_class(
+        old_session = start_course_session(
             session=session,
             class_name="旧班级",
             teacher_id=1,
@@ -57,8 +56,7 @@ class TestStartClass:
             course_name="旧课程"
         )
 
-        # 再开始一个新课程（不同班级）
-        new_session = start_class(
+        new_session = start_course_session(
             session=session,
             class_name="新班级",
             teacher_id=1,
@@ -66,73 +64,63 @@ class TestStartClass:
             course_name="新课程"
         )
 
-        # 验证旧课程仍然活跃（多班级并行）
         session.refresh(old_session)
-        assert old_session.active is True
+        assert old_session.status == "active"
         assert old_session.end_time is None
 
-        # 验证新课程也是活跃的
-        assert new_session.active is True
+        assert new_session.status == "active"
 
 
-class TestGetClassSession:
+class TestGetCourseSession:
     """测试获取课堂状态功能"""
 
-    def test_get_class_session_returns_course_name(self, session):
+    def test_get_teacher_active_course_sessions_returns_course_name(self, session):
         """测试获取课堂状态返回 course_name"""
-        # 准备：创建活跃课堂
-        started = start_class(
+        started = start_course_session(
             session=session,
             class_name="计算机1班",
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
         )
-        
-        # 执行
-        session = get_class_session(session, teacher_id=1)
-        
-        # 验证
-        assert session is not None
-        assert session.id == started.id
-        assert session.course_name == "高等数学"
-        assert session.class_name == "计算机1班"
-        assert session.active is True
 
-    def test_get_class_session_no_active_session(self, session):
-        """测试没有活跃课堂时返回 None"""
-        # 执行
-        session = get_class_session(session, teacher_id=999)
-        
-        # 验证
-        assert session is None
+        sessions = get_teacher_active_course_sessions(session, teacher_id=1)
 
-    def test_get_class_session_only_returns_active(self, session):
+        assert len(sessions) >= 1
+        cs = sessions[0]
+        assert cs.id == started.id
+        assert cs.course_name == "高等数学"
+        assert cs.class_name == "计算机1班"
+        assert cs.status == "active"
+
+    def test_get_teacher_active_course_sessions_no_active_session(self, session):
+        """测试没有活跃课堂时返回空列表"""
+        sessions = get_teacher_active_course_sessions(session, teacher_id=999)
+
+        assert sessions == []
+
+    def test_get_teacher_active_course_sessions_only_returns_active(self, session):
         """测试只返回活跃状态的课堂"""
-        # 准备：创建并结束一个课堂
-        start_class(
+        start_course_session(
             session=session,
             class_name="已结束班级",
             teacher_id=1,
             teacher_name="张老师",
             course_name="已结束课程"
         )
-        end_class(session, teacher_id=1)
-        
-        # 执行
-        session = get_class_session(session, teacher_id=1)
-        
-        # 验证
-        assert session is None
+        end_course_session(session, teacher_id=1)
+
+        sessions = get_teacher_active_course_sessions(session, teacher_id=1)
+
+        assert sessions == []
 
 
-class TestEndClass:
+class TestEndCourseSession:
     """测试结束上课功能"""
 
-    def test_end_class_sets_course_name_session_inactive(self, session):
+    def test_end_course_session_sets_course_name_session_inactive(self, session):
         """测试结束带 course_name 的课堂"""
-        # 准备：创建活跃课堂
-        started = start_class(
+        started = start_course_session(
             session=session,
             class_name="计算机1班",
             teacher_id=1,
@@ -140,19 +128,16 @@ class TestEndClass:
             course_name="高等数学"
         )
         session_id = started.id
-        
-        # 执行
-        end_class(session, teacher_id=1)
-        
-        # 验证：通过 get_class_session 应该返回 None（已结束）
-        active = get_class_session(session, teacher_id=1)
-        assert active is None  # 已结束，不会返回
-        
-        # 从数据库直接查询验证
+
+        end_course_session(session, teacher_id=1)
+
+        active = get_teacher_active_course_sessions(session, teacher_id=1)
+        assert active == []
+
         from sqlmodel import select
-        statement = select(ClassSession).where(ClassSession.id == session_id)
+        statement = select(CourseSession).where(CourseSession.id == session_id)
         results = session.exec(statement).all()
         assert len(results) == 1
-        assert results[0].active is False
+        assert results[0].status == "ended"
         assert results[0].end_time is not None
         assert results[0].course_name == "高等数学"

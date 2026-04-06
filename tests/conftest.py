@@ -28,7 +28,7 @@ def engine():
         poolclass=StaticPool,
     )
     # 创建所有表
-    from app.models import Student, User, CheckinRecord, ClassSession, ScoreLog, AuditLog, SecurityAlert, CourseSchedule
+    from app.models import Student, User, CheckinRecord, CourseSession, ScoreLog, AuditLog, SecurityAlert, CourseSchedule
     SQLModel.metadata.create_all(engine)
     return engine
 

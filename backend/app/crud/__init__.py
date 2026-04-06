@@ -7,15 +7,13 @@ from app.crud.student import (
     reset_student_password, count_students
 )
 from app.crud.user import (
-    get_user, get_user_by_username, get_users, create_user, 
+    get_user, get_user_by_username, get_users, create_user,
     update_user, update_user_info, record_login_success, record_login_failure,
     reset_password, update_user_password, delete_user
 )
 from app.crud.checkin import (
-    get_class_session, start_class, end_class,
     get_today_checkins, create_checkin, has_checked_in_today,
     get_student_score_logs, count_today_checkins, is_device_checked_in_session,
-    get_teacher_active_sessions, get_class_session_by_class_name
 )
 from app.crud.schedule import (
     get_schedule, get_schedules, delete_schedule,
@@ -52,10 +50,8 @@ __all__ = [
     "update_user", "update_user_info", "record_login_success", "record_login_failure",
     "reset_password", "update_user_password", "delete_user",
     # Checkin
-    "get_class_session", "start_class", "end_class",
     "get_today_checkins", "create_checkin", "has_checked_in_today",
     "get_student_score_logs", "count_today_checkins", "is_device_checked_in_session",
-    "get_teacher_active_sessions", "get_class_session_by_class_name",
     # Schedule
     "get_schedule", "get_schedules", "delete_schedule",
     "create_schedule", "import_schedules",

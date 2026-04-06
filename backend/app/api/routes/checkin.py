@@ -9,16 +9,20 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.crud import (
-    get_class_session, start_class, end_class,
     get_today_checkins, create_checkin,
-    get_teacher_active_sessions, get_class_session_by_class_name
+    get_students_by_class
 )
+from app.crud.course_session import (
+    get_active_course_session_by_class_name,
+    get_teacher_active_course_sessions,
+)
+from app.crud.checkin import has_checked_in_session, is_device_checked_in_session
 from app.core.jwt import get_current_user
 from app.models.constants import (
     ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse
 )
-from app.models.checkin import ClassSession
+from app.models import CourseSession
 
 router = APIRouter(tags=["checkin"])
 
@@ -28,23 +32,6 @@ class CheckinRequest(BaseModel):
     student_name: str = Field(..., description="姓名")
     device_id: Optional[str] = Field(default=None, description="设备指纹ID")
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
-
-
-class StartClassRequest(BaseModel):
-    class_name: str = Field(..., description="班级名称")
-    course_name: Optional[str] = Field(default=None, description="课程名称")
-
-
-class EndClassRequest(BaseModel):
-    class_name: Optional[str] = Field(default=None, description="班级名称，不指定则结束所有活跃课堂")
-
-
-class ClassSessionData(BaseModel):
-    """课堂会话数据"""
-    active: bool
-    course_name: Optional[str] = None
-    class_name: Optional[str] = None
-    start_time: Optional[datetime] = None
 
 
 class CheckinData(BaseModel):
@@ -89,17 +76,6 @@ class StudentSessionData(BaseModel):
     start_time: Optional[datetime] = None
 
 
-# 响应模型定义
-class ClassSessionResponse(ApiResponse[list[ClassSessionData]]):
-    """课堂会话列表响应"""
-    pass
-
-
-class StartClassResponse(ApiResponse[dict]):
-    """开始课堂响应"""
-    pass
-
-
 class CheckinResponse(ApiResponse[CheckinData]):
     """签到响应"""
     pass
@@ -125,96 +101,6 @@ class StudentSessionResponse(ApiResponse[StudentSessionData]):
     pass
 
 
-@router.get("/class-session", response_model=ClassSessionResponse)
-def get_current_session(
-    request: Request,
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
-):
-    """获取当前用户的所有活跃课堂"""
-    teacher_id = int(user.get("sub", 0))
-    class_sessions = get_teacher_active_sessions(session, teacher_id)
-
-    sessions_data = []
-    for class_session in class_sessions:
-        sessions_data.append({
-            'id': class_session.id,
-            'active': class_session.active,
-            'course_name': class_session.course_name,
-            'class_name': class_session.class_name,
-            'start_time': class_session.start_time,
-            'session_code': class_session.session_code,
-        })
-
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: sessions_data
-    }
-
-
-@router.post("/class-session/start", response_model=StartClassResponse)
-async def begin_class(
-    request: Request,
-    data: StartClassRequest,
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
-):
-    """开始上课（检查班级冲突）"""
-    # 用户认证已通过 Depends(get_current_user) 完成
-    
-    # 检查该班级是否已有活跃课堂
-    existing_session = get_class_session_by_class_name(session, data.class_name)
-    if existing_session and existing_session.active:
-        teacher_name = existing_session.teacher_name or "其他教师"
-        raise HTTPException(
-            status_code=HttpStatus.CONFLICT,
-            detail=f'该班级正在被 {teacher_name} 老师上课，无法开始新课堂'
-        )
-
-    teacher_id = int(user.get("sub", 0))
-    
-    # 开始新课堂
-    teacher_name = user.get("name", "")
-    class_session = start_class(
-        session=session,
-        class_name=data.class_name,
-        teacher_id=teacher_id,
-        teacher_name=teacher_name,
-        course_name=data.course_name
-    )
-    
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: MessageConst.CLASS_STARTED,
-        ApiResponseConst.DATA: class_session.model_dump()
-    }
-
-
-@router.post("/class-session/end", response_model=ApiSuccessResponse)
-async def finish_class(
-    request: Request,
-    data: EndClassRequest = Body(default_factory=EndClassRequest),
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
-):
-    """结束上课"""
-    # 用户认证已通过 Depends(get_current_user) 完成
-
-    teacher_id = int(user.get("sub", 0))
-    ended = end_class(session, teacher_id, data.class_name)
-
-    if not ended:
-        raise HTTPException(
-            status_code=HttpStatus.BAD_REQUEST,
-            detail='没有活跃的课堂需要结束'
-        )
-
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: MessageConst.CLASS_ENDED
-    }
-
-
 @router.post("/checkin", response_model=CheckinResponse)
 def do_checkin(
     request: Request,
@@ -223,8 +109,6 @@ def do_checkin(
     user: dict = Depends(get_current_user)
 ):
     """学生签到"""
-    from app.crud.checkin import get_class_session_by_class_name, has_checked_in_session, is_device_checked_in_session
-
     # 验证学生
     from app.crud import get_student
     student = get_student(db_session, data.student_id)
@@ -232,17 +116,17 @@ def do_checkin(
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
 
     # 检查学生所在班级是否有活跃课堂
-    class_session = get_class_session_by_class_name(db_session, student.class_name)
-    if not class_session or not class_session.active:
+    cs = get_active_course_session_by_class_name(db_session, student.class_name)
+    if not cs or cs.status != "active":
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
 
     # 检查是否在当前课堂已签到
-    if has_checked_in_session(db_session, data.student_id, class_session.id):
+    if has_checked_in_session(db_session, data.student_id, cs.id):
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
 
     # 验证设备唯一性（如果提供了设备ID）
     if data.device_id:
-        if is_device_checked_in_session(db_session, data.device_id, class_session.id):
+        if is_device_checked_in_session(db_session, data.device_id, cs.id):
             raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该设备已签到')
 
     # 创建签到记录
@@ -250,8 +134,8 @@ def do_checkin(
         db_session,
         data.student_id,
         data.student_name or student.name,
-        class_session.class_name,
-        class_session.id,
+        cs.class_name,
+        cs.id,
         device_id=data.device_id,
         device_info=data.device_info
     )
@@ -272,19 +156,18 @@ def get_today_checkin_list(
 ):
     """获取今日签到列表（只返回当前课堂开始后的签到）"""
     # 根据班级名称获取活跃课堂
-    from app.crud.checkin import get_class_session_by_class_name
-    class_session = get_class_session_by_class_name(session, class_name) if class_name else None
-    
+    cs = get_active_course_session_by_class_name(session, class_name) if class_name else None
+
     # 只查询当前课堂开始时间之后的签到（如果课堂活跃）
-    if class_session and class_session.active:
-        checkins = get_today_checkins(session, class_name, class_session.start_time)
+    if cs and cs.status == "active":
+        checkins = get_today_checkins(session, class_name, cs.start_time)
     elif class_name:
         # 指定了班级但没有活跃课堂，返回今日该班级所有签到（用于历史查看）
         checkins = get_today_checkins(session, class_name)
     else:
         # 没有指定班级，返回今日所有签到
         checkins = get_today_checkins(session)
-    
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [c.model_dump() for c in checkins]
@@ -299,9 +182,9 @@ def get_checkin_stats(
 ):
     """获取签到统计（当前教师的活跃课堂）"""
     teacher_id = int(user.get("sub", 0))
-    class_session = get_class_session(session, teacher_id)
-    
-    if not class_session or not class_session.active:
+    course_sessions = get_teacher_active_course_sessions(session, teacher_id)
+
+    if not course_sessions:
         return {
             ApiResponseConst.SUCCESS: True,
             ApiResponseConst.DATA: {
@@ -312,23 +195,23 @@ def get_checkin_stats(
                 'rate': 0
             }
         }
-    
-    from app.crud import get_students_by_class
-    students = get_students_by_class(session, class_session.class_name)
+
+    cs = course_sessions[0]
+    students = get_students_by_class(session, cs.class_name)
     # 只统计当前课堂开始后的签到
-    checkins = get_today_checkins(session, class_session.class_name, class_session.start_time)
-    
+    checkins = get_today_checkins(session, cs.class_name, cs.start_time)
+
     total = len(students)
     checked_in = len(checkins)
     not_checked_in = total - checked_in
     rate = round(checked_in / total * 100, 1) if total > 0 else 0
-    
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
             'active': True,
-            'course_name': class_session.course_name,
-            'class_name': class_session.class_name,
+            'course_name': cs.course_name,
+            'class_name': cs.class_name,
             'total': total,
             'checked_in': checked_in,
             'not_checked_in': not_checked_in,
@@ -344,9 +227,9 @@ def get_active_class_sessions(
 ):
     """获取所有活跃课堂列表"""
     from sqlmodel import select
-    query = select(ClassSession).where(ClassSession.active.is_(True))
+    query = select(CourseSession).where(CourseSession.status == "active")
     active_sessions = session.exec(query).all()
-    
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [
@@ -371,24 +254,23 @@ async def get_class_session_for_student(
 ):
     """获取指定班级的活跃课堂状态（学生端使用）"""
     # 用户认证已通过 Depends(get_current_user) 完成
-    
-    from app.crud.checkin import get_class_session_by_class_name
-    class_session = get_class_session_by_class_name(session, class_name)
-    
-    if class_session and class_session.active:
+
+    cs = get_active_course_session_by_class_name(session, class_name)
+
+    if cs and cs.status == "active":
         return {
             ApiResponseConst.SUCCESS: True,
             ApiResponseConst.DATA: {
-                'id': class_session.id,
-                'session_code': class_session.session_code,
+                'id': cs.id,
+                'session_code': cs.session_code,
                 'active': True,
-                'course_name': class_session.course_name,
-                'class_name': class_session.class_name,
-                'teacher_name': class_session.teacher_name,
-                'start_time': class_session.start_time
+                'course_name': cs.course_name,
+                'class_name': cs.class_name,
+                'teacher_name': cs.teacher_name,
+                'start_time': cs.start_time
             }
         }
-    
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {'active': False}
