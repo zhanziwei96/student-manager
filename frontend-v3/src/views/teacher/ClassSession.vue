@@ -624,9 +624,11 @@ const formatTime = (timeStr: string) => {
     <Dialog
       :open="showEndConfirm"
       title="确认结束课堂"
-      description="确定要结束【{{ endConfirmClassName }}】的课堂吗？"
       @update:open="showEndConfirm = $event"
     >
+      <template #description>
+        确定要结束【{{ endConfirmClassName }}】的课堂吗？
+      </template>
       <div class="py-4">
         <div class="flex justify-center gap-8 text-center">
           <div>
