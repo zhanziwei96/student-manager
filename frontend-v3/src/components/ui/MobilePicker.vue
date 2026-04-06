@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { ChevronDown, X } from 'lucide-vue-next'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ChevronDown, X, Search, Check } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 
 export interface MobilePickerOption {
@@ -34,6 +34,21 @@ const emit = defineEmits<{
 // 状态
 const isOpen = ref(false)
 const searchQuery = ref('')
+const isMobile = ref(false)
+
+// 移动端检测
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 // 计算属性
 const selectedOption = computed(() => {
@@ -41,15 +56,15 @@ const selectedOption = computed(() => {
   return props.options.find(opt => opt.value === props.modelValue)
 })
 
-// TODO: 将在底部弹窗实现中使用
-// const filteredOptions = computed(() => {
-//   if (!searchQuery.value) return props.options
-//   const query = searchQuery.value.toLowerCase()
-//   return props.options.filter(opt =>
-//     opt.label.toLowerCase().includes(query) ||
-//     opt.subtitle?.toLowerCase().includes(query)
-//   )
-// })
+// 过滤选项
+const filteredOptions = computed(() => {
+  if (!searchQuery.value) return props.options
+  const query = searchQuery.value.toLowerCase()
+  return props.options.filter(opt =>
+    opt.label.toLowerCase().includes(query) ||
+    opt.subtitle?.toLowerCase().includes(query)
+  )
+})
 
 // 方法
 const open = () => {
@@ -58,29 +73,26 @@ const open = () => {
   searchQuery.value = ''
 }
 
-// TODO: 将在底部弹窗实现中使用
-// const close = () => {
-//   isOpen.value = false
-//   searchQuery.value = ''
-// }
+const close = () => {
+  isOpen.value = false
+  searchQuery.value = ''
+}
 
-// TODO: 将在底部弹窗实现中使用
-// const select = (option: MobilePickerOption) => {
-//   if (option.disabled) return
-//   emit('update:modelValue', option.value)
-//   emit('change', option.value, option)
-//   close()
-// }
+const select = (option: MobilePickerOption) => {
+  if (option.disabled) return
+  emit('update:modelValue', option.value)
+  emit('change', option.value, option)
+  close()
+}
 
 const clear = () => {
   emit('update:modelValue', undefined)
   emit('change', undefined, undefined)
 }
 
-// TODO: 将在底部弹窗实现中使用
-// const isSelected = (option: MobilePickerOption) => {
-//   return props.modelValue === option.value
-// }
+const isSelected = (option: MobilePickerOption) => {
+  return props.modelValue === option.value
+}
 </script>
 
 <template>
@@ -131,6 +143,106 @@ const clear = () => {
       </div>
     </button>
 
-    <!-- TODO: 底部弹窗 -->
+    <!-- 移动端底部弹窗 -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="isOpen && isMobile"
+          class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          @click="close"
+        />
+      </Transition>
+
+      <Transition name="slide-up">
+        <div
+          v-if="isOpen && isMobile"
+          class="fixed bottom-0 left-0 right-0 z-50 bg-[#1a1a2e] rounded-t-[20px] shadow-2xl max-h-[70vh] flex flex-col"
+        >
+          <!-- 指示条 -->
+          <div class="flex justify-center pt-3 pb-2" @click="close">
+            <div class="w-10 h-1 rounded-full bg-white/20" />
+          </div>
+
+          <!-- 标题栏 -->
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <h3 class="text-lg font-semibold text-white">
+              {{ title || placeholder }}
+            </h3>
+            <button
+              type="button"
+              class="text-primary text-base font-medium"
+              @click="close"
+            >
+              完成
+            </button>
+          </div>
+
+          <!-- 搜索框 -->
+          <div v-if="searchable" class="p-3 border-b border-white/10">
+            <div class="relative">
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                :placeholder="searchPlaceholder"
+                class="w-full h-10 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+              >
+            </div>
+          </div>
+
+          <!-- 选项列表 -->
+          <div class="flex-1 overflow-y-auto">
+            <div
+              v-for="option in filteredOptions"
+              :key="option.value"
+              :class="cn(
+                'flex items-center justify-between px-4 py-4 border-b border-white/5 cursor-pointer active:bg-white/5',
+                isSelected(option) && 'bg-primary/10'
+              )"
+              @click="select(option)"
+            >
+              <div>
+                <div :class="cn('text-base', isSelected(option) ? 'text-primary font-medium' : 'text-white')">
+                  {{ option.label }}
+                </div>
+                <div v-if="option.subtitle" class="text-sm text-white/50 mt-0.5">
+                  {{ option.subtitle }}
+                </div>
+              </div>
+              <Check
+                v-if="isSelected(option)"
+                class="h-5 w-5 text-primary"
+              />
+            </div>
+            <div v-if="filteredOptions.length === 0" class="py-8 text-center text-white/40">
+              未找到匹配选项
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 150ms ease-out;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 200ms ease-out, opacity 200ms ease-out;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+</style>
