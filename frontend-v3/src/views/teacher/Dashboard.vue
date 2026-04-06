@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useStats, useTodaySchedules, useActiveClassSessions } from '@/composables'
-import { Card, Button, DataContainer } from '@/components/ui'
+import { Card, Button, DataContainer, Badge } from '@/components/ui'
 import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
@@ -207,27 +207,55 @@ const getCardTextMutedColor = (color: CardColor) => {
               <span class="text-[10px] font-medium">{{ schedule.start_time?.slice(0, 5) }}</span>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="font-medium text-white text-sm truncate">
-                {{ schedule.course_name }}
-              </p>
+              <div class="flex items-center gap-2">
+                <p class="font-medium text-white text-sm truncate">
+                  {{ schedule.course_name }}
+                </p>
+                <Badge
+                  v-if="schedule.session_status === 'makeup' || schedule.adjustment"
+                  variant="secondary"
+                  class="bg-purple-500/20 text-purple-300 border-purple-500/30 text-[10px]"
+                >
+                  补课
+                </Badge>
+              </div>
               <p class="text-xs text-white/50 flex items-center gap-1.5">
                 {{ schedule.class_name }}
                 <span
-                  v-if="schedule.classroom"
+                  v-if="(schedule.adjustment?.new_classroom || schedule.classroom)"
                   class="inline-flex items-center gap-0.5"
                 >
                   <MapPin class="h-3 w-3" />
-                  {{ schedule.classroom }}
+                  {{ schedule.adjustment?.new_classroom || schedule.classroom }}
                 </span>
               </p>
             </div>
-            <Button
-              size="sm"
-              class="shadow-md"
-              @click="router.push('/teacher/session')"
-            >
-              去上课
-            </Button>
+            <template v-if="schedule.session_status === 'active'">
+              <Button
+                size="sm"
+                class="shadow-md bg-green-500 hover:bg-green-600 text-white"
+                @click="router.push('/teacher/session')"
+              >
+                进入课堂
+              </Button>
+            </template>
+            <template v-else-if="schedule.session_status === 'ended'">
+              <span class="text-xs text-white/40">已结束</span>
+            </template>
+            <template v-else-if="schedule.session_status === 'cancelled' || schedule.session_status === 'skipped'">
+              <Badge variant="secondary" class="bg-white/10 text-white/50 border-white/10">
+                已停课
+              </Badge>
+            </template>
+            <template v-else>
+              <Button
+                size="sm"
+                class="shadow-md bg-green-500 hover:bg-green-600 text-white"
+                @click="router.push(`/teacher/session?scheduleId=${schedule.id}&className=${encodeURIComponent(schedule.class_name)}&courseName=${encodeURIComponent(schedule.course_name)}`)"
+              >
+                去上课
+              </Button>
+            </template>
           </div>
         </div>
       </DataContainer>

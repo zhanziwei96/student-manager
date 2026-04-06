@@ -4,6 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { schedulesApi } from '@/api/schedules'
 import { computed, type Ref } from 'vue'
+import type { TodayScheduleItem } from '@/types'
 
 /**
  * 获取课表列表
@@ -34,7 +35,7 @@ export function useSchedules(params?: Ref<{
  * 获取今日课表
  */
 export function useTodaySchedules() {
-  const { data, isPending, error, refetch } = useQuery({
+  const { data, isPending, error, refetch } = useQuery<TodayScheduleItem[], Error>({
     queryKey: ['schedules', 'today'],
     queryFn: async () => {
       // schedulesApi.getToday() 使用 request 函数，已自动提取 data

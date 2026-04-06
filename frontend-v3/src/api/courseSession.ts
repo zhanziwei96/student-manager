@@ -24,4 +24,7 @@ export const courseSessionApi = {
 
   getForClass: (className: string): Promise<{ active: boolean; id?: number; session_code?: string; course_name?: string; class_name?: string; teacher_name?: string; start_time?: string }> =>
     get(`/class-sessions/class/${encodeURIComponent(className)}`),
+
+  getHistory: (): Promise<CourseSession[]> =>
+    get('/course-sessions?status=ended'),
 }

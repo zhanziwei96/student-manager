@@ -9,13 +9,13 @@ import { ChevronDown } from 'lucide-vue-next'
  */
 
 interface Option {
-  value: string
+  value: string | number
   label: string
   disabled?: boolean
 }
 
 interface Props {
-  modelValue?: string
+  modelValue?: string | number
   class?: string
   id?: string
   placeholder?: string
@@ -25,7 +25,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: string | number): void
 }>()
 
 const classes = computed(() =>

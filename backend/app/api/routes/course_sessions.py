@@ -15,6 +15,7 @@ from app.crud.course_session import (
     get_teacher_active_course_sessions,
     get_active_course_session_by_class_name,
     start_course_session,
+    get_teacher_course_sessions,
 )
 from app.crud.schedule_adjustment import get_adjustment
 
@@ -57,7 +58,10 @@ def get_course_sessions(
 ):
     """获取当前教师的课程会话列表"""
     teacher_id = int(user.get("sub", 0))
-    sessions = get_teacher_active_course_sessions(session, teacher_id)
+    if status:
+        sessions = get_teacher_course_sessions(session, teacher_id, status=status)
+    else:
+        sessions = get_teacher_active_course_sessions(session, teacher_id)
 
     data = []
     for cs in sessions:
@@ -67,6 +71,7 @@ def get_course_sessions(
             "course_name": cs.course_name,
             "class_name": cs.class_name,
             "start_time": cs.start_time,
+            "end_time": cs.end_time,
             "status": cs.status,
             "session_code": cs.session_code,
             "schedule_id": cs.schedule_id,

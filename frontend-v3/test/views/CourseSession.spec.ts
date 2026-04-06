@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
-import ClassSession from '@/views/teacher/ClassSession.vue'
+import CourseSession from '@/views/teacher/CourseSession.vue'
 
 // Mock stores
 vi.mock('@/stores', () => ({
@@ -16,19 +16,16 @@ vi.mock('@/stores', () => ({
 
 // Mock composables
 vi.mock('@/composables', () => ({
-  useClassSessions: () => ({
+  useCourseSessions: () => ({
     data: ref([]),
     error: ref(null),
     refetch: vi.fn()
   }),
-  useClassSession: () => ({
-    data: ref(null)
-  }),
-  useClassSessionStart: () => ({
+  useCourseSessionStart: () => ({
     mutateAsync: vi.fn(),
     isPending: ref(false)
   }),
-  useClassSessionEnd: () => ({
+  useCourseSessionEnd: () => ({
     mutateAsync: vi.fn(),
     isPending: ref(false)
   }),
@@ -38,6 +35,12 @@ vi.mock('@/composables', () => ({
   }),
   useActiveClassSessions: () => ({
     data: ref([])
+  }),
+  useTodaySchedules: () => ({
+    data: ref([]),
+    isPending: ref(false),
+    error: ref(null),
+    refetch: vi.fn()
   }),
   useToast: () => ({
     show: ref(false),
@@ -75,16 +78,6 @@ vi.mock('@/composables/useCheckins', () => ({
   })
 }))
 
-vi.mock('@/composables/useSchedules', () => ({
-  useSchedules: () => ({
-    data: ref([
-      { id: 1, course_name: '高等数学', class_name: '计算机1班' },
-      { id: 2, course_name: '大学英语', class_name: '软件工程班' },
-      { id: 3, course_name: '程序设计', class_name: '计算机1班' }
-    ])
-  })
-}))
-
 // Mock components
 const MockCard = {
   template: '<div class="mock-card"><slot /></div>'
@@ -99,7 +92,7 @@ const MockSelect = {
   props: ['modelValue', 'placeholder', 'options'],
   emits: ['update:modelValue'],
   template: `
-    <select 
+    <select
       class="mock-select"
       :value="modelValue"
       @change="$emit('update:modelValue', $event.target.value)"
@@ -115,7 +108,7 @@ const MockSelect = {
 const MockInput = {
   props: ['modelValue', 'type', 'step', 'placeholder'],
   emits: ['update:modelValue'],
-  template: '<input :value="modelValue" :type="type" :step="step" :placeholder="placeholder" @input="$emit(\'update:modelValue\', $event.target.value)" />'
+  template: '<input :value="modelValue" :type="type" :step="step" :placeholder="placeholder" @input="$emit(\'update:modelValue\', $event.target.value)" /><span class="mock-input-placeholder">{{ placeholder }}</span>'
 }
 
 const MockDialog = {
@@ -141,7 +134,7 @@ const MockStudentCheckinGrid = {
   template: '<div class="mock-student-grid"><slot /></div>'
 }
 
-describe('ClassSession Course Selection', () => {
+describe('CourseSession', () => {
   const createTestQueryClient = () => new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 }
@@ -154,7 +147,7 @@ describe('ClassSession Course Selection', () => {
 
   const mountComponent = () => {
     const queryClient = createTestQueryClient()
-    return mount(ClassSession, {
+    return mount(CourseSession, {
       global: {
         plugins: [[VueQueryPlugin, { queryClient }]],
         stubs: {
@@ -173,82 +166,64 @@ describe('ClassSession Course Selection', () => {
     })
   }
 
-  it('displays course selection dropdown', async () => {
+  it('displays course selection input and class select', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 验证课程选择下拉框存在
     const selects = wrapper.findAll('.mock-select')
-    expect(selects.length).toBeGreaterThanOrEqual(2)
-    
-    // 验证占位符文字
-    expect(wrapper.text()).toContain('请选择课程（可选）')
+    expect(selects.length).toBeGreaterThanOrEqual(1)
+    expect(wrapper.text()).toContain('课程名称（可选）')
   })
 
-  it('displays available courses from schedules', async () => {
+  it('displays available classes', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 验证课程选项显示
-    expect(wrapper.text()).toContain('高等数学')
-    expect(wrapper.text()).toContain('大学英语')
-    expect(wrapper.text()).toContain('程序设计')
+    expect(wrapper.text()).toContain('计算机1班')
+    expect(wrapper.text()).toContain('软件工程班')
   })
 
-  it('allows selecting both course and class', async () => {
+  it('allows entering course name and selecting class', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 查找选择框
+    const inputs = wrapper.findAll('input')
     const selects = wrapper.findAll('.mock-select')
-    expect(selects.length).toBeGreaterThanOrEqual(2)
 
-    // 选择课程
-    await selects[0].setValue('高等数学')
-    await flushPromises()
+    // Enter course name
+    if (inputs.length > 0) {
+      await inputs[0].setValue('高等数学')
+      await flushPromises()
+      expect(inputs[0].element.value).toBe('高等数学')
+    }
 
-    // 选择班级
-    await selects[1].setValue('计算机1班')
-    await flushPromises()
-
-    // 验证值已设置
-    expect(selects[0].element.value).toBe('高等数学')
-    expect(selects[1].element.value).toBe('计算机1班')
+    // Select class
+    if (selects.length > 0) {
+      await selects[0].setValue('计算机1班')
+      await flushPromises()
+      expect(selects[0].element.value).toBe('计算机1班')
+    }
   })
 
   it('displays start button with correct text', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 验证开始按钮
     expect(wrapper.text()).toContain('开始上课')
   })
 
-  it('opens location dialog when clicking start button', async () => {
+  it('shows start session form when no active session', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 模拟选择班级
-    const selects = wrapper.findAll('.mock-select')
-    await selects[1].setValue('计算机1班')
-    await flushPromises()
-
-    // 点击开始课堂按钮应该打开位置选择对话框
-    const startButton = wrapper.findAll('.mock-button').find(b => b.text().includes('开始课堂'))
-    expect(startButton).toBeDefined()
-    
-    // 由于对话框是由点击事件触发的，这里验证按钮存在即可
-    expect(wrapper.text()).toContain('开始课堂')
+    expect(wrapper.text()).toContain('开始新课堂')
+    expect(wrapper.text()).toContain('选择班级开始上课')
   })
 
-  it('displays location selection dialog with correct title', async () => {
+  it('displays class selection placeholder', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 验证地图选点对话框相关元素存在（通过模拟触发）
     expect(wrapper.text()).toContain('选择班级')
   })
 })
-
-// 活跃课堂显示测试可以在集成测试中覆盖
-

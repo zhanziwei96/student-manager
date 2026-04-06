@@ -103,3 +103,13 @@ def end_course_session(
         session.commit()
 
     return ended_sessions
+
+
+def get_teacher_course_sessions(
+    session: Session, teacher_id: int, status: Optional[str] = None
+) -> List[CourseSession]:
+    """获取教师的课程会话列表（支持按状态筛选）"""
+    query = select(CourseSession).where(CourseSession.teacher_id == teacher_id)
+    if status:
+        query = query.where(CourseSession.status == status)
+    return list(session.exec(query.order_by(CourseSession.start_time.desc())).all())

@@ -1,24 +1,25 @@
 <script setup lang="ts">
 /**
- * 课堂签到页面 - 多班级并行上课支持
+ * CourseSession 课堂签到页面 - 基于 CourseSession 体系
  *
  * 功能：
  * - 支持同时管理多个班级课堂
  * - 标签页切换不同班级
  * - 独立管理每个班级的签到状态
+ * - 顶部今日课表快捷开始
  */
 import { ref, computed, watch } from 'vue'
 import {
-  useClassSessions,
-  useClassSessionStart,
-  useClassSessionEnd,
+  useCourseSessions,
+  useCourseSessionStart,
+  useCourseSessionEnd,
   useStudentCheckIn,
   useActiveClassSessions,
+  useTodaySchedules,
   useToast,
   useNetworkError
 } from '@/composables'
 import { useClasses, useClassStudents } from '@/composables/useClasses'
-import { useSchedules } from '@/composables/useSchedules'
 import { useTodayCheckins } from '@/composables/useCheckins'
 import { useAuthStore } from '@/stores'
 import { Card, Button, Input, Select, Badge, NetworkErrorBanner, Dialog } from '@/components/ui'
@@ -27,7 +28,7 @@ import {
   AlertTriangle, Users
 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
-import type { ClassSessionInfo } from '@/types'
+import type { CourseSession } from '@/types'
 
 // 子组件
 import StudentCheckinGrid from '@/components/teacher/StudentCheckinGrid.vue'
@@ -112,13 +113,14 @@ const showStartForm = ref(false)
 // 新增状态
 const softLimitWarning = ref(false)   // 显示软限制警告
 const showEndConfirm = ref(false)     // 显示结束课堂确认弹窗
-const endConfirmClassName = ref('')   // 待结束的班级名称
+const endConfirmSessionId = ref<number | null>(null)   // 待结束的课堂ID
+const endConfirmClassName = ref('')   // 待结束的班级名称（用于提示）
 
 // 常量定义
 const SOFT_LIMIT = 5  // 软限制：5个班级
 
 // 当前选中的课堂标签
-const activeTab = ref<string>('')
+const activeTab = ref<number>(0)
 
 // ===== 获取数据 =====
 const authStore = useAuthStore()
@@ -128,9 +130,12 @@ const currentUser = computed(() => authStore.user)
 const { networkError, setError, clearError } = useNetworkError()
 
 // 获取所有活跃课堂（多班级支持）
-const { data: activeSessions, error: sessionsError, refetch: refetchSessions } = useClassSessions()
-const { mutateAsync: startSession, isPending: isStartingSession } = useClassSessionStart()
-const { mutateAsync: endSession, isPending: isEndingSession } = useClassSessionEnd()
+const { data: activeSessions, error: sessionsError, refetch: refetchSessions } = useCourseSessions()
+const { mutateAsync: startSession, isPending: isStartingSession } = useCourseSessionStart()
+const { mutateAsync: endSession, isPending: isEndingSession } = useCourseSessionEnd()
+
+// 今日课表（用于快捷开始）
+const { data: todaySchedules } = useTodaySchedules()
 
 // 重试所有查询
 const handleRetry = () => {
@@ -147,14 +152,13 @@ watch(() => sessionsError.value, (err) => {
 
 const { data: allActiveSessions } = useActiveClassSessions()
 const { data: classList } = useClasses()
-const { data: schedules } = useSchedules()
 
 // 当前选中的课堂
-const selectedSession = computed<ClassSessionInfo | null>(() => {
+const selectedSession = computed<CourseSession | null>(() => {
   if (!activeSessions.value || activeSessions.value.length === 0) return null
   if (activeSessions.value.length === 1) return activeSessions.value[0]
   if (!activeTab.value) return activeSessions.value[0]
-  return activeSessions.value.find((s: ClassSessionInfo) => s.class_name === activeTab.value) || activeSessions.value[0]
+  return activeSessions.value.find((s: CourseSession) => s.id === activeTab.value) || activeSessions.value[0]
 })
 
 // 当前选中课堂的班级名称
@@ -168,36 +172,34 @@ const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn(sele
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 
 // ===== 计算属性 =====
-const isSessionActive = computed(() => activeSessions.value && activeSessions.value.length > 0)
+const isSessionActive = computed(() => activeSessions.value && activeSessions.value.some((s: CourseSession) => s.status === 'active'))
+
+// 活跃的课堂列表
+const activeCourseSessions = computed(() => {
+  if (!activeSessions.value) return []
+  return activeSessions.value.filter((s: CourseSession) => s.status === 'active')
+})
 
 // 是否有多个活跃课堂
-const hasMultipleSessions = computed(() => (activeSessions.value?.length || 0) > 1)
+const hasMultipleSessions = computed(() => (activeCourseSessions.value?.length || 0) > 1)
 
 // 新增计算属性
-const sessionCount = computed(() => activeSessions.value?.length || 0)
+const sessionCount = computed(() => activeCourseSessions.value?.length || 0)
 const nearSoftLimit = computed(() => sessionCount.value >= 3)
 const atSoftLimit = computed(() => sessionCount.value >= SOFT_LIMIT)
 
 // 其他教师占用的班级
 const otherOccupiedClasses = computed(() => {
   if (!allActiveSessions.value || !currentUser.value?.id) return []
-  // FIX: 统一转换为数字进行比较，避免类型不匹配（JWT中的sub是字符串）
   const currentUserId = Number(currentUser.value.id)
-  return allActiveSessions.value.filter(s => s.teacher_id !== currentUserId)
-})
-
-// 课程选项
-const courseOptions = computed(() => {
-  if (!schedules.value) return []
-  const courseNames = new Set(schedules.value.map(s => s.course_name).filter(Boolean))
-  return Array.from(courseNames).map(name => ({ value: name, label: name }))
+  return allActiveSessions.value.filter((s: any) => s.teacher_id !== currentUserId)
 })
 
 // 班级选项
 const availableClassOptions = computed(() => {
   if (!classList.value) return []
   const occupiedMap = new Map(
-    allActiveSessions.value?.map(s => [s.class_name, s.teacher_name]) || []
+    allActiveSessions.value?.map((s: any) => [s.class_name, s.teacher_name]) || []
   )
 
   return classList.value.map(cls => {
@@ -210,10 +212,16 @@ const availableClassOptions = computed(() => {
   })
 })
 
+// 今日可快捷开始的课表
+const quickStartSchedules = computed(() => {
+  if (!todaySchedules.value) return []
+  return todaySchedules.value.filter(s => s.session_status === 'none')
+})
+
 // 已签到学生ID集合
 const checkedInStudentIds = computed(() => {
   if (!todayCheckins.value) return new Set()
-  return new Set(todayCheckins.value.map(c => c.student_id))
+  return new Set(todayCheckins.value.map((c: any) => c.student_id))
 })
 
 // 学生列表（带签到状态）
@@ -221,7 +229,7 @@ const studentListWithCheckin = computed(() => {
   if (!classStudents.value) return []
 
   const checkinTimeMap = new Map<string, string>()
-  todayCheckins.value?.forEach(c => {
+  todayCheckins.value?.forEach((c: any) => {
     checkinTimeMap.set(c.student_id, c.checkin_time)
   })
 
@@ -242,8 +250,22 @@ const checkinStats = computed(() => {
 })
 
 // 切换标签时更新
-const handleTabChange = (className: string) => {
-  activeTab.value = className
+const handleTabChange = (sessionId: number) => {
+  activeTab.value = sessionId
+}
+
+// 快捷开始课堂
+const handleQuickStart = async (schedule: any) => {
+  try {
+    await startSession({
+      className: schedule.class_name,
+      courseName: schedule.course_name,
+      scheduleId: schedule.id,
+    })
+    showSuccessToast('课堂已开始！')
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '开始课堂失败')
+  }
 }
 
 // ===== 事件处理 =====
@@ -262,37 +284,37 @@ const handleStartSession = async () => {
   try {
     await startSession({
       className: className.value,
-      courseName: courseName.value || undefined
+      courseName: courseName.value || undefined,
+      scheduleId: undefined,
     })
     showSuccessToast('课堂已开始！')
-    // 切换到新开始的课堂
-    activeTab.value = className.value
+    activeTab.value = 0
     className.value = ''
     courseName.value = ''
-    // 关闭开始新课堂表单
     showStartForm.value = false
-    // 重置软限制警告
     softLimitWarning.value = false
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '开始课堂失败')
   }
 }
 
-const handleEndSession = async (sessionClassName?: string) => {
-  // 显示确认弹窗
-  endConfirmClassName.value = sessionClassName || selectedSession.value?.class_name || ''
+const handleEndSession = async (session?: CourseSession) => {
+  endConfirmSessionId.value = session?.id ?? selectedSession.value?.id ?? null
+  endConfirmClassName.value = session?.class_name || selectedSession.value?.class_name || ''
   showEndConfirm.value = true
 }
 
 const confirmEndSession = async () => {
   showEndConfirm.value = false
+  if (endConfirmSessionId.value == null) return
   try {
-    await endSession({ className: endConfirmClassName.value })
+    await endSession(endConfirmSessionId.value)
     showSuccessToast(endConfirmClassName.value ? `${endConfirmClassName.value} 课堂已结束！` : '课堂已结束！')
-    // 如果结束的是当前选中的标签，重置标签选择
-    if (endConfirmClassName.value === activeTab.value) {
-      activeTab.value = ''
+    if (endConfirmSessionId.value === activeTab.value) {
+      activeTab.value = 0
     }
+    endConfirmSessionId.value = null
+    endConfirmClassName.value = ''
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '结束课堂失败')
   }
@@ -312,7 +334,6 @@ const handleCheckIn = async () => {
 
   try {
     await checkIn(studentCode.value.trim())
-    // FIX: 等待刷新完成后再显示成功提示，确保状态已更新
     await refetchCheckins()
     showSuccessToast('学生签到成功！')
     studentCode.value = ''
@@ -324,7 +345,6 @@ const handleCheckIn = async () => {
 const handleQuickCheckIn = async (studentId: string) => {
   try {
     await checkIn(studentId)
-    // FIX: 等待刷新完成后再显示成功提示，确保状态已更新
     await refetchCheckins()
     showSuccessToast('签到成功！')
   } catch (err: unknown) {
@@ -353,6 +373,20 @@ const sessionDuration = computed(() => {
   if (!selectedSession.value?.start_time) return ''
   return formatDuration(selectedSession.value.start_time)
 })
+
+// source_type 显示文本和颜色
+const getSourceTypeBadge = (sourceType: string) => {
+  switch (sourceType) {
+    case 'scheduled':
+      return { text: '自动', class: 'bg-blue-500/20 text-blue-300 border-blue-500/30' }
+    case 'manual':
+      return { text: '手动', class: 'bg-white/10 text-white/60 border-white/20' }
+    case 'makeup':
+      return { text: '补课', class: 'bg-purple-500/20 text-purple-300 border-purple-500/30' }
+    default:
+      return { text: sourceType, class: 'bg-white/10 text-white/60 border-white/20' }
+  }
+}
 </script>
 
 <template>
@@ -375,6 +409,37 @@ const sessionDuration = computed(() => {
       </p>
     </div>
 
+    <!-- 今日课表快捷开始 -->
+    <Card
+      v-if="quickStartSchedules.length > 0"
+      class="border-white/10 p-4 md:p-6 mb-5 bg-gradient-to-r from-primary/10 to-transparent border-primary/20"
+    >
+      <h3 class="font-medium text-white text-base md:text-lg mb-3">
+        今日课表
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div
+          v-for="schedule in quickStartSchedules"
+          :key="schedule.id"
+          class="rounded-lg border border-white/10 bg-white/[0.03] p-3 flex items-center justify-between hover:bg-white/[0.06] transition-colors"
+        >
+          <div>
+            <p class="text-sm text-white font-medium">{{ schedule.course_name }}</p>
+            <p class="text-xs text-white/50">{{ schedule.class_name }} · {{ schedule.start_time?.slice(0, 5) }}</p>
+          </div>
+          <Button
+            size="sm"
+            class="bg-green-500 hover:bg-green-600 text-white"
+            :loading="isStartingSession"
+            @click="handleQuickStart(schedule)"
+          >
+            <Play class="mr-1 h-3.5 w-3.5" />
+            开始
+          </Button>
+        </div>
+      </div>
+    </Card>
+
     <!-- Session status - 课堂状态卡片 -->
     <Card
       class="border-white/10 p-4 md:p-6 mb-5 transition-all duration-300"
@@ -384,7 +449,7 @@ const sessionDuration = computed(() => {
         <div class="flex items-center gap-3 md:gap-4">
           <!-- 状态图标 -->
           <div
-            class="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl flex-shrink-0 transition-all duration-300"
+            class="relative flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl flex-shrink-0 transition-all duration-300"
             :class="sessionStatusTheme.iconBg"
           >
             <component
@@ -440,6 +505,20 @@ const sessionDuration = computed(() => {
               <span>{{ selectedSession.course_name || '未命名课程' }}</span>
               <span class="mx-1.5 text-white/30">•</span>
               <span>开始于 {{ formatTime(selectedSession.start_time) }}</span>
+              <template v-if="selectedSession.session_code">
+                <span class="mx-1.5 text-white/30">•</span>
+                <span>课堂码 {{ selectedSession.session_code }}</span>
+              </template>
+              <template v-if="selectedSession.source_type">
+                <span class="mx-1.5 text-white/30">•</span>
+                <Badge
+                  variant="secondary"
+                  class="text-[10px] px-1 py-0"
+                  :class="getSourceTypeBadge(selectedSession.source_type).class"
+                >
+                  {{ getSourceTypeBadge(selectedSession.source_type).text }}
+                </Badge>
+              </template>
             </p>
           </div>
         </div>
@@ -512,7 +591,7 @@ const sessionDuration = computed(() => {
         开始新课堂
       </h3>
       <p class="text-sm text-white/60">
-        选择课程和班级开始上课
+        选择班级开始上课
       </p>
 
       <!-- 班级占用状态 -->
@@ -536,11 +615,10 @@ const sessionDuration = computed(() => {
 
       <div class="mt-4">
         <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
-          <Select
+          <Input
             v-model="courseName"
             class="w-full"
-            placeholder="请选择课程（可选）"
-            :options="courseOptions"
+            placeholder="课程名称（可选）"
           />
           <Select
             v-model="className"
@@ -569,16 +647,16 @@ const sessionDuration = computed(() => {
       <!-- Desktop: Tabs -->
       <div class="hidden md:flex flex-wrap gap-2">
         <div
-          v-for="session in activeSessions"
-          :key="session.class_name"
+          v-for="session in activeCourseSessions"
+          :key="session.id"
           class="flex items-center px-4 py-2 rounded-lg border transition-all duration-200"
-          :class="activeTab === session.class_name || (!activeTab && session === activeSessions?.[0])
+          :class="activeTab === session.id || (!activeTab && session === activeCourseSessions?.[0])
             ? 'bg-primary/20 border-primary text-white'
             : 'bg-white/5 border-white/10 text-white/70'"
         >
           <button
             class="flex items-center gap-2 flex-1"
-            @click="handleTabChange(session.class_name)"
+            @click="handleTabChange(session.id)"
           >
             <Users class="h-4 w-4" />
             <span>{{ session.class_name }}</span>
@@ -592,7 +670,7 @@ const sessionDuration = computed(() => {
           <button
             class="ml-2 p-1 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
             title="结束此课堂"
-            @click="handleEndSession(session.class_name)"
+            @click="handleEndSession(session)"
           >
             <X class="h-3 w-3" />
           </button>
@@ -603,14 +681,14 @@ const sessionDuration = computed(() => {
       <div class="md:hidden">
         <label class="block text-sm text-white/60 mb-2">当前课堂</label>
         <Select
-          :model-value="activeTab || activeSessions?.[0]?.class_name"
+          :model-value="activeTab || activeCourseSessions?.[0]?.id"
           class="w-full"
           placeholder="选择课堂"
-          :options="activeSessions?.map(s => ({
-            value: s.class_name,
+          :options="activeCourseSessions?.map(s => ({
+            value: s.id,
             label: `${s.class_name} ${s.course_name ? '(' + s.course_name + ')' : ''}`
           })) || []"
-          @update:model-value="handleTabChange"
+          @update:model-value="(v) => handleTabChange(Number(v))"
         />
       </div>
     </div>
@@ -679,11 +757,10 @@ const sessionDuration = computed(() => {
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
-        <Select
+        <Input
           v-model="courseName"
           class="w-full"
-          placeholder="请选择课程（可选）"
-          :options="courseOptions"
+          placeholder="课程名称（可选）"
         />
         <Select
           v-model="className"
@@ -725,14 +802,26 @@ const sessionDuration = computed(() => {
               {{ selectedSession.class_name }}
             </h3>
             <p class="text-sm text-white/60">
-              {{ selectedSession.course_name || '未命名课程' }} • 开始于 {{ formatTime(selectedSession.start_time) }}
+              {{ selectedSession.course_name || '未命名课程' }} · 开始于 {{ formatTime(selectedSession.start_time) }}
+              <template v-if="selectedSession.session_code">
+                · 课堂码 {{ selectedSession.session_code }}
+              </template>
+              <template v-if="selectedSession.source_type">
+                · <Badge
+                  variant="secondary"
+                  class="text-[10px] px-1 py-0"
+                  :class="getSourceTypeBadge(selectedSession.source_type).class"
+                >
+                  {{ getSourceTypeBadge(selectedSession.source_type).text }}
+                </Badge>
+              </template>
             </p>
           </div>
           <Button
             variant="destructive"
             size="sm"
             :loading="isEndingSession"
-            @click="handleEndSession(selectedSession.class_name)"
+            @click="handleEndSession(selectedSession)"
           >
             <Square class="mr-2 h-4 w-4" />
             结束此课堂

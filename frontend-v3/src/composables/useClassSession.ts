@@ -126,7 +126,7 @@ export function useClassSessionStart() {
       // 刷新课堂列表
       queryClient.invalidateQueries({ queryKey: ['classSessions'] })
       // 刷新活跃课堂列表，更新 Dashboard
-      queryClient.invalidateQueries({ queryKey: ['active-sessions'] })
+      queryClient.invalidateQueries({ queryKey: ['active-class-sessions'] })
     },
   })
 

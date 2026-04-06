@@ -163,7 +163,7 @@ export interface DashboardData {
 
 // 课堂会话类型
 export interface ClassSession {
-  id: string
+  id: number
   course_name?: string
   class_name: string
   start_time: string
@@ -194,7 +194,7 @@ export interface StartClassRequest {
 // 签到类型
 export interface CheckinRequest {
   student_code: string
-  session_id: string
+  session_id?: number
 }
 
 export interface CheckinRecord {

@@ -5,6 +5,7 @@
  * 与 lib/api.ts 中的 get/post/del 函数保持一致
  */
 import { get, put, del } from '@/lib/api'
+import type { TodayScheduleItem } from '@/types'
 
 export interface CourseSchedule {
   id: number
@@ -40,9 +41,9 @@ export const schedulesApi = {
 
   /**
    * 获取今日课表
-   * 返回类型: CourseSchedule[]（已自动提取 data）
+   * 返回类型: TodayScheduleItem[]（已自动提取 data）
    */
-  getToday: (): Promise<CourseSchedule[]> =>
+  getToday: (): Promise<TodayScheduleItem[]> =>
     get('/schedules/today'),
 
   /**

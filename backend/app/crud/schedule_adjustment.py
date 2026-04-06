@@ -33,7 +33,7 @@ def get_adjustments(
     if class_name is not None:
         from app.models import CourseSchedule
         query = query.join(CourseSchedule).where(CourseSchedule.class_name == class_name)
-    return list(session.exec(query).order_by(ScheduleAdjustment.created_at.desc()).all())
+    return list(session.exec(query.order_by(ScheduleAdjustment.created_at.desc())).all())
 
 
 def create_adjustment(

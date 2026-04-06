@@ -15,3 +15,4 @@ export { useAuthQuery } from './useAuth'
 // 课表管理
 export { useSchedules, useTodaySchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from './useSchedules'
 export * from './useCourseSessions'
+export { useCreateScheduleAdjustment } from './useScheduleAdjustments'
