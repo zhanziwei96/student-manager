@@ -190,5 +190,4 @@ desktop-*.png
 # Superpowers plugin temporary files
 .superpowers/
 
-# Auto-generated plans (not needed for git)
-docs/superpowers/plans/
+# Auto-generated plans
