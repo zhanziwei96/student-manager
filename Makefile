@@ -1,7 +1,7 @@
 # 班级管理系统 Makefile
 # 常用命令快捷方式
 
-.PHONY: help install dev dev-backend dev-frontend stop logs status
+.PHONY: help install dev dev-backend dev-frontend stop logs status test test-backend test-frontend type-check clean
 
 help:
 	@echo "班级管理系统 - 常用命令"
@@ -13,6 +13,10 @@ help:
 	@echo "  make stop           - 停止所有服务"
 	@echo "  make logs           - 查看服务日志"
 	@echo "  make status         - 检查服务状态"
+	@echo "  make test           - 运行所有测试"
+	@echo "  make test-backend   - 仅运行后端测试"
+	@echo "  make test-frontend  - 仅运行前端测试"
+	@echo "  make type-check     - 前端 TypeScript 类型检查"
 	@echo "  make clean          - 清理构建文件"
 
 # 首次部署 - 安装依赖
@@ -31,7 +35,7 @@ dev:
 # 启动后端服务（需要 conda 环境）
 dev-backend:
 	@echo "启动后端服务..."
-	cd backend && conda run -n student-manage python main.py
+	cd backend && conda run -n student-manage ENV=production python main.py
 
 # 启动前端服务
 dev-frontend:
@@ -43,13 +47,16 @@ stop:
 	@echo "停止后端服务..."
 	-pkill -f "python main.py" 2>/dev/null || true
 	@echo "停止前端服务..."
-	-pkill -f "pnpm dev" 2>/dev/null || true
+	-pkill -f "vite" 2>/dev/null || pkill -f "pnpm dev" 2>/dev/null || true
 	@echo "服务已停止"
 
 # 查看日志（使用 tail 查看最新日志）
 logs:
-	@echo "=== 后端日志 ==="
-	tail -20 backend/logs/*.log 2>/dev/null || echo "暂无后端日志"
+	@echo "=== 后端日志 (production.log) ==="
+	@tail -20 backend/logs/production.log 2>/dev/null || echo "暂无生产日志"
+	@echo ""
+	@echo "=== 后端日志 (app.log) ==="
+	@tail -20 backend/logs/app.log 2>/dev/null || echo "暂无应用日志"
 	@echo ""
 	@echo "=== 前端日志 ==="
 	@echo "前端日志输出在终端，请查看运行 frontend-v3 的终端窗口"
@@ -57,10 +64,28 @@ logs:
 # 检查服务状态
 status:
 	@echo "=== 后端状态 ==="
-	@curl -s http://localhost:8000/api/v1/health 2>/dev/null && echo " ✅ 后端运行中" || echo " ❌ 后端未运行"
+	@curl -s --max-time 3 http://localhost:8000/api/v1/health 2>/dev/null && echo " ✅ 后端运行中" || echo " ❌ 后端未运行"
 	@echo ""
 	@echo "=== 前端状态 (frontend-v3) ==="
-	@curl -s http://localhost:5173 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"
+	@curl -s --max-time 3 http://localhost:5173 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"
+
+# 运行所有测试
+test: test-backend test-frontend
+
+# 运行后端测试
+test-backend:
+	@echo "=== 运行后端测试 ==="
+	conda run -n student-manage pytest tests/ -v
+
+# 运行前端测试
+test-frontend:
+	@echo "=== 运行前端测试 ==="
+	cd frontend-v3 && pnpm test:run
+
+# 前端 TypeScript 类型检查
+type-check:
+	@echo "=== 前端类型检查 ==="
+	cd frontend-v3 && pnpm vue-tsc --noEmit
 
 # 清理构建文件
 clean:
