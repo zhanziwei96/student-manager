@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from '@/composables/useSchedules'
 import { useClasses, useToast } from '@/composables'
 import { useAuthStore } from '@/stores/auth'
-import { Card, Button, Badge, Dialog, DataContainer } from '@/components/ui'
+import { Card, Button, Badge, Dialog, DataContainer, MobilePicker } from '@/components/ui'
 import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
@@ -68,6 +68,34 @@ const queryParams = computed(() => ({
 
 // 周次选项（1-20周）
 const weekOptions = Array.from({ length: 20 }, (_, i) => i + 1)
+
+// 为 MobilePicker 准备的周次选项
+const weekPickerOptions = computed(() => {
+  return weekOptions.map(week => ({
+    value: week,
+    label: `第${week}周`,
+    subtitle: week === currentWeek.value ? '本周' : undefined
+  }))
+})
+
+// 为 MobilePicker 准备的班级选项
+const classPickerOptions = computed(() => {
+  return (classes.value || []).map(cls => ({
+    value: cls.name,
+    label: cls.name
+  }))
+})
+
+// 为 MobilePicker 准备的星期选项
+const dayPickerOptions = [
+  { value: 1, label: '周一' },
+  { value: 2, label: '周二' },
+  { value: 3, label: '周三' },
+  { value: 4, label: '周四' },
+  { value: 5, label: '周五' },
+  { value: 6, label: '周六' },
+  { value: 7, label: '周日' }
+]
 
 // 按周次筛选的课程
 const filteredSchedulesByWeek = computed(() => {
@@ -477,73 +505,36 @@ const handleBatchDelete = async () => {
       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-4">
         <div class="w-full sm:w-48">
           <label class="mb-1 block text-sm text-white/60">班级</label>
-          <select
+          <MobilePicker
             v-model="selectedClass"
-            class="w-full min-h-[44px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
-          >
-            <option
-              value=""
-              class="bg-gray-900 text-white"
-            >
-              全部班级
-            </option>
-            <option
-              v-for="cls in classes"
-              :key="cls.name"
-              :value="cls.name"
-              class="bg-gray-900 text-white"
-            >
-              {{ cls.name }}
-            </option>
-          </select>
+            title="选择班级"
+            placeholder="全部班级"
+            clearable
+            :options="classPickerOptions"
+          />
         </div>
         <div class="w-full sm:w-32">
           <label class="mb-1 block text-sm text-white/60">星期</label>
-          <select
+          <MobilePicker
             v-model="selectedDay"
-            class="w-full min-h-[44px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
-          >
-            <option
-              :value="undefined"
-              class="bg-gray-900 text-white"
-            >
-              全部
-            </option>
-            <option
-              v-for="day in weekDays"
-              :key="day.value"
-              :value="day.value"
-              class="bg-gray-900 text-white"
-            >
-              {{ day.label }}
-            </option>
-          </select>
+            title="选择星期"
+            placeholder="全部"
+            clearable
+            :options="dayPickerOptions"
+          />
         </div>
         <!-- 周次筛选器 -->
         <div class="w-full sm:w-40">
           <label class="mb-1 block text-sm text-white/60">周次</label>
-          <div class="flex items-center gap-2">
-            <select
-              v-model="selectedWeek"
-              class="flex-1 min-h-[44px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
-            >
-              <option
-                :value="undefined"
-                class="bg-gray-900 text-white"
-              >
-                全部周次
-              </option>
-              <option
-                v-for="week in weekOptions"
-                :key="week"
-                :value="week"
-                class="bg-gray-900 text-white"
-                :class="week === currentWeek ? 'font-bold text-primary' : ''"
-              >
-                第{{ week }}周 {{ week === currentWeek ? '(本周)' : '' }}
-              </option>
-            </select>
-          </div>
+          <MobilePicker
+            v-model="selectedWeek"
+            title="选择周次"
+            placeholder="全部周次"
+            searchable
+            clearable
+            search-placeholder="搜索周次..."
+            :options="weekPickerOptions"
+          />
         </div>
         <!-- 快速跳转本周 -->
         <Button
