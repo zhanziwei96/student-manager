@@ -1,13 +1,51 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Card, Button, Badge, Input, Dialog } from '@/components/ui'
-import { Plus, Search, Loader2, Trash2, Key, BookOpen, Calendar } from 'lucide-vue-next'
+import { Plus, Search, Loader2, Trash2, Key, BookOpen, Calendar, UserCircle } from 'lucide-vue-next'
 import { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from '@/composables/useTeachers'
 import { useToast } from '@/composables/useToast'
 import ManageClassesDialog from '@/components/admin/ManageClassesDialog.vue'
 import ManageSchedulesDialog from '@/components/admin/ManageSchedulesDialog.vue'
 import type { User } from '@/types'
 import { getErrorMessage } from '@/lib/error'
+
+// 获取教师主题色（基于索引循环使用）
+const getTeacherTheme = (index: number) => {
+  const themes = ['purple', 'blue', 'green', 'orange'] as const
+  return themes[index % themes.length]
+}
+
+// 主题色配置
+const themeColors = {
+  blue: {
+    border: 'border-[var(--card-blue-border)]',
+    bg: 'bg-[var(--card-blue-bg)]',
+    iconBg: 'bg-[var(--card-blue-icon-bg)]',
+    iconText: 'text-[var(--card-blue-icon-text)]',
+    glow: 'bg-[var(--card-blue-glow)]'
+  },
+  purple: {
+    border: 'border-[var(--card-purple-border)]',
+    bg: 'bg-[var(--card-purple-bg)]',
+    iconBg: 'bg-[var(--card-purple-icon-bg)]',
+    iconText: 'text-[var(--card-purple-icon-text)]',
+    glow: 'bg-[var(--card-purple-glow)]'
+  },
+  green: {
+    border: 'border-[var(--card-green-border)]',
+    bg: 'bg-[var(--card-green-bg)]',
+    iconBg: 'bg-[var(--card-green-icon-bg)]',
+    iconText: 'text-[var(--card-green-icon-text)]',
+    glow: 'bg-[var(--card-green-glow)]'
+  },
+  orange: {
+    border: 'border-[var(--card-orange-border)]',
+    bg: 'bg-[var(--card-orange-bg)]',
+    iconBg: 'bg-[var(--card-orange-icon-bg)]',
+    iconText: 'text-[var(--card-orange-icon-text)]',
+    glow: 'bg-[var(--card-orange-glow)]'
+  }
+} as const
 
 // Toast
 const { showToast } = useToast()
@@ -267,21 +305,32 @@ const handleResetPassword = async () => {
       class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
     >
       <Card
-        v-for="teacher in filteredTeachers"
+        v-for="(teacher, index) in filteredTeachers"
         :key="teacher.id"
-        class="p-6"
+        class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
+        :class="`${themeColors[getTeacherTheme(index)].border} ${themeColors[getTeacherTheme(index)].bg}`"
       >
-        <div class="flex items-start gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
-            <span class="text-lg font-medium text-primary">
-              {{ teacher.name.charAt(0).toUpperCase() }}
-            </span>
+        <!-- 背景光晕效果 -->
+        <div
+          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl"
+          :class="themeColors[getTeacherTheme(index)].glow"
+        />
+
+        <div class="relative z-10 flex items-start gap-4">
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-xl"
+            :class="themeColors[getTeacherTheme(index)].iconBg"
+          >
+            <UserCircle
+              class="h-6 w-6"
+              :class="themeColors[getTeacherTheme(index)].iconText"
+            />
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="truncate font-medium text-white">
               {{ teacher.name }}
             </h3>
-            <p class="text-sm text-white/60">
+            <p class="text-sm text-[var(--color-text-tertiary)]">
               @{{ teacher.username }}
             </p>
             <div class="mt-2 flex items-center gap-2">
@@ -291,11 +340,24 @@ const handleResetPassword = async () => {
             </div>
           </div>
         </div>
-        <div class="mt-4 flex gap-2">
+
+        <!-- 任课信息展示 -->
+        <div class="relative z-10 mt-4 rounded-xl bg-[var(--color-background-card)] p-3 border border-[var(--color-divider)]">
+          <div class="flex items-center gap-2 text-[var(--color-text-tertiary)]">
+            <BookOpen class="h-4 w-4" />
+            <span class="text-xs">任课信息</span>
+          </div>
+          <p class="text-sm text-[var(--color-text-secondary)] mt-1">
+            管理班级和课表安排
+          </p>
+        </div>
+
+        <!-- 操作按钮组 -->
+        <div class="relative z-10 mt-4 flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            class="flex-1"
+            class="flex-1 hover:bg-white/10"
             @click="openResetDialog(teacher)"
           >
             <Key class="mr-2 h-4 w-4" />
@@ -304,7 +366,7 @@ const handleResetPassword = async () => {
           <Button
             variant="outline"
             size="sm"
-            class="flex-1"
+            class="flex-1 hover:bg-white/10"
             @click="openEditDialog(teacher)"
           >
             编辑
@@ -312,16 +374,17 @@ const handleResetPassword = async () => {
           <Button
             variant="outline"
             size="sm"
+            class="hover:bg-red-500/10"
             @click="openDeleteDialog(teacher)"
           >
-            <Trash2 class="h-4 w-4 text-red-400" />
+            <Trash2 class="h-4 w-4 text-[var(--color-error)]" />
           </Button>
         </div>
-        <div class="mt-2 flex gap-2">
+        <div class="relative z-10 mt-2 flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            class="flex-1"
+            class="flex-1 hover:bg-white/10"
             @click="openManageClassesDialog(teacher)"
           >
             <BookOpen class="mr-2 h-4 w-4" />
@@ -330,7 +393,7 @@ const handleResetPassword = async () => {
           <Button
             variant="outline"
             size="sm"
-            class="flex-1"
+            class="flex-1 hover:bg-white/10"
             @click="openManageSchedulesDialog(teacher)"
           >
             <Calendar class="mr-2 h-4 w-4" />
@@ -343,9 +406,13 @@ const handleResetPassword = async () => {
     <!-- Empty state -->
     <div
       v-else
-      class="flex h-64 flex-col items-center justify-center text-white/60"
+      class="flex h-64 flex-col items-center justify-center text-[var(--color-text-tertiary)]"
     >
+      <UserCircle class="mb-4 h-12 w-12 opacity-50" />
       <p>暂无教师数据</p>
+      <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+        点击右上角按钮添加教师
+      </p>
     </div>
 
     <!-- Add Dialog -->

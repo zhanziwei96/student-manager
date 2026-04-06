@@ -8,9 +8,47 @@ import { getErrorMessage } from '@/lib/error'
 
 /**
  * 管理员学生管理页面 - FE-006 重构后
- * 
+ *
  * 使用 Feature-based 架构，使用共享的 StudentFilters 组件
  */
+
+// 获取学生主题色（基于索引循环使用）
+const getStudentTheme = (index: number) => {
+  const themes = ['green', 'blue', 'purple', 'orange'] as const
+  return themes[index % themes.length]
+}
+
+// 主题色配置
+const themeColors = {
+  blue: {
+    border: 'border-[var(--card-blue-border)]',
+    bg: 'bg-[var(--card-blue-bg)]',
+    iconBg: 'bg-[var(--card-blue-icon-bg)]',
+    iconText: 'text-[var(--card-blue-icon-text)]',
+    glow: 'bg-[var(--card-blue-glow)]'
+  },
+  purple: {
+    border: 'border-[var(--card-purple-border)]',
+    bg: 'bg-[var(--card-purple-bg)]',
+    iconBg: 'bg-[var(--card-purple-icon-bg)]',
+    iconText: 'text-[var(--card-purple-icon-text)]',
+    glow: 'bg-[var(--card-purple-glow)]'
+  },
+  green: {
+    border: 'border-[var(--card-green-border)]',
+    bg: 'bg-[var(--card-green-bg)]',
+    iconBg: 'bg-[var(--card-green-icon-bg)]',
+    iconText: 'text-[var(--card-green-icon-text)]',
+    glow: 'bg-[var(--card-green-glow)]'
+  },
+  orange: {
+    border: 'border-[var(--card-orange-border)]',
+    bg: 'bg-[var(--card-orange-bg)]',
+    iconBg: 'bg-[var(--card-orange-icon-bg)]',
+    iconText: 'text-[var(--card-orange-icon-text)]',
+    glow: 'bg-[var(--card-orange-glow)]'
+  }
+} as const
 
 // === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
@@ -149,13 +187,31 @@ const handleAddStudent = async () => {
       <!-- Mobile: Card List -->
       <div class="lg:hidden space-y-3">
         <Card
-          v-for="student in filteredStudents"
+          v-for="(student, index) in filteredStudents"
           :key="student.id"
-          class="p-4"
+          class="relative overflow-hidden p-4 transition-all duration-300 hover:scale-[1.02]"
+          :class="`${themeColors[getStudentTheme(index)].border} ${themeColors[getStudentTheme(index)].bg}`"
         >
-          <div class="flex items-start justify-between">
+          <!-- 背景光晕效果 -->
+          <div
+            class="absolute -right-4 -bottom-4 h-20 w-20 rounded-full blur-2xl"
+            :class="themeColors[getStudentTheme(index)].glow"
+          />
+
+          <div class="relative z-10 flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
+                <div
+                  class="flex h-8 w-8 items-center justify-center rounded-lg"
+                  :class="themeColors[getStudentTheme(index)].iconBg"
+                >
+                  <span
+                    class="text-sm font-medium"
+                    :class="themeColors[getStudentTheme(index)].iconText"
+                  >
+                    {{ student.name.charAt(0) }}
+                  </span>
+                </div>
                 <span class="font-medium text-white truncate">{{ student.name }}</span>
                 <Badge
                   :variant="student.is_account_enabled ? 'success' : 'secondary'"
@@ -164,39 +220,39 @@ const handleAddStudent = async () => {
                   {{ student.is_account_enabled ? '启用' : '禁用' }}
                 </Badge>
               </div>
-              <p class="text-sm text-white/60 mt-1">{{ student.student_id }}</p>
-              <p class="text-sm text-white/50 mt-0.5 truncate">{{ student.class_name }}</p>
+              <p class="text-sm text-[var(--color-text-tertiary)] mt-1">{{ student.student_id }}</p>
+              <p class="text-sm text-[var(--color-text-muted)] mt-0.5 truncate">{{ student.class_name }}</p>
             </div>
             <div class="text-right flex-shrink-0 ml-4">
-              <span class="text-xl font-bold text-primary">{{ student.score }}</span>
-              <p class="text-xs text-white/40">分</p>
+              <span class="text-xl font-bold text-[var(--color-primary)]">{{ student.score }}</span>
+              <p class="text-xs text-[var(--color-text-muted)]">分</p>
             </div>
           </div>
         </Card>
       </div>
 
       <!-- Desktop: Table -->
-      <Card class="hidden lg:block overflow-hidden border-white/10">
+      <Card class="hidden lg:block overflow-hidden border-[var(--color-border)]">
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead>
-              <tr class="border-b border-white/10 bg-white/[0.02]">
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+              <tr class="border-b border-[var(--color-divider)] bg-[var(--color-background-card)]">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
                   学号
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
                   姓名
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
                   班级
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
                   分数
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
                   状态
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-white/60">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
                   操作
                 </th>
               </tr>
@@ -205,18 +261,18 @@ const handleAddStudent = async () => {
               <tr
                 v-for="student in filteredStudents"
                 :key="student.id"
-                class="border-b border-white/5 transition-colors hover:bg-white/[0.02]"
+                class="border-b border-[var(--color-divider)] transition-colors hover:bg-[var(--color-background-hover)]"
               >
-                <td class="px-4 py-3 text-sm text-white/60">
+                <td class="px-4 py-3 text-sm text-[var(--color-text-tertiary)]">
                   {{ student.student_id }}
                 </td>
                 <td class="px-4 py-3 text-sm font-medium text-white">
                   {{ student.name }}
                 </td>
-                <td class="px-4 py-3 text-sm text-white/60">
+                <td class="px-4 py-3 text-sm text-[var(--color-text-tertiary)]">
                   {{ student.class_name }}
                 </td>
-                <td class="px-4 py-3 text-sm font-bold text-primary">
+                <td class="px-4 py-3 text-sm font-bold text-[var(--color-primary)]">
                   {{ student.score }}
                 </td>
                 <td class="px-4 py-3">
@@ -225,7 +281,7 @@ const handleAddStudent = async () => {
                   </Badge>
                 </td>
                 <td class="px-4 py-3">
-                  <span class="text-white/40 text-sm">-</span>
+                  <span class="text-[var(--color-text-muted)] text-sm">-</span>
                 </td>
               </tr>
             </tbody>
@@ -246,11 +302,11 @@ const handleAddStudent = async () => {
             id="studentId"
             v-model="newStudent.student_id"
             placeholder="输入学号"
-            :class="addFormErrors.student_id ? 'border-red-500' : ''"
+            :class="addFormErrors.student_id ? 'border-[var(--color-error)]' : ''"
           />
           <p
             v-if="addFormErrors.student_id"
-            class="text-sm text-red-500"
+            class="text-sm text-[var(--color-error)]"
           >
             {{ addFormErrors.student_id }}
           </p>
@@ -261,11 +317,11 @@ const handleAddStudent = async () => {
             id="studentName"
             v-model="newStudent.name"
             placeholder="输入姓名"
-            :class="addFormErrors.name ? 'border-red-500' : ''"
+            :class="addFormErrors.name ? 'border-[var(--color-error)]' : ''"
           />
           <p
             v-if="addFormErrors.name"
-            class="text-sm text-red-500"
+            class="text-sm text-[var(--color-error)]"
           >
             {{ addFormErrors.name }}
           </p>
@@ -276,11 +332,11 @@ const handleAddStudent = async () => {
             id="className"
             v-model="newStudent.class_name"
             placeholder="输入班级名称"
-            :class="addFormErrors.class_name ? 'border-red-500' : ''"
+            :class="addFormErrors.class_name ? 'border-[var(--color-error)]' : ''"
           />
           <p
             v-if="addFormErrors.class_name"
-            class="text-sm text-red-500"
+            class="text-sm text-[var(--color-error)]"
           >
             {{ addFormErrors.class_name }}
           </p>

@@ -26,12 +26,54 @@ const openViewDialog = (className: string) => {
   showViewDialog.value = true
 }
 
-// Score color helper
+// Score color helper - 使用CSS变量主题色
 const getScoreColor = (score: number) => {
-  if (score >= 90) return 'text-green-400'
-  if (score >= 70) return 'text-yellow-400'
-  return 'text-red-400'
+  if (score >= 90) return 'text-[var(--color-green-400)]'
+  if (score >= 70) return 'text-[var(--color-amber-400)]'
+  return 'text-[var(--color-error)]'
 }
+
+// 获取班级主题色（基于索引循环使用）
+const getClassTheme = (index: number) => {
+  const themes = ['blue', 'purple', 'green', 'orange'] as const
+  return themes[index % themes.length]
+}
+
+// 主题色配置
+const themeColors = {
+  blue: {
+    border: 'border-[var(--card-blue-border)]',
+    bg: 'bg-[var(--card-blue-bg)]',
+    iconBg: 'bg-[var(--card-blue-icon-bg)]',
+    iconText: 'text-[var(--card-blue-icon-text)]',
+    shadow: 'shadow-[var(--card-blue-shadow)]',
+    glow: 'bg-[var(--card-blue-glow)]'
+  },
+  purple: {
+    border: 'border-[var(--card-purple-border)]',
+    bg: 'bg-[var(--card-purple-bg)]',
+    iconBg: 'bg-[var(--card-purple-icon-bg)]',
+    iconText: 'text-[var(--card-purple-icon-text)]',
+    shadow: 'shadow-[var(--card-purple-shadow)]',
+    glow: 'bg-[var(--card-purple-glow)]'
+  },
+  green: {
+    border: 'border-[var(--card-green-border)]',
+    bg: 'bg-[var(--card-green-bg)]',
+    iconBg: 'bg-[var(--card-green-icon-bg)]',
+    iconText: 'text-[var(--card-green-icon-text)]',
+    shadow: 'shadow-[var(--card-green-shadow)]',
+    glow: 'bg-[var(--card-green-glow)]'
+  },
+  orange: {
+    border: 'border-[var(--card-orange-border)]',
+    bg: 'bg-[var(--card-orange-bg)]',
+    iconBg: 'bg-[var(--card-orange-icon-bg)]',
+    iconText: 'text-[var(--card-orange-icon-text)]',
+    shadow: 'shadow-[var(--card-orange-shadow)]',
+    glow: 'bg-[var(--card-orange-glow)]'
+  }
+} as const
 </script>
 
 <template>
@@ -72,20 +114,33 @@ const getScoreColor = (score: number) => {
       class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
     >
       <Card
-        v-for="cls in filteredClasses"
+        v-for="(cls, index) in filteredClasses"
         :key="cls.name"
-        class="p-6"
+        class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
+        :class="`${themeColors[getClassTheme(index)].border} ${themeColors[getClassTheme(index)].bg}`"
       >
-        <div class="flex items-start justify-between">
+        <!-- 背景光晕效果 -->
+        <div
+          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl"
+          :class="themeColors[getClassTheme(index)].glow"
+        />
+
+        <div class="relative z-10 flex items-start justify-between">
           <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
-              <GraduationCap class="h-5 w-5 text-primary" />
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-xl"
+              :class="themeColors[getClassTheme(index)].iconBg"
+            >
+              <GraduationCap
+                class="h-5 w-5"
+                :class="themeColors[getClassTheme(index)].iconText"
+              />
             </div>
             <div>
               <h3 class="font-medium text-white">
                 {{ cls.name }}
               </h3>
-              <p class="text-xs text-white/50">
+              <p class="text-xs text-[var(--color-text-tertiary)]">
                 {{ cls.student_count }} 名学生
               </p>
             </div>
@@ -94,10 +149,10 @@ const getScoreColor = (score: number) => {
             {{ cls.status === 'active' ? '活跃' : '非活跃' }}
           </Badge>
         </div>
-        
-        <div class="mt-4 grid grid-cols-2 gap-4">
-          <div class="rounded-lg bg-white/5 p-3">
-            <p class="text-xs text-white/50">
+
+        <div class="relative z-10 mt-4 grid grid-cols-2 gap-4">
+          <div class="rounded-xl bg-[var(--color-background-card)] p-3 border border-[var(--color-divider)]">
+            <p class="text-xs text-[var(--color-text-tertiary)]">
               平均分
             </p>
             <p
@@ -107,8 +162,8 @@ const getScoreColor = (score: number) => {
               {{ cls.average_score }}
             </p>
           </div>
-          <div class="rounded-lg bg-white/5 p-3">
-            <p class="text-xs text-white/50">
+          <div class="rounded-xl bg-[var(--color-background-card)] p-3 border border-[var(--color-divider)]">
+            <p class="text-xs text-[var(--color-text-tertiary)]">
               学生数
             </p>
             <p class="text-lg font-semibold text-white">
@@ -116,12 +171,12 @@ const getScoreColor = (score: number) => {
             </p>
           </div>
         </div>
-        
-        <div class="mt-4 flex gap-2">
+
+        <div class="relative z-10 mt-4 flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            class="flex-1"
+            class="flex-1 hover:bg-white/10"
             @click="openViewDialog(cls.name)"
           >
             <Eye class="mr-2 h-4 w-4" />
@@ -163,19 +218,25 @@ const getScoreColor = (score: number) => {
         <!-- 移动端：卡片列表 -->
         <div class="lg:hidden space-y-2">
           <div
-            v-for="student in classStudents"
+            v-for="(student, idx) in classStudents"
             :key="student.id"
-            class="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-3"
+            class="flex items-center justify-between rounded-xl border border-[var(--color-divider)] bg-[var(--color-background-card)] p-3"
           >
             <div class="flex items-center gap-3">
-              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
-                <span class="text-sm font-medium text-primary">
+              <div
+                class="flex h-8 w-8 items-center justify-center rounded-full"
+                :class="themeColors[getClassTheme(idx)].iconBg"
+              >
+                <span
+                  class="text-sm font-medium"
+                  :class="themeColors[getClassTheme(idx)].iconText"
+                >
                   {{ student.name.charAt(0) }}
                 </span>
               </div>
               <div>
                 <p class="font-medium text-white">{{ student.name }}</p>
-                <p class="font-mono text-xs text-white/50">{{ student.student_id }}</p>
+                <p class="font-mono text-xs text-[var(--color-text-tertiary)]">{{ student.student_id }}</p>
               </div>
             </div>
             <span
@@ -189,29 +250,29 @@ const getScoreColor = (score: number) => {
 
         <!-- 桌面端：表格 -->
         <table class="hidden lg:table w-full text-sm">
-          <thead class="bg-white/5 text-white/70">
+          <thead class="bg-[var(--color-background-card)] text-[var(--color-text-secondary)] border-b border-[var(--color-divider)]">
             <tr>
-              <th class="px-4 py-2 text-left">
+              <th class="px-4 py-3 text-left font-medium">
                 学号
               </th>
-              <th class="px-4 py-2 text-left">
+              <th class="px-4 py-3 text-left font-medium">
                 姓名
               </th>
-              <th class="px-4 py-2 text-right">
+              <th class="px-4 py-3 text-right font-medium">
                 分数
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-white/5">
+          <tbody class="divide-y divide-[var(--color-divider)]">
             <tr
               v-for="student in classStudents"
               :key="student.id"
-              class="text-white/80"
+              class="text-[var(--color-text-secondary)] hover:bg-[var(--color-background-hover)] transition-colors"
             >
               <td class="px-4 py-3 font-mono text-xs">
                 {{ student.student_id }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-4 py-3 font-medium text-white">
                 {{ student.name }}
               </td>
               <td class="px-4 py-3 text-right">
