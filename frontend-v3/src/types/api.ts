@@ -248,3 +248,81 @@ export interface LeaderboardData {
     score: number
   } | null
 }
+
+// 课程会话类型（新表 course_sessions）
+export interface CourseSession {
+  id: number
+  session_code: string
+  course_name?: string
+  class_name: string
+  classroom?: string
+  teacher_id: number
+  teacher_name?: string
+  start_time: string
+  end_time?: string
+  status: 'active' | 'ended' | 'cancelled'
+  week_number?: number
+  schedule_id?: number
+  source_type: 'scheduled' | 'manual' | 'makeup'
+}
+
+export interface StartCourseSessionRequest {
+  class_name: string
+  course_name?: string
+  schedule_id?: number
+}
+
+// 课表调整记录
+export interface ScheduleAdjustment {
+  id: number
+  schedule_id: number
+  week_number: number
+  type: 'cancel' | 'modify' | 'makeup'
+  reason?: string
+  new_date?: string
+  new_start_time?: string
+  new_end_time?: string
+  new_classroom?: string
+  generated_session_id?: number
+  created_by: number
+  created_at: string
+}
+
+export interface CreateScheduleAdjustmentRequest {
+  schedule_id: number
+  week_number: number
+  type: 'cancel' | 'modify' | 'makeup'
+  reason?: string
+  new_date?: string
+  new_start_time?: string
+  new_end_time?: string
+  new_classroom?: string
+}
+
+// 今日课表增强类型
+export interface TodayScheduleItem {
+  id: number
+  course_name: string
+  class_name: string
+  teacher_id?: number
+  teacher_name?: string
+  day_of_week: number
+  start_time: string
+  end_time: string
+  classroom?: string
+  week_start: number
+  week_end: number
+  week_type: string
+  week_number: number
+  week_type_match: boolean
+  session_status: 'none' | 'active' | 'ended' | 'cancelled' | 'adjusted' | 'makeup' | 'skipped'
+  active_session_id?: number
+  adjustment?: {
+    type: string
+    reason?: string
+    new_date?: string
+    new_start_time?: string
+    new_end_time?: string
+    new_classroom?: string
+  }
+}

@@ -78,6 +78,11 @@ const routes = [
         name: 'TeacherSchedules',
         component: () => import('@/views/teacher/Schedules.vue'),
       },
+      {
+        path: 'sessions-history',
+        name: 'TeacherSessionsHistory',
+        component: () => import('@/views/teacher/SessionsHistory.vue'),
+      },
     ],
   },
   {
