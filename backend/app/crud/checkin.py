@@ -8,6 +8,18 @@ from app.models import CheckinRecord, ScoreLog
 from app.core.timezone import get_now
 
 
+def get_checkins_by_session_id(session: Session, session_id: int) -> List[CheckinRecord]:
+    """获取指定课堂会话的所有签到记录"""
+    query = select(CheckinRecord).where(CheckinRecord.session_id == session_id)
+    return list(session.exec(query).all())
+
+
+def get_all_checkins(session: Session, limit: int = 200) -> List[CheckinRecord]:
+    """获取签到记录列表（按时间倒序，用于 admin 签到管理）"""
+    query = select(CheckinRecord).order_by(CheckinRecord.checkin_time.desc()).limit(limit)
+    return list(session.exec(query).all())
+
+
 def get_today_checkins(
     session: Session, class_name: Optional[str] = None, session_start: Optional[datetime] = None
 ) -> List[CheckinRecord]:
@@ -93,6 +105,21 @@ def has_checked_in_today(
     if class_name:
         query = query.where(CheckinRecord.class_name == class_name)
     return session.exec(query).first() is not None
+
+
+def get_checkins_by_session_id(session: Session, session_id: int) -> List[CheckinRecord]:
+    """获取指定课堂会话的所有签到记录"""
+    query = select(CheckinRecord).where(CheckinRecord.session_id == session_id)
+    return list(session.exec(query).all())
+
+
+def count_checkins_by_session_id(session: Session, session_id: int) -> int:
+    """统计指定课堂会话的签到数量"""
+    query = select(func.count()).select_from(CheckinRecord).where(
+        CheckinRecord.session_id == session_id
+    )
+    result = session.exec(query)
+    return result.one()
 
 
 def get_student_score_logs(session: Session, student_id: str, limit: Optional[int] = None) -> List[ScoreLog]:

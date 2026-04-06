@@ -20,7 +20,8 @@ import {
   useNetworkError
 } from '@/composables'
 import { useClasses, useClassStudents } from '@/composables/useClasses'
-import { useTodayCheckins } from '@/composables/useCheckins'
+import { useSessionCheckins } from '@/composables/useCheckins'
+import { useTeacherCourses } from '@/composables/useTeacherCourses'
 import { useAuthStore } from '@/stores'
 import { Card, Button, Input, Select, Badge, NetworkErrorBanner, Dialog } from '@/components/ui'
 import {
@@ -161,15 +162,17 @@ const selectedSession = computed<CourseSession | null>(() => {
   return activeSessions.value.find((s: CourseSession) => s.id === activeTab.value) || activeSessions.value[0]
 })
 
-// 当前选中课堂的班级名称
+// 当前选中课堂的班级名称和ID
 const selectedClassName = computed(() => selectedSession.value?.class_name || '')
+const selectedSessionId = computed(() => selectedSession.value?.id)
 
 const { data: classStudents, isPending: isLoadingStudents } = useClassStudents(selectedClassName)
-const { data: todayCheckins, refetch: refetchCheckins } = useTodayCheckins(selectedClassName)
+const { data: sessionCheckins, refetch: refetchCheckins } = useSessionCheckins(selectedSessionId)
 
-const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn(selectedClassName)
+const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn(selectedSessionId)
 
 const { success: showSuccessToast, error: showErrorToast } = useToast()
+const { data: teacherCourses } = useTeacherCourses()
 
 // ===== 计算属性 =====
 const isSessionActive = computed(() => activeSessions.value && activeSessions.value.some((s: CourseSession) => s.status === 'active'))
@@ -220,8 +223,8 @@ const quickStartSchedules = computed(() => {
 
 // 已签到学生ID集合
 const checkedInStudentIds = computed(() => {
-  if (!todayCheckins.value) return new Set()
-  return new Set(todayCheckins.value.map((c: any) => c.student_id))
+  if (!sessionCheckins.value) return new Set()
+  return new Set(sessionCheckins.value.map((c: any) => c.student_id))
 })
 
 // 学生列表（带签到状态）
@@ -229,7 +232,7 @@ const studentListWithCheckin = computed(() => {
   if (!classStudents.value) return []
 
   const checkinTimeMap = new Map<string, string>()
-  todayCheckins.value?.forEach((c: any) => {
+  sessionCheckins.value?.forEach((c: any) => {
     checkinTimeMap.set(c.student_id, c.checkin_time)
   })
 
@@ -615,10 +618,12 @@ const getSourceTypeBadge = (sourceType: string) => {
 
       <div class="mt-4">
         <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
-          <Input
+          <Select
             v-model="courseName"
             class="w-full"
-            placeholder="课程名称（可选）"
+            placeholder="选择课程（可选）"
+            :options="teacherCourses?.map(c => ({ label: c, value: c })) || []"
+            clearable
           />
           <Select
             v-model="className"
@@ -757,10 +762,12 @@ const getSourceTypeBadge = (sourceType: string) => {
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
-        <Input
+        <Select
           v-model="courseName"
           class="w-full"
-          placeholder="课程名称（可选）"
+          placeholder="选择课程（可选）"
+          :options="teacherCourses?.map(c => ({ label: c, value: c })) || []"
+          clearable
         />
         <Select
           v-model="className"

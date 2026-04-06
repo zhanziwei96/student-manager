@@ -51,8 +51,12 @@ vi.mock('@/composables/useStudentCheckin', () => ({
 }))
 
 vi.mock('@/composables/useCheckins', () => ({
-  useTodayCheckins: () => ({
+  useSessionCheckins: () => ({
     data: ref([])
+  }),
+  useSessionCheckinStats: () => ({
+    data: ref(null),
+    refetch: vi.fn()
   })
 }))
 

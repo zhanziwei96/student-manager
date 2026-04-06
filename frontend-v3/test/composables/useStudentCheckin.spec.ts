@@ -64,14 +64,15 @@ vi.mock('@/composables/useStudentProfile', () => ({
   useStudentProfile: vi.fn(),
 }))
 
-// Mock today checkins composable
+// Mock session checkins composable
 vi.mock('@/composables/useCheckins', () => ({
-  useTodayCheckins: vi.fn(),
+  useSessionCheckins: vi.fn(),
+  useSessionCheckinStats: vi.fn(),
 }))
 
 import { checkinApi } from '@/api/checkin'
 import { useStudentProfile } from '@/composables/useStudentProfile'
-import { useTodayCheckins } from '@/composables/useCheckins'
+import { useSessionCheckins } from '@/composables/useCheckins'
 import {
   useStudentCourseSession,
   useStudentSelfCheckin,
@@ -263,7 +264,7 @@ describe('useHasCheckedInSession', () => {
       isPending: ref(false),
       error: ref(null),
     } as QueryResult<Student>)
-    vi.mocked(useTodayCheckins).mockReturnValue({
+    vi.mocked(useSessionCheckins).mockReturnValue({
       data: ref(mockCheckins),
       isPending: ref(false),
       error: ref(null),
@@ -292,7 +293,7 @@ describe('useHasCheckedInSession', () => {
   })
 
   it('当签到列表为空时应返回false', () => {
-    vi.mocked(useTodayCheckins).mockReturnValue({
+    vi.mocked(useSessionCheckins).mockReturnValue({
       data: ref([]),
       isPending: ref(false),
       error: ref(null),

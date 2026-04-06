@@ -3,17 +3,17 @@ import { toValue, type Ref } from 'vue'
 import { checkinApi } from '@/api/checkin'
 
 /**
- * 获取今日签到统计 - FE-003 修复后
- * 使用统一的 API 响应处理，无需手动检查 res.success
+ * 获取签到统计（按 session）- FE-003 修复后
  */
-export function useCheckinStats() {
+export function useSessionCheckinStats(sessionId?: number | Ref<number | undefined>) {
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['checkin-stats'],
+    queryKey: ['checkin-stats', toValue(sessionId)],
     queryFn: async () => {
-      // FE-003: 直接获取数据，错误自动抛出
-      return await checkinApi.getStats()
+      const id = toValue(sessionId)
+      return await checkinApi.getStats(id)
     },
-    refetchInterval: 30000,
+    refetchInterval: 10000,
+    enabled: () => toValue(sessionId) !== undefined,
   })
 
   return {
@@ -25,19 +25,18 @@ export function useCheckinStats() {
 }
 
 /**
- * 获取今日签到列表 - FE-003 修复后
- * 使用统一的 API 响应处理，无需手动检查 res.success
+ * 获取指定课堂的签到列表 - 按 session 维度
  */
-export function useTodayCheckins(className?: string | Ref<string>) {
+export function useSessionCheckins(sessionId?: number | Ref<number | undefined>) {
   const { data, isPending, error, refetch } = useQuery({
-    // FIX: 当 className 为空时，使用更精确的查询键，确保 invalidateQueries 能正确匹配
-    queryKey: ['today-checkins', toValue(className) || 'all'],
+    queryKey: ['session-checkins', toValue(sessionId)],
     queryFn: async () => {
-      const resolvedClassName = toValue(className)
-      // FE-003: 直接获取数据，错误自动抛出
-      return await checkinApi.getToday(resolvedClassName)
+      const id = toValue(sessionId)
+      if (id === undefined) return []
+      return await checkinApi.getSessionCheckins(id)
     },
-    refetchInterval: 30000,
+    refetchInterval: 10000,
+    enabled: () => toValue(sessionId) !== undefined,
   })
 
   return {
@@ -47,3 +46,4 @@ export function useTodayCheckins(className?: string | Ref<string>) {
     refetch,
   }
 }
+

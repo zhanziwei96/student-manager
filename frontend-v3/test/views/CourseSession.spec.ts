@@ -72,8 +72,12 @@ vi.mock('@/composables/useClasses', () => ({
 }))
 
 vi.mock('@/composables/useCheckins', () => ({
-  useTodayCheckins: () => ({
+  useSessionCheckins: () => ({
     data: ref([]),
+    refetch: vi.fn()
+  }),
+  useSessionCheckinStats: () => ({
+    data: ref(null),
     refetch: vi.fn()
   })
 }))
@@ -172,7 +176,7 @@ describe('CourseSession', () => {
 
     const selects = wrapper.findAll('.mock-select')
     expect(selects.length).toBeGreaterThanOrEqual(1)
-    expect(wrapper.text()).toContain('课程名称（可选）')
+    expect(wrapper.text()).toContain('选择课程（可选）')
   })
 
   it('displays available classes', async () => {
@@ -197,11 +201,11 @@ describe('CourseSession', () => {
       expect(inputs[0].element.value).toBe('高等数学')
     }
 
-    // Select class
-    if (selects.length > 0) {
-      await selects[0].setValue('计算机1班')
+    // Select class (selects[0] is course selector, selects[1] is class selector)
+    if (selects.length > 1) {
+      await selects[1].setValue('计算机1班')
       await flushPromises()
-      expect(selects[0].element.value).toBe('计算机1班')
+      expect(selects[1].element.value).toBe('计算机1班')
     }
   })
 

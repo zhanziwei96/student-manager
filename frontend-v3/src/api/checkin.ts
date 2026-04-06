@@ -47,18 +47,26 @@ export const checkinApi = {
     post('/checkin', data),
 
   /**
-   * 获取今日签到列表
+   * 获取签到记录列表（admin 用）
    */
-  getToday: (className?: string): Promise<CheckinRecord[]> => {
-    const query = className ? `?class_name=${encodeURIComponent(className)}` : ''
-    return get(`/checkins/today${query}`)
+  getAll: (limit?: number): Promise<CheckinRecord[]> => {
+    const query = limit ? `?limit=${limit}` : ''
+    return get(`/checkins${query}`)
   },
 
   /**
-   * 获取签到统计
+   * 获取指定课堂的签到列表
    */
-  getStats: (): Promise<CheckinStats> =>
-    get('/checkins/stats'),
+  getSessionCheckins: (sessionId: number): Promise<CheckinRecord[]> =>
+    get(`/checkins/session/${sessionId}`),
+
+  /**
+   * 获取签到统计（支持按 session_id）
+   */
+  getStats: (sessionId?: number): Promise<CheckinStats> => {
+    const query = sessionId !== undefined ? `?session_id=${sessionId}` : ''
+    return get(`/checkins/stats${query}`)
+  },
 
   /**
    * 获取班级活跃课堂状态（学生端使用）

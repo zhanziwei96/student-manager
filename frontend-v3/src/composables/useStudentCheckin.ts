@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { computed, type Ref, ref } from 'vue'
 import { checkinApi } from '@/api/checkin'
 import { useStudentProfile } from './useStudentProfile'
-import { useTodayCheckins } from './useCheckins'
+import { useSessionCheckins } from './useCheckins'
 import { getDeviceFingerprint, getDeviceInfo } from '@/lib/device'
 import type { CheckinRecord } from '@/types'
 
@@ -67,7 +67,8 @@ export function useStudentSelfCheckin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-course-session'] })
-      queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
+      queryClient.invalidateQueries({ queryKey: ['session-checkins'] })
+      queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
     },
   })
 
@@ -146,7 +147,7 @@ export function useGeolocation() {
  */
 export function useHasCheckedInSession(sessionId?: number | Ref<number | undefined>) {
   const { data: studentProfile } = useStudentProfile()
-  const { data: todayCheckins, isPending } = useTodayCheckins()
+  const { data: sessionCheckins, isPending } = useSessionCheckins(sessionId)
 
   const targetSessionId = computed(() => {
     if (sessionId === undefined) return undefined
@@ -154,15 +155,15 @@ export function useHasCheckedInSession(sessionId?: number | Ref<number | undefin
   })
 
   const hasCheckedIn = computed(() => {
-    if (!todayCheckins.value || !studentProfile.value || !targetSessionId.value) return false
-    return todayCheckins.value.some(
+    if (!sessionCheckins.value || !studentProfile.value || !targetSessionId.value) return false
+    return sessionCheckins.value.some(
       c => c.student_id === studentProfile.value!.student_id && c.session_id === targetSessionId.value
     )
   })
 
   const sessionCheckin = computed(() => {
-    if (!todayCheckins.value || !studentProfile.value || !targetSessionId.value) return null
-    return todayCheckins.value.find(
+    if (!sessionCheckins.value || !studentProfile.value || !targetSessionId.value) return null
+    return sessionCheckins.value.find(
       c => c.student_id === studentProfile.value!.student_id && c.session_id === targetSessionId.value
     ) || null
   })

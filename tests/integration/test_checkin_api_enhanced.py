@@ -64,16 +64,40 @@ class TestCheckinAPIEnhanced:
         data = response.json()
         assert "未在上课" in data["message"]
 
-    def test_get_today_checkins(self, teacher_client, test_engine):
-        """测试获取今日签到列表"""
+    def test_get_checkin_list(self, teacher_client, test_engine):
+        """测试获取签到记录列表"""
         self._start_class_directly(test_engine, "一班")
 
-        response = teacher_client.get("/api/v1/checkins/today")
+        response = teacher_client.get("/api/v1/checkins")
 
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert isinstance(data["data"], list)
+
+    def test_get_session_checkins(self, client, test_engine, student_user):
+        """测试按 session 获取签到列表"""
+        cs = self._start_class_directly(test_engine, "一班")
+
+        # 学生登录并签到
+        client.post("/api/v1/login", json={
+            "username": "S001",
+            "password": "student123",
+            "role": "student"
+        })
+        client.post("/api/v1/checkin", json={
+            "student_id": "S001",
+            "student_name": "学生1"
+        })
+
+        # 教师获取该 session 签到列表
+        response = client.get(f"/api/v1/checkins/session/{cs.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 1
+        assert data["data"][0]["student_id"] == "S001"
 
     def test_get_checkin_stats(self, teacher_client, test_engine, sample_students):
         """测试获取签到统计"""

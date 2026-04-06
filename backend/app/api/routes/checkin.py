@@ -9,8 +9,10 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.crud import (
-    get_today_checkins, create_checkin,
-    get_students_by_class
+    create_checkin, get_students_by_class
+)
+from app.crud.checkin import (
+    get_checkins_by_session_id, get_all_checkins
 )
 from app.crud.course_session import (
     get_active_course_session_by_class_name,
@@ -147,27 +149,30 @@ def do_checkin(
     }
 
 
-@router.get("/checkins/today", response_model=CheckinListResponse)
-def get_today_checkin_list(
+@router.get("/checkins", response_model=CheckinListResponse)
+def get_checkin_list(
     request: Request,
-    class_name: Optional[str] = Query(None, description="班级名称"),
+    limit: int = Query(200, ge=1, le=1000, description="返回条数限制"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取今日签到列表（只返回当前课堂开始后的签到）"""
-    # 根据班级名称获取活跃课堂
-    cs = get_active_course_session_by_class_name(session, class_name) if class_name else None
+    """获取签到记录列表（按时间倒序，用于 admin 签到管理）"""
+    checkins = get_all_checkins(session, limit=limit)
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: [c.model_dump() for c in checkins]
+    }
 
-    # 只查询当前课堂开始时间之后的签到（如果课堂活跃）
-    if cs and cs.status == "active":
-        checkins = get_today_checkins(session, class_name, cs.start_time)
-    elif class_name:
-        # 指定了班级但没有活跃课堂，返回今日该班级所有签到（用于历史查看）
-        checkins = get_today_checkins(session, class_name)
-    else:
-        # 没有指定班级，返回今日所有签到
-        checkins = get_today_checkins(session)
 
+@router.get("/checkins/session/{session_id}", response_model=CheckinListResponse)
+def get_session_checkin_list(
+    request: Request,
+    session_id: int,
+    db_session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """获取指定课堂会话的签到列表（按 session 维度统计签到）"""
+    checkins = get_checkins_by_session_id(db_session, session_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [c.model_dump() for c in checkins]
@@ -177,12 +182,48 @@ def get_today_checkin_list(
 @router.get("/checkins/stats", response_model=CheckinStatsResponse)
 def get_checkin_stats(
     request: Request,
-    session: Session = Depends(get_session),
+    session_id: Optional[int] = Query(None, description="课堂会话ID"),
+    db_session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取签到统计（当前教师的活跃课堂）"""
+    """获取签到统计（支持按 session_id 精确统计）"""
+    from app.crud.course_session import get_course_session
+
+    if session_id:
+        cs = get_course_session(db_session, session_id)
+        if not cs:
+            return {
+                ApiResponseConst.SUCCESS: True,
+                ApiResponseConst.DATA: {
+                    'active': False,
+                    'total': 0,
+                    'checked_in': 0,
+                    'not_checked_in': 0,
+                    'rate': 0
+                }
+            }
+        students = get_students_by_class(db_session, cs.class_name)
+        checkins = get_checkins_by_session_id(db_session, session_id)
+        total = len(students)
+        checked_in = len(checkins)
+        not_checked_in = total - checked_in
+        rate = round(checked_in / total * 100, 1) if total > 0 else 0
+        return {
+            ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.DATA: {
+                'active': cs.status == "active",
+                'course_name': cs.course_name,
+                'class_name': cs.class_name,
+                'total': total,
+                'checked_in': checked_in,
+                'not_checked_in': not_checked_in,
+                'rate': rate
+            }
+        }
+
+    # 未指定 session_id 时，返回当前教师活跃课堂的统计（兼容旧逻辑）
     teacher_id = int(user.get("sub", 0))
-    course_sessions = get_teacher_active_course_sessions(session, teacher_id)
+    course_sessions = get_teacher_active_course_sessions(db_session, teacher_id)
 
     if not course_sessions:
         return {
@@ -197,9 +238,8 @@ def get_checkin_stats(
         }
 
     cs = course_sessions[0]
-    students = get_students_by_class(session, cs.class_name)
-    # 只统计当前课堂开始后的签到
-    checkins = get_today_checkins(session, cs.class_name, cs.start_time)
+    students = get_students_by_class(db_session, cs.class_name)
+    checkins = get_checkins_by_session_id(db_session, cs.id)
 
     total = len(students)
     checked_in = len(checkins)

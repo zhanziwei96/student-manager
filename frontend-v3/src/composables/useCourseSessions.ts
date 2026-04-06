@@ -73,6 +73,8 @@ export function useCourseSessionStart() {
       queryClient.invalidateQueries({ queryKey: ['courseSessions'] })
       queryClient.invalidateQueries({ queryKey: ['active-class-sessions'] })
       queryClient.invalidateQueries({ queryKey: ['today-schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['session-checkins'] })
+      queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
     },
   })
   return { mutateAsync, isPending, error }
@@ -87,7 +89,7 @@ export function useCourseSessionEnd() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courseSessions'] })
       queryClient.invalidateQueries({ queryKey: ['students'] })
-      queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
+      queryClient.invalidateQueries({ queryKey: ['session-checkins'] })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
       queryClient.invalidateQueries({ queryKey: ['active-class-sessions'] })
     },
@@ -106,7 +108,7 @@ export function useActiveClassSessions() {
   return { data, isPending, error, refetch }
 }
 
-export function useStudentCheckIn(className?: string | Ref<string>) {
+export function useStudentCheckIn(sessionId?: number | Ref<number | undefined>) {
   const queryClient = useQueryClient()
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (studentCode: string): Promise<CheckinRecord> => {
@@ -116,9 +118,9 @@ export function useStudentCheckIn(className?: string | Ref<string>) {
       })
     },
     onSuccess: () => {
-      const resolved = unref(className)
+      const id = unref(sessionId)
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['today-checkins', resolved || 'all'] })
+      queryClient.invalidateQueries({ queryKey: ['session-checkins', id] })
     },
   })
   return { mutateAsync, isPending, error }
