@@ -18,37 +18,32 @@ const getStudentTheme = (index: number) => {
   return themes[index % themes.length]
 }
 
-// 主题色配置
-const themeColors = {
-  blue: {
-    border: 'border-[var(--card-blue-border)]',
-    bg: 'bg-[var(--card-blue-bg)]',
-    iconBg: 'bg-[var(--card-blue-icon-bg)]',
-    iconText: 'text-[var(--card-blue-icon-text)]',
-    glow: 'bg-[var(--card-blue-glow)]'
-  },
-  purple: {
-    border: 'border-[var(--card-purple-border)]',
-    bg: 'bg-[var(--card-purple-bg)]',
-    iconBg: 'bg-[var(--card-purple-icon-bg)]',
-    iconText: 'text-[var(--card-purple-icon-text)]',
-    glow: 'bg-[var(--card-purple-glow)]'
-  },
-  green: {
-    border: 'border-[var(--card-green-border)]',
-    bg: 'bg-[var(--card-green-bg)]',
-    iconBg: 'bg-[var(--card-green-icon-bg)]',
-    iconText: 'text-[var(--card-green-icon-text)]',
-    glow: 'bg-[var(--card-green-glow)]'
-  },
-  orange: {
-    border: 'border-[var(--card-orange-border)]',
-    bg: 'bg-[var(--card-orange-bg)]',
-    iconBg: 'bg-[var(--card-orange-icon-bg)]',
-    iconText: 'text-[var(--card-orange-icon-text)]',
-    glow: 'bg-[var(--card-orange-glow)]'
+// 卡片主题辅助函数
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
   }
-} as const
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
 
 // === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
@@ -190,24 +185,24 @@ const handleAddStudent = async () => {
           v-for="(student, index) in filteredStudents"
           :key="student.id"
           class="relative overflow-hidden p-4 transition-all duration-300 hover:scale-[1.02]"
-          :class="`${themeColors[getStudentTheme(index)].border} ${themeColors[getStudentTheme(index)].bg}`"
+          :style="getCardStyle(getStudentTheme(index))"
         >
           <!-- 背景光晕效果 -->
           <div
-            class="absolute -right-4 -bottom-4 h-20 w-20 rounded-full blur-2xl"
-            :class="themeColors[getStudentTheme(index)].glow"
+            class="absolute -right-4 -bottom-4 h-20 w-20 rounded-full blur-2xl opacity-30"
+            :style="getCardGlowStyle(getStudentTheme(index))"
           />
 
           <div class="relative z-10 flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <div
-                  class="flex h-8 w-8 items-center justify-center rounded-lg"
-                  :class="themeColors[getStudentTheme(index)].iconBg"
+                  class="flex h-8 w-8 items-center justify-center rounded-lg shadow-inner"
+                  :style="getCardIconStyle(getStudentTheme(index))"
                 >
                   <span
                     class="text-sm font-medium"
-                    :class="themeColors[getStudentTheme(index)].iconText"
+                    :style="{ color: 'var(--card-' + getStudentTheme(index) + '-icon-text)' }"
                   >
                     {{ student.name.charAt(0) }}
                   </span>

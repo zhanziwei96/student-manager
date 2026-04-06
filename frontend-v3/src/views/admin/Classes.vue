@@ -39,41 +39,32 @@ const getClassTheme = (index: number) => {
   return themes[index % themes.length]
 }
 
-// 主题色配置
-const themeColors = {
-  blue: {
-    border: 'border-[var(--card-blue-border)]',
-    bg: 'bg-[var(--card-blue-bg)]',
-    iconBg: 'bg-[var(--card-blue-icon-bg)]',
-    iconText: 'text-[var(--card-blue-icon-text)]',
-    shadow: 'shadow-[var(--card-blue-shadow)]',
-    glow: 'bg-[var(--card-blue-glow)]'
-  },
-  purple: {
-    border: 'border-[var(--card-purple-border)]',
-    bg: 'bg-[var(--card-purple-bg)]',
-    iconBg: 'bg-[var(--card-purple-icon-bg)]',
-    iconText: 'text-[var(--card-purple-icon-text)]',
-    shadow: 'shadow-[var(--card-purple-shadow)]',
-    glow: 'bg-[var(--card-purple-glow)]'
-  },
-  green: {
-    border: 'border-[var(--card-green-border)]',
-    bg: 'bg-[var(--card-green-bg)]',
-    iconBg: 'bg-[var(--card-green-icon-bg)]',
-    iconText: 'text-[var(--card-green-icon-text)]',
-    shadow: 'shadow-[var(--card-green-shadow)]',
-    glow: 'bg-[var(--card-green-glow)]'
-  },
-  orange: {
-    border: 'border-[var(--card-orange-border)]',
-    bg: 'bg-[var(--card-orange-bg)]',
-    iconBg: 'bg-[var(--card-orange-icon-bg)]',
-    iconText: 'text-[var(--card-orange-icon-text)]',
-    shadow: 'shadow-[var(--card-orange-shadow)]',
-    glow: 'bg-[var(--card-orange-glow)]'
+// 卡片主题辅助函数
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
   }
-} as const
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
 </script>
 
 <template>
@@ -117,23 +108,23 @@ const themeColors = {
         v-for="(cls, index) in filteredClasses"
         :key="cls.name"
         class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
-        :class="`${themeColors[getClassTheme(index)].border} ${themeColors[getClassTheme(index)].bg}`"
+        :style="getCardStyle(getClassTheme(index))"
       >
         <!-- 背景光晕效果 -->
         <div
-          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl"
-          :class="themeColors[getClassTheme(index)].glow"
+          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl opacity-30"
+          :style="getCardGlowStyle(getClassTheme(index))"
         />
 
         <div class="relative z-10 flex items-start justify-between">
           <div class="flex items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl"
-              :class="themeColors[getClassTheme(index)].iconBg"
+              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner"
+              :style="getCardIconStyle(getClassTheme(index))"
             >
               <GraduationCap
                 class="h-5 w-5"
-                :class="themeColors[getClassTheme(index)].iconText"
+                :style="{ color: 'var(--card-' + getClassTheme(index) + '-icon-text)' }"
               />
             </div>
             <div>
@@ -224,12 +215,12 @@ const themeColors = {
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-8 w-8 items-center justify-center rounded-full"
-                :class="themeColors[getClassTheme(idx)].iconBg"
+                class="flex h-8 w-8 items-center justify-center rounded-full shadow-inner"
+                :style="getCardIconStyle(getClassTheme(idx))"
               >
                 <span
                   class="text-sm font-medium"
-                  :class="themeColors[getClassTheme(idx)].iconText"
+                  :style="{ color: 'var(--card-' + getClassTheme(idx) + '-icon-text)' }"
                 >
                   {{ student.name.charAt(0) }}
                 </span>

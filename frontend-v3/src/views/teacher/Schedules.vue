@@ -31,6 +31,33 @@ const getCourseTheme = (courseName: string) => {
   return courseTypeThemes[index]
 }
 
+// 卡片主题辅助函数
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
+  }
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
+
 // 计算课程卡片样式
 const computedCourseCardClass = (schedule: typeof schedules.value[0]) => {
   const theme = getCourseTheme(schedule.course_name)
@@ -401,14 +428,14 @@ const handleBatchDelete = async () => {
 
     <!-- 统计卡片 -->
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-5">
-      <!-- 总课程数 -->
-      <Card class="p-4">
-        <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Layers class="h-5 w-5 text-primary" />
+      <!-- 总课程数 - blue主题 -->
+      <Card class="relative overflow-hidden p-4 transition-all duration-300" :style="getCardStyle('blue')">
+        <div class="relative z-10 flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner" :style="getCardIconStyle('blue')">
+            <Layers class="h-5 w-5" :style="{ color: 'var(--card-blue-icon-text)' }" />
           </div>
-          <div>
-            <p class="text-sm text-white/60">
+          <div class="min-w-0">
+            <p class="text-sm text-white/60 truncate">
               总课程数
             </p>
             <p class="text-2xl font-bold text-white">
@@ -416,16 +443,17 @@ const handleBatchDelete = async () => {
             </p>
           </div>
         </div>
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('blue')" />
       </Card>
 
-      <!-- 本周课程 -->
-      <Card class="p-4">
-        <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-            <Calendar class="h-5 w-5 text-green-400" />
+      <!-- 本周课程 - green主题 -->
+      <Card class="relative overflow-hidden p-4 transition-all duration-300" :style="getCardStyle('green')">
+        <div class="relative z-10 flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner" :style="getCardIconStyle('green')">
+            <Calendar class="h-5 w-5" :style="{ color: 'var(--card-green-icon-text)' }" />
           </div>
-          <div>
-            <p class="text-sm text-white/60">
+          <div class="min-w-0">
+            <p class="text-sm text-white/60 truncate">
               本周课程（第{{ currentWeek }}周）
             </p>
             <p class="text-2xl font-bold text-white">
@@ -433,6 +461,7 @@ const handleBatchDelete = async () => {
             </p>
           </div>
         </div>
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('green')" />
       </Card>
 
       <!-- 冲突检测 -->

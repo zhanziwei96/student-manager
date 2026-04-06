@@ -10,6 +10,33 @@ const currentStudentId = computed(() => authStore.user?.id)
 
 const activeTab = ref<'class' | 'school'>('class')
 
+// 卡片主题辅助函数
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
+  }
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
+
 const { isPending, students, myRank } = useLeaderboard(
   computed(() => ({ scope: activeTab.value, limit: 50 }))
 )
@@ -88,15 +115,19 @@ const maskName = (name: string, studentId: string) => {
       </Button>
     </div>
 
-    <!-- My Rank Card - 渐变主题 -->
+    <!-- My Rank Card - purple 主题 -->
     <Card
       v-if="myRank"
-      class="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/25 via-primary/15 to-accent-cyan/20 p-4 shadow-xl shadow-primary/10 mb-5"
+      class="relative overflow-hidden p-4 shadow-xl mb-5 transition-all duration-300"
+      :style="getCardStyle('purple')"
     >
       <div class="relative z-10 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-            <User class="h-5 w-5 text-primary" />
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 shadow-inner"
+            :style="getCardIconStyle('purple')"
+          >
+            <User class="h-5 w-5" :style="{ color: 'var(--card-purple-icon-text)' }" />
           </div>
           <div>
             <p class="text-sm text-white/60">我的排名</p>
@@ -106,15 +137,21 @@ const maskName = (name: string, studentId: string) => {
           </div>
         </div>
         <div class="text-right">
-          <p class="text-2xl font-bold text-primary">
+          <p class="text-2xl font-bold text-[var(--card-purple-icon-text)]">
             {{ myRank.score }}
           </p>
           <p class="text-sm text-white/40">分</p>
         </div>
       </div>
-      <!-- 动态背景装饰 -->
-      <div class="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-primary/30 blur-3xl" />
-      <div class="absolute -bottom-8 -left-4 h-28 w-28 rounded-full bg-accent-cyan/20 blur-3xl" />
+      <!-- 背景装饰 -->
+      <div
+        class="absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl opacity-30"
+        :style="getCardGlowStyle('purple')"
+      />
+      <div
+        class="absolute -bottom-8 -left-4 h-28 w-28 rounded-full blur-3xl opacity-30"
+        :style="getCardGlowStyle('purple')"
+      />
     </Card>
 
     <!-- Loading -->

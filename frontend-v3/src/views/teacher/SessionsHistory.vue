@@ -33,6 +33,33 @@ const formatDateTime = (iso?: string) => {
   return `${mm}-${dd} ${hh}:${min}`
 }
 
+// 卡片主题辅助函数
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
+  }
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
+
 const statusBadge = (status: CourseSession['status']) => {
   switch (status) {
     case 'ended':
@@ -85,13 +112,17 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
         <Card
           v-for="session in historySessions"
           :key="session.id"
-          class="p-4 border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+          class="relative overflow-hidden p-4 transition-all duration-300 hover:scale-[1.01]"
+          :style="getCardStyle('blue')"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                  <BookOpen class="h-4 w-4 text-primary" />
+              <div class="relative z-10 flex items-center gap-2 mb-2">
+                <div
+                  class="flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 shadow-inner"
+                  :style="getCardIconStyle('blue')"
+                >
+                  <BookOpen class="h-4 w-4" :style="{ color: 'var(--card-blue-icon-text)' }" />
                 </div>
                 <h4 class="font-semibold text-base text-white truncate">
                   {{ session.course_name || '未命名课程' }}
@@ -171,6 +202,11 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
               <span>已签到：--</span>
             </div>
           </div>
+          <!-- 背景装饰 -->
+          <div
+            class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
+            :style="getCardGlowStyle('blue')"
+          />
         </Card>
       </div>
     </DataContainer>

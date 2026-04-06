@@ -15,37 +15,32 @@ const getTeacherTheme = (index: number) => {
   return themes[index % themes.length]
 }
 
-// 主题色配置
-const themeColors = {
-  blue: {
-    border: 'border-[var(--card-blue-border)]',
-    bg: 'bg-[var(--card-blue-bg)]',
-    iconBg: 'bg-[var(--card-blue-icon-bg)]',
-    iconText: 'text-[var(--card-blue-icon-text)]',
-    glow: 'bg-[var(--card-blue-glow)]'
-  },
-  purple: {
-    border: 'border-[var(--card-purple-border)]',
-    bg: 'bg-[var(--card-purple-bg)]',
-    iconBg: 'bg-[var(--card-purple-icon-bg)]',
-    iconText: 'text-[var(--card-purple-icon-text)]',
-    glow: 'bg-[var(--card-purple-glow)]'
-  },
-  green: {
-    border: 'border-[var(--card-green-border)]',
-    bg: 'bg-[var(--card-green-bg)]',
-    iconBg: 'bg-[var(--card-green-icon-bg)]',
-    iconText: 'text-[var(--card-green-icon-text)]',
-    glow: 'bg-[var(--card-green-glow)]'
-  },
-  orange: {
-    border: 'border-[var(--card-orange-border)]',
-    bg: 'bg-[var(--card-orange-bg)]',
-    iconBg: 'bg-[var(--card-orange-icon-bg)]',
-    iconText: 'text-[var(--card-orange-icon-text)]',
-    glow: 'bg-[var(--card-orange-glow)]'
+// 卡片主题辅助函数
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
   }
-} as const
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
 
 // Toast
 const { showToast } = useToast()
@@ -308,22 +303,22 @@ const handleResetPassword = async () => {
         v-for="(teacher, index) in filteredTeachers"
         :key="teacher.id"
         class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
-        :class="`${themeColors[getTeacherTheme(index)].border} ${themeColors[getTeacherTheme(index)].bg}`"
+        :style="getCardStyle(getTeacherTheme(index))"
       >
         <!-- 背景光晕效果 -->
         <div
-          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl"
-          :class="themeColors[getTeacherTheme(index)].glow"
+          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl opacity-30"
+          :style="getCardGlowStyle(getTeacherTheme(index))"
         />
 
         <div class="relative z-10 flex items-start gap-4">
           <div
-            class="flex h-12 w-12 items-center justify-center rounded-xl"
-            :class="themeColors[getTeacherTheme(index)].iconBg"
+            class="flex h-12 w-12 items-center justify-center rounded-xl shadow-inner"
+            :style="getCardIconStyle(getTeacherTheme(index))"
           >
             <UserCircle
               class="h-6 w-6"
-              :class="themeColors[getTeacherTheme(index)].iconText"
+              :style="{ color: 'var(--card-' + getTeacherTheme(index) + '-icon-text)' }"
             />
           </div>
           <div class="flex-1 min-w-0">
