@@ -29,6 +29,13 @@ from app.crud.course_session import (
     start_course_session,
     end_course_session,
 )
+from app.crud.schedule_adjustment import (
+    get_adjustment,
+    get_adjustments,
+    create_adjustment,
+    has_active_session,
+    has_ended_session,
+)
 from app.crud.audit import (
     create_audit_log, get_audit_logs, get_my_logs,
     create_security_alert, get_unresolved_alerts, resolve_alert, cleanup_old_audit_logs
@@ -59,6 +66,13 @@ __all__ = [
     # Audit
     "create_audit_log", "get_audit_logs", "get_my_logs",
     "create_security_alert", "get_unresolved_alerts", "resolve_alert", "cleanup_old_audit_logs",
+    # CourseSession
+    "get_course_session", "get_active_course_session_by_class_name",
+    "get_teacher_active_course_sessions", "get_course_sessions_by_schedule_and_week",
+    "start_course_session", "end_course_session",
+    # ScheduleAdjustment
+    "get_adjustment", "get_adjustments", "create_adjustment",
+    "has_active_session", "has_ended_session",
     # Leaderboard
     "get_leaderboard",
 ]
