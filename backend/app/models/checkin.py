@@ -7,45 +7,31 @@ from sqlmodel import SQLModel, Field
 from app.models.constants import CheckinTypeConst
 from app.core.timezone import get_now
 
-# 兼容性别名（向后兼容）
-get_shanghai_now = get_now
-
 
 class CheckinRecord(SQLModel, table=True):
     """签到记录表"""
     __tablename__ = "checkin_records"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    session_id: Optional[int] = Field(default=None, description="课堂会话ID", index=True)
+    session_id: Optional[int] = Field(
+        default=None,
+        foreign_key="course_sessions.id",
+        description="课堂会话ID",
+        index=True
+    )
     student_id: str = Field(..., description="学号", index=True)
     student_name: Optional[str] = Field(default=None, description="学生姓名")
     class_name: Optional[str] = Field(default=None, description="班级", index=True)
     checkin_type: str = Field(default=CheckinTypeConst.SELF, description="签到类型")
-    checkin_time: datetime = Field(default_factory=get_shanghai_now, description="签到时间")
+    checkin_time: datetime = Field(default_factory=get_now, description="签到时间")
     device_id: Optional[str] = Field(default=None, description="设备指纹ID", index=True)
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
-
-
-class ClassSession(SQLModel, table=True):
-    """上课状态表 - 支持多教师同时上课，每次开始新课堂创建新记录"""
-    __tablename__ = "class_session"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    session_code: Optional[str] = Field(default=None, description="课堂唯一代码", index=True)
-    course_name: Optional[str] = Field(default=None, description="课程名称")
-    class_name: Optional[str] = Field(default=None, description="当前上课班级", index=True)
-    teacher_id: Optional[int] = Field(default=None, description="上课教师ID", index=True)
-    teacher_name: Optional[str] = Field(default=None, description="上课教师姓名")
-    start_time: Optional[datetime] = Field(default=None, description="开始时间")
-    end_time: Optional[datetime] = Field(default=None, description="结束时间")
-    active: bool = Field(default=False, description="是否上课中", index=True)
-    updated_at: datetime = Field(default_factory=get_shanghai_now, description="更新时间")
 
 
 class ScoreLog(SQLModel, table=True):
     """分数变更日志表"""
     __tablename__ = "score_logs"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     student_id: str = Field(..., description="学号", index=True)
     old_score: Optional[float] = Field(default=None, description="旧分数")

@@ -3,7 +3,7 @@
 """
 from app.models.student import Student, StudentCreate, StudentUpdate, StudentResponse
 from app.models.user import User, UserCreate, UserUpdate, UserResponse
-from app.models.checkin import CheckinRecord, ClassSession, ScoreLog
+from app.models.checkin import CheckinRecord, ScoreLog
 from app.models.audit import AuditLog, SecurityAlert
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
 from app.models.course_session import CourseSession, ScheduleAdjustment, CourseSessionResponse
@@ -20,7 +20,7 @@ __all__ = [
     # Constants
     "UserRole", "UserRoleConst", "UserStatus", "CheckinType",
     # Checkin
-    "CheckinRecord", "ClassSession", "ScoreLog",
+    "CheckinRecord", "ScoreLog",
     # Audit
     "AuditLog", "SecurityAlert",
     # Course Session
