@@ -17,11 +17,29 @@ const { isPending, students, myRank } = useLeaderboard(
 // 前三名样式 - 金银铜奖杯（高对比度配色）
 const getRankStyle = (rank: number) => {
   switch (rank) {
-    case 1: return { icon: Trophy, color: 'text-yellow-600', bg: 'bg-yellow-300', ring: 'ring-yellow-200', shadow: 'shadow-yellow-400/50' }  // 🥇 金牌
-    case 2: return { icon: Trophy, color: 'text-gray-700', bg: 'bg-gray-200', ring: 'ring-gray-100', shadow: 'shadow-gray-400/40' }    // 🥈 银牌
-    case 3: return { icon: Trophy, color: 'text-amber-700', bg: 'bg-amber-400', ring: 'ring-amber-300', shadow: 'shadow-amber-500/40' } // 🥉 铜牌
-    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', ring: 'ring-white/10', shadow: '' }
+    case 1: return { icon: Trophy, color: 'text-yellow-600', bg: 'bg-yellow-300', ring: 'ring-yellow-200', shadow: 'shadow-yellow-400/50', cardBg: 'bg-yellow-500/10', cardBorder: 'border-yellow-400/30' }  // 🥇 金牌
+    case 2: return { icon: Trophy, color: 'text-gray-700', bg: 'bg-gray-200', ring: 'ring-gray-100', shadow: 'shadow-gray-400/40', cardBg: 'bg-gray-400/10', cardBorder: 'border-gray-300/30' }    // 🥈 银牌
+    case 3: return { icon: Trophy, color: 'text-amber-700', bg: 'bg-amber-400', ring: 'ring-amber-300', shadow: 'shadow-amber-500/40', cardBg: 'bg-amber-500/10', cardBorder: 'border-amber-400/30' } // 🥉 铜牌
+    default: return { icon: null, color: 'text-white/60', bg: 'bg-white/10', ring: 'ring-white/10', shadow: '', cardBg: '', cardBorder: '' }
   }
+}
+
+// 获取卡片样式（前三名特殊主题色，当前用户高亮）
+const getCardClass = (student: { student_id: string; rank: number }) => {
+  const isMe = isCurrentStudent(student.student_id)
+  const rankStyle = getRankStyle(student.rank)
+
+  // 当前用户高亮优先
+  if (isMe) {
+    return 'border-primary/50 bg-primary/10 hover:bg-primary/15 hover:border-primary/60'
+  }
+
+  // 前三名特殊主题色
+  if (student.rank <= 3 && rankStyle.cardBg) {
+    return `${rankStyle.cardBg} ${rankStyle.cardBorder} hover:brightness-110`
+  }
+
+  return ''
 }
 
 // 是否当前登录学生
@@ -114,8 +132,8 @@ const maskName = (name: string, studentId: string) => {
         <Card
           v-for="student in students"
           :key="`${activeTab}-${student.student_id}`"
-          class="group transition-all duration-200"
-          :class="isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/40' : ''"
+          class="group transition-all duration-200 border"
+          :class="getCardClass(student)"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -192,8 +210,16 @@ const maskName = (name: string, studentId: string) => {
               v-for="student in students"
               :key="`${activeTab}-${student.student_id}`"
               :class="[
-                'border-b border-white/5 last:border-0',
-                isCurrentStudent(student.student_id) ? 'bg-primary/10' : 'hover:bg-white/[0.02]'
+                'border-b border-white/5 last:border-0 transition-colors',
+                isCurrentStudent(student.student_id)
+                  ? 'bg-primary/15 border-primary/30'
+                  : student.rank === 1
+                    ? 'bg-yellow-500/5 hover:bg-yellow-500/10'
+                    : student.rank === 2
+                      ? 'bg-gray-400/5 hover:bg-gray-400/10'
+                      : student.rank === 3
+                        ? 'bg-amber-500/5 hover:bg-amber-500/10'
+                        : 'hover:bg-white/[0.02]'
               ]"
             >
               <td class="px-4 py-3">
