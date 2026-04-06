@@ -174,6 +174,9 @@ const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn(sele
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 const { data: teacherCourses } = useTeacherCourses()
 
+// 正在快速签到的学生ID集合（防止重复点击）
+const checkingStudentIds = ref<Set<string>>(new Set())
+
 // ===== 计算属性 =====
 const isSessionActive = computed(() => activeSessions.value && activeSessions.value.some((s: CourseSession) => s.status === 'active'))
 
@@ -346,12 +349,16 @@ const handleCheckIn = async () => {
 }
 
 const handleQuickCheckIn = async (studentId: string) => {
+  if (checkingStudentIds.value.has(studentId)) return
+  checkingStudentIds.value.add(studentId)
   try {
     await checkIn(studentId)
     await refetchCheckins()
     showSuccessToast('签到成功！')
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '签到失败')
+  } finally {
+    checkingStudentIds.value.delete(studentId)
   }
 }
 
@@ -877,6 +884,7 @@ const getSourceTypeBadge = (sourceType: string) => {
         v-model:search-query="searchQuery"
         :students="studentListWithCheckin"
         :loading="isLoadingStudents"
+        :checking-student-ids="Array.from(checkingStudentIds)"
         @quick-check-in="handleQuickCheckIn"
       />
     </template>

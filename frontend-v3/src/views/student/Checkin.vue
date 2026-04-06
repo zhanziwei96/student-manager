@@ -43,8 +43,11 @@ const { hasCheckedIn, sessionCheckin } = useHasCheckedInSession(computed(() => c
 const showSuccessToast = ref(false)
 const successMessage = ref('')
 
+// 本地签到锁定（防止快速重复点击导致并发请求）
+const isSelfCheckingIn = ref(false)
+
 const canCheckin = computed(() => {
-  return hasActiveSession.value && !hasCheckedIn.value
+  return hasActiveSession.value && !hasCheckedIn.value && !isSelfCheckingIn.value
 })
 
 // 是否显示已签到状态（必须有活跃课堂且已签到）
@@ -53,6 +56,8 @@ const showCheckedInStatus = computed(() => {
 })
 
 const handleCheckin = async () => {
+  if (isSelfCheckingIn.value) return
+  isSelfCheckingIn.value = true
   try {
     await doCheckin()
     showSuccessToast.value = true
@@ -63,6 +68,8 @@ const handleCheckin = async () => {
   } catch (err: unknown) {
     // 错误由 mutation 处理，这里捕获是为了防止未处理的 Promise 拒绝
     console.error('签到失败:', getErrorMessage(err))
+  } finally {
+    isSelfCheckingIn.value = false
   }
 }
 
@@ -194,7 +201,7 @@ const formatTime = (time: string) => {
           v-if="canCheckin"
           size="lg"
           class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 border-0 shadow-lg shadow-green-500/25 transition-all duration-300"
-          :loading="isCheckingIn"
+          :loading="isCheckingIn || isSelfCheckingIn"
           @click="handleCheckin"
         >
           <CheckCircle class="mr-2 h-5 w-5 md:h-4 md:w-4" />

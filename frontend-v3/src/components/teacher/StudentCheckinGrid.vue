@@ -21,6 +21,7 @@ const props = defineProps<{
   students: Student[]
   loading?: boolean
   searchQuery?: string
+  checkingStudentIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -75,9 +76,14 @@ const getRateColor = (rate: number): string => {
   return 'text-red-400 bg-red-500/20 border-red-500/30'
 }
 
+// 检查学生是否正在签到
+const isStudentCheckingIn = (studentId: string): boolean => {
+  return props.checkingStudentIds?.includes(studentId) ?? false
+}
+
 // 处理快速签到
 const handleQuickCheckIn = (student: Student) => {
-  if (!student.checkedIn) {
+  if (!student.checkedIn && !isStudentCheckingIn(student.student_id)) {
     emit('quickCheckIn', student.student_id)
   }
 }
@@ -190,8 +196,17 @@ const getAvatarColor = (studentId: string): string => {
             v-for="student in notCheckedInStudents"
             :key="student.id"
             class="group relative rounded-xl border border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-orange-500/[0.02] p-4 transition-all duration-200 cursor-pointer hover:border-orange-500/40 hover:shadow-lg hover:shadow-orange-500/10 hover:-translate-y-0.5"
+            :class="{ 'opacity-60 cursor-not-allowed pointer-events-none': isStudentCheckingIn(student.student_id) }"
             @click="handleQuickCheckIn(student)"
           >
+            <!-- Loading 遮罩 -->
+            <div
+              v-if="isStudentCheckingIn(student.student_id)"
+              class="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/20"
+            >
+              <div class="h-5 w-5 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
+            </div>
+
             <!-- 状态指示器 -->
             <div class="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500/20 text-orange-400">
               <span class="text-xs font-bold">!</span>
