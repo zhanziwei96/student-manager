@@ -111,8 +111,9 @@ const atSoftLimit = computed(() => sessionCount.value >= SOFT_LIMIT)
 
 // 其他教师占用的班级
 const otherOccupiedClasses = computed(() => {
-  if (!allActiveSessions.value) return []
-  const currentUserId = currentUser.value?.id
+  if (!allActiveSessions.value || !currentUser.value?.id) return []
+  // FIX: 统一转换为数字进行比较，避免类型不匹配（JWT中的sub是字符串）
+  const currentUserId = Number(currentUser.value.id)
   return allActiveSessions.value.filter(s => s.teacher_id !== currentUserId)
 })
 
@@ -242,9 +243,10 @@ const handleCheckIn = async () => {
 
   try {
     await checkIn(studentCode.value.trim())
+    // FIX: 等待刷新完成后再显示成功提示，确保状态已更新
+    await refetchCheckins()
     showSuccessToast('学生签到成功！')
     studentCode.value = ''
-    refetchCheckins()
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '签到失败')
   }
@@ -253,8 +255,9 @@ const handleCheckIn = async () => {
 const handleQuickCheckIn = async (studentId: string) => {
   try {
     await checkIn(studentId)
+    // FIX: 等待刷新完成后再显示成功提示，确保状态已更新
+    await refetchCheckins()
     showSuccessToast('签到成功！')
-    refetchCheckins()
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '签到失败')
   }
@@ -412,12 +415,13 @@ const formatTime = (timeStr: string) => {
       </div>
     </Card>
 
-    <!-- Multi-session tabs -->
+    <!-- Multi-session selector (Responsive) -->
     <div
       v-if="hasMultipleSessions"
       class="mb-5"
     >
-      <div class="flex flex-wrap gap-2">
+      <!-- Desktop: Tabs -->
+      <div class="hidden md:flex flex-wrap gap-2">
         <div
           v-for="session in activeSessions"
           :key="session.class_name"
@@ -447,6 +451,21 @@ const formatTime = (timeStr: string) => {
             <X class="h-3 w-3" />
           </button>
         </div>
+      </div>
+
+      <!-- Mobile: Dropdown -->
+      <div class="md:hidden">
+        <label class="block text-sm text-white/60 mb-2">当前课堂</label>
+        <Select
+          :model-value="activeTab || activeSessions?.[0]?.class_name"
+          class="w-full"
+          placeholder="选择课堂"
+          :options="activeSessions?.map(s => ({
+            value: s.class_name,
+            label: `${s.class_name} ${s.course_name ? '(' + s.course_name + ')' : ''}`
+          })) || []"
+          @update:model-value="handleTabChange"
+        />
       </div>
     </div>
 

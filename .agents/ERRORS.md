@@ -328,8 +328,42 @@ python -c "from app.core.config import get_settings; print(get_settings().get_da
 | 2026-03-31 | 未阅读完调用链就修复 API 函数 | **禁止在未阅读完所有相关调用代码的情况下修改公共函数接口**，修改函数签名后必须检查所有调用方是否需要同步修改 |
 | 2026-04-01 | 未经用户同意擅自简化地图功能 | **禁止未经用户明确同意擅自修改功能或简化需求**，必须严格按照用户需求实现，遇到问题应先询问用户 |
 | 2026-04-02 | curl 请求长时间无超时导致阻塞 | **curl 必须设置超时时间**，使用 `--max-time 10` 或 `--connect-timeout 5` 避免长时间等待 |
+| 2026-04-06 | JWT `sub` (字符串) 与 API `id` (数字) 类型不一致导致比较失败 | **类型强制转换**：比较前统一使用 `Number()` 或 `String()` 转换，避免 `!==` 隐式类型比较陷阱 |
+| 2026-04-06 | useQuery queryKey 与 invalidateQueries 不一致导致缓存不刷新 | **缓存键一致性**：修改 queryKey 格式时必须同步更新所有 invalidateQueries 调用，空值用 `'all'` 等占位符保持一致 |
+| 2026-04-06 | mutation 后未 await refetch 就显示成功提示 | **异步刷新顺序**：数据刷新必须在提示之前完成：`await mutate(); await refetch(); showSuccess()` |
 
 ---
 
-**最后更新**: 2026-04-02
-**版本**: v4 (新增禁令：禁止未经用户明确同意擅自修改功能或简化需求)
+## 跨文件修改一致性工作流
+
+当修改涉及多个文件（如新增功能、重构接口）时，必须执行以下检查：
+
+### 1. 修改前 - 依赖分析
+```bash
+# 搜索所有使用该 queryKey 的文件
+grep -r "queryKey: \['today-checkins'" --include="*.ts" --include="*.vue"
+
+# 搜索所有 invalidateQueries 调用
+grep -r "invalidateQueries.*today-checkins" --include="*.ts" --include="*.vue"
+```
+
+### 2. 修改中 - 同步检查清单
+- [ ] queryKey 格式在所有文件保持一致
+- [ ] 变量处理（空值、undefined）在所有位置一致
+- [ ] 类型转换在比较操作中明确处理
+
+### 3. 修改后 - 一致性验证
+```bash
+# 确保所有引用都已更新
+grep -r "today-checkins" --include="*.ts" --include="*.vue" | wc -l
+# 确认数量与修改前预期一致
+```
+
+### 4. 测试验证
+- [ ] 手动测试跨文件交互场景（如：签到后列表刷新）
+- [ ] 检查浏览器 DevTools Network 确认缓存失效请求
+
+---
+
+**最后更新**: 2026-04-06
+**版本**: v5 (新增跨文件修改一致性工作流，记录类型不一致和缓存键不匹配问题)

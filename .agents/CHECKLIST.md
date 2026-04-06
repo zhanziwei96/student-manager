@@ -103,6 +103,27 @@
 - [ ] **禁止直接访问 `res.xxx`**，必须访问 `res.data.xxx`
 - [ ] 错误示例：`res.user.role` → 正确：`res.data.user.role`
 
+### TanStack Query / 缓存一致性（强制）
+- [ ] **修改 useQuery 的 queryKey 后，同步检查所有 invalidateQueries 调用**
+  - 同一数据源的 queryKey 必须完全一致
+  - 变量处理：`['key', var || 'default']` 与 `['key', var]` 是不同的键
+- [ ] **跨文件修改时，检查所有使用该 queryKey 的文件**
+  - 搜索项目：`queryKey: ['your-key'` 和 `invalidateQueries({ queryKey: ['your-key'`
+- [ ] **空值处理一致性**：`undefined`、`null`、`''` 在 queryKey 中是不同的值
+
+### 类型一致性检查（强制）
+- [ ] **JWT Token 字段 vs API 返回字段类型对比**：
+  - JWT 中的 `sub` 是字符串，API 返回的 `id` 通常是数字
+  - 比较时必须统一转换：`Number(userId) === apiId` 或 `String(userId) === apiId`
+- [ ] **计算属性中的比较操作**：检查 `===`、`!==`、`>`、`<` 等操作数的类型
+  - 错误：`"2" !== 2` → `true`
+  - 正确：`Number("2") !== 2` → `false`
+
+### 异步刷新检查（强制）
+- [ ] **mutation 后需要刷新数据时，await refetch 后再显示成功提示**
+  - 错误：`mutate(); showSuccess(); refetch()`
+  - 正确：`await mutate(); await refetch(); showSuccess()`
+
 ---
 
 ## 测试操作检查清单

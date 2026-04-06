@@ -197,11 +197,8 @@ export function useStudentCheckIn(className?: string | Ref<string>) {
     onSuccess: () => {
       const resolvedClassName = unref(className)
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
-      if (resolvedClassName) {
-        queryClient.invalidateQueries({ queryKey: ['today-checkins', resolvedClassName] })
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['today-checkins'] })
-      }
+      // FIX: 使用与 useTodayCheckins 相同的查询键格式，确保缓存失效能正确匹配
+      queryClient.invalidateQueries({ queryKey: ['today-checkins', resolvedClassName || 'all'] })
     },
   })
 
