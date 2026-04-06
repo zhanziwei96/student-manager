@@ -46,8 +46,8 @@ class TestStartClass:
         assert new_session.course_name is None
         assert new_session.active is True
 
-    def test_start_class_ends_previous_session(self, session):
-        """测试开始新课程会自动结束该教师的旧课程"""
+    def test_start_class_allows_multiple_sessions(self, session):
+        """测试教师可以同时开始多个班级的课程（多班级并行功能）"""
         # 先开始一个课程
         old_session = start_class(
             session=session,
@@ -56,8 +56,8 @@ class TestStartClass:
             teacher_name="张老师",
             course_name="旧课程"
         )
-        
-        # 再开始一个新课程
+
+        # 再开始一个新课程（不同班级）
         new_session = start_class(
             session=session,
             class_name="新班级",
@@ -65,13 +65,13 @@ class TestStartClass:
             teacher_name="张老师",
             course_name="新课程"
         )
-        
-        # 验证旧课程已结束
+
+        # 验证旧课程仍然活跃（多班级并行）
         session.refresh(old_session)
-        assert old_session.active is False
-        assert old_session.end_time is not None
-        
-        # 验证新课程是活跃的
+        assert old_session.active is True
+        assert old_session.end_time is None
+
+        # 验证新课程也是活跃的
         assert new_session.active is True
 
 

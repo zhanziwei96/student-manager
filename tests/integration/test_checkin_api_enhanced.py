@@ -67,23 +67,28 @@ class TestCheckinAPIEnhanced:
         teacher_client.post("/api/v1/class-session/start", json={
             "class_name": "一班"
         })
-        
+
         response = teacher_client.get("/api/v1/class-session")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["data"]["active"] is True
-        assert data["data"]["class_name"] == "一班"
+        # 多班级功能后返回列表，取第一个
+        assert isinstance(data["data"], list)
+        assert len(data["data"]) >= 1
+        assert data["data"][0]["active"] is True
+        assert data["data"][0]["class_name"] == "一班"
     
     def test_get_class_session_not_started(self, teacher_client):
         """测试获取未开始上课的状态"""
         response = teacher_client.get("/api/v1/class-session")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["data"]["active"] is False
+        # 多班级功能后返回列表，无活跃课堂时为空列表
+        assert isinstance(data["data"], list)
+        assert len(data["data"]) == 0
     
     def test_end_class_as_teacher(self, teacher_client):
         """测试教师结束上课"""
