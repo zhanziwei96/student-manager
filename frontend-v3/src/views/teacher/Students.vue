@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useStudents, useToast } from '@/composables'
 import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, useStudentFilters } from '@/features/students'
-import { DataContainer } from '@/components/ui'
+import { DataContainer, Card } from '@/components/ui'
 import type { Student } from '@/types'
 import { getErrorMessage } from '@/lib/error'
+import { Users, GraduationCap, Search } from 'lucide-vue-next'
 
 /**
  * 教师学生管理页面 - FE-006 重构后
- * 
+ *
  * 使用 Feature-based 架构：
  * - 使用 features/students 的组件和 composables
  * - 视图层只负责页面布局和状态组合
@@ -18,16 +19,73 @@ import { getErrorMessage } from '@/lib/error'
 // === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
 
+// === 卡片颜色类型 ===
+type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+
+// 获取卡片样式 - 使用 CSS 变量
+const getCardStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-bg)`,
+    borderColor: `var(${varPrefix}-border)`,
+    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+  } as Record<string, string>
+}
+
+const getCardIconStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-icon-bg)`,
+    color: `var(${varPrefix}-icon-text)`,
+  }
+}
+
+const getCardGlowStyle = (color: CardColor) => {
+  const varPrefix = `--card-${color}`
+  return {
+    backgroundColor: `var(${varPrefix}-glow)`,
+  }
+}
+
+// 统计信息
+const stats = computed(() => {
+  const total = filteredStudents.value.length
+  const checkedIn = filteredStudents.value.filter(s => s.checkin_status === 'checked_in').length
+  const avgScore = total > 0
+    ? Math.round(filteredStudents.value.reduce((sum, s) => sum + s.score, 0) / total)
+    : 0
+
+  return [
+    { title: '学生总数', value: total, icon: Users, color: 'blue' as CardColor },
+    { title: '已签到', value: checkedIn, icon: GraduationCap, color: 'green' as CardColor },
+    { title: '平均分数', value: avgScore, icon: Search, color: 'purple' as CardColor },
+  ]
+})
+
 // === Feature composables ===
 const { updateScore, isUpdating, updatingStudentId } = useStudentScore()
-const { 
-  filters, 
-  classOptions, 
-  filteredStudents, 
-  setSearchQuery, 
+const {
+  filters,
+  classOptions,
+  filteredStudents,
+  setSearchQuery,
   setClassFilter,
   selectFirstClass,
 } = useStudentFilters(students)
+
+// 班级颜色映射
+const classColorMap = ref<Record<string, CardColor>>({})
+
+// 为每个班级分配颜色
+const getClassColor = (className: string): CardColor => {
+  if (!classColorMap.value[className]) {
+    const colors: CardColor[] = ['blue', 'green', 'purple', 'orange']
+    const existingColors = Object.values(classColorMap.value)
+    const availableColor = colors.find(c => !existingColors.includes(c)) || colors[existingColors.length % colors.length]
+    classColorMap.value[className] = availableColor
+  }
+  return classColorMap.value[className]
+}
 
 // 默认选中第一个班级
 watch(() => students.value, (newData) => {
@@ -96,6 +154,41 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
       </p>
     </div>
 
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+      <Card
+        v-for="stat in stats"
+        :key="stat.title"
+        class="group relative overflow-hidden p-3 sm:p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+        :style="getCardStyle(stat.color)"
+      >
+        <div class="relative z-10">
+          <div class="flex items-center justify-between">
+            <div
+              class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              :style="getCardIconStyle(stat.color)"
+            >
+              <component
+                :is="stat.icon"
+                class="h-4 w-4 sm:h-5 sm:w-5"
+              />
+            </div>
+            <p class="text-xl sm:text-2xl font-bold text-white">
+              {{ stat.value }}
+            </p>
+          </div>
+          <p class="mt-2 text-xs font-medium text-white/70">
+            {{ stat.title }}
+          </p>
+        </div>
+        <!-- 背景装饰 -->
+        <div
+          class="absolute -right-4 -bottom-4 h-12 w-12 sm:h-16 sm:w-16 rounded-full blur-2xl transition-colors opacity-30"
+          :style="getCardGlowStyle(stat.color)"
+        />
+      </Card>
+    </div>
+
     <!-- Filters -->
     <StudentFilters class="mb-5"
       v-model:search-query="filters.searchQuery"
@@ -122,6 +215,7 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
           :quick-score-options="quickScoreOptions"
           :is-updating="isUpdating"
           :updating-student-id="updatingStudentId || undefined"
+          :card-color="getClassColor(student.class_name)"
           @quick-score="handleQuickScore"
           @open-score-dialog="openScoreDialog"
         />
