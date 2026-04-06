@@ -39,7 +39,7 @@ const statCards = computed(() => [
     value: '-',
     icon: Clock,
     color: 'purple' as CardColor,
-    link: '/teacher',
+    link: '/teacher/schedules',
   },
 ])
 
@@ -132,8 +132,9 @@ const getCardTextMutedColor = (color: CardColor) => {
       <Card
         v-for="card in statCards"
         :key="card.title"
-        class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+        class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
         :style="getCardStyle(card.color)"
+        @click="router.push(card.link)"
       >
         <div class="relative z-10">
           <div class="flex items-start justify-between">
@@ -156,15 +157,10 @@ const getCardTextMutedColor = (color: CardColor) => {
             </div>
           </div>
           <div class="mt-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              class="p-0 h-auto text-xs text-white/70 hover:text-white"
-              @click="router.push(card.link)"
-            >
+            <span class="text-xs text-white/70 flex items-center">
               查看详情
               <ArrowRight class="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
-            </Button>
+            </span>
           </div>
         </div>
         <!-- 背景装饰 -->
