@@ -109,9 +109,6 @@ const sessionCount = computed(() => activeSessions.value?.length || 0)
 const nearSoftLimit = computed(() => sessionCount.value >= 3)
 const atSoftLimit = computed(() => sessionCount.value >= SOFT_LIMIT)
 
-// 当前选中班级
-const currentActiveClass = computed(() => selectedSession.value?.class_name || '')
-
 // 其他教师占用的班级
 const otherOccupiedClasses = computed(() => {
   if (!allActiveSessions.value) return []

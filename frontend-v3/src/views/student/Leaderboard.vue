@@ -115,9 +115,7 @@ const maskName = (name: string, studentId: string) => {
           v-for="student in students"
           :key="`${activeTab}-${student.student_id}`"
           class="group transition-all duration-200"
-          :class="[
-            isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/40' : ''
-          ]"
+          :class="isCurrentStudent(student.student_id) ? 'border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/40' : ''"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
