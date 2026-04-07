@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { cn } from '@/lib/utils'
 import { Search, ChevronDown, X } from 'lucide-vue-next'
 
@@ -25,6 +25,8 @@ const emit = defineEmits<{
 const isOpen = ref(false)
 const searchQuery = ref('')
 const containerRef = ref<HTMLDivElement | null>(null)
+const dropdownRef = ref<HTMLDivElement | null>(null)
+const dropdownStyle = ref({ top: '0px', left: '0px', width: '0px' })
 
 const selectedLabel = computed(() => {
   const option = props.options.find(opt => opt.value === props.modelValue)
@@ -39,11 +41,22 @@ const filteredOptions = computed(() => {
   )
 })
 
+const updatePosition = () => {
+  if (!containerRef.value) return
+  const rect = containerRef.value.getBoundingClientRect()
+  dropdownStyle.value = {
+    top: `${rect.bottom + 4}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+  }
+}
+
 const toggleOpen = () => {
   if (props.disabled) return
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     searchQuery.value = ''
+    nextTick(updatePosition)
   }
 }
 
@@ -59,17 +72,34 @@ const clearSelection = () => {
 
 // 点击外部关闭
 const handleClickOutside = (event: MouseEvent) => {
-  if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  const insideTrigger = containerRef.value?.contains(target)
+  const insideDropdown = dropdownRef.value?.contains(target)
+  if (!insideTrigger && !insideDropdown) {
     isOpen.value = false
   }
 }
 
+// ESC 关闭
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') isOpen.value = false
+}
+
+// 窗口 resize 时更新位置
+const handleResize = () => {
+  if (isOpen.value) updatePosition()
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeydown)
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -116,12 +146,16 @@ onUnmounted(() => {
         />
       </div>
     </button>
+  </div>
 
-    <!-- Dropdown -->
+  <!-- Dropdown rendered via Teleport to avoid z-index / overflow clipping -->
+  <Teleport to="body">
     <div
       v-if="isOpen"
+      ref="dropdownRef"
+      :style="dropdownStyle"
       :class="cn(
-        'absolute z-[100] mt-1 w-full min-w-[200px]',
+        'fixed z-[9999] mt-1 min-w-[200px]',
         'rounded-lg border border-white/10 bg-[#1a1a2e] shadow-xl',
         'overflow-hidden'
       )"
@@ -163,5 +197,5 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
