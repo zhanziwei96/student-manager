@@ -121,7 +121,7 @@ onUnmounted(() => {
     <div
       v-if="isOpen"
       :class="cn(
-        'absolute z-50 mt-1 w-full min-w-[200px]',
+        'absolute z-[100] mt-1 w-full min-w-[200px]',
         'rounded-lg border border-white/10 bg-[#1a1a2e] shadow-xl',
         'overflow-hidden'
       )"
@@ -149,7 +149,7 @@ onUnmounted(() => {
             'cursor-pointer px-3 py-2 text-sm transition-colors',
             modelValue === option.value 
               ? 'bg-primary/20 text-primary' 
-              : 'text-white/80 hover:bg-white/[0.05]'
+              : 'bg-[#1a1a2e] text-white/80 hover:bg-white/[0.05]'
           )"
           @click="selectOption(option.value)"
         >
