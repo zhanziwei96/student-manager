@@ -32,7 +32,7 @@ const handleClassUpdate = (value: string | number) => {
 </script>
 
 <template>
-  <Card class="relative overflow-hidden border-white/10 bg-white/[0.03] p-4 shadow-lg">
+  <Card class="relative border-white/10 bg-white/[0.03] p-4 shadow-lg">
     <!-- 背景装饰 -->
     <div class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 blur-2xl" />
 
