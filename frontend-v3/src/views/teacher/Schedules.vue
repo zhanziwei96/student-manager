@@ -4,7 +4,8 @@ import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplat
 import { useClasses, useToast } from '@/composables'
 import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer, MobilePicker } from '@/components/ui'
-import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X } from 'lucide-vue-next'
+import ScheduleAdjustmentDialog from '@/components/teacher/ScheduleAdjustmentDialog.vue'
+import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X, Settings2 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
 
@@ -154,6 +155,40 @@ const { mutateAsync: importSchedules, isPending: isImporting } = useImportSchedu
 
 // 删除相关
 const { mutateAsync: deleteSchedule, isPending: isDeleting } = useDeleteSchedule()
+
+// 调课相关
+const showAdjustmentDialog = ref(false)
+const adjustmentSchedule = ref<{
+  id: number
+  course_name: string
+  class_name: string
+  classroom?: string
+  start_time?: string
+  end_time?: string
+} | null>(null)
+const adjustmentWeek = ref(1)
+
+const canAdjustSchedule = (schedule: typeof schedules.value[0]) => {
+  return isAdmin.value || (currentUser.value?.id && schedule.teacher_id === currentUser.value.id)
+}
+
+const openAdjustmentDialog = (schedule: typeof schedules.value[0]) => {
+  adjustmentSchedule.value = {
+    id: schedule.id,
+    course_name: schedule.course_name,
+    class_name: schedule.class_name,
+    classroom: schedule.classroom,
+    start_time: schedule.start_time,
+    end_time: schedule.end_time,
+  }
+  adjustmentWeek.value = selectedWeek.value || currentWeek.value
+  showAdjustmentDialog.value = true
+}
+
+const handleAdjustmentSuccess = () => {
+  showSuccessToast('课程调整已提交')
+  refetch()
+}
 
 // 下载模板
 const { download: downloadTemplate } = useDownloadTemplate()
@@ -792,12 +827,23 @@ const handleBatchDelete = async () => {
                         </div>
                       </div>
 
+                      <!-- 调课按钮 -->
+                      <Button
+                        v-if="canAdjustSchedule(schedule)"
+                        variant="ghost"
+                        size="sm"
+                        class="h-8 w-8 p-0 text-white/40 hover:text-primary flex-shrink-0 ml-1"
+                        @click="openAdjustmentDialog(schedule)"
+                      >
+                        <Settings2 class="h-4 w-4" />
+                      </Button>
+
                       <!-- 删除按钮 -->
                       <Button
                         v-if="isAdmin"
                         variant="ghost"
                         size="sm"
-                        class="h-8 w-8 p-0 text-white/40 hover:text-red-400 flex-shrink-0 ml-2"
+                        class="h-8 w-8 p-0 text-white/40 hover:text-red-400 flex-shrink-0 ml-1"
                         :loading="isDeleting"
                         @click="handleDelete(schedule.id)"
                       >
@@ -812,6 +858,14 @@ const handleBatchDelete = async () => {
         </div>
       </div>
     </DataContainer>
+
+    <!-- 调课弹窗 -->
+    <ScheduleAdjustmentDialog
+      v-model:open="showAdjustmentDialog"
+      :schedule="adjustmentSchedule"
+      :week-number="adjustmentWeek"
+      @success="handleAdjustmentSuccess"
+    />
 
     <!-- Import Dialog -->
     <Dialog

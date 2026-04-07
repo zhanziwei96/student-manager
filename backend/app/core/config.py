@@ -113,6 +113,8 @@ class RateLimitSettings(BaseSettings):
     multiplier: int = Field(default=1, description="限流倍数因子")
     login_max_requests: int = Field(default=5, description="登录接口限流次数")
     login_window_seconds: int = Field(default=60, description="登录接口限流窗口")
+    checkin_max_requests: int = Field(default=3, description="签到接口限流次数")
+    checkin_window_seconds: int = Field(default=10, description="签到接口限流窗口")
 
 
 class LogSettings(BaseSettings):

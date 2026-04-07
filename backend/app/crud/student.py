@@ -159,9 +159,11 @@ def update_student_score(
             detail="分数已被其他用户修改，请刷新后重试"
         )
 
-    # 同步内存对象状态
-    student.version = new_version
-    student.score = new_score
+    # 注意：不要在此处修改内存对象状态（student.version / student.score）。
+    # 原生 UPDATE 已经正确更新了数据库，如果此时再修改内存对象，
+    # session.commit() 的 dirty flush 会再次发起无条件 UPDATE，
+    # 覆盖并发事务的乐观锁保护，导致 Lost Update（BE-008）。
+    # commit() 后对象会被 expire，后续 lazy load 会自动读到最新值。
 
     # 创建领域事件
     event = ScoreUpdated(

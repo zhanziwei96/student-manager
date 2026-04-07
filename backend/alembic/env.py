@@ -22,6 +22,7 @@ from app.models.student import Student
 from app.models.checkin import CheckinRecord, ScoreLog
 from app.models.audit import AuditLog
 from app.models.course_schedule import CourseSchedule
+from app.models.course_session import CourseSession, ScheduleAdjustment
 
 # Alembic 配置对象
 config = context.config

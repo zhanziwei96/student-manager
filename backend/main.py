@@ -80,20 +80,26 @@ async def lifespan(app: FastAPI):
     # 初始化限流（如果启用）
     if settings.rate_limit.enabled:
         try:
-            from pyrate_limiter import Limiter, Rate, InMemoryBucket
-            
-            # 创建内存限流器
-            rate = Rate(settings.rate_limit.login_max_requests, 
-                       settings.rate_limit.login_window_seconds * 1000)  # 转换为毫秒
-            bucket = InMemoryBucket([rate])
-            limiter = Limiter(bucket)
-            
+            from pyrate_limiter import Limiter, Rate
+            from app.core.rate_limit import PerKeyBucketFactory
+
+            # 创建内存限流器（按 key 隔离，避免全局共享计数器）
+            login_rate = Rate(settings.rate_limit.login_max_requests,
+                             settings.rate_limit.login_window_seconds * 1000)
+            login_limiter = Limiter(PerKeyBucketFactory([login_rate]))
+
+            checkin_rate = Rate(settings.rate_limit.checkin_max_requests,
+                               settings.rate_limit.checkin_window_seconds * 1000)
+            checkin_limiter = Limiter(PerKeyBucketFactory([checkin_rate]))
+
             # 存储到 app state
-            app.state.limiter = limiter
+            app.state.limiter = login_limiter
+            app.state.checkin_limiter = checkin_limiter
             app.state.rate_limit_config = settings.rate_limit
-            
-            logger.info("限流功能已启用（内存存储）")
+
+            logger.info("限流功能已启用（按 key 隔离）")
             logger.info(f"  登录限流: {settings.rate_limit.login_max_requests}次/{settings.rate_limit.login_window_seconds}秒")
+            logger.info(f"  签到限流: {settings.rate_limit.checkin_max_requests}次/{settings.rate_limit.checkin_window_seconds}秒")
         except Exception as e:
             logger.warning(f"限流初始化失败: {e}")
             logger.warning("继续运行，限流功能将不可用")

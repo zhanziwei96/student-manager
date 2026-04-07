@@ -48,6 +48,7 @@ def _clear_all_data():
             "score_logs",
             "checkin_records",
             "course_sessions",
+            "schedule_adjustments",
             "course_schedules",
             "security_alerts",
             "audit_logs",
@@ -66,6 +67,8 @@ def _clear_all_data():
 def test_engine():
     """提供测试引擎"""
     _clear_all_data()
+    # 模型变更后重新创建表/索引（如 partial unique index）
+    SQLModel.metadata.create_all(_test_engine)
     yield _test_engine
 
 

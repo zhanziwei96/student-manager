@@ -4,6 +4,7 @@
 from datetime import datetime, date
 from typing import Optional
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Index, text
 from app.core.timezone import get_now
 
 
@@ -30,6 +31,10 @@ class CourseSessionBase(SQLModel):
 class CourseSession(CourseSessionBase, table=True):
     """课程会话数据库模型"""
     __tablename__ = "course_sessions"
+    __table_args__ = (
+        # 同一班级在同一时间只能有一个活跃课堂，防止并发重复创建（P0 并发安全）
+        Index('uix_active_class_name', 'class_name', unique=True, sqlite_where=text('status="active"')),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     updated_at: datetime = Field(default_factory=get_now, description="更新时间")

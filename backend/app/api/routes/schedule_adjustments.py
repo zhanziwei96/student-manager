@@ -41,8 +41,11 @@ def create_schedule_adjustment(
     user: dict = Depends(get_current_user)
 ):
     """创建课表调整记录"""
-    user_id = int(user.get("sub", 0))
     role = user.get("role", "")
+    if role not in ("teacher", "admin"):
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权调整此课程")
+
+    user_id = int(user.get("sub", 0))
 
     schedule = session.get(CourseSchedule, data.schedule_id)
     if not schedule:

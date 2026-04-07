@@ -18,6 +18,7 @@ from app.crud.course_session import (
     get_teacher_course_sessions,
 )
 from app.crud.schedule_adjustment import get_adjustment
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(tags=["course_sessions"])
 
@@ -123,17 +124,24 @@ def begin_course_session(
         if not data.course_name:
             data.course_name = schedule.course_name
 
-    course_session = start_course_session(
-        session=session,
-        class_name=data.class_name,
-        teacher_id=teacher_id,
-        teacher_name=teacher_name,
-        course_name=data.course_name,
-        schedule_id=schedule_id,
-        week_number=week_number,
-        classroom=classroom,
-        source_type=source_type,
-    )
+    try:
+        course_session = start_course_session(
+            session=session,
+            class_name=data.class_name,
+            teacher_id=teacher_id,
+            teacher_name=teacher_name,
+            course_name=data.course_name,
+            schedule_id=schedule_id,
+            week_number=week_number,
+            classroom=classroom,
+            source_type=source_type,
+        )
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=HttpStatus.CONFLICT,
+            detail="该班级已开始上课，请勿重复操作"
+        )
 
     return {
         ApiResponseConst.SUCCESS: True,

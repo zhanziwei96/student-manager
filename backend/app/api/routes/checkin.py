@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
+from app.core.rate_limit import check_rate_limit
 from app.crud import (
     create_checkin, get_students_by_class
 )
@@ -104,13 +105,21 @@ class StudentSessionResponse(ApiResponse[StudentSessionData]):
 
 
 @router.post("/checkin", response_model=CheckinResponse)
-def do_checkin(
+async def do_checkin(
     request: Request,
     data: CheckinRequest,
     db_session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
     """学生签到"""
+    # 限流检查（基于学号）
+    allowed = await check_rate_limit(request, data.student_id, key_prefix="checkin", limiter_attr="checkin_limiter")
+    if not allowed:
+        raise HTTPException(
+            status_code=HttpStatus.TOO_MANY_REQUESTS,
+            detail='请求过于频繁，请稍后再试'
+        )
+
     # 验证学生
     from app.crud import get_student
     student = get_student(db_session, data.student_id)

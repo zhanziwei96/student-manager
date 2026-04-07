@@ -16,6 +16,13 @@
 - [ ] **数据库操作**: 已确认实际路径
   - `python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"`
 
+### Read 工具强制预检（每次调用前必须执行）
+- [ ] **参数检查**: 在 commentary 中显式输出一行确认（如：`Read preflight: limit=200, offset=1. OK.`）
+  - `limit` 必须是正整数（> 0），禁止传负数
+  - `offset` >= 1
+  - 超大文件优先用 `Grep`，不盲目读全文
+  - **未输出此行即调用 Read，视为违规**
+
 ### 前端操作
 - [ ] **修改代码后**: 已评估是否需要创建/修改测试
 - [ ] **重启服务前**: 已检查当前状态

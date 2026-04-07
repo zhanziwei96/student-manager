@@ -1,7 +1,7 @@
 """Initial migration
 
 Revision ID: 5bc3d1e6b181
-Revises: 
+Revises:
 Create Date: 2026-04-01 21:18:29.409208
 
 """
@@ -10,6 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
+from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
@@ -52,9 +53,6 @@ def upgrade() -> None:
     sa.Column('class_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('checkin_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('checkin_time', sa.DateTime(), nullable=False),
-    sa.Column('checkin_lat', sa.Float(), nullable=True),
-    sa.Column('checkin_lng', sa.Float(), nullable=True),
-    sa.Column('checkin_distance', sa.Float(), nullable=True),
     sa.Column('device_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('device_info', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.PrimaryKeyConstraint('id')
@@ -64,28 +62,6 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_checkin_records_device_id'), ['device_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_checkin_records_session_id'), ['session_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_checkin_records_student_id'), ['student_id'], unique=False)
-
-    op.create_table('class_session',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('session_code', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('course_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('class_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('teacher_id', sa.Integer(), nullable=True),
-    sa.Column('teacher_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('start_time', sa.DateTime(), nullable=True),
-    sa.Column('end_time', sa.DateTime(), nullable=True),
-    sa.Column('active', sa.Boolean(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('location_lat', sa.Float(), nullable=True),
-    sa.Column('location_lng', sa.Float(), nullable=True),
-    sa.Column('location_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('checkin_radius', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    with op.batch_alter_table('class_session', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_class_session_class_name'), ['class_name'], unique=False)
-        batch_op.create_index(batch_op.f('ix_class_session_session_code'), ['session_code'], unique=False)
-        batch_op.create_index(batch_op.f('ix_class_session_teacher_id'), ['teacher_id'], unique=False)
 
     op.create_table('course_schedules',
     sa.Column('course_name', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
@@ -103,6 +79,43 @@ def upgrade() -> None:
     sa.Column('updated_at', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+
+    op.create_table('course_sessions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('schedule_id', sa.Integer(), nullable=True),
+    sa.Column('session_code', sqlmodel.sql.sqltypes.AutoString(length=16), nullable=False),
+    sa.Column('course_name', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True),
+    sa.Column('class_name', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
+    sa.Column('classroom', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
+    sa.Column('teacher_id', sa.Integer(), nullable=False),
+    sa.Column('teacher_name', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
+    sa.Column('start_time', sa.DateTime(), nullable=True),
+    sa.Column('end_time', sa.DateTime(), nullable=True),
+    sa.Column('week_number', sa.Integer(), nullable=True),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False),
+    sa.Column('source_type', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('course_sessions', schema=None) as batch_op:
+        batch_op.create_index('uix_active_class_name', ['class_name'], unique=True, sqlite_where=text('status="active"'))
+
+    op.create_table('schedule_adjustments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('schedule_id', sa.Integer(), nullable=False),
+    sa.Column('week_number', sa.Integer(), nullable=False),
+    sa.Column('type', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False),
+    sa.Column('new_date', sa.Date(), nullable=True),
+    sa.Column('new_start_time', sqlmodel.sql.sqltypes.AutoString(length=10), nullable=True),
+    sa.Column('new_end_time', sqlmodel.sql.sqltypes.AutoString(length=10), nullable=True),
+    sa.Column('new_classroom', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
+    sa.Column('generated_session_id', sa.Integer(), nullable=True),
+    sa.Column('reason', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+
     op.create_table('score_logs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('student_id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -177,13 +190,12 @@ def downgrade() -> None:
         batch_op.drop_index(batch_op.f('ix_score_logs_student_id'))
 
     op.drop_table('score_logs')
-    op.drop_table('course_schedules')
-    with op.batch_alter_table('class_session', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_class_session_teacher_id'))
-        batch_op.drop_index(batch_op.f('ix_class_session_session_code'))
-        batch_op.drop_index(batch_op.f('ix_class_session_class_name'))
+    op.drop_table('schedule_adjustments')
+    with op.batch_alter_table('course_sessions', schema=None) as batch_op:
+        batch_op.drop_index('uix_active_class_name')
 
-    op.drop_table('class_session')
+    op.drop_table('course_sessions')
+    op.drop_table('course_schedules')
     with op.batch_alter_table('checkin_records', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_checkin_records_student_id'))
         batch_op.drop_index(batch_op.f('ix_checkin_records_session_id'))

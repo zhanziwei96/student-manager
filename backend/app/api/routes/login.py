@@ -9,6 +9,7 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
 from app.core.logging import logger
+from app.core.rate_limit import check_rate_limit
 from app.core.jwt import (
     create_access_token, set_token_cookie, clear_token_cookie,
     get_current_user
@@ -56,34 +57,6 @@ class MeResponse(ApiResponse[dict]):
     pass
 
 
-async def check_rate_limit(request: Request, identifier: str) -> bool:
-    """
-    检查限流
-    
-    Args:
-        request: FastAPI请求对象
-        identifier: 限流标识（如用户名或IP）
-    
-    Returns:
-        True: 允许请求
-        False: 触发限流
-    """
-    if not settings.rate_limit.enabled:
-        return True
-    
-    try:
-        limiter = getattr(request.app.state, 'limiter', None)
-        if limiter:
-            # 使用 pyrate_limiter 检查限流（非阻塞模式）
-            key = f"login:{identifier}"
-            success = await limiter.try_acquire_async(key, blocking=False)
-            return success
-    except Exception as e:
-        logger.warning(f"限流检查失败: {e}")
-    
-    return True
-
-
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: Request,
@@ -94,9 +67,9 @@ async def login(
     """用户登录 - JWT 版本"""
     username = data.username.strip()
     password = data.password.strip()
-    
+
     # 限流检查（基于用户名）
-    allowed = await check_rate_limit(request, username)
+    allowed = await check_rate_limit(request, username, key_prefix="login", limiter_attr="limiter")
     if not allowed:
         raise HTTPException(
             status_code=HttpStatus.TOO_MANY_REQUESTS,  # 429 请求过多
