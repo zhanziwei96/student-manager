@@ -30,7 +30,7 @@
 - Modify: `backend/app/models/student.py`
 - Test: 手动验证索引存在
 
-- [ ] **Step 1: 给 score 字段添加索引**
+- [x] **Step 1: 给 score 字段添加索引**
 
 ```python
 # backend/app/models/student.py
@@ -38,7 +38,7 @@
 score: float = Field(default=70.0, index=True, description="分数")
 ```
 
-- [ ] **Step 2: 验证索引**
+- [x] **Step 2: 验证索引**
 
 运行 SQL 检查索引:
 ```bash
@@ -62,7 +62,7 @@ Expected: 包含 `idx_students_score`
 - Create: `backend/app/crud/leaderboard.py`
 - Modify: `backend/app/crud/__init__.py`
 
-- [ ] **Step 1: 创建 leaderboard CRUD 文件**
+- [x] **Step 1: 创建 leaderboard CRUD 文件**
 
 ```python
 # backend/app/crud/leaderboard.py
@@ -174,7 +174,7 @@ def _get_student_rank(
     }
 ```
 
-- [ ] **Step 2: 导出 CRUD 函数**
+- [x] **Step 2: 导出 CRUD 函数**
 
 ```python
 # backend/app/crud/__init__.py
@@ -187,7 +187,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/crud/leaderboard.py backend/app/crud/__init__.py
@@ -202,7 +202,7 @@ git commit -m "feat: add leaderboard CRUD functions"
 - Create: `backend/app/api/routes/leaderboard.py`
 - Modify: `backend/app/api/routes/__init__.py`
 
-- [ ] **Step 1: 创建 API 路由文件**
+- [x] **Step 1: 创建 API 路由文件**
 
 ```python
 # backend/app/api/routes/leaderboard.py
@@ -262,7 +262,7 @@ def get_student_leaderboard(
     }
 ```
 
-- [ ] **Step 2: 注册路由**
+- [x] **Step 2: 注册路由**
 
 ```python
 # backend/app/api/routes/__init__.py
@@ -272,7 +272,7 @@ from app.api.routes.leaderboard import router as leaderboard_router
 app.include_router(leaderboard_router, prefix="/api/v1")
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/api/routes/leaderboard.py backend/app/api/routes/__init__.py
@@ -286,7 +286,7 @@ git commit -m "feat: add leaderboard API endpoint"
 **Files:**
 - Create: `tests/integration/test_leaderboard_api.py`
 
-- [ ] **Step 1: 编写测试**
+- [x] **Step 1: 编写测试**
 
 ```python
 # tests/integration/test_leaderboard_api.py
@@ -365,7 +365,7 @@ class TestLeaderboardAPI:
         assert response.status_code == 401
 ```
 
-- [ ] **Step 2: 运行测试**
+- [x] **Step 2: 运行测试**
 
 ```bash
 cd /home/yufeng/student-manager
@@ -374,7 +374,7 @@ pytest tests/integration/test_leaderboard_api.py -v
 
 Expected: 5 passed
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/integration/test_leaderboard_api.py
@@ -388,7 +388,7 @@ git commit -m "test: add leaderboard API integration tests"
 **Files:**
 - Modify: `frontend-v3/src/types/api.ts`
 
-- [ ] **Step 1: 添加排行榜类型**
+- [x] **Step 1: 添加排行榜类型**
 
 ```typescript
 // frontend-v3/src/types/api.ts
@@ -416,7 +416,7 @@ export interface LeaderboardData {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/types/api.ts
@@ -431,7 +431,7 @@ git commit -m "types: add leaderboard types"
 - Create: `frontend-v3/src/api/leaderboard.ts`
 - Modify: `frontend-v3/src/api/index.ts`
 
-- [ ] **Step 1: 创建 API 文件**
+- [x] **Step 1: 创建 API 文件**
 
 ```typescript
 // frontend-v3/src/api/leaderboard.ts
@@ -456,14 +456,14 @@ export const leaderboardApi = {
 }
 ```
 
-- [ ] **Step 2: 导出 API**
+- [x] **Step 2: 导出 API**
 
 ```typescript
 // frontend-v3/src/api/index.ts
 export { leaderboardApi } from './leaderboard'
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/api/leaderboard.ts frontend-v3/src/api/index.ts
@@ -477,7 +477,7 @@ git commit -m "feat: add leaderboard API client"
 **Files:**
 - Create: `frontend-v3/src/composables/useLeaderboard.ts`
 
-- [ ] **Step 1: 创建 Composable**
+- [x] **Step 1: 创建 Composable**
 
 ```typescript
 // frontend-v3/src/composables/useLeaderboard.ts
@@ -507,7 +507,7 @@ export function useLeaderboard(params?: LeaderboardParams | Ref<LeaderboardParam
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/composables/useLeaderboard.ts
@@ -522,7 +522,7 @@ git commit -m "feat: add useLeaderboard composable"
 - Create: `frontend-v3/src/views/student/Leaderboard.vue`
 - Modify: `frontend-v3/src/router/index.ts`
 
-- [ ] **Step 1: 创建页面组件**
+- [x] **Step 1: 创建页面组件**
 
 ```vue
 <!-- frontend-v3/src/views/student/Leaderboard.vue -->
@@ -709,7 +709,7 @@ const isCurrentStudent = (studentId: string) => {
 </template>
 ```
 
-- [ ] **Step 2: 添加路由**
+- [x] **Step 2: 添加路由**
 
 ```typescript
 // frontend-v3/src/router/index.ts
@@ -729,7 +729,7 @@ const isCurrentStudent = (studentId: string) => {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/views/student/Leaderboard.vue frontend-v3/src/router/index.ts
@@ -743,7 +743,7 @@ git commit -m "feat: add student leaderboard page"
 **Files:**
 - Create: `frontend-v3/test/views/Leaderboard.spec.ts`
 
-- [ ] **Step 1: 编写测试**
+- [x] **Step 1: 编写测试**
 
 ```typescript
 /**
@@ -829,7 +829,7 @@ describe('Leaderboard', () => {
 })
 ```
 
-- [ ] **Step 2: 运行测试**
+- [x] **Step 2: 运行测试**
 
 ```bash
 cd frontend-v3
@@ -838,7 +838,7 @@ pnpm test:run test/views/Leaderboard.spec.ts
 
 Expected: 测试通过
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/test/views/Leaderboard.spec.ts
@@ -851,7 +851,7 @@ git commit -m "test: add leaderboard page tests"
 
 **运行所有验证：**
 
-- [ ] **Step 1: 后端测试**
+- [x] **Step 1: 后端测试**
 
 ```bash
 cd /home/yufeng/student-manager
@@ -860,7 +860,7 @@ pytest tests/integration/test_leaderboard_api.py -v
 
 Expected: 5 passed
 
-- [ ] **Step 2: 前端类型检查**
+- [x] **Step 2: 前端类型检查**
 
 ```bash
 cd frontend-v3
@@ -869,7 +869,7 @@ pnpm vue-tsc --noEmit
 
 Expected: No errors
 
-- [ ] **Step 3: 前端测试**
+- [x] **Step 3: 前端测试**
 
 ```bash
 pnpm test:run
@@ -877,7 +877,7 @@ pnpm test:run
 
 Expected: All tests pass
 
-- [ ] **Step 4: 手动验证**
+- [x] **Step 4: 手动验证**
 
 1. 启动后端: `make dev-backend`
 2. 启动前端: `make dev-frontend`

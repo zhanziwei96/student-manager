@@ -33,7 +33,7 @@ frontend-v3/src/views/teacher/
 - Create: `frontend-v3/src/components/ui/MobilePicker.vue`
 - Modify: `frontend-v3/src/components/ui/index.ts`
 
-- [ ] **Step 1: 创建 MobilePicker.vue 骨架**
+- [x] **Step 1: 创建 MobilePicker.vue 骨架**
 
 创建文件 `frontend-v3/src/components/ui/MobilePicker.vue`：
 
@@ -172,7 +172,7 @@ const isSelected = (option: MobilePickerOption) => {
 </template>
 ```
 
-- [ ] **Step 2: 添加到 UI 组件导出**
+- [x] **Step 2: 添加到 UI 组件导出**
 
 修改 `frontend-v3/src/components/ui/index.ts`，添加第 17 行：
 
@@ -180,7 +180,7 @@ const isSelected = (option: MobilePickerOption) => {
 export { default as MobilePicker } from './MobilePicker.vue'
 ```
 
-- [ ] **Step 3: 验证类型检查**
+- [x] **Step 3: 验证类型检查**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
@@ -188,7 +188,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
 
 Expected: 无错误
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/MobilePicker.vue frontend-v3/src/components/ui/index.ts
@@ -208,7 +208,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/MobilePicker.vue`
 
-- [ ] **Step 1: 添加移动端检测逻辑**
+- [x] **Step 1: 添加移动端检测逻辑**
 
 在 `<script setup>` 中添加：
 
@@ -231,7 +231,7 @@ onUnmounted(() => {
 })
 ```
 
-- [ ] **Step 2: 添加底部弹窗模板**
+- [x] **Step 2: 添加底部弹窗模板**
 
 在 `</div>` 结束前添加：
 
@@ -316,7 +316,7 @@ onUnmounted(() => {
 </Teleport>
 ```
 
-- [ ] **Step 3: 添加动画样式**
+- [x] **Step 3: 添加动画样式**
 
 在 `<style scoped>` 中添加：
 
@@ -345,7 +345,7 @@ onUnmounted(() => {
 </style>
 ```
 
-- [ ] **Step 4: 运行类型检查**
+- [x] **Step 4: 运行类型检查**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
@@ -353,7 +353,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
 
 Expected: 无错误
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/MobilePicker.vue
@@ -374,7 +374,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/MobilePicker.vue`
 
-- [ ] **Step 1: 添加桌面端下拉面板**
+- [x] **Step 1: 添加桌面端下拉面板**
 
 在移动端弹窗的 `</Teleport>` 后添加：
 
@@ -431,7 +431,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 </div>
 ```
 
-- [ ] **Step 2: 添加桌面端点击外部关闭**
+- [x] **Step 2: 添加桌面端点击外部关闭**
 
 在 `<script setup>` 中添加：
 
@@ -459,7 +459,7 @@ onUnmounted(() => {
 })
 ```
 
-- [ ] **Step 3: 更新触发器容器类名**
+- [x] **Step 3: 更新触发器容器类名**
 
 给触发器容器添加类名：
 
@@ -467,7 +467,7 @@ onUnmounted(() => {
 <div class="relative mobile-picker-container">
 ```
 
-- [ ] **Step 4: 运行类型检查**
+- [x] **Step 4: 运行类型检查**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
@@ -475,7 +475,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
 
 Expected: 无错误
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/MobilePicker.vue
@@ -495,7 +495,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 **Files:**
 - Create: `frontend-v3/test/components/MobilePicker.spec.ts`
 
-- [ ] **Step 1: 编写测试文件**
+- [x] **Step 1: 编写测试文件**
 
 创建 `frontend-v3/test/components/MobilePicker.spec.ts`：
 
@@ -614,7 +614,7 @@ describe('MobilePicker', () => {
 })
 ```
 
-- [ ] **Step 2: 运行测试**
+- [x] **Step 2: 运行测试**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm test:run test/components/MobilePicker.spec.ts
@@ -622,7 +622,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm test:run test/components/Mob
 
 Expected: 测试通过（可能有部分因 Teleport 需特殊处理）
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/test/components/MobilePicker.spec.ts
@@ -643,7 +643,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 **Files:**
 - Modify: `frontend-v3/src/views/teacher/Schedules.vue`
 
-- [ ] **Step 1: 导入 MobilePicker**
+- [x] **Step 1: 导入 MobilePicker**
 
 在 `<script setup>` 的 import 中添加：
 
@@ -651,7 +651,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 import { MobilePicker } from '@/components/ui'
 ```
 
-- [ ] **Step 2: 准备选项数据**
+- [x] **Step 2: 准备选项数据**
 
 在 `weekOptions` 定义后添加计算属性：
 
@@ -685,7 +685,7 @@ const dayPickerOptions = [
 ]
 ```
 
-- [ ] **Step 3: 替换班级选择器**
+- [x] **Step 3: 替换班级选择器**
 
 找到班级选择区域（约第 478-498 行），替换为：
 
@@ -702,7 +702,7 @@ const dayPickerOptions = [
 </div>
 ```
 
-- [ ] **Step 4: 替换星期选择器**
+- [x] **Step 4: 替换星期选择器**
 
 替换星期选择区域（约第 500-520 行）：
 
@@ -719,7 +719,7 @@ const dayPickerOptions = [
 </div>
 ```
 
-- [ ] **Step 5: 替换周次选择器**
+- [x] **Step 5: 替换周次选择器**
 
 替换周次选择区域（约第 522-546 行）：
 
@@ -738,7 +738,7 @@ const dayPickerOptions = [
 </div>
 ```
 
-- [ ] **Step 6: 运行类型检查**
+- [x] **Step 6: 运行类型检查**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
@@ -746,7 +746,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm vue-tsc --noEmit
 
 Expected: 无错误
 
-- [ ] **Step 7: 验证构建**
+- [x] **Step 7: 验证构建**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm build
@@ -754,7 +754,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm build
 
 Expected: 构建成功
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/Schedules.vue
@@ -774,7 +774,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/MobilePicker.vue`（可选优化）
 
-- [ ] **Step 1: 运行完整测试套件**
+- [x] **Step 1: 运行完整测试套件**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm test:run
@@ -782,7 +782,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm test:run
 
 Expected: 所有测试通过
 
-- [ ] **Step 2: 运行构建验证**
+- [x] **Step 2: 运行构建验证**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm build
@@ -790,7 +790,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm build
 
 Expected: 构建成功，无警告
 
-- [ ] **Step 3: 推送到 GitHub**
+- [x] **Step 3: 推送到 GitHub**
 
 ```bash
 git push origin main

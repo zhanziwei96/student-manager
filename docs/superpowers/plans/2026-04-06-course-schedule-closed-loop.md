@@ -64,7 +64,7 @@
 - Create: `backend/app/models/course_session.py`
 - Modify: `backend/app/models/__init__.py`
 
-- [ ] **Step 1: Write new model file**
+- [x] **Step 1: Write new model file**
 
 Create `backend/app/models/course_session.py`:
 
@@ -144,7 +144,7 @@ class ScheduleAdjustmentResponse(ScheduleAdjustmentBase):
     created_at: str
 ```
 
-- [ ] **Step 2: Update `backend/app/models/__init__.py`**
+- [x] **Step 2: Update `backend/app/models/__init__.py`**
 
 Add to imports:
 
@@ -158,7 +158,7 @@ Add to `__all__`:
 "CourseSession", "ScheduleAdjustment", "CourseSessionResponse",
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/models/course_session.py backend/app/models/__init__.py
@@ -170,7 +170,7 @@ git commit -m "feat(models): add CourseSession and ScheduleAdjustment models"
 **Files:**
 - Modify: `backend/app/models/checkin.py`
 
-- [ ] **Step 1: Rewrite checkin.py**
+- [x] **Step 1: Rewrite checkin.py**
 
 Replace the entire `backend/app/models/checkin.py`:
 
@@ -219,7 +219,7 @@ class ScoreLog(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
 ```
 
-- [ ] **Step 2: Update `backend/app/models/__init__.py` to remove ClassSession references**
+- [x] **Step 2: Update `backend/app/models/__init__.py` to remove ClassSession references**
 
 Change:
 ```python
@@ -232,7 +232,7 @@ from app.models.checkin import CheckinRecord, ScoreLog
 
 Remove `"ClassSession"` from `__all__`.
 
-- [ ] **Step 3: Verify backend can import without ClassSession**
+- [x] **Step 3: Verify backend can import without ClassSession**
 
 Run:
 ```bash
@@ -241,7 +241,7 @@ cd /home/yufeng/student-manager/backend && conda run -n student-manage python -c
 
 Expected: `OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/app/models/checkin.py backend/app/models/__init__.py
@@ -253,7 +253,7 @@ git commit -m "refactor(models): remove ClassSession, migrate CheckinRecord to c
 **Files:**
 - Modify: `backend/app/models/course_schedule.py`
 
-- [ ] **Step 1: Add week_type field**
+- [x] **Step 1: Add week_type field**
 
 Add inside `CourseScheduleBase`:
 
@@ -267,7 +267,7 @@ And add to `CourseScheduleImport`:
 week_type: Optional[str] = "all"
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add backend/app/models/course_schedule.py
@@ -284,7 +284,7 @@ git commit -m "feat(models): add week_type to CourseSchedule"
 - Create: `backend/app/crud/course_session.py`
 - Modify: `backend/app/crud/__init__.py`
 
-- [ ] **Step 1: Write course_session.py**
+- [x] **Step 1: Write course_session.py**
 
 Create `backend/app/crud/course_session.py`:
 
@@ -396,7 +396,7 @@ def end_course_session(
     return ended_sessions
 ```
 
-- [ ] **Step 2: Update `backend/app/crud/__init__.py`**
+- [x] **Step 2: Update `backend/app/crud/__init__.py`**
 
 Add imports:
 
@@ -411,7 +411,7 @@ from app.crud.course_session import (
 )
 ```
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 Run:
 ```bash
@@ -420,7 +420,7 @@ cd /home/yufeng/student-manager/backend && conda run -n student-manage python -c
 
 Expected: `OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/app/crud/course_session.py backend/app/crud/__init__.py
@@ -433,7 +433,7 @@ git commit -m "feat(crud): add CourseSession CRUD operations"
 - Create: `backend/app/crud/schedule_adjustment.py`
 - Modify: `backend/app/crud/__init__.py`
 
-- [ ] **Step 1: Write schedule_adjustment.py**
+- [x] **Step 1: Write schedule_adjustment.py**
 
 Create `backend/app/crud/schedule_adjustment.py`:
 
@@ -526,7 +526,7 @@ def has_ended_session(
     return cs is not None and cs.status == "ended"
 ```
 
-- [ ] **Step 2: Update `backend/app/crud/__init__.py`**
+- [x] **Step 2: Update `backend/app/crud/__init__.py`**
 
 Add imports:
 
@@ -540,7 +540,7 @@ from app.crud.schedule_adjustment import (
 )
 ```
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 Run:
 ```bash
@@ -549,7 +549,7 @@ cd /home/yufeng/student-manager/backend && conda run -n student-manage python -c
 
 Expected: `OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/app/crud/schedule_adjustment.py backend/app/crud/__init__.py
@@ -561,7 +561,7 @@ git commit -m "feat(crud): add ScheduleAdjustment CRUD operations"
 **Files:**
 - Modify: `backend/app/crud/checkin.py`
 
-- [ ] **Step 1: Replace class_session references with course_session**
+- [x] **Step 1: Replace class_session references with course_session**
 
 Rewrite `backend/app/crud/checkin.py` to remove old `ClassSession` based functions and import from `course_session.py`:
 
@@ -683,11 +683,11 @@ def is_device_checked_in_session(session: Session, device_id: str, session_id: i
     return session.exec(query).first() is not None
 ```
 
-- [ ] **Step 2: Update `backend/app/crud/__init__.py` to remove old checkin exports**
+- [x] **Step 2: Update `backend/app/crud/__init__.py` to remove old checkin exports**
 
 Remove old imports like `get_class_session`, `start_class`, `end_class`, etc. Keep only checkin-related ones.
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 Run:
 ```bash
@@ -696,7 +696,7 @@ cd /home/yufeng/student-manager/backend && conda run -n student-manage python -c
 
 Expected: `OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/app/crud/checkin.py backend/app/crud/__init__.py
@@ -713,7 +713,7 @@ git commit -m "refactor(crud): migrate checkin CRUD from ClassSession to CourseS
 - Create: `backend/app/api/routes/course_sessions.py`
 - Modify: `backend/app/api/routes/__init__.py`
 
-- [ ] **Step 1: Write course_sessions.py**
+- [x] **Step 1: Write course_sessions.py**
 
 Create `backend/app/api/routes/course_sessions.py`:
 
@@ -951,7 +951,7 @@ def _get_current_week_number() -> int:
     return max(1, week)
 ```
 
-- [ ] **Step 2: Update `backend/app/api/routes/__init__.py`**
+- [x] **Step 2: Update `backend/app/api/routes/__init__.py`**
 
 Add:
 
@@ -965,7 +965,7 @@ Add to `__all__`:
 "course_sessions_router",
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/api/routes/course_sessions.py backend/app/api/routes/__init__.py
@@ -978,7 +978,7 @@ git commit -m "feat(api): add CourseSession routes"
 - Create: `backend/app/api/routes/schedule_adjustments.py`
 - Modify: `backend/app/api/routes/__init__.py`
 
-- [ ] **Step 1: Write schedule_adjustments.py**
+- [x] **Step 1: Write schedule_adjustments.py**
 
 Create `backend/app/api/routes/schedule_adjustments.py`:
 
@@ -1115,7 +1115,7 @@ def list_schedule_adjustments(
     }
 ```
 
-- [ ] **Step 2: Update `backend/app/api/routes/__init__.py`**
+- [x] **Step 2: Update `backend/app/api/routes/__init__.py`**
 
 Add:
 
@@ -1129,7 +1129,7 @@ And to `__all__`:
 "schedule_adjustments_router",
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/api/routes/schedule_adjustments.py backend/app/api/routes/__init__.py
@@ -1141,7 +1141,7 @@ git commit -m "feat(api): add ScheduleAdjustment routes"
 **Files:**
 - Modify: `backend/app/api/routes/checkin.py`
 
-- [ ] **Step 1: Replace class_session imports and logic**
+- [x] **Step 1: Replace class_session imports and logic**
 
 Replace the top of `backend/app/api/routes/checkin.py` with:
 
@@ -1303,7 +1303,7 @@ def get_today_checkin_list(
 
 **Remove old `/class-session/*` endpoints** from `backend/app/api/routes/checkin.py` entirely.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add backend/app/api/routes/checkin.py
@@ -1315,7 +1315,7 @@ git commit -m "refactor(api): migrate checkin routes to use CourseSession"
 **Files:**
 - Find main app registration (likely `backend/app/main.py` or similar router setup)
 
-- [ ] **Step 1: Add new routers to FastAPI app**
+- [x] **Step 1: Add new routers to FastAPI app**
 
 Look for where routers are included and add:
 
@@ -1326,7 +1326,7 @@ app.include_router(schedule_adjustments_router, prefix="/api/v1")
 
 (Make sure these are added alongside existing routers like `checkin_router`, `schedules_router`, etc.)
 
-- [ ] **Step 2: Verify backend starts**
+- [x] **Step 2: Verify backend starts**
 
 Run:
 ```bash
@@ -1335,7 +1335,7 @@ cd /home/yufeng/student-manager/backend && conda run -n student-manage python -c
 
 Expected: `OK`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "feat(api): register course_sessions and schedule_adjustments routers"
@@ -1350,7 +1350,7 @@ git commit -m "feat(api): register course_sessions and schedule_adjustments rout
 **Files:**
 - Modify: `frontend-v3/src/types/api.ts`
 
-- [ ] **Step 1: Add new types**
+- [x] **Step 1: Add new types**
 
 Add to `frontend-v3/src/types/api.ts` after existing `ClassSession` types:
 
@@ -1435,7 +1435,7 @@ export interface TodayScheduleItem {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/types/api.ts
@@ -1449,7 +1449,7 @@ git commit -m "feat(types): add CourseSession, ScheduleAdjustment and TodaySched
 - Create: `frontend-v3/src/api/scheduleAdjustment.ts`
 - Modify: `frontend-v3/src/api/index.ts`
 
-- [ ] **Step 1: Write courseSession.ts**
+- [x] **Step 1: Write courseSession.ts**
 
 Create `frontend-v3/src/api/courseSession.ts`:
 
@@ -1487,7 +1487,7 @@ export const courseSessionApi = {
 }
 ```
 
-- [ ] **Step 2: Write scheduleAdjustment.ts**
+- [x] **Step 2: Write scheduleAdjustment.ts**
 
 Create `frontend-v3/src/api/scheduleAdjustment.ts`:
 
@@ -1508,7 +1508,7 @@ export const scheduleAdjustmentApi = {
 }
 ```
 
-- [ ] **Step 3: Update api/index.ts**
+- [x] **Step 3: Update api/index.ts**
 
 Replace:
 ```typescript
@@ -1522,7 +1522,7 @@ export { scheduleAdjustmentApi } from './scheduleAdjustment'
 export { classSessionApi } from './classSession'
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend-v3/src/api/courseSession.ts frontend-v3/src/api/scheduleAdjustment.ts frontend-v3/src/api/index.ts
@@ -1539,7 +1539,7 @@ git commit -m "feat(api-clients): add courseSession and scheduleAdjustment APIs"
 - Create: `frontend-v3/src/composables/useCourseSessions.ts`
 - Modify: `frontend-v3/src/composables/index.ts`
 
-- [ ] **Step 1: Write useCourseSessions.ts**
+- [x] **Step 1: Write useCourseSessions.ts**
 
 Create `frontend-v3/src/composables/useCourseSessions.ts`:
 
@@ -1671,7 +1671,7 @@ export function useStudentCheckIn(className?: string | Ref<string>) {
 }
 ```
 
-- [ ] **Step 2: Update composables/index.ts**
+- [x] **Step 2: Update composables/index.ts**
 
 Export the new composable:
 
@@ -1681,7 +1681,7 @@ export * from './useCourseSessions'
 
 Keep `useClassSession` for backward compatibility until fully migrated.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/composables/useCourseSessions.ts frontend-v3/src/composables/index.ts
@@ -1693,7 +1693,7 @@ git commit -m "feat(composables): add useCourseSessions with CourseSession integ
 **Files:**
 - Modify: `frontend-v3/src/router/index.ts`
 
-- [ ] **Step 1: Add route**
+- [x] **Step 1: Add route**
 
 Add to `/teacher` children in `frontend-v3/src/router/index.ts`:
 
@@ -1705,7 +1705,7 @@ Add to `/teacher` children in `frontend-v3/src/router/index.ts`:
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/router/index.ts
@@ -1718,11 +1718,11 @@ git commit -m "feat(router): add TeacherSessionsHistory route"
 - Modify: `frontend-v3/src/views/teacher/Dashboard.vue`
 - Modify: `frontend-v3/src/composables/useSchedules.ts`
 
-- [ ] **Step 1: Update useSchedules.ts to return TodayScheduleItem**
+- [x] **Step 1: Update useSchedules.ts to return TodayScheduleItem**
 
 Modify `frontend-v3/src/composables/useSchedules.ts` (check actual return type) to return `TodayScheduleItem[]` from `useTodaySchedules`.
 
-- [ ] **Step 2: Rewrite Dashboard.vue today-schedule cards**
+- [x] **Step 2: Rewrite Dashboard.vue today-schedule cards**
 
 Replace the `todaySchedules` list rendering with new status-aware cards. Key changes:
 
@@ -1775,7 +1775,7 @@ function canStartClass(schedule: TodayScheduleItem) {
 
 Update the template list item to conditionally show different buttons based on `session_status`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/Dashboard.vue frontend-v3/src/composables/useSchedules.ts
@@ -1787,27 +1787,27 @@ git commit -m "feat(teacher): enhance Dashboard today schedule with status-aware
 **Files:**
 - Modify: `frontend-v3/src/views/teacher/ClassSession.vue`
 
-- [ ] **Step 1: Replace useClassSessions with useCourseSessions**
+- [x] **Step 1: Replace useClassSessions with useCourseSessions**
 
 Change imports from `useClassSessions` to `useCourseSessions`, `useCourseSessionStart`, `useCourseSessionEnd`.
 
-- [ ] **Step 2: Add quick-start schedule cards**
+- [x] **Step 2: Add quick-start schedule cards**
 
 Add a computed `todaySchedulesWithoutSession` that filters `todaySchedules` for ones not yet started.
 Render these as quick-start cards above the manual form.
 
-- [ ] **Step 3: Update end session to use session_id**
+- [x] **Step 3: Update end session to use session_id**
 
 Change `handleEndSession` and `confirmEndSession` to pass the `selectedSession.value.id` to `endCourseSession` instead of `class_name`.
 
-- [ ] **Step 4: Display source_type badge**
+- [x] **Step 4: Display source_type badge**
 
 In the active session info card, add a badge showing:
 - `source_type === 'scheduled'` → "按课表 · 第X周"
 - `source_type === 'manual'` → "手动开启"
 - `source_type === 'makeup'` → "补课 · 第X周"
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -1820,18 +1820,18 @@ git commit -m "feat(teacher): ClassSession supports quick-start from schedule an
 - Create: `frontend-v3/src/components/teacher/ScheduleAdjustmentDialog.vue`
 - Modify: `frontend-v3/src/views/teacher/Schedules.vue`
 
-- [ ] **Step 1: Write ScheduleAdjustmentDialog.vue**
+- [x] **Step 1: Write ScheduleAdjustmentDialog.vue**
 
 Create the dialog with three tabs/modes: 停课、调课、补课.
 Use existing `Dialog`, `Button`, `Input` components from `@/components/ui`.
 Include `class_name`, `course_name`, `week_number` display for context.
 
-- [ ] **Step 2: Add adjustment button per schedule card in Schedules.vue**
+- [x] **Step 2: Add adjustment button per schedule card in Schedules.vue**
 
 Add a small settings/adjustment icon button on each schedule timeline card.
 Click opens the dialog.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/components/teacher/ScheduleAdjustmentDialog.vue frontend-v3/src/views/teacher/Schedules.vue
@@ -1843,7 +1843,7 @@ git commit -m "feat(teacher): add schedule adjustment dialog to Schedules page"
 **Files:**
 - Create: `frontend-v3/src/views/teacher/SessionsHistory.vue`
 
-- [ ] **Step 1: Write basic page**
+- [x] **Step 1: Write basic page**
 
 A table/list showing:
 - 课程名、班级、教室
@@ -1854,7 +1854,7 @@ A table/list showing:
 
 Use `useCourseSessions` for active sessions, and add a new API `GET /course-sessions?status=ended` for historical ones.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/SessionsHistory.vue
@@ -1870,7 +1870,7 @@ git commit -m "feat(teacher): add SessionsHistory page"
 **Files:**
 - Create: `migrations/versions/2026_04_06_course_session_migration.py` (or use Alembic)
 
-- [ ] **Step 1: Create migration script**
+- [x] **Step 1: Create migration script**
 
 Write a script that:
 1. Creates `course_sessions` and `schedule_adjustments`
@@ -1878,7 +1878,7 @@ Write a script that:
 3. Remaps `checkin_records.session_id`
 4. Adds `week_type` to `course_schedules`
 
-- [ ] **Step 2: Test migration in dev environment**
+- [x] **Step 2: Test migration in dev environment**
 
 Run:
 ```bash
@@ -1893,7 +1893,7 @@ sqlite3 data/class_system.db ".tables"
 
 Ensure `course_sessions` and `schedule_adjustments` exist.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add migrations/versions/2026_04_06_course_session_migration.py
@@ -1909,11 +1909,11 @@ git commit -m "chore(db): add CourseSession migration script"
 **Files:**
 - Create: `tests/unit/crud/test_course_session.py`
 
-- [ ] **Step 1: Write tests**
+- [x] **Step 1: Write tests**
 
 Test `start_course_session`, `end_course_session`, `get_active_course_session_by_class_name`, `get_teacher_active_course_sessions`.
 
-- [ ] **Step 2: Run and commit**
+- [x] **Step 2: Run and commit**
 
 ```bash
 cd /home/yufeng/student-manager && conda run -n student-manage pytest tests/unit/crud/test_course_session.py -v
@@ -1932,7 +1932,7 @@ git commit -m "test(crud): add CourseSession unit tests"
 - Create: `tests/integration/test_course_session_api.py`
 - Modify: `tests/integration/test_checkin_api_enhanced.py`
 
-- [ ] **Step 1: Write new integration tests**
+- [x] **Step 1: Write new integration tests**
 
 Cover:
 - `POST /course-sessions/start` with and without `schedule_id`
@@ -1940,11 +1940,11 @@ Cover:
 - Multi-session support via new API
 - Student checkin via updated `/checkin`
 
-- [ ] **Step 2: Update existing test_checkin_api_enhanced.py**
+- [x] **Step 2: Update existing test_checkin_api_enhanced.py**
 
 Replace `/class-session` paths with `/course-sessions` and adjust assertions.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```bash
 cd /home/yufeng/student-manager && conda run -n student-manage pytest tests/integration/test_course_session_api.py tests/integration/test_checkin_api_enhanced.py -v
@@ -1952,7 +1952,7 @@ cd /home/yufeng/student-manager && conda run -n student-manage pytest tests/inte
 
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/integration/test_course_session_api.py tests/integration/test_checkin_api_enhanced.py
@@ -1964,7 +1964,7 @@ git commit -m "test(api): add CourseSession integration tests and migrate checki
 **Files:**
 - Create/update relevant `frontend-v3/test/` files
 
-- [ ] **Step 1: Run existing frontend tests**
+- [x] **Step 1: Run existing frontend tests**
 
 ```bash
 cd /home/yufeng/student-manager/frontend-v3 && pnpm test:run
@@ -1972,7 +1972,7 @@ cd /home/yufeng/student-manager/frontend-v3 && pnpm test:run
 
 Fix any TypeScript errors caused by type renames.
 
-- [ ] **Step 2: Commit fixes**
+- [x] **Step 2: Commit fixes**
 
 ```bash
 git commit -m "test(frontend): fix types after CourseSession migration"

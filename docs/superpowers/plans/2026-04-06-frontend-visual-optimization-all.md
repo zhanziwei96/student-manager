@@ -105,7 +105,7 @@ const getCardGlowStyle = (color: CardColor) => {
 
 **目标**: 将统计卡片改为CSS变量方案
 
-- [ ] **Step 1: 添加类型定义和辅助函数**
+- [x] **Step 1: 添加类型定义和辅助函数**
 
 在 `<script setup>` 中添加：
 
@@ -137,7 +137,7 @@ const getCardGlowStyle = (color: CardColor) => {
 }
 ```
 
-- [ ] **Step 2: 修改统计卡片样式**
+- [x] **Step 2: 修改统计卡片样式**
 
 找到统计卡片 `<Card>` 组件（约第132行），修改：
 
@@ -151,7 +151,7 @@ const getCardGlowStyle = (color: CardColor) => {
 >
 ```
 
-- [ ] **Step 3: 修改图标容器样式**
+- [x] **Step 3: 修改图标容器样式**
 
 找到图标容器 `div`（约第148行），改为：
 
@@ -162,7 +162,7 @@ const getCardGlowStyle = (color: CardColor) => {
 >
 ```
 
-- [ ] **Step 4: 修改背景装饰元素**
+- [x] **Step 4: 修改背景装饰元素**
 
 找到背景装饰 `div`（约第170行），改为：
 
@@ -173,17 +173,17 @@ const getCardGlowStyle = (color: CardColor) => {
 />
 ```
 
-- [ ] **Step 5: 删除旧的辅助函数（如果存在）**
+- [x] **Step 5: 删除旧的辅助函数（如果存在）**
 
 删除旧的 `getCardTextMutedColor` 函数（如果不使用）。
 
-- [ ] **Step 6: 运行类型检查**
+- [x] **Step 6: 运行类型检查**
 
 ```bash
 cd frontend-v3 && pnpm vue-tsc --noEmit
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/Dashboard.vue
@@ -199,27 +199,27 @@ git commit -m "optimize: Teacher Dashboard 使用CSS变量方案"
 
 **目标**: 应用与 Teacher Dashboard 相同的CSS变量方案
 
-- [ ] **Step 1: 阅读当前 Admin Dashboard 文件**
+- [x] **Step 1: 阅读当前 Admin Dashboard 文件**
 
 ```bash
 cat frontend-v3/src/views/admin/Dashboard.vue
 ```
 
-- [ ] **Step 2: 添加辅助函数**
+- [x] **Step 2: 添加辅助函数**
 
 复制 Task 1 中的辅助函数到 `<script setup>`。
 
-- [ ] **Step 3: 修改统计卡片**
+- [x] **Step 3: 修改统计卡片**
 
 参考 Task 1 的模式，修改所有统计卡片的样式绑定。
 
-- [ ] **Step 4: 运行类型检查**
+- [x] **Step 4: 运行类型检查**
 
 ```bash
 cd frontend-v3 && pnpm vue-tsc --noEmit
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend-v3/src/views/admin/Dashboard.vue
@@ -239,17 +239,17 @@ git commit -m "optimize: Admin Dashboard 使用CSS变量方案"
 - 签到按钮区域使用渐变背景
 - 签到说明卡片使用 blue 主题
 
-- [ ] **Step 1: 阅读当前文件**
+- [x] **Step 1: 阅读当前文件**
 
-- [ ] **Step 2: 添加辅助函数**
+- [x] **Step 2: 添加辅助函数**
 
-- [ ] **Step 3: 修改学生信息卡片为 purple 主题**
+- [x] **Step 3: 修改学生信息卡片为 purple 主题**
 
-- [ ] **Step 4: 修改签到状态卡片为 green 主题**
+- [x] **Step 4: 修改签到状态卡片为 green 主题**
 
-- [ ] **Step 5: 修改签到说明卡片为 blue 主题**
+- [x] **Step 5: 修改签到说明卡片为 blue 主题**
 
-- [ ] **Step 6: 运行类型检查并 Commit**
+- [x] **Step 6: 运行类型检查并 Commit**
 
 ---
 
@@ -263,15 +263,15 @@ git commit -m "optimize: Admin Dashboard 使用CSS变量方案"
 - 前三名使用特殊主题色（金牌/银牌/铜牌）
 - 当前用户高亮使用 primary 主题
 
-- [ ] **Step 1: 阅读当前文件**
+- [x] **Step 1: 阅读当前文件**
 
-- [ ] **Step 2: 添加辅助函数**
+- [x] **Step 2: 添加辅助函数**
 
-- [ ] **Step 3: 修改"我的排名"卡片样式**
+- [x] **Step 3: 修改"我的排名"卡片样式**
 
-- [ ] **Step 4: 修改前三名排名样式**
+- [x] **Step 4: 修改前三名排名样式**
 
-- [ ] **Step 5: 运行类型检查并 Commit**
+- [x] **Step 5: 运行类型检查并 Commit**
 
 ---
 
@@ -283,30 +283,30 @@ git commit -m "optimize: Admin Dashboard 使用CSS变量方案"
 
 ## 最终验证
 
-- [ ] **运行所有类型检查**
+- [x] **运行所有类型检查**
 
 ```bash
 cd frontend-v3 && pnpm vue-tsc --noEmit
 ```
 
-- [ ] **运行前端测试**
+- [x] **运行前端测试**
 
 ```bash
 pnpm test:run
 ```
 
-- [ ] **手动验证清单**
+- [x] **手动验证清单**
 
 打开浏览器验证以下页面：
-- [ ] teacher/Dashboard - 移动端 375px
-- [ ] teacher/Dashboard - 桌面端 1440px
-- [ ] admin/Dashboard - 移动端
-- [ ] admin/Dashboard - 桌面端
-- [ ] student/Checkin - 两种尺寸
-- [ ] student/Leaderboard - 两种尺寸
-- [ ] （其他页面...）
+- [x] teacher/Dashboard - 移动端 375px
+- [x] teacher/Dashboard - 桌面端 1440px
+- [x] admin/Dashboard - 移动端
+- [x] admin/Dashboard - 桌面端
+- [x] student/Checkin - 两种尺寸
+- [x] student/Leaderboard - 两种尺寸
+- [x] （其他页面...）
 
-- [ ] **提交最终 commit**
+- [x] **提交最终 commit**
 
 ```bash
 git add .

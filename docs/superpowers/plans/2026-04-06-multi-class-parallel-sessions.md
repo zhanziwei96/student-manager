@@ -31,7 +31,7 @@
 
 **Why:** 集中管理网络错误状态，供多个组件共享错误提示和重试逻辑。
 
-- [ ] **Step 1: 创建 useNetworkError.ts**
+- [x] **Step 1: 创建 useNetworkError.ts**
 
 ```typescript
 import { ref, readonly } from 'vue'
@@ -59,14 +59,14 @@ export function useNetworkError() {
 }
 ```
 
-- [ ] **Step 2: 在 index.ts 中导出**
+- [x] **Step 2: 在 index.ts 中导出**
 
 ```typescript
 // frontend-v3/src/composables/index.ts
 export { useNetworkError } from './useNetworkError'
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/composables/useNetworkError.ts frontend-v3/src/composables/index.ts
@@ -83,7 +83,7 @@ git commit -m "feat: add useNetworkError composable for centralized error handli
 
 **Why:** 统一的网络错误提示 UI，支持重试操作。
 
-- [ ] **Step 1: 创建 NetworkErrorBanner.vue**
+- [x] **Step 1: 创建 NetworkErrorBanner.vue**
 
 ```vue
 <script setup lang="ts">
@@ -139,14 +139,14 @@ const emit = defineEmits<{
 </template>
 ```
 
-- [ ] **Step 2: 在 ui/index.ts 中导出**
+- [x] **Step 2: 在 ui/index.ts 中导出**
 
 ```typescript
 // Add to existing exports
 export { default as NetworkErrorBanner } from './NetworkErrorBanner.vue'
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/NetworkErrorBanner.vue frontend-v3/src/components/ui/index.ts
@@ -162,7 +162,7 @@ git commit -m "feat: add NetworkErrorBanner component for network error display"
 
 **Why:** 当前班级5秒刷新，无课堂时30秒刷新，节省资源。
 
-- [ ] **Step 1: 修改 useClassSessions 函数**
+- [x] **Step 1: 修改 useClassSessions 函数**
 
 ```typescript
 export function useClassSessions() {
@@ -191,7 +191,7 @@ export function useClassSessions() {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/composables/useClassSession.ts
@@ -207,7 +207,7 @@ git commit -m "feat: add smart refresh strategy to useClassSessions (5s active/3
 
 **Why:** 添加开始新课堂表单状态、软限制检查、空班级检查所需的状态和计算属性。
 
-- [ ] **Step 1: 在状态定义区域添加新状态**
+- [x] **Step 1: 在状态定义区域添加新状态**
 
 ```typescript
 // ===== 状态定义 =====
@@ -224,7 +224,7 @@ const softLimitWarning = ref(false)   // 显示软限制警告
 const SOFT_LIMIT = 5  // 软限制：5个班级
 ```
 
-- [ ] **Step 2: 在计算属性区域添加新属性**
+- [x] **Step 2: 在计算属性区域添加新属性**
 
 ```typescript
 // ===== 计算属性 =====
@@ -240,7 +240,7 @@ const atSoftLimit = computed(() => sessionCount.value >= SOFT_LIMIT)
 const currentActiveClass = computed(() => selectedSession.value?.class_name || '')
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -256,7 +256,7 @@ git commit -m "feat: add new state and computed properties for multi-session man
 
 **Why:** 添加空班级检查、软限制警告、表单关闭逻辑。
 
-- [ ] **Step 1: 修改 handleStartSession 函数**
+- [x] **Step 1: 修改 handleStartSession 函数**
 
 ```typescript
 const handleStartSession = async () => {
@@ -295,7 +295,7 @@ const handleStartSession = async () => {
 }
 ```
 
-- [ ] **Step 2: 添加软限制继续函数**
+- [x] **Step 2: 添加软限制继续函数**
 
 ```typescript
 const handleContinueDespiteLimit = async () => {
@@ -324,7 +324,7 @@ const handleCancelStart = () => {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -340,7 +340,7 @@ git commit -m "feat: update event handlers with empty class check and soft limit
 
 **Why:** 在单课堂状态下显示"开始新课堂"按钮。
 
-- [ ] **Step 1: 找到 Session status Card 区域（约第230行），替换按钮部分**
+- [x] **Step 1: 找到 Session status Card 区域（约第230行），替换按钮部分**
 
 ```vue
         <div class="flex-shrink-0 flex gap-2">
@@ -378,7 +378,7 @@ git commit -m "feat: update event handlers with empty class check and soft limit
         </div>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -394,7 +394,7 @@ git commit -m "feat: add 'Start New Session' button in single session state"
 
 **Why:** 展开/收起形式的开始课堂表单，支持软限制警告。
 
-- [ ] **Step 1: 在开始课堂表单区域（原 Card v-if="!isSessionActive"）之后，添加新的表单 Card**
+- [x] **Step 1: 在开始课堂表单区域（原 Card v-if="!isSessionActive"）之后，添加新的表单 Card**
 
 ```vue
     <!-- 开始新课堂表单 (在有一个或多个课堂进行时显示) -->
@@ -495,7 +495,7 @@ git commit -m "feat: add 'Start New Session' button in single session state"
     </Card>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -511,7 +511,7 @@ git commit -m "feat: add expandable start session form with soft limit warning"
 
 **Why:** 解决 `<button>` 不能嵌套在 `<button>` 中的 HTML 规范问题。
 
-- [ ] **Step 1: 找到多课堂标签区域（约第350行），修改标签按钮结构**
+- [x] **Step 1: 找到多课堂标签区域（约第350行），修改标签按钮结构**
 
 原代码（有问题）：
 ```vue
@@ -577,7 +577,7 @@ git commit -m "feat: add expandable start session form with soft limit warning"
     </div>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -593,7 +593,7 @@ git commit -m "fix: resolve button nesting violation in multi-session tabs"
 
 **Why:** 移动端使用下拉选择器替代标签页，节省空间。
 
-- [ ] **Step 1: 在多课堂标签区域添加响应式逻辑**
+- [x] **Step 1: 在多课堂标签区域添加响应式逻辑**
 
 ```vue
     <!-- Multi-session selector (Responsive) -->
@@ -624,7 +624,7 @@ git commit -m "fix: resolve button nesting violation in multi-session tabs"
     </div>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -640,7 +640,7 @@ git commit -m "feat: add mobile dropdown selector for multi-session switching"
 
 **Why:** 在页面顶部显示网络错误提示，支持重试。
 
-- [ ] **Step 1: 在模板顶部添加 NetworkErrorBanner**
+- [x] **Step 1: 在模板顶部添加 NetworkErrorBanner**
 
 ```vue
 <template>
@@ -658,7 +658,7 @@ git commit -m "feat: add mobile dropdown selector for multi-session switching"
 </template>
 ```
 
-- [ ] **Step 2: 在 script setup 中添加相关引入和处理函数**
+- [x] **Step 2: 在 script setup 中添加相关引入和处理函数**
 
 ```typescript
 import { NetworkErrorBanner } from '@/components/ui'
@@ -681,7 +681,7 @@ watch(() => error.value, (err) => {
 })
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -697,7 +697,7 @@ git commit -m "feat: integrate network error banner with retry functionality"
 
 **Why:** 所有结束课堂操作都需要确认，显示签到统计。
 
-- [ ] **Step 1: 添加确认状态和处理函数**
+- [x] **Step 1: 添加确认状态和处理函数**
 
 ```typescript
 // 确认弹窗状态
@@ -729,7 +729,7 @@ const confirmEndSession = async () => {
 }
 ```
 
-- [ ] **Step 2: 在模板底部添加确认弹窗 Dialog**
+- [x] **Step 2: 在模板底部添加确认弹窗 Dialog**
 
 ```vue
     <!-- End Session Confirmation Dialog -->
@@ -776,7 +776,7 @@ const confirmEndSession = async () => {
     </Dialog>
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend-v3/src/views/teacher/ClassSession.vue
@@ -792,18 +792,18 @@ git commit -m "feat: add confirmation dialog for ending sessions with stats disp
 
 **Why:** 确保 TypeScript 类型正确。
 
-- [ ] **Step 1: 运行 vue-tsc**
+- [x] **Step 1: 运行 vue-tsc**
 
 ```bash
 cd frontend-v3
 pnpm vue-tsc --noEmit
 ```
 
-- [ ] **Step 2: 修复任何类型错误**
+- [x] **Step 2: 修复任何类型错误**
 
 如果有错误，修复后继续。
 
-- [ ] **Step 3: Commit（如有修复）**
+- [x] **Step 3: Commit（如有修复）**
 
 ```bash
 git add .
@@ -819,7 +819,7 @@ git commit -m "fix: resolve TypeScript type errors"
 
 **Why:** 验证完整的多班级流程。
 
-- [ ] **Step 1: 创建测试文件**
+- [x] **Step 1: 创建测试文件**
 
 ```typescript
 import { test, expect } from '@playwright/test'
@@ -888,7 +888,7 @@ test.describe('多班级并行上课功能', () => {
 })
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add tests/e2e/multi-class-session.spec.ts
@@ -904,7 +904,7 @@ git commit -m "test: add E2E tests for multi-class session feature"
 
 **Why:** 确保所有功能正常工作。
 
-- [ ] **Step 1: 检查服务状态**
+- [x] **Step 1: 检查服务状态**
 
 ```bash
 cd /home/yufeng/student-manager
@@ -912,20 +912,20 @@ curl -s http://localhost:8000/api/v1/health
 curl -s http://localhost:5174 | head -1
 ```
 
-- [ ] **Step 2: 运行后端测试**
+- [x] **Step 2: 运行后端测试**
 
 ```bash
 conda run -n student-manage pytest tests/integration/test_checkin_api_enhanced.py -v
 ```
 
-- [ ] **Step 3: 运行前端类型检查**
+- [x] **Step 3: 运行前端类型检查**
 
 ```bash
 cd frontend-v3
 pnpm vue-tsc --noEmit
 ```
 
-- [ ] **Step 4: Commit（最终提交）**
+- [x] **Step 4: Commit（最终提交）**
 
 ```bash
 git add .
