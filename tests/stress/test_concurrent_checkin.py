@@ -10,8 +10,8 @@ from httpx import Client, AsyncClient
 
 # 测试配置
 BASE_URL = "http://localhost:8000/api/v1"
-TEST_CLASS = "测试班级"
-TEST_STUDENTS = [f"202400{i:03d}" for i in range(1, 51)]  # 50个学生
+TEST_CLASS = "2025中医康复治疗2班"
+TEST_STUDENTS = [f"25130702{i:02d}" for i in range(1, 21)]  # 20个真实学生
 
 
 @pytest.fixture(scope="module")
@@ -22,47 +22,45 @@ def client():
 
 
 @pytest.fixture(scope="module")
-def teacher_token(client):
-    """获取教师 token"""
+def teacher_cookies(client):
+    """获取教师 session cookies"""
     resp = client.post("/login", json={
         "username": "admin",
         "password": "admin123"
     })
     assert resp.status_code == 200
-    return resp.json()["data"]["token"]
+    assert resp.json()["success"] is True
+    # 返回 cookies dict
+    return dict(client.cookies)
 
 
 @pytest.fixture(scope="module")
-def setup_course_session(client, teacher_token):
+def setup_course_session(client, teacher_cookies):
     """创建测试课堂会话"""
+    # 导入cookies
+    client.cookies.update(teacher_cookies)
+
     # 先结束所有活跃会话
-    client.post(
-        "/class-session",
-        json={"action": "end"},
-        headers={"Authorization": f"Bearer {teacher_token}"}
-    )
+    sessions_resp = client.get("/course-sessions")
+    if sessions_resp.status_code == 200:
+        for s in sessions_resp.json().get("data", []):
+            client.post(f"/course-sessions/{s['id']}/end")
 
     # 创建新会话
     resp = client.post(
-        "/class-session",
+        "/course-sessions/start",
         json={
-            "action": "start",
             "class_name": TEST_CLASS,
             "course_name": "压力测试课程"
-        },
-        headers={"Authorization": f"Bearer {teacher_token}"}
+        }
     )
     assert resp.status_code == 200
-    session_id = resp.json()["data"]["session_id"]
+    session_id = resp.json()["data"]["id"]
 
     yield session_id
 
     # 清理：结束会话
-    client.post(
-        "/class-session",
-        json={"action": "end"},
-        headers={"Authorization": f"Bearer {teacher_token}"}
-    )
+    client.post(f"/course-sessions/{session_id}/end")
 
 
 def test_single_checkin(client, setup_course_session):
@@ -109,7 +107,7 @@ def test_sequential_checkins(client, setup_course_session):
 
 def test_concurrent_checkins_thread(client, setup_course_session):
     """测试并发签到 - 使用线程池模拟20学生同时签到"""
-    test_students = TEST_STUDENTS[10:30]  # 取20个学生
+    test_students = TEST_STUDENTS  # 使用全部20个学生
     results = {"success": 0, "failed": 0, "rate_limited": 0, "times": []}
 
     def do_checkin(student_id):
