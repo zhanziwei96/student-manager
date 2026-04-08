@@ -53,12 +53,18 @@ def count_today_checkins(session: Session, class_name: Optional[str] = None) -> 
     return result.one()
 
 
+class DuplicateCheckinError(Exception):
+    """重复签到异常"""
+    pass
+
+
 def create_checkin(
     session: Session, student_id: str, student_name: str,
     class_name: str, session_id: int, checkin_type: Optional[str] = None,
     device_id: Optional[str] = None, device_info: Optional[str] = None
 ) -> CheckinRecord:
     """创建签到记录"""
+    from sqlalchemy.exc import IntegrityError
     from app.models.constants import CheckinTypeConst
     if checkin_type is None:
         checkin_type = CheckinTypeConst.SELF
@@ -72,7 +78,11 @@ def create_checkin(
         device_info=device_info
     )
     session.add(checkin)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise DuplicateCheckinError("您已在本课堂签到")
     session.refresh(checkin)
     return checkin
 

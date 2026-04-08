@@ -19,7 +19,7 @@ from app.crud.course_session import (
     get_active_course_session_by_class_name,
     get_teacher_active_course_sessions,
 )
-from app.crud.checkin import has_checked_in_session, is_device_checked_in_session
+from app.crud.checkin import has_checked_in_session, is_device_checked_in_session, DuplicateCheckinError
 from app.core.jwt import get_current_user
 from app.models.constants import (
     ApiResponseConst, MessageConst,
@@ -132,24 +132,29 @@ async def do_checkin(
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
 
     # 检查是否在当前课堂已签到
-    if has_checked_in_session(db_session, data.student_id, cs.id):
+    already_checked = has_checked_in_session(db_session, data.student_id, cs.id)
+    if already_checked:
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
 
     # 验证设备唯一性（如果提供了设备ID）
     if data.device_id:
-        if is_device_checked_in_session(db_session, data.device_id, cs.id):
+        device_checked = is_device_checked_in_session(db_session, data.device_id, cs.id)
+        if device_checked:
             raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该设备已签到')
 
     # 创建签到记录
-    checkin = create_checkin(
-        db_session,
-        data.student_id,
-        data.student_name or student.name,
-        cs.class_name,
-        cs.id,
-        device_id=data.device_id,
-        device_info=data.device_info
-    )
+    try:
+        checkin = create_checkin(
+            db_session,
+            data.student_id,
+            data.student_name or student.name,
+            cs.class_name,
+            cs.id,
+            device_id=data.device_id,
+            device_info=data.device_info
+        )
+    except DuplicateCheckinError:
+        raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
 
     return {
         ApiResponseConst.SUCCESS: True,
@@ -302,8 +307,6 @@ async def get_course_session_for_student(
     user: dict = Depends(get_current_user)
 ):
     """获取指定班级的活跃课堂状态（学生端使用）"""
-    # 用户认证已通过 Depends(get_current_user) 完成
-
     cs = get_active_course_session_by_class_name(session, class_name)
 
     if cs and cs.status == "active":
