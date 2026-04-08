@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { cn } from '@/lib/utils'
 import { Search, ChevronDown, X } from 'lucide-vue-next'
 
