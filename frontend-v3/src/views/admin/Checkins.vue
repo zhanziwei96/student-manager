@@ -25,11 +25,11 @@ useClassStats()
 
     <!-- Stats Cards - CSS变量主题色 -->
     <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 mb-5">
-      <!-- 总学生数 - purple主题 -->
-      <Card class="relative overflow-hidden p-4 border-[var(--card-purple-border)] bg-[var(--card-purple-bg)]">
+      <!-- 总学生数 - indigo主题 -->
+      <Card class="relative overflow-hidden p-4 border-[var(--card-indigo-border)] bg-[var(--card-indigo-bg)]">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--card-purple-icon-bg)]">
-            <Users class="h-5 w-5 text-[var(--card-purple-icon-text)]" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--card-indigo-icon-bg)]">
+            <Users class="h-5 w-5 text-[var(--card-indigo-icon-text)]" />
           </div>
           <div>
             <p class="text-xs text-[var(--color-text-tertiary)]">
@@ -40,14 +40,14 @@ useClassStats()
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--card-purple-glow)] blur-2xl" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--card-indigo-glow)] blur-2xl" />
       </Card>
 
-      <!-- 已签到 - green主题 -->
-      <Card class="relative overflow-hidden p-4 border-[var(--card-green-border)] bg-[var(--card-green-bg)]">
+      <!-- 已签到 - success主题 -->
+      <Card class="relative overflow-hidden p-4 border-[var(--card-success-border)] bg-[var(--card-success-bg)]">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--card-green-icon-bg)]">
-            <CheckCircle class="h-5 w-5 text-[var(--card-green-icon-text)]" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--card-success-icon-bg)]">
+            <CheckCircle class="h-5 w-5 text-[var(--card-success-icon-text)]" />
           </div>
           <div>
             <p class="text-xs text-[var(--color-text-tertiary)]">
@@ -58,14 +58,14 @@ useClassStats()
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--card-green-glow)] blur-2xl" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--card-success-glow)] blur-2xl" />
       </Card>
 
-      <!-- 未签到 - red主题 -->
-      <Card class="relative overflow-hidden p-4 border-[var(--color-error-muted)] bg-[var(--color-error-muted)]">
+      <!-- 未签到 - error主题 -->
+      <Card class="relative overflow-hidden p-4 border-[var(--card-error-border)] bg-[var(--card-error-bg)]">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-error-muted)]">
-            <Clock class="h-5 w-5 text-[var(--color-error)]" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--card-error-icon-bg)]">
+            <Clock class="h-5 w-5 text-[var(--card-error-icon-text)]" />
           </div>
           <div>
             <p class="text-xs text-[var(--color-text-tertiary)]">
@@ -76,14 +76,14 @@ useClassStats()
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--color-error-muted)] blur-2xl" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--card-error-glow)] blur-2xl" />
       </Card>
 
-      <!-- 签到率 - blue主题 -->
-      <Card class="relative overflow-hidden p-4 border-[var(--card-blue-border)] bg-[var(--card-blue-bg)]">
+      <!-- 签到率 - indigo主题 -->
+      <Card class="relative overflow-hidden p-4 border-[var(--card-indigo-border)] bg-[var(--card-indigo-bg)]">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--card-blue-icon-bg)]">
-            <TrendingUp class="h-5 w-5 text-[var(--card-blue-icon-text)]" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--card-indigo-icon-bg)]">
+            <TrendingUp class="h-5 w-5 text-[var(--card-indigo-icon-text)]" />
           </div>
           <div>
             <p class="text-xs text-[var(--color-text-tertiary)]">
@@ -94,7 +94,7 @@ useClassStats()
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--card-blue-glow)] blur-2xl" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-[var(--card-indigo-glow)] blur-2xl" />
       </Card>
     </div>
   </div>

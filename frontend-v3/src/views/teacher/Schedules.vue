@@ -9,12 +9,11 @@ import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, Al
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
 
-// ========== 课程类型颜色主题 ==========
+// ========== 课程类型颜色主题 (Indigo 单色系) ==========
 const courseTypeThemes = [
-  { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: 'text-blue-400', accent: 'bg-blue-500/20' },
-  { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: 'text-green-400', accent: 'bg-green-500/20' },
-  { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400', icon: 'text-purple-400', accent: 'bg-purple-500/20' },
-  { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400', icon: 'text-orange-400', accent: 'bg-orange-500/20' },
+  { bg: 'bg-indigo-500/25', border: 'border-indigo-500/40', text: 'text-indigo-200', icon: 'text-indigo-300', accent: 'bg-indigo-500/30' },
+  { bg: 'bg-indigo-500/15', border: 'border-indigo-500/30', text: 'text-indigo-300', icon: 'text-indigo-400', accent: 'bg-indigo-500/20' },
+  { bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', text: 'text-indigo-300/80', icon: 'text-indigo-400/80', accent: 'bg-indigo-500/15' },
 ] as const
 
 // 根据课程名称生成稳定的颜色索引
@@ -30,33 +29,6 @@ const getCourseThemeIndex = (courseName: string): number => {
 const getCourseTheme = (courseName: string) => {
   const index = getCourseThemeIndex(courseName)
   return courseTypeThemes[index]
-}
-
-// 卡片主题辅助函数
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
-
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
-
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
 }
 
 // 计算课程卡片样式
@@ -463,11 +435,11 @@ const handleBatchDelete = async () => {
 
     <!-- 统计卡片 -->
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-5">
-      <!-- 总课程数 - blue主题 -->
-      <Card class="relative overflow-hidden p-4 transition-all duration-300" :style="getCardStyle('blue')">
+      <!-- 总课程数 - Indigo主题 -->
+      <Card class="relative overflow-hidden p-4 transition-all duration-300 border-indigo-500/30 bg-indigo-500/10">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner" :style="getCardIconStyle('blue')">
-            <Layers class="h-5 w-5" :style="{ color: 'var(--card-blue-icon-text)' }" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner bg-indigo-500/20 text-indigo-300">
+            <Layers class="h-5 w-5" />
           </div>
           <div class="min-w-0">
             <p class="text-sm text-white/60 truncate">
@@ -478,14 +450,14 @@ const handleBatchDelete = async () => {
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('blue')" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30 bg-indigo-500/40" />
       </Card>
 
-      <!-- 本周课程 - green主题 -->
-      <Card class="relative overflow-hidden p-4 transition-all duration-300" :style="getCardStyle('green')">
+      <!-- 本周课程 - Indigo主题 -->
+      <Card class="relative overflow-hidden p-4 transition-all duration-300 border-indigo-500/30 bg-indigo-500/10">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner" :style="getCardIconStyle('green')">
-            <Calendar class="h-5 w-5" :style="{ color: 'var(--card-green-icon-text)' }" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner bg-indigo-500/20 text-indigo-300">
+            <Calendar class="h-5 w-5" />
           </div>
           <div class="min-w-0">
             <p class="text-sm text-white/60 truncate">
@@ -496,7 +468,7 @@ const handleBatchDelete = async () => {
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('green')" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30 bg-indigo-500/40" />
       </Card>
 
       <!-- 冲突检测 -->

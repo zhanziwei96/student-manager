@@ -19,33 +19,21 @@ import { Users, GraduationCap, Search } from 'lucide-vue-next'
 // === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
 
-// === 卡片颜色类型 ===
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-// 获取卡片样式 - 使用 CSS 变量
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 
 // 统计信息
 const stats = computed(() => {
@@ -56,9 +44,9 @@ const stats = computed(() => {
     : 0
 
   return [
-    { title: '学生总数', value: total, icon: Users, color: 'blue' as CardColor },
-    { title: '已签到', value: checkedIn, icon: GraduationCap, color: 'green' as CardColor },
-    { title: '平均分数', value: avgScore, icon: Search, color: 'purple' as CardColor },
+    { title: '学生总数', value: total, icon: Users },
+    { title: '已签到', value: checkedIn, icon: GraduationCap },
+    { title: '平均分数', value: avgScore, icon: Search },
   ]
 })
 
@@ -73,19 +61,6 @@ const {
   selectFirstClass,
 } = useStudentFilters(students)
 
-// 班级颜色映射
-const classColorMap = ref<Record<string, CardColor>>({})
-
-// 为每个班级分配颜色
-const getClassColor = (className: string): CardColor => {
-  if (!classColorMap.value[className]) {
-    const colors: CardColor[] = ['blue', 'green', 'purple', 'orange']
-    const existingColors = Object.values(classColorMap.value)
-    const availableColor = colors.find(c => !existingColors.includes(c)) || colors[existingColors.length % colors.length]
-    classColorMap.value[className] = availableColor
-  }
-  return classColorMap.value[className]
-}
 
 // 默认选中第一个班级
 watch(() => students.value, (newData) => {
@@ -160,13 +135,13 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
         v-for="stat in stats"
         :key="stat.title"
         class="group relative overflow-hidden p-3 sm:p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
-        :style="getCardStyle(stat.color)"
+        :style="getCardStyle()"
       >
         <div class="relative z-10">
           <div class="flex items-center justify-between">
             <div
               class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
-              :style="getCardIconStyle(stat.color)"
+              :style="getCardIconStyle()"
             >
               <component
                 :is="stat.icon"
@@ -184,7 +159,7 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
         <!-- 背景装饰 -->
         <div
           class="absolute -right-4 -bottom-4 h-12 w-12 sm:h-16 sm:w-16 rounded-full blur-2xl transition-colors opacity-30"
-          :style="getCardGlowStyle(stat.color)"
+          :style="getCardGlowStyle()"
         />
       </Card>
     </div>
@@ -215,7 +190,6 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
           :quick-score-options="quickScoreOptions"
           :is-updating="isUpdating"
           :updating-student-id="updatingStudentId || undefined"
-          :card-color="getClassColor(student.class_name)"
           @quick-score="handleQuickScore"
           @open-score-dialog="openScoreDialog"
         />

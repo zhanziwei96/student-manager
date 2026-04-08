@@ -24,61 +24,37 @@ const statCards = computed(() => [
     title: '我的学生',
     value: stats.value?.total_students ?? 0,
     icon: Users,
-    color: 'blue' as CardColor,
     link: '/teacher/students',
   },
   {
     title: '活跃课堂',
     value: activeSessionsCount.value,
     icon: Calendar,
-    color: 'green' as CardColor,
     link: '/teacher/session',
   },
   {
     title: '授课时长',
     value: '-',
     icon: Clock,
-    color: 'purple' as CardColor,
     link: '/teacher/schedules',
   },
 ])
 
-// 卡片颜色类型
-type CardColor = 'blue' | 'green' | 'purple'
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-// 获取卡片样式 - 使用 CSS 变量
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
-
-const getCardTextMutedColor = (color: CardColor) => {
-  const colors: Record<CardColor, string> = {
-    blue: 'text-blue-200/80',
-    green: 'text-green-200/80',
-    purple: 'text-purple-200/80',
-  }
-  return colors[color]
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 </script>
 
 <template>
@@ -133,13 +109,13 @@ const getCardTextMutedColor = (color: CardColor) => {
         v-for="card in statCards"
         :key="card.title"
         class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-        :style="getCardStyle(card.color)"
+        :style="getCardStyle()"
         @click="router.push(card.link)"
       >
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
-              <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor(card.color)">
+              <p class="mt-3 text-xs font-medium text-indigo-200/80">
                 {{ card.title }}
               </p>
               <p class="mt-1 text-2xl font-bold text-white">
@@ -148,7 +124,7 @@ const getCardTextMutedColor = (color: CardColor) => {
             </div>
             <div
               class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
-              :style="getCardIconStyle(card.color)"
+              :style="getCardIconStyle()"
             >
               <component
                 :is="card.icon"
@@ -166,7 +142,7 @@ const getCardTextMutedColor = (color: CardColor) => {
         <!-- 背景装饰 -->
         <div
           class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30"
-          :style="getCardGlowStyle(card.color)"
+          :style="getCardGlowStyle()"
         />
       </Card>
     </div>

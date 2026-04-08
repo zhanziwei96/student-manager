@@ -10,48 +10,34 @@ import type { Student, QuickScoreOption } from '../types'
  * 展示学生基本信息、分数和快速操作按钮
  */
 
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
-
 interface Props {
   student: Student
   quickScoreOptions: QuickScoreOption[]
   isUpdating?: boolean
   updatingStudentId?: string
-  cardColor?: CardColor
 }
 
-withDefaults(defineProps<Props>(), {
-  cardColor: 'blue'
-})
+defineProps<Props>()
 
 defineEmits<{
   'quick-score': [student: Student, score: number, reason: string]
   'open-score-dialog': [student: Student, defaultScore: number, defaultReason: string]
 }>()
 
-// 获取卡片样式 - 使用 CSS 变量
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
+// 统一的 Indigo 卡片样式
+const cardStyle = {
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+} as Record<string, string>
+
+const cardIconStyle = {
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
 }
 
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
+const cardGlowStyle = {
+  backgroundColor: 'var(--card-indigo-glow)',
 }
 
 const getScoreColorClass = (score: number): string => {
@@ -65,13 +51,13 @@ const getScoreColorClass = (score: number): string => {
 <template>
   <Card
     class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
-    :style="getCardStyle(cardColor)"
+    :style="cardStyle"
     :class="student.checkin_status === 'checked_in' ? 'ring-1 ring-green-500/50' : ''"
   >
     <!-- 背景装饰 -->
     <div
       class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30"
-      :style="getCardGlowStyle(cardColor)"
+      :style="cardGlowStyle"
     />
 
     <!-- 学生信息 -->
@@ -80,7 +66,7 @@ const getScoreColorClass = (score: number): string => {
         <div class="flex items-center gap-3">
           <div
             class="flex h-11 w-11 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
-            :style="getCardIconStyle(cardColor)"
+            :style="cardIconStyle"
           >
             <User class="h-5 w-5" />
           </div>

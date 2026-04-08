@@ -35,30 +35,25 @@ import type { CourseSession } from '@/types'
 import StudentCheckinGrid from '@/components/teacher/StudentCheckinGrid.vue'
 import CheckinStats from '@/components/teacher/CheckinStats.vue'
 
-// ===== 卡片主题辅助函数 =====
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
-
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
+// ===== 卡片主题辅助函数 - 统一使用 Indigo 主题 =====
+const getCardStyle = () => {
   return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
+    backgroundColor: 'var(--card-indigo-bg)',
+    borderColor: 'var(--card-indigo-border)',
+    '--tw-shadow-color': 'var(--card-indigo-shadow)',
   } as Record<string, string>
 }
 
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
+const getCardIconStyle = () => {
   return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
+    backgroundColor: 'var(--card-indigo-icon-bg)',
+    color: 'var(--card-indigo-icon-text)',
   }
 }
 
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
+const getCardGlowStyle = () => {
   return {
-    backgroundColor: `var(${varPrefix}-glow)`,
+    backgroundColor: 'var(--card-indigo-glow)',
   }
 }
 
@@ -442,11 +437,11 @@ const getSourceTypeBadge = (sourceType: string) => {
       </p>
     </div>
 
-    <!-- 今日课表快捷开始 - blue主题 -->
+    <!-- 今日课表快捷开始 - Indigo 主题 -->
     <Card
       v-if="quickStartSchedules.length > 0"
       class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
-      :style="getCardStyle('blue')"
+      :style="getCardStyle()"
     >
       <div class="relative z-10">
         <h3 class="font-medium text-white text-base md:text-lg mb-3">
@@ -475,20 +470,20 @@ const getSourceTypeBadge = (sourceType: string) => {
       </div>
       </div>
       <!-- 背景装饰 -->
-      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('blue')" />
+      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
     </Card>
 
     <!-- Session status - 课堂状态卡片 -->
     <Card
       class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
-      :style="isSessionActive ? getCardStyle('green') : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' }"
+      :style="isSessionActive ? { backgroundColor: 'var(--card-success-bg)', borderColor: 'var(--card-success-border)', '--tw-shadow-color': 'var(--card-success-shadow)' } : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' }"
     >
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3 md:gap-4">
           <!-- 状态图标 -->
           <div
             class="relative flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl flex-shrink-0 transition-all duration-300 shadow-inner"
-            :style="isSessionActive ? getCardIconStyle('green') : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
+            :style="isSessionActive ? { backgroundColor: 'var(--card-success-icon-bg)', color: 'var(--card-success-icon-text)' } : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
           >
             <component
               :is="sessionStatusTheme.icon"
@@ -600,7 +595,7 @@ const getSourceTypeBadge = (sourceType: string) => {
       <div
         v-if="isSessionActive"
         class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="getCardGlowStyle('green')"
+        :style="{ backgroundColor: 'var(--card-success-glow)' }"
       />
 
       <!-- 签到进度条 - 仅在活跃课堂显示 -->
@@ -627,11 +622,11 @@ const getSourceTypeBadge = (sourceType: string) => {
       </div>
     </Card>
 
-    <!-- Start session form - blue主题 -->
+    <!-- Start session form - Indigo 主题 -->
     <Card
       v-if="!isSessionActive"
       class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
-      :style="getCardStyle('blue')"
+      :style="getCardStyle()"
     >
       <div class="relative z-10">
         <h3 class="font-medium text-white text-base md:text-lg">
@@ -688,7 +683,7 @@ const getSourceTypeBadge = (sourceType: string) => {
       </div>
       </div>
       <!-- 背景装饰 -->
-      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('blue')" />
+      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
     </Card>
 
     <!-- Multi-session selector (Responsive) -->
@@ -749,7 +744,7 @@ const getSourceTypeBadge = (sourceType: string) => {
     <Card
       v-if="isSessionActive && showStartForm"
       class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
-      :style="getCardStyle('blue')"
+      :style="getCardStyle()"
     >
       <div class="relative z-10 flex items-center justify-between mb-4">
         <div>
@@ -842,16 +837,16 @@ const getSourceTypeBadge = (sourceType: string) => {
           取消
         </Button>
       </div>
-      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('blue')" />
+      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
     </Card>
 
     <!-- Active session content -->
     <template v-if="isSessionActive && selectedSession">
-      <!-- Selected session info (for multi-session) - blue主题 -->
+      <!-- Selected session info (for multi-session) - Indigo 主题 -->
       <Card
         v-if="hasMultipleSessions"
         class="relative overflow-hidden p-4 mb-5 transition-all duration-300"
-        :style="getCardStyle('blue')"
+        :style="getCardStyle()"
       >
         <div class="relative z-10 flex items-center justify-between">
           <div>
@@ -885,14 +880,14 @@ const getSourceTypeBadge = (sourceType: string) => {
           </Button>
         </div>
         <!-- 背景装饰 -->
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('blue')" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
       </Card>
 
-      <!-- Check-in form - purple主题 -->
-      <Card class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300" :style="getCardStyle('purple')">
+      <!-- Check-in form - Indigo 主题 -->
+      <Card class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300" :style="getCardStyle()">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 shadow-inner" :style="getCardIconStyle('purple')">
-            <CheckCircle class="h-5 w-5" :style="{ color: 'var(--card-purple-icon-text)' }" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 shadow-inner" :style="getCardIconStyle()">
+            <CheckCircle class="h-5 w-5" :style="{ color: 'var(--card-indigo-icon-text)' }" />
           </div>
           <div class="min-w-0 flex-1">
             <h3 class="font-medium text-white">
@@ -920,7 +915,7 @@ const getSourceTypeBadge = (sourceType: string) => {
           </Button>
         </div>
         <!-- 背景装饰 -->
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle('purple')" />
+        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
       </Card>
 
       <!-- Stats -->

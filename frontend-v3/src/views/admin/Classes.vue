@@ -33,38 +33,21 @@ const getScoreColor = (score: number) => {
   return 'text-[var(--color-error)]'
 }
 
-// 获取班级主题色（基于索引循环使用）
-const getClassTheme = (index: number) => {
-  const themes = ['blue', 'purple', 'green', 'orange'] as const
-  return themes[index % themes.length]
-}
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-// 卡片主题辅助函数
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
-
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 </script>
 
 <template>
@@ -105,26 +88,26 @@ const getCardGlowStyle = (color: CardColor) => {
       class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
     >
       <Card
-        v-for="(cls, index) in filteredClasses"
+        v-for="(cls) in filteredClasses"
         :key="cls.name"
         class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
-        :style="getCardStyle(getClassTheme(index))"
+        :style="getCardStyle()"
       >
         <!-- 背景光晕效果 -->
         <div
           class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl opacity-30"
-          :style="getCardGlowStyle(getClassTheme(index))"
+          :style="getCardGlowStyle()"
         />
 
         <div class="relative z-10 flex items-start justify-between">
           <div class="flex items-center gap-3">
             <div
               class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner"
-              :style="getCardIconStyle(getClassTheme(index))"
+              :style="getCardIconStyle()"
             >
               <GraduationCap
                 class="h-5 w-5"
-                :style="{ color: 'var(--card-' + getClassTheme(index) + '-icon-text)' }"
+                :style="{ color: 'var(--card-indigo-icon-text)' }"
               />
             </div>
             <div>
@@ -209,18 +192,16 @@ const getCardGlowStyle = (color: CardColor) => {
         <!-- 移动端：卡片列表 -->
         <div class="lg:hidden space-y-2">
           <div
-            v-for="(student, idx) in classStudents"
+            v-for="student in classStudents"
             :key="student.id"
             class="flex items-center justify-between rounded-xl border border-[var(--color-divider)] bg-[var(--color-background-card)] p-3"
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-8 w-8 items-center justify-center rounded-full shadow-inner"
-                :style="getCardIconStyle(getClassTheme(idx))"
+                class="flex h-8 w-8 items-center justify-center rounded-full shadow-inner bg-[var(--card-indigo-icon-bg)]"
               >
                 <span
-                  class="text-sm font-medium"
-                  :style="{ color: 'var(--card-' + getClassTheme(idx) + '-icon-text)' }"
+                  class="text-sm font-medium text-[var(--card-indigo-icon-text)]"
                 >
                   {{ student.name.charAt(0) }}
                 </span>

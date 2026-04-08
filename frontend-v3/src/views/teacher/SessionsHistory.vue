@@ -33,32 +33,21 @@ const formatDateTime = (iso?: string) => {
   return `${mm}-${dd} ${hh}:${min}`
 }
 
-// 卡片主题辅助函数
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 
 const statusBadge = (status: CourseSession['status']) => {
   switch (status) {
@@ -113,16 +102,16 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
           v-for="session in historySessions"
           :key="session.id"
           class="relative overflow-hidden p-4 transition-all duration-300 hover:scale-[1.01]"
-          :style="getCardStyle('blue')"
+          :style="getCardStyle()"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <div class="relative z-10 flex items-center gap-2 mb-2">
                 <div
                   class="flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 shadow-inner"
-                  :style="getCardIconStyle('blue')"
+                  :style="getCardIconStyle()"
                 >
-                  <BookOpen class="h-4 w-4" :style="{ color: 'var(--card-blue-icon-text)' }" />
+                  <BookOpen class="h-4 w-4" :style="{ color: 'var(--card-indigo-icon-text)' }" />
                 </div>
                 <h4 class="font-semibold text-base text-white truncate">
                   {{ session.course_name || '未命名课程' }}
@@ -205,7 +194,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
           <!-- 背景装饰 -->
           <div
             class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-            :style="getCardGlowStyle('blue')"
+            :style="getCardGlowStyle()"
           />
         </Card>
       </div>

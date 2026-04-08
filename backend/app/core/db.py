@@ -21,25 +21,31 @@ def _set_sqlite_pragma(dbapi_conn, connection_record):
     cursor.execute("PRAGMA synchronous=NORMAL")
     # 临时表存储在内存中，提升性能
     cursor.execute("PRAGMA temp_store=MEMORY")
-    # 增加缓存大小（页数，每页 4KB）
-    cursor.execute("PRAGMA cache_size=10000")
+    # 增加缓存大小（页数，每页 4KB）- 提升到 20000 页 (~80MB)
+    cursor.execute("PRAGMA cache_size=20000")
+    # WAL 模式优化：自动检查点阈值（页数）
+    cursor.execute("PRAGMA wal_autocheckpoint=1000")
     # 启用外键约束
     cursor.execute("PRAGMA foreign_keys=ON")
+    # 内存映射 I/O 提升读取性能
+    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
     cursor.close()
 
 
 # 创建数据库引擎 - 使用连接池管理连接
+# 优化配置以支持高并发签到场景
 engine = create_engine(
     f"sqlite:///{settings.get_database_path()}",
     connect_args={
         "check_same_thread": False,
-        "timeout": 30,  # 连接超时时间（秒）
+        "timeout": 10,  # 连接超时时间（秒）- 缩短以快速失败
     },
     poolclass=QueuePool,
-    pool_size=10,          # 连接池大小
-    max_overflow=20,       # 超出 pool_size 时的额外连接数
-    pool_timeout=30,       # 获取连接的超时时间
-    pool_recycle=3600,     # 连接回收时间（秒）
+    pool_size=20,          # 连接池大小 - 增加以支持更多并发
+    max_overflow=30,       # 超出 pool_size 时的额外连接数
+    pool_timeout=5,        # 获取连接的超时时间 - 缩短避免长时间等待
+    pool_recycle=1800,     # 连接回收时间（秒）- 30分钟
+    pool_pre_ping=True,    # 连接前检测，避免使用已断开的连接
     echo=settings.app.debug
 )
 

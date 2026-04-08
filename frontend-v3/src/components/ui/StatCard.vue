@@ -10,7 +10,7 @@ import { computed } from 'vue'
  * 支持 CSS 变量主题色
  */
 
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+type CardColor = 'indigo' | 'neutral' | 'success' | 'warning' | 'error'
 
 interface Props {
   title: string
@@ -23,7 +23,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   trend: '',
-  color: 'blue',
+  color: 'indigo',
   link: '',
 })
 
@@ -58,10 +58,11 @@ const glowStyle = computed<CSSProperties>(() => {
 
 const textMutedColor = computed(() => {
   const colors: Record<CardColor, string> = {
-    blue: 'text-blue-200/80',
-    green: 'text-green-200/80',
-    purple: 'text-purple-200/80',
-    orange: 'text-orange-200/80',
+    indigo: 'text-indigo-200/80',
+    neutral: 'text-white/60',
+    success: 'text-green-200/80',
+    warning: 'text-amber-200/80',
+    error: 'text-red-200/80',
   }
   return colors[props.color]
 })
