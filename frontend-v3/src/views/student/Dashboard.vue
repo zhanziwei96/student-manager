@@ -14,7 +14,7 @@ const { data: allStudents } = useStudents()
 
 // 获取分数历史记录
 const studentId = computed(() => currentStudent.value?.student_id || '')
-const { data: scoreLogs, isPending: logsLoading } = useStudentScoreLogs(studentId)
+const { data: scoreLogs, isPending: logsLoading } = useStudentScoreLogs(studentId, { limit: 0 })
 
 const rank = computed(() => {
   if (!allStudents.value || !currentStudent.value) return '-'
@@ -246,10 +246,10 @@ const getCardTextMutedColor = () => 'text-indigo-200/80'
         <!-- Score logs list -->
         <div
           v-else-if="scoreLogs && scoreLogs.length > 0"
-          class="mt-5 space-y-2.5"
+          class="mt-5 space-y-2.5 max-h-96 overflow-y-auto pr-1"
         >
           <div
-            v-for="(log, index) in scoreLogs.slice(0, 5)"
+            v-for="(log, index) in scoreLogs"
             :key="log.id"
             class="group flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.03] p-3.5 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/10"
             :style="{ animationDelay: `${index * 50}ms` }"

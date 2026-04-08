@@ -31,8 +31,8 @@ export const studentsApi = {
   updateScore: (studentId: string, data: UpdateScoreRequest): Promise<Student> =>
     put(`/students/${studentId}/score`, data),
 
-  getScoreLogs: (studentId: string): Promise<ScoreLog[]> =>
-    get(`/students/${studentId}/scores`),
+  getScoreLogs: (studentId: string, limit?: number): Promise<ScoreLog[]> =>
+    get(`/students/${studentId}/scores`, limit !== undefined ? { limit } : undefined),
 
   resetPassword: (id: number, newPassword: string): Promise<void> =>
     put(`/students/${id}/reset-password`, { new_password: newPassword }),

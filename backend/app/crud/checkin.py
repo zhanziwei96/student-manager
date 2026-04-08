@@ -134,10 +134,12 @@ def count_checkins_by_session_id(session: Session, session_id: int) -> int:
 
 def get_student_score_logs(session: Session, student_id: str, limit: Optional[int] = None) -> List[ScoreLog]:
     """获取学生分数日志"""
+    query = select(ScoreLog).where(ScoreLog.student_id == student_id).order_by(ScoreLog.created_at.desc())
     if limit is None:
         from app.core.config import get_settings
         limit = get_settings().pagination.score_log_default_limit
-    query = select(ScoreLog).where(ScoreLog.student_id == student_id).order_by(ScoreLog.created_at.desc()).limit(limit)
+    if limit > 0:
+        query = query.limit(limit)
     return list(session.exec(query).all())
 
 
