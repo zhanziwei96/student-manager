@@ -10,32 +10,21 @@ const currentStudentId = computed(() => authStore.user?.id)
 
 const activeTab = ref<'class' | 'school'>('class')
 
-// 卡片主题辅助函数
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 
 const { isPending, students, myRank } = useLeaderboard(
   computed(() => ({ scope: activeTab.value, limit: 50 }))
@@ -115,19 +104,19 @@ const maskName = (name: string, studentId: string) => {
       </Button>
     </div>
 
-    <!-- My Rank Card - purple 主题 -->
+    <!-- My Rank Card - Indigo 主题 -->
     <Card
       v-if="myRank"
       class="relative overflow-hidden p-4 shadow-xl mb-5 transition-all duration-300"
-      :style="getCardStyle('purple')"
+      :style="getCardStyle()"
     >
       <div class="relative z-10 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div
             class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 shadow-inner"
-            :style="getCardIconStyle('purple')"
+            :style="getCardIconStyle()"
           >
-            <User class="h-5 w-5" :style="{ color: 'var(--card-purple-icon-text)' }" />
+            <User class="h-5 w-5" :style="{ color: 'var(--card-indigo-icon-text)' }" />
           </div>
           <div>
             <p class="text-sm text-white/60">我的排名</p>
@@ -137,7 +126,7 @@ const maskName = (name: string, studentId: string) => {
           </div>
         </div>
         <div class="text-right">
-          <p class="text-2xl font-bold text-[var(--card-purple-icon-text)]">
+          <p class="text-2xl font-bold text-[var(--card-indigo-icon-text)]">
             {{ myRank.score }}
           </p>
           <p class="text-sm text-white/40">分</p>
@@ -146,11 +135,11 @@ const maskName = (name: string, studentId: string) => {
       <!-- 背景装饰 -->
       <div
         class="absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl opacity-30"
-        :style="getCardGlowStyle('purple')"
+        :style="getCardGlowStyle()"
       />
       <div
         class="absolute -bottom-8 -left-4 h-28 w-28 rounded-full blur-3xl opacity-30"
-        :style="getCardGlowStyle('purple')"
+        :style="getCardGlowStyle()"
       />
     </Card>
 

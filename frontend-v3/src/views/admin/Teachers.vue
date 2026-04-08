@@ -9,38 +9,21 @@ import ManageSchedulesDialog from '@/components/admin/ManageSchedulesDialog.vue'
 import type { User } from '@/types'
 import { getErrorMessage } from '@/lib/error'
 
-// 获取教师主题色（基于索引循环使用）
-const getTeacherTheme = (index: number) => {
-  const themes = ['purple', 'blue', 'green', 'orange'] as const
-  return themes[index % themes.length]
-}
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-// 卡片主题辅助函数
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
-
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 
 // Toast
 const { showToast } = useToast()
@@ -300,25 +283,25 @@ const handleResetPassword = async () => {
       class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
     >
       <Card
-        v-for="(teacher, index) in filteredTeachers"
+        v-for="teacher in filteredTeachers"
         :key="teacher.id"
         class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
-        :style="getCardStyle(getTeacherTheme(index))"
+        :style="getCardStyle()"
       >
         <!-- 背景光晕效果 -->
         <div
           class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl opacity-30"
-          :style="getCardGlowStyle(getTeacherTheme(index))"
+          :style="getCardGlowStyle()"
         />
 
         <div class="relative z-10 flex items-start gap-4">
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl shadow-inner"
-            :style="getCardIconStyle(getTeacherTheme(index))"
+            :style="getCardIconStyle()"
           >
             <UserCircle
               class="h-6 w-6"
-              :style="{ color: 'var(--card-' + getTeacherTheme(index) + '-icon-text)' }"
+              :style="{ color: 'var(--card-indigo-icon-text)' }"
             />
           </div>
           <div class="flex-1 min-w-0">

@@ -12,38 +12,21 @@ import { getErrorMessage } from '@/lib/error'
  * 使用 Feature-based 架构，使用共享的 StudentFilters 组件
  */
 
-// 获取学生主题色（基于索引循环使用）
-const getStudentTheme = (index: number) => {
-  const themes = ['green', 'blue', 'purple', 'orange'] as const
-  return themes[index % themes.length]
-}
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-// 卡片主题辅助函数
-type CardColor = 'blue' | 'green' | 'purple' | 'orange'
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
-
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
-
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 
 // === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
@@ -182,15 +165,15 @@ const handleAddStudent = async () => {
       <!-- Mobile: Card List -->
       <div class="lg:hidden space-y-3">
         <Card
-          v-for="(student, index) in filteredStudents"
+          v-for="student in filteredStudents"
           :key="student.id"
           class="relative overflow-hidden p-4 transition-all duration-300 hover:scale-[1.02]"
-          :style="getCardStyle(getStudentTheme(index))"
+          :style="getCardStyle()"
         >
           <!-- 背景光晕效果 -->
           <div
             class="absolute -right-4 -bottom-4 h-20 w-20 rounded-full blur-2xl opacity-30"
-            :style="getCardGlowStyle(getStudentTheme(index))"
+            :style="getCardGlowStyle()"
           />
 
           <div class="relative z-10 flex items-start justify-between">
@@ -198,11 +181,11 @@ const handleAddStudent = async () => {
               <div class="flex items-center gap-2">
                 <div
                   class="flex h-8 w-8 items-center justify-center rounded-lg shadow-inner"
-                  :style="getCardIconStyle(getStudentTheme(index))"
+                  :style="getCardIconStyle()"
                 >
                   <span
                     class="text-sm font-medium"
-                    :style="{ color: 'var(--card-' + getStudentTheme(index) + '-icon-text)' }"
+                    :style="{ color: 'var(--card-indigo-icon-text)' }"
                   >
                     {{ student.name.charAt(0) }}
                   </span>

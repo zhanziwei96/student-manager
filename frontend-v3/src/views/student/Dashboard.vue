@@ -34,41 +34,23 @@ function formatDate(dateStr: string): string {
   })
 }
 
-// 获取卡片样式 - 使用 CSS 变量
-type CardColor = 'blue' | 'green' | 'purple'
+// 统一的 Indigo 卡片样式
+const getCardStyle = () => ({
+  backgroundColor: 'var(--card-indigo-bg)',
+  borderColor: 'var(--card-indigo-border)',
+  '--tw-shadow-color': 'var(--card-indigo-shadow)',
+})
 
-const getCardStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-bg)`,
-    borderColor: `var(${varPrefix}-border)`,
-    '--tw-shadow-color': `var(${varPrefix}-shadow)`,
-  } as Record<string, string>
-}
+const getCardIconStyle = () => ({
+  backgroundColor: 'var(--card-indigo-icon-bg)',
+  color: 'var(--card-indigo-icon-text)',
+})
 
-const getCardIconStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-icon-bg)`,
-    color: `var(${varPrefix}-icon-text)`,
-  }
-}
+const getCardGlowStyle = () => ({
+  backgroundColor: 'var(--card-indigo-glow)',
+})
 
-const getCardGlowStyle = (color: CardColor) => {
-  const varPrefix = `--card-${color}`
-  return {
-    backgroundColor: `var(${varPrefix}-glow)`,
-  }
-}
-
-const getCardTextMutedColor = (color: CardColor) => {
-  const colors: Record<CardColor, string> = {
-    blue: 'text-blue-200/80',
-    green: 'text-green-200/80',
-    purple: 'text-purple-200/80',
-  }
-  return colors[color]
-}
+const getCardTextMutedColor = () => 'text-indigo-200/80'
 </script>
 
 <template>
@@ -156,16 +138,16 @@ const getCardTextMutedColor = (color: CardColor) => {
         <!-- 班级卡片 -->
         <Card
           class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
-          :style="getCardStyle('blue')"
+          :style="getCardStyle()"
         >
           <div class="relative z-10">
             <div
               class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
-              :style="getCardIconStyle('blue')"
+              :style="getCardIconStyle()"
             >
               <Users class="h-5 w-5" />
             </div>
-            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor('blue')">
+            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor()">
               班级
             </p>
             <p class="text-sm font-semibold text-white mt-0.5 truncate">
@@ -174,23 +156,23 @@ const getCardTextMutedColor = (color: CardColor) => {
           </div>
           <div
             class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors group-hover:opacity-30"
-            :style="getCardGlowStyle('blue')"
+            :style="getCardGlowStyle()"
           />
         </Card>
 
         <!-- 学号卡片 -->
         <Card
           class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
-          :style="getCardStyle('purple')"
+          :style="getCardStyle()"
         >
           <div class="relative z-10">
             <div
               class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
-              :style="getCardIconStyle('purple')"
+              :style="getCardIconStyle()"
             >
               <Award class="h-5 w-5" />
             </div>
-            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor('purple')">
+            <p class="mt-3 text-xs font-medium" :class="getCardTextMutedColor()">
               学号
             </p>
             <p class="text-sm font-semibold text-white mt-0.5 font-mono tracking-wide">
@@ -199,25 +181,25 @@ const getCardTextMutedColor = (color: CardColor) => {
           </div>
           <div
             class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors group-hover:opacity-30"
-            :style="getCardGlowStyle('purple')"
+            :style="getCardGlowStyle()"
           />
         </Card>
 
         <!-- 状态卡片 - 跨两列 -->
         <Card
           class="group col-span-2 relative overflow-hidden p-4 shadow-lg transition-all duration-300"
-          :style="getCardStyle('green')"
+          :style="getCardStyle()"
         >
           <div class="relative z-10 flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div
                 class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
-                :style="getCardIconStyle('green')"
+                :style="getCardIconStyle()"
               >
                 <TrendingUp class="h-5 w-5" />
               </div>
               <div>
-                <p class="text-xs font-medium" :class="getCardTextMutedColor('green')">
+                <p class="text-xs font-medium" :class="getCardTextMutedColor()">
                   账户状态
                 </p>
                 <p class="text-sm font-semibold text-white mt-0.5">
@@ -232,7 +214,7 @@ const getCardTextMutedColor = (color: CardColor) => {
           </div>
           <div
             class="absolute right-0 bottom-0 h-20 w-20 rounded-full blur-2xl transition-colors group-hover:opacity-30"
-            :style="getCardGlowStyle('green')"
+            :style="getCardGlowStyle()"
           />
         </Card>
       </div>
