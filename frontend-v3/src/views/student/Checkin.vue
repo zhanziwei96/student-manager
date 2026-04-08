@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge } from '@/components/ui'
@@ -40,6 +40,17 @@ const successMessage = ref('')
 // 本地签到锁定（防止快速重复点击导致并发请求）
 const isSelfCheckingIn = ref(false)
 
+// Toast 定时器引用（用于组件卸载时清理）
+let toastTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (toastTimeoutId) {
+    clearTimeout(toastTimeoutId)
+    toastTimeoutId = null
+  }
+})
+
 const canCheckin = computed(() => {
   return hasActiveSession.value && !hasCheckedIn.value && !isSelfCheckingIn.value
 })
@@ -56,8 +67,9 @@ const handleCheckin = async () => {
     await doCheckin()
     showSuccessToast.value = true
     successMessage.value = '签到成功！'
-    setTimeout(() => {
+    toastTimeoutId = setTimeout(() => {
       showSuccessToast.value = false
+      toastTimeoutId = null
     }, 3000)
   } catch (err: unknown) {
     // 错误由 mutation 处理，这里捕获是为了防止未处理的 Promise 拒绝

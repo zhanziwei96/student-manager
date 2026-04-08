@@ -186,19 +186,26 @@ def update_student_score(
     )
     session.add(score_log)
 
+    # 使用一次性事件发布机制，确保事件只在事务成功提交后发布一次
+    # 使用事件对象的 id 作为去重键，防止重复发布
+    _published_events = getattr(session, '_published_events', None)
+    if _published_events is None:
+        _published_events = set()
+        session._published_events = _published_events
+
+    event_id = id(event)
+
+    def _publish_event_once(session):
+        # 检查事件是否已发布
+        if event_id not in _published_events:
+            _published_events.add(event_id)
+            event_bus.publish(event)
+
+    # 注册事务提交后的回调
+    sa_event.listen(session, "after_commit", _publish_event_once, once=True)
+
     session.commit()
-    
-    # 注册事务提交后的回调，用于处理其他非核心副作用
-    # 使用 SQLAlchemy 的事件机制确保事件在事务成功提交后才发布
-    # 这样可以保证：
-    # 1. 如果业务提交失败，事件不会发布
-    # 2. 避免事件处理成功但业务数据回滚的不一致情况
-    @sa_event.listens_for(session, "after_commit")
-    def publish_event_once(session):
-        event_bus.publish(event)
-        # 移除监听器避免重复
-        sa_event.remove(session, "after_commit", publish_event_once)
-    
+
     return student
 
 

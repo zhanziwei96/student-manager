@@ -117,12 +117,6 @@ def has_checked_in_today(
     return session.exec(query).first() is not None
 
 
-def get_checkins_by_session_id(session: Session, session_id: int) -> List[CheckinRecord]:
-    """获取指定课堂会话的所有签到记录"""
-    query = select(CheckinRecord).where(CheckinRecord.session_id == session_id)
-    return list(session.exec(query).all())
-
-
 def count_checkins_by_session_id(session: Session, session_id: int) -> int:
     """统计指定课堂会话的签到数量"""
     query = select(func.count()).select_from(CheckinRecord).where(

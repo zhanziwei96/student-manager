@@ -24,6 +24,17 @@ _pending_audit_tasks: set[asyncio.Task] = set()
 _audit_executor = ThreadPoolExecutor(max_workers=10, thread_name_prefix="audit_log_")
 
 
+def shutdown_audit_executor():
+    """
+    关闭审计日志线程池
+    在应用关闭时调用，确保线程资源正确释放
+    """
+    global _audit_executor
+    if _audit_executor:
+        _audit_executor.shutdown(wait=True)
+        _audit_executor = None
+
+
 async def _save_audit_log_async(audit_data: Dict[str, Any]) -> None:
     """
     异步保存审计日志（后台任务）- 性能优化

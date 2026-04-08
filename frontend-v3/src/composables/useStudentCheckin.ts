@@ -27,7 +27,9 @@ export function useStudentCourseSession(className?: string | Ref<string>) {
       return await checkinApi.getCourseSessionForClass(classNameValue)
     },
     enabled: computed(() => !!targetClassName.value),
+    staleTime: 5000, // 5秒内不重复请求，避免组件快速切换时堆积
     refetchInterval: 10000,
+    refetchOnWindowFocus: false, // 签到页面不需要窗口聚焦时刷新
   })
 
   return {

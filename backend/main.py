@@ -110,8 +110,13 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 50)
     
     yield
-    
+
     # 关闭时执行
+    # 关闭审计日志线程池，释放线程资源
+    from app.core.middleware import shutdown_audit_executor
+    shutdown_audit_executor()
+    logger.info("审计日志线程池已关闭")
+
     logger.info("服务已停止")
 
 

@@ -18,6 +18,9 @@ interface ToastOptions {
 // 全局 toast 队列（单例模式）
 const toasts = ref<ToastItem[]>([])
 
+// 最大 Toast 数量限制，防止极端情况下累积过多
+const MAX_TOASTS = 10
+
 let idCounter = 0
 
 function generateId(): string {
@@ -53,6 +56,11 @@ export function useToast() {
       message: toastData.message,
       variant: toastData.variant!,
       duration: toastData.duration!,
+    }
+
+    // 如果达到上限，移除最早的 toast
+    if (toasts.value.length >= MAX_TOASTS) {
+      toasts.value.shift()
     }
 
     toasts.value.push(newToast)
