@@ -50,8 +50,8 @@ watch(() => props.open, (isOpen) => {
 
 const typeOptions: { value: AdjustmentType; label: string; color: string }[] = [
   { value: 'cancel', label: '停课', color: 'text-red-400 bg-red-500/10 border-red-500/30' },
-  { value: 'modify', label: '调课', color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' },
-  { value: 'makeup', label: '补课', color: 'text-purple-400 bg-purple-500/10 border-purple-500/30' },
+  { value: 'modify', label: '调课', color: 'text-indigo-300 bg-indigo-500/20 border-indigo-500/40' },
+  { value: 'makeup', label: '补课', color: 'text-amber-300 bg-amber-500/20 border-amber-500/40' },
 ]
 
 const showExtraFields = computed(() => adjustmentType.value === 'modify' || adjustmentType.value === 'makeup')
