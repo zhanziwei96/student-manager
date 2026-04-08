@@ -2,7 +2,8 @@
 限流辅助工具 - 为每个 key 提供独立的 InMemoryBucket
 修复 pyrate-limiter 默认 SingleBucketFactory 导致所有 key 共享计数器的问题
 """
-from typing import Dict
+from collections import OrderedDict
+from typing import Optional
 from fastapi import Request
 from pyrate_limiter import BucketFactory, RateItem, AbstractBucket, InMemoryBucket, Rate
 from app.core.config import get_settings
@@ -49,9 +50,10 @@ class PerKeyBucketFactory(BucketFactory):
     InMemoryBucket，确保限流按 key 精确隔离。
     """
 
-    def __init__(self, rates: list[Rate]):
+    def __init__(self, rates: list[Rate], max_buckets: int = 10000):
         self.rates = rates
-        self._buckets: Dict[str, InMemoryBucket] = {}
+        self._max_buckets = max_buckets
+        self._buckets: OrderedDict[str, InMemoryBucket] = OrderedDict()
         # 占位 bucket，仅用于获取统一的时间戳（MonotonicClock）
         self._prototype = InMemoryBucket(rates)
 
@@ -61,8 +63,19 @@ class PerKeyBucketFactory(BucketFactory):
 
     def get(self, item: RateItem) -> AbstractBucket:
         key = item.name
-        if key not in self._buckets:
-            bucket = InMemoryBucket(self.rates)
-            self.schedule_leak(bucket)
-            self._buckets[key] = bucket
-        return self._buckets[key]
+        if key in self._buckets:
+            # LRU: 移动到末尾
+            self._buckets.move_to_end(key)
+            return self._buckets[key]
+
+        bucket = InMemoryBucket(self.rates)
+        self.schedule_leak(bucket)
+        self._buckets[key] = bucket
+
+        # 限制总 bucket 数，防止无限增长导致内存泄漏
+        if len(self._buckets) > self._max_buckets:
+            # 弹出最久未使用的 bucket
+            _, old_bucket = self._buckets.popitem(last=False)
+            old_bucket.flush()
+
+        return bucket

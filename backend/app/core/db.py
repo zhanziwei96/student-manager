@@ -28,7 +28,7 @@ def _set_sqlite_pragma(dbapi_conn, connection_record):
     # 启用外键约束
     cursor.execute("PRAGMA foreign_keys=ON")
     # 内存映射 I/O 提升读取性能
-    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
+    cursor.execute("PRAGMA mmap_size=33554432")  # 32MB
     cursor.close()
 
 

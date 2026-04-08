@@ -16,7 +16,9 @@ from starlette.types import ASGIApp
 
 # 任务队列管理 - 限制最大并发任务数
 MAX_CONCURRENT_AUDIT_TASKS = 50  # 最大并发审计任务数
+MAX_PENDING_AUDIT_TASKS = 100   # 最大 pending 审计任务数，防止内存泄漏
 _audit_task_semaphore = asyncio.Semaphore(MAX_CONCURRENT_AUDIT_TASKS)
+_pending_audit_tasks: set[asyncio.Task] = set()
 
 # 使用线程池处理数据库操作，避免阻塞事件循环
 _audit_executor = ThreadPoolExecutor(max_workers=10, thread_name_prefix="audit_log_")
@@ -202,10 +204,20 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
         })
 
         # SEC-006: 创建后台任务异步写入，添加错误处理和队列管理
+        # 限制 pending 任务总数，防止高并发下 create_task 无限堆积导致内存泄漏
+        if len(_pending_audit_tasks) >= MAX_PENDING_AUDIT_TASKS:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"审计日志 pending 任务数已达上限 ({MAX_PENDING_AUDIT_TASKS})，丢弃当前审计日志以防止内存泄漏"
+            )
+            return
+
         task = asyncio.create_task(_save_audit_log_async(audit_data))
+        _pending_audit_tasks.add(task)
 
         # 添加任务完成回调，捕获异常防止未处理异常警告
         def _on_task_done(t: asyncio.Task) -> None:
+            _pending_audit_tasks.discard(t)
             try:
                 t.result()  # 这会抛出任务中的异常（如果有）
             except Exception as e:
