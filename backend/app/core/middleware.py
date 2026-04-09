@@ -35,6 +35,26 @@ def shutdown_audit_executor():
         _audit_executor = None
 
 
+async def _save_audit_log_with_timeout(audit_data: Dict[str, Any]) -> None:
+    """
+    保存审计日志（带超时保护）
+
+    包装 _save_audit_log_async，添加 10 秒超时机制，防止数据库连接
+    卡住导致任务长时间占用内存。
+
+    Args:
+        audit_data: 审计日志数据字典
+    """
+    try:
+        await asyncio.wait_for(
+            _save_audit_log_async(audit_data),
+            timeout=10.0  # 10秒总超时（包含内部5秒超时）
+        )
+    except asyncio.TimeoutError:
+        import logging
+        logging.getLogger(__name__).warning("审计日志任务超时（10秒），已取消并释放资源")
+
+
 async def _save_audit_log_async(audit_data: Dict[str, Any]) -> None:
     """
     异步保存审计日志（后台任务）- 性能优化
@@ -223,7 +243,10 @@ class AuditLogMiddleware(BaseHTTPMiddleware):
             )
             return
 
-        task = asyncio.create_task(_save_audit_log_async(audit_data))
+        # SEC-006: 创建后台任务异步写入，添加超时保护防止任务无限运行
+        task = asyncio.create_task(
+            _save_audit_log_with_timeout(audit_data)
+        )
         _pending_audit_tasks.add(task)
 
         # 添加任务完成回调，捕获异常防止未处理异常警告
