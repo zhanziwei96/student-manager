@@ -5,7 +5,7 @@ import { Check } from 'lucide-vue-next'
 
 /**
  * Checkbox 组件
- * 基于 ClassHub 设计体系 v1.0.0
+ * Ollama 白色主题设计
  */
 
 interface Props {
@@ -28,10 +28,10 @@ const handleChange = (event: Event) => {
 const wrapperClasses = computed(() =>
   cn(
     'relative flex items-center justify-center',
-    'h-5 w-5 rounded border transition-all duration-150',
+    'h-5 w-5 rounded border',
     props.checked
-      ? 'bg-primary border-primary'
-      : 'bg-transparent border-border hover:border-border-hover',
+      ? 'bg-black border-black'
+      : 'bg-white border-[#e5e5e5] hover:border-[#d4d4d4]',
     props.disabled && 'opacity-50 cursor-not-allowed',
     props.class
   )

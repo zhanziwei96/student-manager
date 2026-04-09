@@ -64,17 +64,17 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background">
+  <div class="min-h-screen bg-[#fafafa]">
     <!-- 移动端：顶部导航栏 -->
     <header class="lg:hidden fixed top-0 left-0 right-0 h-14 z-40
-                   bg-[#0a0a0f] border-b border-white/10
+                   bg-white border-b border-[#e5e5e5]
                    flex items-center justify-between px-4">
       <div class="flex items-center gap-2">
-        <GraduationCap class="h-6 w-6 text-primary" />
-        <span class="text-lg font-bold text-white">智慧课堂</span>
+        <GraduationCap class="h-6 w-6 text-black" />
+        <span class="text-lg font-medium text-black">智慧课堂</span>
       </div>
       <button
-        class="p-2 -mr-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 min-h-[44px] min-w-[44px] flex items-center justify-center"
+        class="p-2 -mr-2 rounded-lg text-[#a3a3a3] hover:text-black hover:bg-[#fafafa] min-h-[44px] min-w-[44px] flex items-center justify-center"
         @click="showMobileMenu = true"
       >
         <Menu class="h-6 w-6" />
@@ -84,24 +84,24 @@ const handleLogout = async () => {
     <!-- 桌面端：固定侧边栏 -->
     <aside class="hidden lg:block lg:fixed lg:left-0 lg:top-0 lg:z-40
                   lg:h-screen lg:w-64
-                  border-r border-white/10 bg-[#0a0a0f]">
+                  border-r border-[#e5e5e5] bg-white">
       <!-- Logo -->
-      <div class="flex h-16 items-center border-b border-white/10 px-6">
-        <GraduationCap class="h-8 w-8 text-primary" />
-        <span class="ml-3 text-xl font-bold text-white">智慧课堂</span>
+      <div class="flex h-16 items-center border-b border-[#e5e5e5] px-6">
+        <GraduationCap class="h-8 w-8 text-black" />
+        <span class="ml-3 text-xl font-medium text-black">智慧课堂</span>
       </div>
 
       <!-- User info -->
-      <div class="border-b border-white/10 p-4">
+      <div class="border-b border-[#e5e5e5] p-4">
         <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-            <User class="h-5 w-5 text-primary" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#fafafa]">
+            <User class="h-5 w-5 text-[#737373]" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="truncate text-sm font-medium text-white">
+            <p class="truncate text-sm font-medium text-black">
               {{ user?.name }}
             </p>
-            <p class="truncate text-xs text-white/50 capitalize">
+            <p class="truncate text-xs text-[#a3a3a3] capitalize">
               {{ user?.role === 'admin' ? '管理员' : user?.role === 'teacher' ? '教师' : '学生' }}
             </p>
           </div>
@@ -115,10 +115,10 @@ const handleLogout = async () => {
           :key="item.path"
           :to="item.path"
           :class="[
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            'flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
             isActive(item.path)
-              ? 'bg-primary/10 text-primary'
-              : 'text-white/70 hover:bg-white/10 hover:text-white',
+              ? 'bg-[#e5e5e5] text-black'
+              : 'text-[#737373] hover:bg-[#fafafa] hover:text-black',
           ]"
         >
           <component :is="item.icon" class="h-5 w-5" />
@@ -127,10 +127,10 @@ const handleLogout = async () => {
       </nav>
 
       <!-- Bottom actions -->
-      <div class="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
+      <div class="absolute bottom-0 left-0 right-0 border-t border-[#e5e5e5] p-4">
         <Button
           variant="ghost"
-          class="w-full justify-start gap-2 text-white/70"
+          class="w-full justify-start gap-2 text-[#a3a3a3] hover:text-black"
           @click="handleLogout"
         >
           <LogOut class="h-5 w-5" />

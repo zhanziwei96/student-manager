@@ -36,7 +36,7 @@ const selectedLabel = computed(() => {
 const filteredOptions = computed(() => {
   if (!searchQuery.value) return props.options
   const query = searchQuery.value.toLowerCase()
-  return props.options.filter(opt => 
+  return props.options.filter(opt =>
     opt.label.toLowerCase().includes(query)
   )
 })
@@ -112,37 +112,35 @@ onUnmounted(() => {
     <button
       type="button"
       :class="cn(
-        'flex h-10 w-full items-center justify-between rounded-lg',
-        'border border-white/10 bg-white/5',
+        'flex h-10 w-full items-center justify-between rounded-full',
+        'border border-[#e5e5e5] bg-white',
         'px-3 py-2',
-        'text-sm text-white',
-        'transition-all duration-150',
-        'hover:border-white/20 hover:bg-white/[0.07]',
-        'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50',
+        'text-sm text-black',
+        'focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 focus:border-black',
         'disabled:cursor-not-allowed disabled:opacity-50',
-        isOpen && 'border-primary/50 ring-2 ring-primary/50',
+        isOpen && 'ring-2 ring-[#3b82f6]/50 border-black',
         props.class
       )"
       :disabled="disabled"
       @click="toggleOpen"
     >
-      <span :class="!modelValue && 'text-white/50'">
+      <span :class="!modelValue && 'text-[#a3a3a3]'">
         {{ selectedLabel }}
       </span>
       <div class="flex items-center gap-1">
         <button
           v-if="modelValue"
           type="button"
-          class="rounded p-0.5 hover:bg-white/10"
+          class="rounded p-0.5 hover:bg-[#fafafa]"
           @click.stop="clearSelection"
         >
-          <X class="h-3.5 w-3.5 text-white/50" />
+          <X class="h-3.5 w-3.5 text-[#a3a3a3]" />
         </button>
-        <ChevronDown 
+        <ChevronDown
           :class="cn(
-            'h-4 w-4 text-white/50 transition-transform duration-200',
+            'h-4 w-4 text-[#a3a3a3]',
             isOpen && 'rotate-180'
-          )" 
+          )"
         />
       </div>
     </button>
@@ -156,19 +154,19 @@ onUnmounted(() => {
       :style="dropdownStyle"
       :class="cn(
         'fixed z-[9999] mt-1 min-w-[200px]',
-        'rounded-lg border border-white/10 bg-[#1a1a2e] shadow-xl',
+        'rounded-xl border border-[#e5e5e5] bg-white',
         'overflow-hidden'
       )"
     >
       <!-- Search Input -->
-      <div class="border-b border-white/10 p-2">
+      <div class="border-b border-[#e5e5e5] p-2">
         <div class="relative">
-          <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+          <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
           <input
             v-model="searchQuery"
             type="text"
             :placeholder="searchPlaceholder || '搜索...'"
-            class="w-full rounded-md bg-white/5 py-1.5 pl-9 pr-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-primary/50"
+            class="w-full rounded-full bg-[#fafafa] border border-[#e5e5e5] py-1.5 pl-9 pr-3 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-1 focus:ring-[#3b82f6]/50"
             @click.stop
           >
         </div>
@@ -180,10 +178,10 @@ onUnmounted(() => {
           v-for="option in filteredOptions"
           :key="option.value"
           :class="cn(
-            'cursor-pointer px-3 py-2 text-sm transition-colors',
-            modelValue === option.value 
-              ? 'bg-primary/20 text-primary' 
-              : 'bg-[#1a1a2e] text-white/80 hover:bg-white/[0.05]'
+            'cursor-pointer px-3 py-2 text-sm',
+            modelValue === option.value
+              ? 'bg-[#e5e5e5] text-black'
+              : 'text-[#737373] hover:bg-[#fafafa]'
           )"
           @click="selectOption(option.value)"
         >
@@ -191,7 +189,7 @@ onUnmounted(() => {
         </div>
         <div
           v-if="filteredOptions.length === 0"
-          class="px-3 py-4 text-center text-sm text-white/40"
+          class="px-3 py-4 text-center text-sm text-[#a3a3a3]"
         >
           未找到匹配选项
         </div>

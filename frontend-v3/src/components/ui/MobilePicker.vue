@@ -113,23 +113,21 @@ const isSelected = (option: MobilePickerOption) => {
     <button
       type="button"
       :class="cn(
-        'flex h-11 w-full items-center justify-between rounded-lg',
-        'border border-white/10 bg-white/5',
+        'flex h-11 w-full items-center justify-between rounded-full',
+        'border border-[#e5e5e5] bg-white',
         'px-3 py-2',
-        'text-base text-white',
-        'transition-all duration-150',
-        'hover:border-white/20 hover:bg-white/[0.07]',
-        'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50',
+        'text-base text-black',
+        'focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 focus:border-black',
         'disabled:cursor-not-allowed disabled:opacity-50',
-        isOpen && 'border-primary/50 ring-2 ring-primary/50'
+        isOpen && 'ring-2 ring-[#3b82f6]/50 border-black'
       )"
       :disabled="disabled"
       @click="open"
     >
-      <span :class="!selectedOption && 'text-white/50'">
+      <span :class="!selectedOption && 'text-[#a3a3a3]'">
         <template v-if="selectedOption">
           {{ selectedOption.label }}
-          <span v-if="selectedOption.subtitle" class="text-white/60 ml-1">
+          <span v-if="selectedOption.subtitle" class="text-[#737373] ml-1">
             ({{ selectedOption.subtitle }})
           </span>
         </template>
@@ -141,14 +139,14 @@ const isSelected = (option: MobilePickerOption) => {
         <button
           v-if="clearable && modelValue !== undefined"
           type="button"
-          class="rounded p-0.5 hover:bg-white/10"
+          class="rounded p-0.5 hover:bg-[#fafafa]"
           @click.stop="clear"
         >
-          <X class="h-4 w-4 text-white/50" />
+          <X class="h-4 w-4 text-[#a3a3a3]" />
         </button>
         <ChevronDown
           :class="cn(
-            'h-4 w-4 text-white/50 transition-transform duration-200',
+            'h-4 w-4 text-[#a3a3a3]',
             isOpen && 'rotate-180'
           )"
         />
@@ -160,7 +158,7 @@ const isSelected = (option: MobilePickerOption) => {
       <Transition name="fade">
         <div
           v-if="isOpen && isMobile"
-          class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          class="fixed inset-0 z-50 bg-black/30"
           @click="close"
         />
       </Transition>
@@ -168,21 +166,21 @@ const isSelected = (option: MobilePickerOption) => {
       <Transition name="slide-up">
         <div
           v-if="isOpen && isMobile"
-          class="fixed bottom-0 left-0 right-0 z-50 bg-[#1a1a2e] rounded-t-[20px] shadow-2xl max-h-[70vh] flex flex-col"
+          class="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-xl max-h-[70vh] flex flex-col"
         >
           <!-- 指示条 -->
           <div class="flex justify-center pt-3 pb-2" @click="close">
-            <div class="w-10 h-1 rounded-full bg-white/20" />
+            <div class="w-10 h-1 rounded-full bg-[#d4d4d4]" />
           </div>
 
           <!-- 标题栏 -->
-          <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
-            <h3 class="text-lg font-semibold text-white">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-[#e5e5e5]">
+            <h3 class="text-lg font-medium text-black">
               {{ title || placeholder }}
             </h3>
             <button
               type="button"
-              class="text-primary text-base font-medium"
+              class="text-black text-base font-medium"
               @click="close"
             >
               完成
@@ -190,14 +188,14 @@ const isSelected = (option: MobilePickerOption) => {
           </div>
 
           <!-- 搜索框 -->
-          <div v-if="searchable" class="p-3 border-b border-white/10">
+          <div v-if="searchable" class="p-3 border-b border-[#e5e5e5]">
             <div class="relative">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a3a3a3]" />
               <input
                 v-model="searchQuery"
                 type="text"
                 :placeholder="searchPlaceholder"
-                class="w-full h-10 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                class="w-full h-10 pl-10 pr-4 rounded-full bg-[#fafafa] border border-[#e5e5e5] text-black text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-black"
               >
             </div>
           </div>
@@ -208,25 +206,25 @@ const isSelected = (option: MobilePickerOption) => {
               v-for="option in filteredOptions"
               :key="option.value"
               :class="cn(
-                'flex items-center justify-between px-4 py-4 border-b border-white/5 cursor-pointer active:bg-white/5',
-                isSelected(option) && 'bg-primary/10'
+                'flex items-center justify-between px-4 py-4 border-b border-[#e5e5e5] cursor-pointer active:bg-[#fafafa]',
+                isSelected(option) && 'bg-[#e5e5e5]'
               )"
               @click="select(option)"
             >
               <div>
-                <div :class="cn('text-base', isSelected(option) ? 'text-primary font-medium' : 'text-white')">
+                <div :class="cn('text-base', isSelected(option) ? 'text-black font-medium' : 'text-[#737373]')">
                   {{ option.label }}
                 </div>
-                <div v-if="option.subtitle" class="text-sm text-white/50 mt-0.5">
+                <div v-if="option.subtitle" class="text-sm text-[#a3a3a3] mt-0.5">
                   {{ option.subtitle }}
                 </div>
               </div>
               <Check
                 v-if="isSelected(option)"
-                class="h-5 w-5 text-primary"
+                class="h-5 w-5 text-black"
               />
             </div>
-            <div v-if="filteredOptions.length === 0" class="py-8 text-center text-white/40">
+            <div v-if="filteredOptions.length === 0" class="py-8 text-center text-[#a3a3a3]">
               未找到匹配选项
             </div>
           </div>
@@ -238,17 +236,17 @@ const isSelected = (option: MobilePickerOption) => {
     <div
       v-if="isOpen && !isMobile"
       ref="desktopPanelRef"
-      class="absolute z-50 top-full left-0 right-0 mt-1 bg-[#1a1a2e] border border-white/10 rounded-lg shadow-xl overflow-hidden"
+      class="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[#e5e5e5] rounded-xl overflow-hidden"
     >
       <!-- 搜索框 -->
-      <div v-if="searchable" class="p-2 border-b border-white/10">
+      <div v-if="searchable" class="p-2 border-b border-[#e5e5e5]">
         <div class="relative">
-          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a3a3a3]" />
           <input
             v-model="searchQuery"
             type="text"
             :placeholder="searchPlaceholder"
-            class="w-full h-9 pl-9 pr-3 rounded bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+            class="w-full h-9 pl-9 pr-3 rounded-full bg-[#fafafa] border border-[#e5e5e5] text-black text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-black"
             @keydown.esc="close"
           >
         </div>
@@ -260,26 +258,26 @@ const isSelected = (option: MobilePickerOption) => {
           v-for="(option, index) in filteredOptions"
           :key="option.value"
           :class="cn(
-            'flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-white/5',
-            index !== filteredOptions.length - 1 && 'border-b border-white/5',
-            isSelected(option) && 'bg-primary/10'
+            'flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-[#fafafa]',
+            index !== filteredOptions.length - 1 && 'border-b border-[#e5e5e5]',
+            isSelected(option) && 'bg-[#e5e5e5]'
           )"
           @click="select(option)"
         >
           <div>
-            <div :class="cn('text-sm', isSelected(option) ? 'text-primary font-medium' : 'text-white')">
+            <div :class="cn('text-sm', isSelected(option) ? 'text-black font-medium' : 'text-[#737373]')">
               {{ option.label }}
             </div>
-            <div v-if="option.subtitle" class="text-xs text-white/50 mt-0.5">
+            <div v-if="option.subtitle" class="text-xs text-[#a3a3a3] mt-0.5">
               {{ option.subtitle }}
             </div>
           </div>
           <Check
             v-if="isSelected(option)"
-            class="h-4 w-4 text-primary"
+            class="h-4 w-4 text-black"
           />
         </div>
-        <div v-if="filteredOptions.length === 0" class="py-6 text-center text-sm text-white/40">
+        <div v-if="filteredOptions.length === 0" class="py-6 text-center text-sm text-[#a3a3a3]">
           未找到匹配选项
         </div>
       </div>

@@ -5,7 +5,7 @@ import { ChevronDown } from 'lucide-vue-next'
 
 /**
  * Select 组件
- * 基于 ClassHub 设计体系 v1.0.0
+ * Ollama 白色主题设计
  */
 
 interface Option {
@@ -31,19 +31,17 @@ const emit = defineEmits<{
 const classes = computed(() =>
   cn(
     // 布局
-    'flex h-9 w-full items-center justify-between rounded-md',
+    'flex h-9 w-full items-center justify-between rounded-full',
     'px-3 py-2 pr-10', // 右侧留出图标空间
     // 边框和背景
-    'border border-border bg-transparent',
+    'border border-[#e5e5e5] bg-white',
     // 文字
-    'text-sm text-text-primary',
+    'text-sm text-black',
     // 占位符
-    'placeholder:text-text-placeholder',
+    'placeholder:text-[#a3a3a3]',
     // 状态
-    'transition-all duration-150 ease-out',
-    'hover:border-border-hover',
-    'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
-    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-white/[0.02]',
+    'focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 focus:border-black',
+    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[#fafafa]',
     // 自定义下拉箭头
     'appearance-none cursor-pointer',
     props.class
@@ -72,17 +70,17 @@ const onChange = (event: Event) => {
       >
         {{ placeholder }}
       </option>
-      <option 
-        v-for="option in options || []" 
-        :key="option.value" 
+      <option
+        v-for="option in options || []"
+        :key="option.value"
         :value="option.value"
         :disabled="option.disabled"
-        class="bg-background-elevated text-text-primary"
+        class="bg-white text-black"
       >
         {{ option.label }}
       </option>
       <slot />
     </select>
-    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
   </div>
 </template>

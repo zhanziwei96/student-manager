@@ -6,7 +6,7 @@ import { X } from 'lucide-vue-next'
 
 /**
  * Dialog 组件
- * 基于 ClassHub 设计体系 v1.0.0
+ * Ollama 白色主题设计
  * 支持作为 form 使用，解决密码字段警告
  *
  * 使用 useScrollLock 锁定 body 滚动，支持多 Dialog 同时打开
@@ -53,9 +53,8 @@ watch(
 
 const overlayClasses = computed(() =>
   cn(
-    'fixed inset-0 z-50 bg-black/80 backdrop-blur-sm',
+    'fixed inset-0 z-50 bg-black/30',
     'flex items-center justify-center',
-    'transition-opacity duration-300 ease-out',
     props.open ? 'opacity-100' : 'opacity-0 pointer-events-none'
   )
 )
@@ -65,11 +64,7 @@ const contentClasses = computed(() =>
     // 定位 - 使用 flex 居中，移动端固定边距
     'relative w-full max-w-lg mx-4 sm:mx-0 max-h-[90vh] overflow-y-auto',
     // 样式
-    'rounded-xl border border-border bg-background-elevated p-4 sm:p-6',
-    // 阴影
-    'shadow-2xl',
-    // 动画
-    'transition-all duration-300 ease-out',
+    'rounded-xl border border-[#e5e5e5] bg-white p-4 sm:p-6',
     props.open
       ? 'opacity-100 scale-100'
       : 'opacity-0 scale-95 pointer-events-none',
@@ -111,14 +106,14 @@ const handleSubmit = (e: Event) => {
           v-if="title || $slots.title"
           class="flex flex-col space-y-1.5 text-center sm:text-left mb-4"
         >
-          <h3 class="text-lg font-semibold text-text-primary">
+          <h3 class="text-lg font-medium text-black">
             <slot name="title">
               {{ title }}
             </slot>
           </h3>
           <p
             v-if="description || $slots.description"
-            class="text-sm text-text-secondary break-words"
+            class="text-sm text-[#737373] break-words"
           >
             <slot name="description">
               {{ description }}
@@ -127,14 +122,14 @@ const handleSubmit = (e: Event) => {
         </div>
 
         <!-- Body -->
-        <div class="text-text-secondary">
+        <div class="text-[#737373]">
           <slot />
         </div>
 
         <!-- Footer -->
-        <div 
-          v-if="$slots.footer" 
-          class="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 mt-6 pt-4 border-t border-border"
+        <div
+          v-if="$slots.footer"
+          class="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 mt-6 pt-4 border-t border-[#e5e5e5]"
         >
           <slot name="footer" />
         </div>
@@ -142,7 +137,7 @@ const handleSubmit = (e: Event) => {
         <!-- Close button -->
         <button
           type="button"
-          class="absolute right-4 top-4 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
+          class="absolute right-4 top-4 p-1 rounded-md text-[#a3a3a3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
           @click="close"
         >
           <X class="h-4 w-4" />

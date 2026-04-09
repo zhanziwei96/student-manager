@@ -36,7 +36,7 @@ const isActive = (path: string) => {
 </script>
 
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a0f] border-t border-white/10 lg:hidden">
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#e5e5e5] lg:hidden">
     <div class="flex items-center justify-around h-16">
       <RouterLink
         v-for="item in navItems"
@@ -45,8 +45,8 @@ const isActive = (path: string) => {
         :class="[
           'flex flex-col items-center justify-center gap-1 flex-1 h-full min-w-0',
           isActive(item.path)
-            ? 'text-primary'
-            : 'text-white/50'
+            ? 'text-black'
+            : 'text-[#a3a3a3]'
         ]"
       >
         <component :is="item.icon" class="h-6 w-6" />

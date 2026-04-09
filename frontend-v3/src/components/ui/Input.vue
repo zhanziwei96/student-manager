@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * Input 组件
- * 基于 ClassHub 设计体系 v1.0.0
+ * Ollama 白色主题设计
  */
 
 interface Props {
@@ -25,20 +25,18 @@ const emit = defineEmits<{
 const classes = computed(() =>
   cn(
     // 布局
-    'flex h-9 w-full rounded-md px-3 py-2',
-    // 边框
-    'border border-border bg-transparent',
+    'flex h-9 w-full rounded-full px-3 py-2',
+    // 边框和背景
+    'border border-[#e5e5e5] bg-white',
     // 文字
-    'text-sm text-text-primary',
+    'text-sm text-black',
     // 占位符
-    'placeholder:text-text-placeholder',
+    'placeholder:text-[#a3a3a3]',
     // 文件输入
-    'file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-text-primary',
+    'file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-black',
     // 状态
-    'transition-all duration-150 ease-out',
-    'hover:border-border-hover',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary',
-    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-white/[0.02]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 focus-visible:border-black',
+    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[#fafafa]',
     props.class
   )
 )

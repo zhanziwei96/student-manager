@@ -82,7 +82,7 @@ watch(() => route.path, () => {
   >
     <div
       v-if="open"
-      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm lg:hidden"
+      class="fixed inset-0 z-50 bg-black/30 lg:hidden"
       @click="handleClose"
     />
   </Transition>
@@ -98,16 +98,16 @@ watch(() => route.path, () => {
   >
     <aside
       v-if="open"
-      class="fixed left-0 top-0 z-50 h-screen w-[280px] bg-[#0a0a0f] border-r border-white/10 lg:hidden"
+      class="fixed left-0 top-0 z-50 h-screen w-[280px] bg-white border-r border-[#e5e5e5] lg:hidden"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between h-16 px-4 border-b border-white/10">
+      <div class="flex items-center justify-between h-16 px-4 border-b border-[#e5e5e5]">
         <div class="flex items-center gap-2">
-          <GraduationCap class="h-6 w-6 text-primary" />
-          <span class="text-lg font-bold text-white">智慧课堂</span>
+          <GraduationCap class="h-6 w-6 text-black" />
+          <span class="text-lg font-medium text-black">智慧课堂</span>
         </div>
         <button
-          class="p-2 -mr-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10"
+          class="p-2 -mr-2 rounded-lg text-[#a3a3a3] hover:text-black hover:bg-[#fafafa]"
           @click="handleClose"
         >
           <X class="h-6 w-6" />
@@ -115,16 +115,16 @@ watch(() => route.path, () => {
       </div>
 
       <!-- User info -->
-      <div class="p-4 border-b border-white/10">
+      <div class="p-4 border-b border-[#e5e5e5]">
         <div class="flex items-center gap-3">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
-            <User class="h-6 w-6 text-primary" />
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#fafafa]">
+            <User class="h-6 w-6 text-[#737373]" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-base font-medium text-white truncate">
+            <p class="text-base font-medium text-black truncate">
               {{ user?.name }}
             </p>
-            <p class="text-sm text-white/50">
+            <p class="text-sm text-[#a3a3a3]">
               {{ user?.role === 'admin' ? '管理员' : user?.role === 'teacher' ? '教师' : '学生' }}
             </p>
           </div>
@@ -138,10 +138,10 @@ watch(() => route.path, () => {
           :key="item.path"
           :to="item.path"
           :class="[
-            'flex items-center gap-4 rounded-lg px-4 py-3.5 text-base font-medium transition-colors',
+            'flex items-center gap-4 rounded-full px-4 py-3.5 text-base font-medium',
             isActive(item.path)
-              ? 'bg-primary/10 text-primary'
-              : 'text-white/70 hover:bg-white/10 hover:text-white'
+              ? 'bg-[#e5e5e5] text-black'
+              : 'text-[#737373] hover:bg-[#fafafa] hover:text-black'
           ]"
         >
           <component :is="item.icon" class="h-6 w-6" />
@@ -150,10 +150,10 @@ watch(() => route.path, () => {
       </nav>
 
       <!-- Bottom actions -->
-      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-[#e5e5e5]">
         <Button
           variant="ghost"
-          class="w-full justify-start gap-3 text-white/70 h-12"
+          class="w-full justify-start gap-3 text-[#a3a3a3] hover:text-black h-12"
           @click="handleLogout"
         >
           <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

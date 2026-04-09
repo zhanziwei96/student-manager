@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="fixed top-0 left-0 right-0 z-50 bg-red-500/90 backdrop-blur-sm text-white px-4 py-3 shadow-lg"
+    class="fixed top-0 left-0 right-0 z-50 bg-[#ef4444] text-white px-4 py-3"
     role="alert"
   >
     <div class="flex items-center justify-between max-w-7xl mx-auto">

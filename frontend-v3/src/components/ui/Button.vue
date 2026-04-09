@@ -5,49 +5,48 @@ import { cn } from '@/lib/utils'
 
 /**
  * Button 组件
- * 基于 ClassHub 设计体系 v1.0.0
+ * Ollama 白色主题设计
  */
 
 const buttonVariants = cva(
   // 基础样式
   'inline-flex items-center justify-center gap-2 whitespace-nowrap ' +
-  'font-medium transition-all duration-150 ease-out ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
-  'disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed ' +
-  'active:scale-[0.98]',
+  'font-medium ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 ' +
+  'disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed',
   {
     variants: {
       variant: {
-        // 主按钮 - 使用主色
-        default: 'bg-primary text-white hover:bg-primary-hover shadow-md hover:shadow-glow-primary',
-        
-        // 次级按钮 - 描边样式
-        outline: 'border border-border bg-transparent text-text-secondary hover:bg-white/10 hover:text-text-primary hover:border-border-hover',
-        
+        // 默认按钮 - 灰色药丸
+        default: 'bg-[#e5e5e5] text-[#262626] border border-[#e5e5e5] hover:bg-[#d4d4d4]',
+
+        // 描边按钮 - 白色药丸
+        outline: 'bg-white text-[#404040] border border-[#d4d4d4] hover:bg-[#fafafa]',
+
+        // CTA 按钮 - 黑色药丸
+        cta: 'bg-black text-white border border-black hover:bg-[#262626]',
+
         // 幽灵按钮 - 透明背景
-        ghost: 'bg-transparent text-text-secondary hover:bg-white/10 hover:text-text-primary',
-        
+        ghost: 'bg-transparent text-[#737373] hover:text-black hover:bg-[#fafafa]',
+
         // 危险按钮 - 错误色
-        destructive: 'bg-error text-white hover:bg-error/90 shadow-md',
-        
-        // 次级按钮 - 半透明背景
-        secondary: 'bg-white/10 text-white hover:bg-white/20',
-        
+        destructive: 'bg-[#ef4444] text-white border border-[#ef4444] hover:bg-[#dc2626]',
+
         // 链接按钮
-        link: 'text-primary underline-offset-4 hover:underline bg-transparent',
+        link: 'text-black underline-offset-4 hover:underline bg-transparent',
       },
       size: {
         // 小尺寸: h-8 (32px)
-        sm: 'h-8 px-3 text-xs rounded-md',
-        
+        sm: 'h-8 px-3 text-xs rounded-full',
+
         // 默认尺寸: h-9 (36px)
-        default: 'h-9 px-4 py-2 text-sm rounded-md',
-        
+        default: 'h-9 px-4 py-2 text-sm rounded-full',
+
         // 大尺寸: h-10 (40px)
-        lg: 'h-10 px-6 text-base rounded-lg',
-        
+        lg: 'h-10 px-6 text-base rounded-full',
+
         // 图标按钮: 正方形
-        icon: 'h-9 w-9 p-0 rounded-md',
+        icon: 'h-9 w-9 p-0 rounded-full',
       },
     },
     defaultVariants: {
@@ -79,9 +78,9 @@ const classes = computed(() => cn(buttonVariants({ variant: props.variant, size:
 </script>
 
 <template>
-  <button 
-    :class="classes" 
-    :disabled="disabled || loading" 
+  <button
+    :class="classes"
+    :disabled="disabled || loading"
     :type="type"
   >
     <slot />
