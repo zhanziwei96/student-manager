@@ -69,7 +69,8 @@ export function useStudentSelfCheckin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-course-session'] })
-      queryClient.invalidateQueries({ queryKey: ['session-checkins'] })
+      // 使用 exact: false 匹配所有以 ['session-checkins'] 开头的 query（包含 sessionId）
+      queryClient.invalidateQueries({ queryKey: ['session-checkins'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
     },
   })

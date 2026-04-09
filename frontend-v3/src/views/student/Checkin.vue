@@ -4,7 +4,6 @@ import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge } from '@/components/ui'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
-import { getErrorMessage } from '@/lib/error'
 
 // 获取卡片样式 - 统一使用 indigo 主题
 const getCardStyle = () => {
@@ -72,8 +71,8 @@ const handleCheckin = async () => {
       toastTimeoutId = null
     }, 3000)
   } catch (err: unknown) {
-    // 错误由 mutation 处理，这里捕获是为了防止未处理的 Promise 拒绝
-    console.error('签到失败:', getErrorMessage(err))
+    // 错误已由 mutation 的 error 状态暴露给 UI，无需额外处理
+    // 捕获是为了防止未处理的 Promise 拒绝
   } finally {
     isSelfCheckingIn.value = false
   }

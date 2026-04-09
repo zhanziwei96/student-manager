@@ -29,7 +29,10 @@ export function useThrottle(cooldownMs: number = 2000) {
 
   const execute = async <T>(fn: () => Promise<T>): Promise<T | undefined> => {
     if (isThrottled.value && !canExecute.value) {
-      console.log(`操作过于频繁，请等待 ${cooldownMs}ms`)
+      // 仅在开发环境输出调试信息
+      if (import.meta.env.DEV) {
+        console.log(`操作过于频繁，请等待 ${cooldownMs}ms`)
+      }
       return undefined
     }
 

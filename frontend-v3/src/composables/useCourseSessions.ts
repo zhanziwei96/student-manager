@@ -73,7 +73,8 @@ export function useCourseSessionStart() {
       queryClient.invalidateQueries({ queryKey: ['courseSessions'] })
       queryClient.invalidateQueries({ queryKey: ['active-class-sessions'] })
       queryClient.invalidateQueries({ queryKey: ['today-schedules'] })
-      queryClient.invalidateQueries({ queryKey: ['session-checkins'] })
+      // 使用 exact: false 匹配所有以 ['session-checkins'] 开头的 query
+      queryClient.invalidateQueries({ queryKey: ['session-checkins'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
     },
   })

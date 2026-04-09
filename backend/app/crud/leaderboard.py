@@ -1,5 +1,6 @@
 # backend/app/crud/leaderboard.py
 from typing import List, Optional, Dict, Any
+from sqlalchemy import func
 from sqlmodel import Session, select
 from app.models import Student
 
@@ -87,26 +88,32 @@ def _get_student_rank(
     scope: str,
     class_name: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
-    """获取单个学生的排名信息"""
-    # 先获取目标学生
-    student = session.exec(
-        select(Student).where(Student.student_id == student_id)
-    ).first()
+    """获取单个学生的排名信息（使用子查询优化，避免N+1问题）"""
+    # 使用子查询一次性获取学生信息和排名
+    # 子查询：获取目标学生的分数
+    score_subquery = (
+        select(Student.score)
+        .where(Student.student_id == student_id)
+        .scalar_subquery()
+    )
+
+    # 主查询：获取学生信息
+    student_query = select(Student).where(Student.student_id == student_id)
+    student = session.exec(student_query).first()
 
     if not student:
         return None
 
-    # 计算该学生的排名
-    query = select(Student).where(
+    # 子查询：计算排名（分数更高的学生数量）
+    rank_query = select(func.count()).where(
         Student.is_account_enabled.is_(True),
-        Student.score > student.score
+        Student.score > score_subquery
     )
 
     if scope == "class" and class_name:
-        query = query.where(Student.class_name == class_name)
+        rank_query = rank_query.where(Student.class_name == class_name)
 
-    # 分数更高的学生数量 + 1 = 排名（标准竞赛排名）
-    higher_count = len(session.exec(query).all())
+    higher_count = session.exec(rank_query).one()
 
     return {
         "rank": higher_count + 1,
