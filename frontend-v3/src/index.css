@@ -1,10 +1,5 @@
 /**
- * ClassHub 主样式文件 - Tailwind CSS v4
- * 
- * Tailwind v4 配置指南:
- * 1. 使用 @import "tailwindcss" 导入所有功能
- * 2. 使用 @theme inline 合并到默认主题（而非覆盖）
- * 3. 全局重置需放入 @layer base 以保持正确的优先级
+ * ClassHub Ollama 主样式文件 - Tailwind CSS v4
  */
 
 /* ===== 导入 Tailwind CSS v4 ===== */
@@ -14,58 +9,25 @@
 @import "./styles/tokens.css";
 @import "./styles/components.css";
 
-/* ===== 自定义主题配置 (@theme inline 合并到默认主题) ===== */
+/* ===== 自定义主题配置 ===== */
 @theme inline {
-  /* 颜色系统 */
-  --color-background: #030307;
-  --color-background-elevated: #0a0a0f;
-  --color-primary: #6366f1;
-  --color-primary-hover: #818cf8;
-  --color-accent: #22d3ee;
-  --color-accent-cyan: #22d3ee;
-  --color-text-primary: #ffffff;
-  --color-text-secondary: rgba(255, 255, 255, 0.7);
-  --color-text-muted: rgba(255, 255, 255, 0.5);
-  --color-border: rgba(255, 255, 255, 0.1);
+  --color-background: #ffffff;
+  --color-background-elevated: #fafafa;
+  --color-primary: #000000;
+  --color-primary-hover: #262626;
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  
-  /* Grafana 柔和配色 */
-  --color-success-soft: #73bf69;
-  --color-success-soft-muted: rgba(115, 191, 105, 0.15);
-  --color-warning-soft: #f2cc0c;
-  --color-warning-soft-muted: rgba(242, 204, 12, 0.15);
-  --color-error-soft: #e02f44;
-  --color-error-soft-muted: rgba(224, 47, 68, 0.15);
-  --color-info-soft: #5794f2;
-  --color-info-soft-muted: rgba(87, 148, 242, 0.15);
-  
-  /* 字体 */
-  --font-sans: 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  
-  /* 圆角 */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  
-  /* 
-   * 间距保留 Tailwind 默认值
-   * 基础单位: --spacing: 0.25rem
-   * 生成: px-1 (0.25rem), px-6 (1.5rem), mx-auto 等
-   */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
-/* ===== 基础样式层 (@layer base) ===== */
-/* 必须在 @layer base 中定义，否则优先级会覆盖 utilities */
+/* ===== 基础样式层 ===== */
 @layer base {
   *,
   *::before,
   *::after {
     box-sizing: border-box;
-    /* 不要在这里设置 margin: 0，让 Tailwind 的 preflight 处理 */
   }
 
   html {
@@ -74,9 +36,8 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: var(--color-background);
-    color: var(--color-text-primary);
-    line-height: 1.5;
+    background-color: #ffffff;
+    color: #000000;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -84,184 +45,25 @@
 
 /* ===== 滚动条样式 ===== */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: #d4d4d4;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #a3a3a3;
 }
 
 /* ===== 选中文本 ===== */
 ::selection {
-  background-color: rgba(99, 102, 241, 0.3);
-  color: white;
-}
-
-/* ===== 工具类 ===== */
-
-/* 渐变文字 */
-.text-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* 玻璃拟态 */
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 发光效果 */
-.glow-primary {
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-}
-
-.glow-accent {
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
-}
-
-/* 背景光晕 */
-.glow-bg {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-}
-
-.glow-bg--primary {
-  background: rgba(99, 102, 241, 0.1);
-}
-
-.glow-bg--accent {
-  background: rgba(34, 211, 238, 0.1);
-}
-
-/* 动画 */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-in-up {
-  from { 
-    opacity: 0; 
-    transform: translateY(10px); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-.animate-slide-in-up {
-  animation: slide-in-up 0.3s ease-out;
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/*
-  Tailwind v4 安全列表 - 显式声明动态使用的类名
-  这些类名在 Vue 文件中使用，需要确保被生成
-*/
-@layer utilities {
-  /* 学生仪表板卡片背景 */
-  .bg-blue-500\/15 {
-    background-color: rgba(59, 130, 246, 0.15);
-  }
-  .bg-green-500\/15 {
-    background-color: rgba(34, 197, 94, 0.15);
-  }
-  .bg-purple-500\/15 {
-    background-color: rgba(168, 85, 247, 0.15);
-  }
-
-  /* 边框颜色 */
-  .border-blue-500\/40 {
-    border-color: rgba(59, 130, 246, 0.4);
-  }
-  .border-green-500\/40 {
-    border-color: rgba(34, 197, 94, 0.4);
-  }
-  .border-purple-500\/40 {
-    border-color: rgba(168, 85, 247, 0.4);
-  }
-
-  /* 阴影颜色 */
-  .shadow-blue-950\/30 {
-    --tw-shadow-color: rgba(23, 37, 84, 0.3);
-  }
-  .shadow-green-950\/30 {
-    --tw-shadow-color: rgba(5, 46, 22, 0.3);
-  }
-  .shadow-purple-950\/30 {
-    --tw-shadow-color: rgba(59, 7, 100, 0.3);
-  }
-
-  /* 白色半透明背景 */
-  .bg-white\/[0\.02] {
-    background-color: rgba(255, 255, 255, 0.02);
-  }
-  .bg-white\/[0\.03] {
-    background-color: rgba(255, 255, 255, 0.03);
-  }
-  .bg-white\/[0\.05] {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-  .bg-white\/[0\.06] {
-    background-color: rgba(255, 255, 255, 0.06);
-  }
-
-  /* 白色边框 */
-  .border-white\/5 {
-    border-color: rgba(255, 255, 255, 0.05);
-  }
-  .border-white\/10 {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-  .border-white\/15 {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-  .border-white\/20 {
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  /* 分数卡片渐变背景 */
-  .from-primary\/25 {
-    --tw-gradient-from: rgba(99, 102, 241, 0.25);
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(99, 102, 241, 0));
-  }
-  .via-primary\/15 {
-    --tw-gradient-via: rgba(99, 102, 241, 0.15);
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to, rgba(99, 102, 241, 0));
-  }
-  .to-accent-cyan\/20 {
-    --tw-gradient-to: rgba(34, 211, 238, 0.2);
-  }
+  background-color: rgba(0, 0, 0, 0.08);
+  color: #000000;
 }

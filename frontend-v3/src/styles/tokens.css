@@ -1,8 +1,6 @@
 /**
- * ClassHub 设计体系 - CSS Tokens
- * 版本: 2.0.0 (Tailwind v4) - 响应式设计
- *
- * 注意: 使用 @theme inline 合并到默认主题，而非覆盖
+ * ClassHub Ollama 设计系统 - CSS Tokens
+ * 版本: 3.0.0 (Tailwind v4)
  */
 
 @theme inline {
@@ -16,167 +14,59 @@
   --touch-target-min: 2.75rem;
   --touch-target-comfort: 3rem;
 
-  /* ========== 色彩系统 ========== */
-  
-  /* 主色调 */
-  --color-primary: #6366f1;
-  --color-primary-foreground: #ffffff;
-  --color-primary-hover: #818cf8;
-  --color-primary-muted: rgba(99, 102, 241, 0.2);
-  
-  /* 强调色 */
-  --color-accent: #22d3ee;
-  --color-accent-cyan: #22d3ee;
-  --color-accent-foreground: #ffffff;
-  --color-accent-hover: #67e8f9;
-  
+  /* ========== Ollama 色彩系统 ========== */
+
   /* 背景色 */
-  --color-background: #030307;
-  --color-background-elevated: #0a0a0f;
-  --color-background-card: rgba(255, 255, 255, 0.02);
-  --color-background-hover: rgba(255, 255, 255, 0.04);
-  --color-background-active: rgba(255, 255, 255, 0.06);
-  
+  --color-background: #ffffff;
+  --color-background-elevated: #fafafa;
+  --color-background-card: #ffffff;
+  --color-background-hover: #fafafa;
+  --color-background-active: #f5f5f5;
+
   /* 文字色 */
-  --color-text-primary: #ffffff;
-  --color-text-secondary: rgba(255, 255, 255, 0.7);
-  --color-text-tertiary: rgba(255, 255, 255, 0.4);
-  --color-text-muted: rgba(255, 255, 255, 0.5);
-  --color-text-placeholder: rgba(255, 255, 255, 0.4);
-  
-  /* 状态色 - 标准 */
-  --color-success: #22c55e;
-  --color-success-muted: rgba(34, 197, 94, 0.2);
-  --color-warning: #f59e0b;
-  --color-warning-muted: rgba(245, 158, 11, 0.2);
-  --color-error: #ef4444;
-  --color-error-muted: rgba(239, 68, 68, 0.2);
-  --color-info: #3b82f6;
-  --color-info-muted: rgba(59, 130, 246, 0.2);
+  --color-text-primary: #000000;
+  --color-text-secondary: #737373;
+  --color-text-tertiary: #a3a3a3;
+  --color-text-muted: #a3a3a3;
+  --color-text-placeholder: #a3a3a3;
 
-  /* ========== 扩展颜色系统 (用于透明度类名 bg-blue-500/10) ========== */
-  /* 蓝色系 */
-  --color-blue-300: #93c5fd;
-  --color-blue-400: #60a5fa;
-  --color-blue-500: #3b82f6;
-  --color-blue-600: #2563eb;
-
-  /* 绿色系 */
-  --color-green-300: #86efac;
-  --color-green-400: #4ade80;
-  --color-green-500: #22c55e;
-  --color-green-600: #16a34a;
-
-  /* 紫色系 */
-  --color-purple-300: #d8b4fe;
-  --color-purple-400: #c084fc;
-  --color-purple-500: #a855f7;
-  --color-purple-600: #9333ea;
-
-  /* 黄色/琥珀色系 */
-  --color-yellow-300: #fde047;
-  --color-yellow-400: #facc15;
-  --color-yellow-500: #eab308;
-  --color-yellow-600: #ca8a04;
-  --color-amber-300: #fcd34d;
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
-  --color-amber-600: #d97706;
-
-  /* 橙色系 */
-  --color-orange-300: #fdba74;
-  --color-orange-400: #fb923c;
-  --color-orange-500: #f97316;
-  --color-orange-600: #ea580c;
-
-  /* 青色系 */
-  --color-cyan-300: #67e8f9;
-  --color-cyan-400: #22d3ee;
-  --color-cyan-500: #06b6d4;
-  --color-cyan-600: #0891b2;
-
-  /* 灰色系 */
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-  
-  /* ========== 卡片主题色变量 (精简为 Indigo 主色 + Neutral 中性色) ========== */
-  /* 主色 Indigo 主题 - 用于主要卡片 */
-  --card-indigo-bg: rgba(99, 102, 241, 0.15);
-  --card-indigo-border: rgba(99, 102, 241, 0.4);
-  --card-indigo-icon-bg: rgba(129, 140, 248, 0.3);
-  --card-indigo-icon-text: #a5b4fc;
-  --card-indigo-shadow: rgba(49, 46, 129, 0.3);
-  --card-indigo-glow: rgba(99, 102, 241, 0.1);
-
-  /* 中性色主题 - 用于普通卡片 */
-  --card-neutral-bg: rgba(255, 255, 255, 0.03);
-  --card-neutral-border: rgba(255, 255, 255, 0.1);
-  --card-neutral-icon-bg: rgba(255, 255, 255, 0.1);
-  --card-neutral-icon-text: rgba(255, 255, 255, 0.7);
-  --card-neutral-shadow: rgba(0, 0, 0, 0.3);
-  --card-neutral-glow: rgba(255, 255, 255, 0.05);
-
-  /* 状态色主题 - 用于特定状态 */
-  --card-success-bg: rgba(34, 197, 94, 0.15);
-  --card-success-border: rgba(34, 197, 94, 0.4);
-  --card-success-icon-bg: rgba(74, 222, 128, 0.3);
-  --card-success-icon-text: #86efac;
-  --card-success-shadow: rgba(5, 46, 22, 0.3);
-  --card-success-glow: rgba(34, 197, 94, 0.1);
-
-  --card-warning-bg: rgba(245, 158, 11, 0.15);
-  --card-warning-border: rgba(245, 158, 11, 0.4);
-  --card-warning-icon-bg: rgba(251, 191, 36, 0.3);
-  --card-warning-icon-text: #fcd34d;
-  --card-warning-shadow: rgba(120, 53, 15, 0.3);
-  --card-warning-glow: rgba(245, 158, 11, 0.1);
-
-  --card-error-bg: rgba(239, 68, 68, 0.15);
-  --card-error-border: rgba(239, 68, 68, 0.4);
-  --card-error-icon-bg: rgba(248, 113, 113, 0.3);
-  --card-error-icon-text: #fca5a5;
-  --card-error-shadow: rgba(127, 29, 29, 0.3);
-  --card-error-glow: rgba(239, 68, 68, 0.1);
+  /* 主色（灰度系） */
+  --color-primary: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: #262626;
+  --color-primary-muted: #e5e5e5;
 
   /* 边框 */
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-hover: rgba(255, 255, 255, 0.2);
-  --color-border-focus: #6366f1;
-  --color-divider: rgba(255, 255, 255, 0.05);
-  
+  --color-border: #e5e5e5;
+  --color-border-hover: #d4d4d4;
+  --color-border-focus: #000000;
+  --color-divider: #f5f5f5;
+
+  /* 状态色 */
+  --color-success: #22c55e;
+  --color-success-muted: rgba(34, 197, 94, 0.15);
+  --color-warning: #f59e0b;
+  --color-warning-muted: rgba(245, 158, 11, 0.15);
+  --color-error: #ef4444;
+  --color-error-muted: rgba(239, 68, 68, 0.15);
+  --color-info: #3b82f6;
+  --color-info-muted: rgba(59, 130, 246, 0.15);
+
   /* ========== 字体系统 ========== */
-  --font-sans: 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  
-  /* ========== 圆角系统 ========== */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* ========== 圆角系统（严格二元） ========== */
+  --radius-container: 0.75rem;
   --radius-full: 9999px;
-  
-  /* ========== 阴影系统 ========== */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-  --shadow-glow-primary: 0 0 20px rgba(99, 102, 241, 0.4);
-  --shadow-glow-accent: 0 0 20px rgba(34, 211, 238, 0.4);
-  
+
   /* ========== 过渡时间 ========== */
   --duration-instant: 100ms;
   --duration-fast: 150ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
   --duration-slower: 500ms;
-  
+
   /* ========== Z-Index 层级 ========== */
   --z-base: 0;
   --z-dropdown: 10;
@@ -189,15 +79,10 @@
   --z-toast: 80;
 }
 
-/* ========== CSS 变量导出 (兼容旧浏览器) ========== */
+/* ========== CSS 变量导出 ========== */
 :root {
-  --color-primary: #6366f1;
-  --color-primary-hover: #818cf8;
-  --color-accent: #22d3ee;
-  --color-background: #030307;
-  --color-background-elevated: #0a0a0f;
-  --color-text-primary: #ffffff;
-  --color-text-secondary: rgba(255, 255, 255, 0.7);
-  --color-border: rgba(255, 255, 255, 0.1);
-  --radius-lg: 0.75rem;
+  --color-background: #ffffff;
+  --color-text-primary: #000000;
+  --color-text-secondary: #737373;
+  --color-border: #e5e5e5;
 }
