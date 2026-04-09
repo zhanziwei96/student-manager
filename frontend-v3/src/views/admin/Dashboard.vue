@@ -70,10 +70,10 @@ const getTrendBadgeStyle = () => ({
   <div class="space-y-5">
     <!-- Header -->
     <div class="px-1">
-      <h1 class="text-2xl font-bold text-white tracking-tight">
+      <h1 class="text-2xl font-medium text-black tracking-tight">
         仪表板
       </h1>
-      <p class="text-white/50 text-sm mt-1">
+      <p class="text-[#a3a3a3] text-sm mt-1">
         欢迎回来，管理员
       </p>
     </div>
@@ -102,21 +102,21 @@ const getTrendBadgeStyle = () => ({
       <Card
         v-for="card in statCards"
         :key="card.title"
-        class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+        class="group relative overflow-hidden p-4"
         :style="getCardStyle()"
       >
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
-              <p class="mt-3 text-xs font-medium text-indigo-200/80">
+              <p class="mt-3 text-xs font-medium text-[#737373]">
                 {{ card.title }}
               </p>
-              <p class="mt-1 text-2xl font-bold text-white">
+              <p class="mt-1 text-2xl font-medium text-black">
                 {{ card.value }}
               </p>
             </div>
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
               :style="getCardIconStyle()"
             >
               <component
@@ -132,7 +132,7 @@ const getTrendBadgeStyle = () => ({
             >
               {{ card.trend }}
             </Badge>
-            <span class="text-xs text-white/40">较上月</span>
+            <span class="text-xs text-[#a3a3a3]">较上月</span>
           </div>
         </div>
         <!-- 背景装饰 -->
@@ -144,18 +144,18 @@ const getTrendBadgeStyle = () => ({
     </div>
 
     <!-- Active Classes - 增强视觉层次 -->
-    <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20 mt-5">
+    <Card class="border-[#e5e5e5] bg-white p-5 mt-5">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-semibold text-white">
+          <h2 class="text-lg font-medium text-black">
             正在上课
           </h2>
-          <p class="text-xs text-white/50 mt-0.5">
+          <p class="text-xs text-[#a3a3a3] mt-0.5">
             当前活跃的课堂
           </p>
         </div>
         <Badge
-          variant="primary"
+          variant="default"
           class="text-xs bg-primary/20 text-primary border-primary/30"
         >
           {{ activeSessions?.length || 0 }} 个课堂
@@ -173,9 +173,9 @@ const getTrendBadgeStyle = () => ({
       <!-- Empty state -->
       <div
         v-else-if="!activeSessions?.length"
-        class="flex flex-col items-center justify-center py-8 text-white/40"
+        class="flex flex-col items-center justify-center py-8 text-[#a3a3a3]"
       >
-        <div class="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+        <div class="h-12 w-12 rounded-full bg-white flex items-center justify-center mb-3">
           <Clock class="h-5 w-5 opacity-50" />
         </div>
         <p class="text-sm">
@@ -191,24 +191,24 @@ const getTrendBadgeStyle = () => ({
         <div
           v-for="session in activeSessions"
           :key="session.class_name + session.teacher_name"
-          class="group flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3.5 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/10"
+          class="group flex items-center gap-3 rounded-xl border border-[#e5e5e5] bg-white p-3.5 hover:bg-[#fafafa]"
         >
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 shadow-inner">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
             <BookOpen class="h-5 w-5 text-primary" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-white truncate">
+            <p class="text-sm font-medium text-black truncate">
               <span class="text-primary">【{{ session.course_name || '未知课程' }}】</span>
               {{ session.class_name }}
             </p>
-            <p class="text-xs text-white/50 flex items-center gap-2">
+            <p class="text-xs text-[#a3a3a3] flex items-center gap-2">
               <span>{{ session.teacher_name }}</span>
-              <span class="text-white/30">•</span>
+              <span class="text-[#a3a3a3]">•</span>
               <span>开始于 {{ formatDistanceToNow(session.start_time) }}</span>
             </p>
           </div>
           <div class="flex items-center gap-2">
-            <div class="h-2 w-2 rounded-full bg-green-500 shadow-lg shadow-green-500/50 animate-pulse" />
+            <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             <span class="text-xs text-green-400 hidden sm:inline">进行中</span>
           </div>
         </div>

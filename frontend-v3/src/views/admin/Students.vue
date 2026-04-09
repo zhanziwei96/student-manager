@@ -131,10 +131,10 @@ const handleAddStudent = async () => {
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>
-        <h1 class="text-2xl font-bold text-white">
+        <h1 class="text-2xl font-medium text-black">
           学生管理
         </h1>
-        <p class="text-white/60">
+        <p class="text-[#737373]">
           管理学生档案和分数
         </p>
       </div>
@@ -167,7 +167,7 @@ const handleAddStudent = async () => {
         <Card
           v-for="student in filteredStudents"
           :key="student.id"
-          class="relative overflow-hidden p-4 transition-all duration-300 hover:scale-[1.02]"
+          class="relative overflow-hidden p-4"
           :style="getCardStyle()"
         >
           <!-- 背景光晕效果 -->
@@ -180,7 +180,7 @@ const handleAddStudent = async () => {
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <div
-                  class="flex h-8 w-8 items-center justify-center rounded-lg shadow-inner"
+                  class="flex h-8 w-8 items-center justify-center rounded-lg"
                   :style="getCardIconStyle()"
                 >
                   <span
@@ -190,7 +190,7 @@ const handleAddStudent = async () => {
                     {{ student.name.charAt(0) }}
                   </span>
                 </div>
-                <span class="font-medium text-white truncate">{{ student.name }}</span>
+                <span class="font-medium text-black truncate">{{ student.name }}</span>
                 <Badge
                   :variant="student.is_account_enabled ? 'success' : 'secondary'"
                   class="text-xs flex-shrink-0"
@@ -202,7 +202,7 @@ const handleAddStudent = async () => {
               <p class="text-sm text-[var(--color-text-muted)] mt-0.5 truncate">{{ student.class_name }}</p>
             </div>
             <div class="text-right flex-shrink-0 ml-4">
-              <span class="text-xl font-bold text-[var(--color-primary)]">{{ student.score }}</span>
+              <span class="text-xl font-medium text-[var(--color-primary)]">{{ student.score }}</span>
               <p class="text-xs text-[var(--color-text-muted)]">分</p>
             </div>
           </div>
@@ -244,13 +244,13 @@ const handleAddStudent = async () => {
                 <td class="px-4 py-3 text-sm text-[var(--color-text-tertiary)]">
                   {{ student.student_id }}
                 </td>
-                <td class="px-4 py-3 text-sm font-medium text-white">
+                <td class="px-4 py-3 text-sm font-medium text-black">
                   {{ student.name }}
                 </td>
                 <td class="px-4 py-3 text-sm text-[var(--color-text-tertiary)]">
                   {{ student.class_name }}
                 </td>
-                <td class="px-4 py-3 text-sm font-bold text-[var(--color-primary)]">
+                <td class="px-4 py-3 text-sm font-medium text-[var(--color-primary)]">
                   {{ student.score }}
                 </td>
                 <td class="px-4 py-3">

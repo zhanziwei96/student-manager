@@ -246,10 +246,10 @@ const handleResetPassword = async () => {
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>
-        <h1 class="text-2xl font-bold text-white">
+        <h1 class="text-2xl font-medium text-black">
           教师管理
         </h1>
-        <p class="text-white/60">
+        <p class="text-[#737373]">
           管理教师账号
         </p>
       </div>
@@ -261,7 +261,7 @@ const handleResetPassword = async () => {
 
     <!-- Search -->
     <div class="relative mb-5">
-      <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+      <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
       <Input
         v-model="searchQuery"
         placeholder="搜索教师..."
@@ -285,7 +285,7 @@ const handleResetPassword = async () => {
       <Card
         v-for="teacher in filteredTeachers"
         :key="teacher.id"
-        class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
+        class="relative overflow-hidden p-6"
         :style="getCardStyle()"
       >
         <!-- 背景光晕效果 -->
@@ -296,7 +296,7 @@ const handleResetPassword = async () => {
 
         <div class="relative z-10 flex items-start gap-4">
           <div
-            class="flex h-12 w-12 items-center justify-center rounded-xl shadow-inner"
+            class="flex h-12 w-12 items-center justify-center rounded-xl"
             :style="getCardIconStyle()"
           >
             <UserCircle
@@ -305,14 +305,14 @@ const handleResetPassword = async () => {
             />
           </div>
           <div class="flex-1 min-w-0">
-            <h3 class="truncate font-medium text-white">
+            <h3 class="truncate font-medium text-black">
               {{ teacher.name }}
             </h3>
             <p class="text-sm text-[var(--color-text-tertiary)]">
               @{{ teacher.username }}
             </p>
             <div class="mt-2 flex items-center gap-2">
-              <Badge variant="secondary">
+              <Badge variant="default">
                 教师
               </Badge>
             </div>
@@ -335,7 +335,7 @@ const handleResetPassword = async () => {
           <Button
             variant="outline"
             size="sm"
-            class="flex-1 hover:bg-white/10"
+            class="flex-1 hover:bg-[#fafafa]"
             @click="openResetDialog(teacher)"
           >
             <Key class="mr-2 h-4 w-4" />
@@ -344,7 +344,7 @@ const handleResetPassword = async () => {
           <Button
             variant="outline"
             size="sm"
-            class="flex-1 hover:bg-white/10"
+            class="flex-1 hover:bg-[#fafafa]"
             @click="openEditDialog(teacher)"
           >
             编辑
@@ -362,7 +362,7 @@ const handleResetPassword = async () => {
           <Button
             variant="outline"
             size="sm"
-            class="flex-1 hover:bg-white/10"
+            class="flex-1 hover:bg-[#fafafa]"
             @click="openManageClassesDialog(teacher)"
           >
             <BookOpen class="mr-2 h-4 w-4" />
@@ -371,7 +371,7 @@ const handleResetPassword = async () => {
           <Button
             variant="outline"
             size="sm"
-            class="flex-1 hover:bg-white/10"
+            class="flex-1 hover:bg-[#fafafa]"
             @click="openManageSchedulesDialog(teacher)"
           >
             <Calendar class="mr-2 h-4 w-4" />
@@ -403,7 +403,7 @@ const handleResetPassword = async () => {
     >
       <div class="space-y-4">
         <div>
-          <label class="text-sm text-white/80">用户名</label>
+          <label class="text-sm text-[#737373]">用户名</label>
           <Input
             v-model="newTeacher.username"
             placeholder="请输入用户名"
@@ -417,7 +417,7 @@ const handleResetPassword = async () => {
           </p>
         </div>
         <div>
-          <label class="text-sm text-white/80">姓名</label>
+          <label class="text-sm text-[#737373]">姓名</label>
           <Input
             v-model="newTeacher.name"
             placeholder="请输入姓名"
@@ -431,7 +431,7 @@ const handleResetPassword = async () => {
           </p>
         </div>
         <div>
-          <label class="text-sm text-white/80">密码</label>
+          <label class="text-sm text-[#737373]">密码</label>
           <Input
             v-model="newTeacher.password"
             type="password"
@@ -446,7 +446,7 @@ const handleResetPassword = async () => {
           </p>
         </div>
         <div>
-          <label class="text-sm text-white/80">确认密码</label>
+          <label class="text-sm text-[#737373]">确认密码</label>
           <Input
             v-model="newTeacher.confirmPassword"
             type="password"
@@ -490,7 +490,7 @@ const handleResetPassword = async () => {
     >
       <div class="space-y-4">
         <div>
-          <label class="text-sm text-white/80">姓名</label>
+          <label class="text-sm text-[#737373]">姓名</label>
           <Input
             v-model="editForm.name"
             placeholder="请输入姓名"
@@ -560,7 +560,7 @@ const handleResetPassword = async () => {
     >
       <div class="space-y-4">
         <div>
-          <label class="text-sm text-white/80">新密码</label>
+          <label class="text-sm text-[#737373]">新密码</label>
           <Input
             v-model="resetForm.newPassword"
             type="password"
@@ -576,7 +576,7 @@ const handleResetPassword = async () => {
           </p>
         </div>
         <div>
-          <label class="text-sm text-white/80">确认新密码</label>
+          <label class="text-sm text-[#737373]">确认新密码</label>
           <Input
             v-model="resetForm.confirmPassword"
             type="password"

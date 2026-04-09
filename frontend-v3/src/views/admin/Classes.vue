@@ -55,10 +55,10 @@ const getCardGlowStyle = () => ({
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>
-        <h1 class="text-2xl font-bold text-white">
+        <h1 class="text-2xl font-medium text-black">
           班级管理
         </h1>
-        <p class="text-white/60">
+        <p class="text-[#737373]">
           管理班级信息和查看班级学生
         </p>
       </div>
@@ -66,7 +66,7 @@ const getCardGlowStyle = () => ({
 
     <!-- Search -->
     <div class="relative mb-5">
-      <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+      <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
       <Input
         v-model="searchQuery"
         placeholder="搜索班级..."
@@ -90,7 +90,7 @@ const getCardGlowStyle = () => ({
       <Card
         v-for="(cls) in filteredClasses"
         :key="cls.name"
-        class="relative overflow-hidden p-6 transition-all duration-300 hover:scale-[1.02]"
+        class="relative overflow-hidden p-6"
         :style="getCardStyle()"
       >
         <!-- 背景光晕效果 -->
@@ -102,7 +102,7 @@ const getCardGlowStyle = () => ({
         <div class="relative z-10 flex items-start justify-between">
           <div class="flex items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner"
+              class="flex h-10 w-10 items-center justify-center rounded-xl"
               :style="getCardIconStyle()"
             >
               <GraduationCap
@@ -111,7 +111,7 @@ const getCardGlowStyle = () => ({
               />
             </div>
             <div>
-              <h3 class="font-medium text-white">
+              <h3 class="font-medium text-black">
                 {{ cls.name }}
               </h3>
               <p class="text-xs text-[var(--color-text-tertiary)]">
@@ -130,7 +130,7 @@ const getCardGlowStyle = () => ({
               平均分
             </p>
             <p
-              class="text-lg font-semibold"
+              class="text-lg font-medium"
               :class="getScoreColor(cls.average_score)"
             >
               {{ cls.average_score }}
@@ -140,7 +140,7 @@ const getCardGlowStyle = () => ({
             <p class="text-xs text-[var(--color-text-tertiary)]">
               学生数
             </p>
-            <p class="text-lg font-semibold text-white">
+            <p class="text-lg font-medium text-black">
               {{ cls.student_count }}
             </p>
           </div>
@@ -150,7 +150,7 @@ const getCardGlowStyle = () => ({
           <Button
             variant="outline"
             size="sm"
-            class="flex-1 hover:bg-white/10"
+            class="flex-1 hover:bg-[#fafafa]"
             @click="openViewDialog(cls.name)"
           >
             <Eye class="mr-2 h-4 w-4" />
@@ -163,11 +163,11 @@ const getCardGlowStyle = () => ({
     <!-- Empty state -->
     <div
       v-else
-      class="flex h-64 flex-col items-center justify-center text-white/60"
+      class="flex h-64 flex-col items-center justify-center text-[#737373]"
     >
       <GraduationCap class="mb-4 h-12 w-12 opacity-50" />
       <p>暂无班级数据</p>
-      <p class="mt-1 text-sm text-white/40">
+      <p class="mt-1 text-sm text-[#a3a3a3]">
         请先在学生管理中添加学生并分配班级
       </p>
     </div>
@@ -198,7 +198,7 @@ const getCardGlowStyle = () => ({
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-8 w-8 items-center justify-center rounded-full shadow-inner bg-[var(--card-indigo-icon-bg)]"
+                class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--card-indigo-icon-bg)]"
               >
                 <span
                   class="text-sm font-medium text-[var(--card-indigo-icon-text)]"
@@ -207,12 +207,12 @@ const getCardGlowStyle = () => ({
                 </span>
               </div>
               <div>
-                <p class="font-medium text-white">{{ student.name }}</p>
+                <p class="font-medium text-black">{{ student.name }}</p>
                 <p class="font-mono text-xs text-[var(--color-text-tertiary)]">{{ student.student_id }}</p>
               </div>
             </div>
             <span
-              class="text-lg font-bold"
+              class="text-lg font-medium"
               :class="getScoreColor(student.score)"
             >
               {{ student.score }}
@@ -244,7 +244,7 @@ const getCardGlowStyle = () => ({
               <td class="px-4 py-3 font-mono text-xs">
                 {{ student.student_id }}
               </td>
-              <td class="px-4 py-3 font-medium text-white">
+              <td class="px-4 py-3 font-medium text-black">
                 {{ student.name }}
               </td>
               <td class="px-4 py-3 text-right">
@@ -257,7 +257,7 @@ const getCardGlowStyle = () => ({
       
       <div
         v-else
-        class="flex h-32 flex-col items-center justify-center text-white/50"
+        class="flex h-32 flex-col items-center justify-center text-[#a3a3a3]"
       >
         <p>该班级暂无学生</p>
       </div>
