@@ -194,6 +194,7 @@ desktop-*.png
 # Auto-generated plans
 
 # Backend temporary test files
+file:*
 backend/file:*
 
 # Ignore all env files across subdirectories

@@ -39,4 +39,4 @@ class ScoreLog(SQLModel, table=True):
     delta: Optional[float] = Field(default=None, description="变化值")
     reason: Optional[str] = Field(default=None, description="原因")
     operator: Optional[str] = Field(default=None, description="操作人")
-    created_at: datetime = Field(default_factory=datetime.now, description="创建时间")
+    created_at: datetime = Field(default_factory=get_now, description="创建时间")
