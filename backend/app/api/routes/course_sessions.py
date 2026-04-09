@@ -124,6 +124,19 @@ def begin_course_session(
         if not data.course_name:
             data.course_name = schedule.course_name
 
+        # 修复：检查是否有 modify 类型的调课
+        from app.crud.schedule_adjustment import get_adjustment
+        adjustment = get_adjustment(session, schedule_id, week_number)
+        if adjustment:
+            if adjustment.type == "modify":
+                # 使用调课后的信息
+                classroom = adjustment.new_classroom or classroom
+            elif adjustment.type == "cancel":
+                raise HTTPException(
+                    status_code=HttpStatus.BAD_REQUEST,
+                    detail="该周课程已取消，无法开始上课"
+                )
+
     try:
         course_session = start_course_session(
             session=session,
