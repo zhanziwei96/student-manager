@@ -212,10 +212,40 @@ def update_user_password(session: Session, user: User, new_password: str) -> Non
 
 
 def delete_user(session: Session, user_id: int) -> bool:
-    """删除用户"""
+    """
+    删除用户 - 修复：级联处理关联课表
+
+    Args:
+        session: 数据库会话
+        user_id: 用户ID
+
+    Returns:
+        bool: 删除成功返回 True，不存在返回 False
+
+    Raises:
+        HTTPException: 如果用户有关联的课表
+    """
+    from fastapi import HTTPException
+    from app.core.config import HttpStatus
+    from app.models import CourseSchedule
+    from sqlalchemy import func
+
     user = get_user(session, user_id)
     if not user:
         return False
+
+    # 检查是否有关联的排班
+    schedule_count = session.exec(
+        select(func.count())
+        .where(CourseSchedule.teacher_id == user_id)
+    ).one()
+
+    if schedule_count > 0:
+        raise HTTPException(
+            status_code=HttpStatus.BAD_REQUEST,
+            detail=f"该教师有关联的 {schedule_count} 个课程，请先转移或删除课程后再删除教师"
+        )
+
     session.delete(user)
     session.commit()
     return True

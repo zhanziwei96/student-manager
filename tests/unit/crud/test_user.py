@@ -243,3 +243,71 @@ class TestUserCRUD:
         assert updated.name == "仅更新姓名"
         assert updated.role == original_role  # 保持不变
         assert updated.get_assigned_classes() == ["软件1班"]  # 保持不变
+
+
+class TestDeleteUserCascade:
+    """测试删除用户级联处理（H-08 修复）"""
+
+    def test_delete_user_with_schedules_blocked(self, session: Session):
+        """测试删除有关联课表的教师被阻止"""
+        from app.crud.user import delete_user
+        from app.models import CourseSchedule
+        from fastapi import HTTPException
+
+        # 创建教师
+        password_hash = hash_password("password123")
+        user = create_user(
+            session,
+            "teacher_with_schedule",
+            "有课表的教师",
+            password_hash,
+            role="teacher"
+        )
+
+        # 创建课表
+        schedule = CourseSchedule(
+            course_name="测试课程",
+            class_name="测试班级",
+            teacher_id=user.id,
+            teacher_name=user.name,
+            day_of_week=1,
+            start_time="08:00",
+            end_time="09:40"
+        )
+        session.add(schedule)
+        session.commit()
+
+        # 尝试删除教师应失败
+        with pytest.raises(HTTPException) as exc_info:
+            delete_user(session, user.id)
+
+        assert exc_info.value.status_code == 400
+        assert "有关联" in exc_info.value.detail
+        assert "1 个课程" in exc_info.value.detail
+
+        # 清理
+        session.delete(schedule)
+        session.commit()
+        delete_user(session, user.id)
+
+    def test_delete_user_without_schedules_success(self, session: Session):
+        """测试删除无关联课表的教师成功"""
+        from app.crud.user import delete_user
+
+        # 创建教师
+        password_hash = hash_password("password123")
+        user = create_user(
+            session,
+            "teacher_no_schedule",
+            "无课表的教师",
+            password_hash,
+            role="teacher"
+        )
+
+        # 删除应成功
+        result = delete_user(session, user.id)
+        assert result is True
+
+        # 验证已删除
+        deleted = session.get(User, user.id)
+        assert deleted is None
