@@ -295,10 +295,11 @@ async def get_course_session_for_class(
 def _get_current_week_number() -> int:
     """获取当前教学周次（与前端 getCurrentWeek 保持一致）"""
     from datetime import datetime
-    now = datetime.now()
-    semester_start = datetime(now.year, 2, 1)
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    semester_start = datetime(now.year, 2, 1, tzinfo=ZoneInfo("Asia/Shanghai"))
     if now < semester_start:
-        semester_start = datetime(now.year - 1, 2, 1)
+        semester_start = datetime(now.year - 1, 2, 1, tzinfo=ZoneInfo("Asia/Shanghai"))
     delta = now - semester_start
     week = delta.days // 7 + 1
     return max(1, week)

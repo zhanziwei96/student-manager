@@ -125,8 +125,9 @@ def create_schedule(
     Returns:
         创建的课表对象
     """
-    from datetime import datetime
+    from app.core.timezone import get_now
 
+    now = get_now().isoformat()
     schedule = CourseSchedule(
         course_name=course_name,
         class_name=class_name,
@@ -139,8 +140,8 @@ def create_schedule(
         week_start=week_start,
         week_end=week_end,
         week_type=week_type,
-        created_at=datetime.now().isoformat(),
-        updated_at=datetime.now().isoformat()
+        created_at=now,
+        updated_at=now
     )
     
     session.add(schedule)
@@ -175,8 +176,6 @@ def import_schedules(
     Returns:
         tuple: (导入成功数量, 错误列表)
     """
-    from datetime import datetime
-    
     imported_count = 0
     errors = []
     
@@ -232,6 +231,8 @@ def import_schedules(
                 continue
             
             # 创建课表
+            from app.core.timezone import get_now
+            now = get_now().isoformat()
             schedule = CourseSchedule(
                 course_name=course_name,
                 class_name=class_name,
@@ -244,8 +245,8 @@ def import_schedules(
                 week_start=week_start,
                 week_end=week_end,
                 week_type=week_type,
-                created_at=datetime.now().isoformat(),
-                updated_at=datetime.now().isoformat()
+                created_at=now,
+                updated_at=now
             )
             
             session.add(schedule)
