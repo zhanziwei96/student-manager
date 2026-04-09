@@ -75,23 +75,17 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="relative flex min-h-screen items-start sm:items-center justify-center overflow-hidden bg-background p-4 pt-16 sm:pt-4">
-    <!-- Background effects -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -left-[30%] -top-[5%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-primary/10 blur-[80px] sm:blur-[100px]" />
-      <div class="absolute -right-[30%] top-[60%] sm:-bottom-[10%] h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] lg:h-[500px] lg:w-[500px] rounded-full bg-accent-cyan/10 blur-[80px] sm:blur-[100px]" />
-    </div>
-
+  <div class="relative flex min-h-screen items-start sm:items-center justify-center bg-white p-4 pt-16 sm:pt-4">
     <!-- Login form -->
-    <Card class="relative w-full max-w-md border-white/10 p-6 sm:p-8 backdrop-blur-xl">
+    <Card class="relative w-full max-w-md border-[#e5e5e5] p-6 sm:p-8">
       <div class="flex flex-col items-center space-y-2 text-center">
-        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
-          <GraduationCap class="h-7 w-7 text-primary" />
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#fafafa] border border-[#e5e5e5]">
+          <GraduationCap class="h-7 w-7 text-black" />
         </div>
-        <h1 class="text-2xl font-bold text-white">
+        <h1 class="text-2xl font-medium text-black">
           欢迎使用智慧课堂
         </h1>
-        <p class="text-sm text-white/60">
+        <p class="text-sm text-[#737373]">
           登录您的账号
         </p>
       </div>
@@ -110,10 +104,10 @@ const handleSubmit = async () => {
               :key="role.value"
               type="button"
               :class="[
-                'rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+                'rounded-full border px-3 py-2 text-sm font-medium transition-colors',
                 form.role === role.value
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10',
+                  ? 'border-[#e5e5e5] bg-[#e5e5e5] text-[#262626]'
+                  : 'border-[#e5e5e5] bg-white text-[#737373] hover:bg-[#fafafa]',
               ]"
               @click="form.role = role.value as UserRole"
             >
@@ -127,7 +121,7 @@ const handleSubmit = async () => {
           <Label for="username">用户名</Label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <User class="h-4 w-4 text-white/50" />
+              <User class="h-4 w-4 text-[#a3a3a3]" />
             </div>
             <Input
               id="username"
@@ -146,7 +140,7 @@ const handleSubmit = async () => {
           <Label for="password">密码</Label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Lock class="h-4 w-4 text-white/50" />
+              <Lock class="h-4 w-4 text-[#a3a3a3]" />
             </div>
             <Input
               id="password"
@@ -163,6 +157,7 @@ const handleSubmit = async () => {
         <!-- Submit button -->
         <Button
           type="submit"
+          variant="cta"
           class="w-full mt-8"
           :loading="authStore.isLoggingIn"
         >
