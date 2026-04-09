@@ -22,12 +22,7 @@ const getIconStyle = () => {
   } as Record<string, string>
 }
 
-// 获取背景装饰样式
-const getGlowStyle = () => {
-  return {
-    backgroundColor: 'var(--card-indigo-glow)',
-  } as Record<string, string>
-}
+
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
 const { data: classSession, isPending: isLoadingSession, hasActiveSession } = useStudentCourseSession()
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
@@ -91,10 +86,10 @@ const formatTime = (time: string) => {
   <div>
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-white">
+      <h1 class="text-2xl font-medium text-black">
         课堂签到
       </h1>
-      <p class="text-white/60">
+      <p class="text-[#737373]">
         签到获取课堂积分
       </p>
     </div>
@@ -110,21 +105,21 @@ const formatTime = (time: string) => {
     <!-- Student Info Card - Indigo 主题 -->
     <Card
       v-else-if="studentProfile"
-      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300 mb-5"
+      class="relative overflow-hidden p-4 md:p-6 mb-5"
       :style="getCardStyle()"
     >
       <div class="flex items-center gap-3 md:gap-4 relative z-10">
         <div
-          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 shadow-inner"
+          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0"
           :style="getIconStyle()"
         >
           <User class="h-5 w-5 md:h-6 md:w-6" :style="{ color: 'var(--card-indigo-icon-text)' }" />
         </div>
         <div class="min-w-0 flex-1">
-          <h2 class="font-medium text-white truncate">
+          <h2 class="font-medium text-black truncate">
             {{ studentProfile.name }}
           </h2>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-white/60">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-[#737373]">
             <span class="flex items-center gap-1">
               <GraduationCap class="h-4 w-4 flex-shrink-0" />
               <span class="truncate">{{ studentProfile.class_name }}</span>
@@ -134,23 +129,18 @@ const formatTime = (time: string) => {
           </div>
         </div>
       </div>
-      <!-- 背景装饰 -->
-      <div
-        class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="getGlowStyle()"
-      />
     </Card>
 
     <!-- Checkin Status Card - 动态主题 -->
     <Card
-      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300 mb-5"
-      :class="hasActiveSession ? '' : 'bg-white/[0.02] border-white/10'"
+      class="relative overflow-hidden p-4 md:p-6 mb-5"
+      :class="hasActiveSession ? '' : 'bg-[#fafafa] border-[#e5e5e5]'"
       :style="hasActiveSession ? { backgroundColor: 'var(--card-success-bg)', borderColor: 'var(--card-success-border)', '--tw-shadow-color': 'var(--card-success-shadow)' } : {}"
     >
       <div class="flex items-center gap-3 md:gap-4 relative z-10">
         <div
-          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 shadow-inner transition-transform"
-          :style="hasActiveSession ? { backgroundColor: 'var(--card-success-icon-bg)', color: 'var(--card-success-icon-text)' } : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
+          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 transition-transform"
+          :style="hasActiveSession ? { backgroundColor: 'var(--card-success-icon-bg)', color: 'var(--card-success-icon-text)' } : { backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }"
         >
           <Clock
             v-if="!hasActiveSession"
@@ -162,19 +152,19 @@ const formatTime = (time: string) => {
           />
         </div>
         <div class="flex-1 min-w-0">
-          <h2 class="font-medium text-white">
+          <h2 class="font-medium text-black">
             {{ hasActiveSession ? '课堂进行中' : '暂无活跃课堂' }}
           </h2>
           <p
             v-if="hasActiveSession && classSession"
-            class="text-sm text-white/60 truncate"
+            class="text-sm text-[#737373] truncate"
           >
             {{ classSession.teacher_name || '教师' }} 老师正在上课
             <span v-if="classSession.start_time" class="hidden sm:inline">· 已开始 {{ formatTime(classSession.start_time) }}</span>
           </p>
           <p
             v-else
-            class="text-sm text-white/60"
+            class="text-sm text-[#737373]"
           >
             请等待老师开启课堂后进行签到
           </p>
@@ -190,22 +180,15 @@ const formatTime = (time: string) => {
         </Badge>
       </div>
 
-      <!-- 背景装饰 - 仅在活跃课堂时显示 -->
+      <!-- Checkin Button - 背景区域 -->
       <div
         v-if="hasActiveSession"
-        class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="{ backgroundColor: 'var(--card-success-glow)' }"
-      />
-
-      <!-- Checkin Button - 渐变色背景区域 -->
-      <div
-        v-if="hasActiveSession"
-        class="mt-4 md:mt-6 p-4 rounded-xl bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent border border-green-500/20"
+        class="mt-4 md:mt-6 p-4 rounded-xl border border-green-500/20"
       >
         <Button
           v-if="canCheckin"
           size="lg"
-          class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 border-0 shadow-lg shadow-green-500/25 transition-all duration-300"
+          class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm border-0"
           :loading="isCheckingIn || isSelfCheckingIn"
           @click="handleCheckin"
         >
@@ -221,7 +204,7 @@ const formatTime = (time: string) => {
           <p class="mt-2 text-green-400 font-medium text-base md:text-lg">
             本节课已完成签到
           </p>
-          <p class="text-sm text-white/60 mt-1">
+          <p class="text-sm text-[#737373] mt-1">
             签到时间: {{ new Date(sessionCheckin.checkin_time).toLocaleString() }}
           </p>
         </div>
@@ -241,48 +224,43 @@ const formatTime = (time: string) => {
 
     <!-- Checkin Tips - Indigo 主题 -->
     <Card
-      class="relative overflow-hidden p-4 md:p-6 shadow-lg transition-all duration-300"
+      class="relative overflow-hidden p-4 md:p-6"
       :style="getCardStyle()"
     >
       <div class="relative z-10">
-        <h3 class="font-medium text-white mb-4 text-base md:text-lg">
+        <h3 class="font-medium text-black mb-4 text-base md:text-lg">
           签到说明
         </h3>
         <ul class="space-y-3 md:space-y-4 text-sm" :style="{ color: 'var(--card-indigo-icon-text)' }">
           <li class="flex items-start gap-3">
             <div
-              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
+              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
               :style="getIconStyle()"
             >
               <span class="text-xs font-medium" style="color: #fff">1</span>
             </div>
-            <span class="leading-relaxed text-white/70">请在老师开启课堂后进行签到</span>
+            <span class="leading-relaxed text-[#737373]">请在老师开启课堂后进行签到</span>
           </li>
           <li class="flex items-start gap-3">
             <div
-              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
+              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
               :style="getIconStyle()"
             >
               <span class="text-xs font-medium" style="color: #fff">2</span>
             </div>
-            <span class="leading-relaxed text-white/70">每节课只能签到一次，不可重复签到</span>
+            <span class="leading-relaxed text-[#737373]">每节课只能签到一次，不可重复签到</span>
           </li>
           <li class="flex items-start gap-3">
             <div
-              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner"
+              class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
               :style="getIconStyle()"
             >
               <span class="text-xs font-medium" style="color: #fff">3</span>
             </div>
-            <span class="leading-relaxed text-white/70">签到可获得课堂参与积分</span>
+            <span class="leading-relaxed text-[#737373]">签到可获得课堂参与积分</span>
           </li>
         </ul>
       </div>
-      <!-- 背景装饰 -->
-      <div
-        class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="getGlowStyle()"
-      />
     </Card>
 
     <!-- Success Toast -->
@@ -296,7 +274,7 @@ const formatTime = (time: string) => {
     >
       <div
         v-if="showSuccessToast"
-        class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 z-50 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 shadow-lg md:w-auto"
+        class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 z-50 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 md:w-auto"
       >
         <div class="flex items-center justify-center md:justify-start gap-2 text-green-400">
           <CheckCircle class="h-5 w-5 flex-shrink-0" />

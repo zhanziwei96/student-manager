@@ -9,11 +9,11 @@ import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, Al
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
 
-// ========== 课程类型颜色主题 (Indigo 单色系) ==========
+// ========== 课程类型颜色主题 (Light theme) ==========
 const courseTypeThemes = [
-  { bg: 'bg-indigo-500/25', border: 'border-indigo-500/40', text: 'text-indigo-200', icon: 'text-indigo-300', accent: 'bg-indigo-500/30' },
-  { bg: 'bg-indigo-500/15', border: 'border-indigo-500/30', text: 'text-indigo-300', icon: 'text-indigo-400', accent: 'bg-indigo-500/20' },
-  { bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', text: 'text-indigo-300/80', icon: 'text-indigo-400/80', accent: 'bg-indigo-500/15' },
+  { bg: 'bg-[#f5f5f5]', border: 'border-[#e5e5e5]', text: 'text-[#262626]', icon: 'text-[#525252]', accent: 'bg-[#e5e5e5]' },
+  { bg: 'bg-[#fafafa]', border: 'border-[#e5e5e5]', text: 'text-[#262626]', icon: 'text-[#737373]', accent: 'bg-[#f5f5f5]' },
+  { bg: 'bg-white', border: 'border-[#e5e5e5]', text: 'text-[#262626]', icon: 'text-[#737373]', accent: 'bg-[#fafafa]' },
 ] as const
 
 // 根据课程名称生成稳定的颜色索引

@@ -74,7 +74,7 @@ const getSessionStatusTheme = (isActive: boolean) => {
   }
   return {
     icon: Clock,
-    titleColor: 'text-white/80',
+    titleColor: 'text-black',
     pulse: false
   }
 }
@@ -406,13 +406,13 @@ const sessionDuration = computed(() => {
 const getSourceTypeBadge = (sourceType: string) => {
   switch (sourceType) {
     case 'scheduled':
-      return { text: '自动', class: 'bg-blue-500/20 text-blue-300 border-blue-500/30' }
+      return { text: '自动', class: 'bg-[#fafafa] text-[#525252] border-[#e5e5e5]' }
     case 'manual':
-      return { text: '手动', class: 'bg-white/10 text-white/60 border-white/20' }
+      return { text: '手动', class: 'bg-[#fafafa] text-[#737373] border-[#e5e5e5]' }
     case 'makeup':
-      return { text: '补课', class: 'bg-purple-500/20 text-purple-300 border-purple-500/30' }
+      return { text: '补课', class: 'bg-[#f5f5f5] text-[#525252] border-[#e5e5e5]' }
     default:
-      return { text: sourceType, class: 'bg-white/10 text-white/60 border-white/20' }
+      return { text: sourceType, class: 'bg-[#fafafa] text-[#737373] border-[#e5e5e5]' }
   }
 }
 </script>
@@ -429,10 +429,10 @@ const getSourceTypeBadge = (sourceType: string) => {
 
     <!-- Header -->
     <div class="mb-5">
-      <h1 class="text-2xl font-bold text-white">
+      <h1 class="text-2xl font-medium text-black">
         课堂签到
       </h1>
-      <p class="text-white/60">
+      <p class="text-[#737373]">
         管理您的活跃课堂
       </p>
     </div>
@@ -440,22 +440,22 @@ const getSourceTypeBadge = (sourceType: string) => {
     <!-- 今日课表快捷开始 - Indigo 主题 -->
     <Card
       v-if="quickStartSchedules.length > 0"
-      class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
+      class="relative overflow-hidden p-4 md:p-6 mb-5"
       :style="getCardStyle()"
     >
       <div class="relative z-10">
-        <h3 class="font-medium text-white text-base md:text-lg mb-3">
+        <h3 class="font-medium text-black text-base md:text-lg mb-3">
           今日课表
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div
             v-for="schedule in quickStartSchedules"
             :key="schedule.id"
-            class="rounded-lg border border-white/10 bg-white/[0.03] p-3 flex items-center justify-between hover:bg-white/[0.06] transition-colors"
+            class="rounded-lg border border-[#e5e5e5] bg-white p-3 flex items-center justify-between hover:bg-[#fafafa]"
           >
           <div>
-            <p class="text-sm text-white font-medium">{{ schedule.course_name }}</p>
-            <p class="text-xs text-white/50">{{ schedule.class_name }} · {{ schedule.start_time?.slice(0, 5) }}</p>
+            <p class="text-sm text-black font-medium">{{ schedule.course_name }}</p>
+            <p class="text-xs text-[#a3a3a3]">{{ schedule.class_name }} · {{ schedule.start_time?.slice(0, 5) }}</p>
           </div>
           <Button
             size="sm"
@@ -470,19 +470,18 @@ const getSourceTypeBadge = (sourceType: string) => {
       </div>
       </div>
       <!-- 背景装饰 -->
-      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
     </Card>
 
     <!-- Session status - 课堂状态卡片 -->
     <Card
-      class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
-      :style="isSessionActive ? { backgroundColor: 'var(--card-success-bg)', borderColor: 'var(--card-success-border)', '--tw-shadow-color': 'var(--card-success-shadow)' } : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' }"
+      class="relative overflow-hidden p-4 md:p-6 mb-5"
+      :style="isSessionActive ? { backgroundColor: 'var(--card-success-bg)', borderColor: 'var(--card-success-border)', '--tw-shadow-color': 'var(--card-success-shadow)' } : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: '#e5e5e5' }"
     >
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3 md:gap-4">
           <!-- 状态图标 -->
           <div
-            class="relative flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl flex-shrink-0 transition-all duration-300 shadow-inner"
+            class="relative flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-xl flex-shrink-0 transition-all duration-300"
             :style="isSessionActive ? { backgroundColor: 'var(--card-success-icon-bg)', color: 'var(--card-success-icon-text)' } : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
           >
             <component
@@ -492,7 +491,7 @@ const getSourceTypeBadge = (sourceType: string) => {
             <!-- 脉冲动画 - 课堂进行中 -->
             <span
               v-if="sessionStatusTheme.pulse"
-              class="absolute inline-flex h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-green-400/20 animate-ping"
+              class="absolute inline-flex h-12 w-12 md:h-14 md:w-14 rounded-xl bg-green-400/20 animate-ping"
             />
           </div>
 
@@ -500,8 +499,8 @@ const getSourceTypeBadge = (sourceType: string) => {
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2 flex-wrap">
               <h2
-                class="font-semibold text-lg"
-                :class="isSessionActive ? 'text-green-400' : 'text-white/80'"
+                class="font-medium text-lg"
+                :class="isSessionActive ? 'text-green-400' : 'text-black'"
               >
                 {{ isSessionActive ? '课堂进行中' : '暂无活跃课堂' }}
               </h2>
@@ -517,7 +516,7 @@ const getSourceTypeBadge = (sourceType: string) => {
               <Badge
                 v-if="isSessionActive && sessionDuration"
                 variant="secondary"
-                class="bg-white/10 text-white/70"
+                class="bg-[#fafafa] text-[#737373]"
               >
                 <Clock class="h-3 w-3 mr-1" />
                 {{ sessionDuration }}
@@ -525,25 +524,25 @@ const getSourceTypeBadge = (sourceType: string) => {
             </div>
             <p
               v-if="!isSessionActive"
-              class="text-sm text-white/60 mt-0.5"
+              class="text-sm text-[#737373] mt-0.5"
             >
               选择班级开始新课堂
             </p>
             <p
               v-else-if="selectedSession"
-              class="text-sm text-white/60 mt-0.5 truncate"
+              class="text-sm text-[#737373] mt-0.5 truncate"
             >
-              <span class="text-white/80">{{ selectedSession.class_name }}</span>
-              <span class="mx-1.5 text-white/30">•</span>
+              <span class="text-black">{{ selectedSession.class_name }}</span>
+              <span class="mx-1.5 text-[#a3a3a3]">•</span>
               <span>{{ selectedSession.course_name || '未命名课程' }}</span>
-              <span class="mx-1.5 text-white/30">•</span>
+              <span class="mx-1.5 text-[#a3a3a3]">•</span>
               <span>开始于 {{ formatTime(selectedSession.start_time) }}</span>
               <template v-if="selectedSession.session_code">
-                <span class="mx-1.5 text-white/30">•</span>
+                <span class="mx-1.5 text-[#a3a3a3]">•</span>
                 <span>课堂码 {{ selectedSession.session_code }}</span>
               </template>
               <template v-if="selectedSession.source_type">
-                <span class="mx-1.5 text-white/30">•</span>
+                <span class="mx-1.5 text-[#a3a3a3]">•</span>
                 <Badge
                   variant="secondary"
                   class="text-[10px] px-1 py-0"
@@ -572,7 +571,7 @@ const getSourceTypeBadge = (sourceType: string) => {
             <Button
               variant="outline"
               :loading="isStartingSession"
-              class="w-full sm:w-auto min-h-[44px] border-white/20 text-white hover:bg-white/10"
+              class="w-full sm:w-auto min-h-[44px] border-[#e5e5e5] text-black hover:bg-[#fafafa]"
               @click="showStartForm = true"
             >
               <Plus class="mr-2 h-4 w-4" />
@@ -601,10 +600,10 @@ const getSourceTypeBadge = (sourceType: string) => {
       <!-- 签到进度条 - 仅在活跃课堂显示 -->
       <div
         v-if="isSessionActive && checkinStats.total > 0"
-        class="mt-4 pt-4 border-t border-white/10"
+        class="mt-4 pt-4 border-t border-[#e5e5e5]"
       >
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm text-white/60">签到进度</span>
+          <span class="text-sm text-[#737373]">签到进度</span>
           <span
             class="text-sm font-medium"
             :class="getCheckinRateColor(currentCheckinRate)"
@@ -612,7 +611,7 @@ const getSourceTypeBadge = (sourceType: string) => {
             {{ checkinStats.checkedIn }}/{{ checkinStats.total }} ({{ currentCheckinRate }}%)
           </span>
         </div>
-        <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+        <div class="h-2 bg-[#f5f5f5] rounded-full overflow-hidden">
           <div
             class="h-full rounded-full transition-all duration-500 ease-out"
             :class="getCheckinRateBarColor(currentCheckinRate)"
@@ -625,14 +624,14 @@ const getSourceTypeBadge = (sourceType: string) => {
     <!-- Start session form - Indigo 主题 -->
     <Card
       v-if="!isSessionActive"
-      class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
+      class="relative overflow-hidden p-4 md:p-6 mb-5"
       :style="getCardStyle()"
     >
       <div class="relative z-10">
-        <h3 class="font-medium text-white text-base md:text-lg">
+        <h3 class="font-medium text-black text-base md:text-lg">
           开始新课堂
         </h3>
-        <p class="text-sm text-white/60">
+        <p class="text-sm text-[#737373]">
           选择班级开始上课
         </p>
 
@@ -645,7 +644,7 @@ const getSourceTypeBadge = (sourceType: string) => {
           <AlertTriangle class="h-4 w-4 flex-shrink-0" />
           以下班级正在被其他教师上课：
         </p>
-        <ul class="mt-2 text-sm text-white/70 space-y-1">
+        <ul class="mt-2 text-sm text-[#737373] space-y-1">
           <li
             v-for="cls in otherOccupiedClasses"
             :key="cls.class_name"
@@ -682,8 +681,6 @@ const getSourceTypeBadge = (sourceType: string) => {
         </Button>
       </div>
       </div>
-      <!-- 背景装饰 -->
-      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
     </Card>
 
     <!-- Multi-session selector (Responsive) -->
@@ -696,10 +693,10 @@ const getSourceTypeBadge = (sourceType: string) => {
         <div
           v-for="session in activeCourseSessions"
           :key="session.id"
-          class="flex items-center px-4 py-2 rounded-lg border transition-all duration-200"
+          class="flex items-center px-4 py-2 rounded-lg border"
           :class="activeTab === session.id || (!activeTab && session === activeCourseSessions?.[0])
-            ? 'bg-primary/20 border-primary text-white'
-            : 'bg-white/5 border-white/10 text-white/70'"
+            ? 'bg-primary/20 border-primary text-black'
+            : 'bg-white border-[#e5e5e5] text-[#737373]'"
         >
           <button
             class="flex items-center gap-2 flex-1"
@@ -715,7 +712,7 @@ const getSourceTypeBadge = (sourceType: string) => {
             </Badge>
           </button>
           <button
-            class="ml-2 p-1 rounded hover:bg-white/20 text-white/50 hover:text-white transition-colors"
+            class="ml-2 p-1 rounded hover:bg-[#f5f5f5] text-[#a3a3a3] hover:text-black"
             title="结束此课堂"
             @click="handleEndSession(session)"
           >
@@ -726,7 +723,7 @@ const getSourceTypeBadge = (sourceType: string) => {
 
       <!-- Mobile: Dropdown -->
       <div class="md:hidden">
-        <label class="block text-sm text-white/60 mb-2">当前课堂</label>
+        <label class="block text-sm text-[#737373] mb-2">当前课堂</label>
         <Select
           :model-value="activeTab || activeCourseSessions?.[0]?.id"
           class="w-full"
@@ -743,22 +740,22 @@ const getSourceTypeBadge = (sourceType: string) => {
     <!-- 开始新课堂表单 (在有一个课堂进行时显示) -->
     <Card
       v-if="isSessionActive && showStartForm"
-      class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300"
+      class="relative overflow-hidden p-4 md:p-6 mb-5"
       :style="getCardStyle()"
     >
       <div class="relative z-10 flex items-center justify-between mb-4">
         <div>
-          <h3 class="font-medium text-white text-base md:text-lg">
+          <h3 class="font-medium text-black text-base md:text-lg">
             开始新课堂
           </h3>
-          <p class="text-sm text-white/60">
+          <p class="text-sm text-[#737373]">
             同时管理另一个班级
           </p>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          class="text-white/60 hover:text-white"
+          class="text-[#737373] hover:text-black"
           @click="showStartForm = false"
         >
           <X class="h-4 w-4" />
@@ -796,7 +793,7 @@ const getSourceTypeBadge = (sourceType: string) => {
           <Button
             size="sm"
             variant="ghost"
-            class="text-white/60"
+            class="text-[#737373]"
             @click="softLimitWarning = false"
           >
             取消
@@ -831,13 +828,12 @@ const getSourceTypeBadge = (sourceType: string) => {
         </Button>
         <Button
           variant="outline"
-          class="min-h-[44px] border-white/20 text-white hover:bg-white/10"
+          class="min-h-[44px] border-[#e5e5e5] text-black hover:bg-[#fafafa]"
           @click="showStartForm = false"
         >
           取消
         </Button>
       </div>
-      <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
     </Card>
 
     <!-- Active session content -->
@@ -845,15 +841,15 @@ const getSourceTypeBadge = (sourceType: string) => {
       <!-- Selected session info (for multi-session) - Indigo 主题 -->
       <Card
         v-if="hasMultipleSessions"
-        class="relative overflow-hidden p-4 mb-5 transition-all duration-300"
+        class="relative overflow-hidden p-4 mb-5"
         :style="getCardStyle()"
       >
         <div class="relative z-10 flex items-center justify-between">
           <div>
-            <h3 class="font-medium text-white text-lg">
+            <h3 class="font-medium text-black text-lg">
               {{ selectedSession.class_name }}
             </h3>
-            <p class="text-sm text-white/60">
+            <p class="text-sm text-[#737373]">
               {{ selectedSession.course_name || '未命名课程' }} · 开始于 {{ formatTime(selectedSession.start_time) }}
               <template v-if="selectedSession.session_code">
                 · 课堂码 {{ selectedSession.session_code }}
@@ -879,21 +875,19 @@ const getSourceTypeBadge = (sourceType: string) => {
             结束此课堂
           </Button>
         </div>
-        <!-- 背景装饰 -->
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
       </Card>
 
       <!-- Check-in form - Indigo 主题 -->
-      <Card class="relative overflow-hidden p-4 md:p-6 mb-5 transition-all duration-300" :style="getCardStyle()">
+      <Card class="relative overflow-hidden p-4 md:p-6 mb-5" :style="getCardStyle()">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 shadow-inner" :style="getCardIconStyle()">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0" :style="getCardIconStyle()">
             <CheckCircle class="h-5 w-5" :style="{ color: 'var(--card-indigo-icon-text)' }" />
           </div>
           <div class="min-w-0 flex-1">
-            <h3 class="font-medium text-white">
+            <h3 class="font-medium text-black">
               学生签到
             </h3>
-            <p class="text-sm text-white/60">
+            <p class="text-sm text-[#737373]">
               输入学生学号进行签到
             </p>
           </div>
@@ -914,8 +908,6 @@ const getSourceTypeBadge = (sourceType: string) => {
             签到
           </Button>
         </div>
-        <!-- 背景装饰 -->
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30" :style="getCardGlowStyle()" />
       </Card>
 
       <!-- Stats -->
@@ -944,11 +936,11 @@ const getSourceTypeBadge = (sourceType: string) => {
         <div class="flex justify-center gap-8 text-center">
           <div>
             <p class="text-2xl font-bold text-green-400">{{ endConfirmStats.checkedIn }}</p>
-            <p class="text-sm text-white/60">已签到</p>
+            <p class="text-sm text-[#737373]">已签到</p>
           </div>
           <div>
             <p class="text-2xl font-bold text-red-400">{{ endConfirmStats.notCheckedIn }}</p>
-            <p class="text-sm text-white/60">未签到</p>
+            <p class="text-sm text-[#737373]">未签到</p>
           </div>
         </div>
       </div>

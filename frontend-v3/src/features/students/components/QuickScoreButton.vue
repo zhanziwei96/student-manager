@@ -37,10 +37,10 @@ const isPositive = props.score > 0
 
 <template>
   <button
-    class="group relative flex flex-col items-center gap-1 rounded-lg py-2.5 px-1 text-xs transition-all duration-200 disabled:opacity-50"
+    class="group relative flex flex-col items-center gap-1 rounded-lg py-2.5 px-1 text-xs transition-colors disabled:opacity-50"
     :class="[
-      isPositive 
-        ? 'bg-success-soft-muted text-success-soft hover:bg-success-soft/25' 
+      isPositive
+        ? 'bg-success-soft-muted text-success-soft hover:bg-success-soft/25'
         : 'bg-error-soft-muted text-error-soft hover:bg-error-soft/25'
     ]"
     :disabled="disabled"
@@ -54,10 +54,5 @@ const isPositive = props.score > 0
     <span class="text-[10px] opacity-70">
       {{ score > 0 ? '+' : '' }}{{ score }}
     </span>
-    <!-- 光晕效果 -->
-    <div 
-      class="absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100 pointer-events-none"
-      :class="isPositive ? 'shadow-[0_0_12px_rgba(115,191,105,0.25)]' : 'shadow-[0_0_12px_rgba(224,47,68,0.25)]'"
-    />
   </button>
 </template>

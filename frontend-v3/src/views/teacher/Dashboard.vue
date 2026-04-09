@@ -61,17 +61,17 @@ const getCardGlowStyle = () => ({
   <div class="space-y-5">
     <!-- Header -->
     <div class="px-1">
-      <h1 class="text-2xl font-bold text-white tracking-tight">
+      <h1 class="text-2xl font-medium text-black tracking-tight">
         教师仪表板
       </h1>
-      <p class="text-white/50 text-sm mt-1">
+      <p class="text-[#a3a3a3] text-sm mt-1">
         欢迎回来，教师
       </p>
     </div>
 
     <!-- Quick actions -->
     <div class="flex gap-3 mb-5">
-      <Button @click="router.push('/teacher/session')" class="shadow-lg shadow-primary/20">
+      <Button @click="router.push('/teacher/session')">
         <Calendar class="mr-2 h-4 w-4" />
         开始上课
       </Button>
@@ -108,22 +108,22 @@ const getCardGlowStyle = () => ({
       <Card
         v-for="card in statCards"
         :key="card.title"
-        class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+        class="group relative overflow-hidden p-4 cursor-pointer"
         :style="getCardStyle()"
         @click="router.push(card.link)"
       >
         <div class="relative z-10">
           <div class="flex items-start justify-between">
             <div>
-              <p class="mt-3 text-xs font-medium text-indigo-200/80">
+              <p class="mt-3 text-xs font-medium text-[#737373]">
                 {{ card.title }}
               </p>
-              <p class="mt-1 text-2xl font-bold text-white">
+              <p class="mt-1 text-2xl font-medium text-black">
                 {{ card.value }}
               </p>
             </div>
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
               :style="getCardIconStyle()"
             >
               <component
@@ -133,7 +133,7 @@ const getCardGlowStyle = () => ({
             </div>
           </div>
           <div class="mt-3">
-            <span class="text-xs text-white/70 flex items-center">
+            <span class="text-xs text-[#737373] flex items-center">
               查看详情
               <ArrowRight class="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
             </span>
@@ -148,13 +148,13 @@ const getCardGlowStyle = () => ({
     </div>
 
     <!-- Today's schedule - 增强视觉层次 -->
-    <Card class="border-white/15 bg-white/[0.06] p-5 shadow-xl shadow-black/20 mt-5">
+    <Card class="border-[#e5e5e5] bg-white p-5 mt-5">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-semibold text-white">
+          <h2 class="text-lg font-medium text-black">
             今日课表
           </h2>
-          <p class="text-xs text-white/50 mt-0.5">
+          <p class="text-xs text-[#a3a3a3] mt-0.5">
             {{ todayWeekDay }}的课程安排
           </p>
         </div>
@@ -176,26 +176,26 @@ const getCardGlowStyle = () => ({
           <div
             v-for="schedule in todaySchedules"
             :key="schedule.id"
-            class="group flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3.5 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/10"
+            class="group flex items-center gap-3 rounded-xl border border-[#e5e5e5] bg-white p-3.5 hover:bg-[#fafafa] hover:border-[#e5e5e5]"
           >
-            <div class="flex h-11 w-11 flex-col items-center justify-center rounded-xl bg-primary/20 text-primary shadow-inner">
+            <div class="flex h-11 w-11 flex-col items-center justify-center rounded-xl bg-primary/20 text-primary">
               <Clock class="h-3.5 w-3.5 mb-0.5" />
               <span class="text-[10px] font-medium">{{ schedule.start_time?.slice(0, 5) }}</span>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <p class="font-medium text-white text-sm truncate">
+                <p class="font-medium text-black text-sm truncate">
                   {{ schedule.course_name }}
                 </p>
                 <Badge
                   v-if="schedule.session_status === 'makeup' || schedule.adjustment"
-                  variant="secondary"
-                  class="bg-purple-500/20 text-purple-300 border-purple-500/30 text-[10px]"
+                  variant="outline"
+                  class="bg-[#f5f5f5] text-[#525252] border-[#e5e5e5] text-[10px]"
                 >
                   补课
                 </Badge>
               </div>
-              <p class="text-xs text-white/50 flex items-center gap-1.5">
+              <p class="text-xs text-[#a3a3a3] flex items-center gap-1.5">
                 {{ schedule.class_name }}
                 <span
                   v-if="(schedule.adjustment?.new_classroom || schedule.classroom)"
@@ -209,24 +209,24 @@ const getCardGlowStyle = () => ({
             <template v-if="schedule.session_status === 'active'">
               <Button
                 size="sm"
-                class="shadow-md bg-green-500 hover:bg-green-600 text-white"
+                class="bg-green-500 hover:bg-green-600 text-white"
                 @click="router.push('/teacher/session')"
               >
                 进入课堂
               </Button>
             </template>
             <template v-else-if="schedule.session_status === 'ended'">
-              <span class="text-xs text-white/40">已结束</span>
+              <span class="text-xs text-[#a3a3a3]">已结束</span>
             </template>
             <template v-else-if="schedule.session_status === 'cancelled' || schedule.session_status === 'skipped'">
-              <Badge variant="secondary" class="bg-white/10 text-white/50 border-white/10">
+              <Badge variant="outline" class="bg-[#fafafa] text-[#a3a3a3] border-[#e5e5e5]">
                 已停课
               </Badge>
             </template>
             <template v-else>
               <Button
                 size="sm"
-                class="shadow-md bg-green-500 hover:bg-green-600 text-white"
+                class="bg-green-500 hover:bg-green-600 text-white"
                 @click="router.push(`/teacher/session?scheduleId=${schedule.id}&className=${encodeURIComponent(schedule.class_name)}&courseName=${encodeURIComponent(schedule.course_name)}`)"
               >
                 去上课

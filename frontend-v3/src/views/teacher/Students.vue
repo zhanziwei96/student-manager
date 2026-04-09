@@ -121,10 +121,10 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
   <div>
     <!-- Header -->
     <div class="mb-5">
-      <h1 class="text-2xl font-bold text-white">
+      <h1 class="text-2xl font-medium text-black">
         我的学生
       </h1>
-      <p class="text-white/60">
+      <p class="text-[#737373]">
         查看和管理学生分数
       </p>
     </div>
@@ -134,13 +134,13 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
       <Card
         v-for="stat in stats"
         :key="stat.title"
-        class="group relative overflow-hidden p-3 sm:p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+        class="group relative overflow-hidden p-3 sm:p-4"
         :style="getCardStyle()"
       >
         <div class="relative z-10">
           <div class="flex items-center justify-between">
             <div
-              class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+              class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
               :style="getCardIconStyle()"
             >
               <component
@@ -148,11 +148,11 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
                 class="h-4 w-4 sm:h-5 sm:w-5"
               />
             </div>
-            <p class="text-xl sm:text-2xl font-bold text-white">
+            <p class="text-xl sm:text-2xl font-medium text-black">
               {{ stat.value }}
             </p>
           </div>
-          <p class="mt-2 text-xs font-medium text-white/70">
+          <p class="mt-2 text-xs font-medium text-[#737373]">
             {{ stat.title }}
           </p>
         </div>

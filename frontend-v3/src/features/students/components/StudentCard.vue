@@ -50,40 +50,34 @@ const getScoreColorClass = (score: number): string => {
 
 <template>
   <Card
-    class="group relative overflow-hidden p-4 shadow-lg transition-all duration-300 hover:scale-[1.02]"
+    class="group relative overflow-hidden p-4"
     :style="cardStyle"
     :class="student.checkin_status === 'checked_in' ? 'ring-1 ring-green-500/50' : ''"
   >
-    <!-- 背景装饰 -->
-    <div
-      class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30"
-      :style="cardGlowStyle"
-    />
-
     <!-- 学生信息 -->
     <div class="relative z-10">
       <div class="flex items-start justify-between mb-4">
         <div class="flex items-center gap-3">
           <div
-            class="flex h-11 w-11 items-center justify-center rounded-xl shadow-inner transition-transform group-hover:scale-110"
+            class="flex h-11 w-11 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
             :style="cardIconStyle"
           >
             <User class="h-5 w-5" />
           </div>
           <div class="min-w-0">
-            <p class="font-medium text-white truncate">
+            <p class="font-medium text-black truncate">
               {{ student.name }}
             </p>
-            <p class="text-xs text-white/60">
+            <p class="text-xs text-[#737373]">
               {{ student.student_id }}
             </p>
-            <p class="text-[10px] text-white/40 truncate">
+            <p class="text-[10px] text-[#a3a3a3] truncate">
               {{ student.class_name }}
             </p>
           </div>
         </div>
         <Badge
-          :variant="student.checkin_status === 'checked_in' ? 'success' : 'secondary'"
+          :variant="student.checkin_status === 'checked_in' ? 'success' : 'outline'"
           class="text-[10px] px-1.5 py-0.5"
         >
           {{ student.checkin_status === 'checked_in' ? '已签到' : '未签到' }}
@@ -92,10 +86,10 @@ const getScoreColorClass = (score: number): string => {
 
       <!-- 分数显示 -->
       <div class="mb-4 flex items-baseline gap-2">
-        <p class="text-xs text-white/50">
+        <p class="text-xs text-[#a3a3a3]">
           当前分数
         </p>
-        <p class="text-2xl font-bold" :class="getScoreColorClass(student.score)">
+        <p class="text-2xl font-medium" :class="getScoreColorClass(student.score)">
           {{ student.score }}
         </p>
       </div>
@@ -116,7 +110,7 @@ const getScoreColorClass = (score: number): string => {
       <!-- 自定义分数按钮 - 主题色统一 -->
       <div class="flex gap-2">
         <button
-          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-all duration-200 disabled:opacity-50 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30"
+          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-colors disabled:opacity-50 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30"
           :disabled="isUpdating"
           @click="$emit('open-score-dialog', student, 10, '加分')"
         >
@@ -124,7 +118,7 @@ const getScoreColorClass = (score: number): string => {
           加分
         </button>
         <button
-          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-all duration-200 disabled:opacity-50 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border border-orange-500/30"
+          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-colors disabled:opacity-50 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border border-orange-500/30"
           :disabled="isUpdating"
           @click="$emit('open-score-dialog', student, -10, '扣分')"
         >
