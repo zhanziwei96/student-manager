@@ -26,10 +26,19 @@ def get_active_course_session_by_class_name(session: Session, class_name: str) -
 
 
 def get_teacher_active_course_sessions(session: Session, teacher_id: int) -> List[CourseSession]:
-    """获取教师所有活跃课程会话"""
+    """获取教师所有活跃课程会话（不包含 scheduled）"""
     query = select(CourseSession).where(
         CourseSession.teacher_id == teacher_id,
-        CourseSession.status == "active"
+        CourseSession.status == "active"  # 只返回 active，不包含 scheduled
+    )
+    return list(session.exec(query).all())
+
+
+def get_teacher_scheduled_course_sessions(session: Session, teacher_id: int) -> List[CourseSession]:
+    """获取教师所有已安排但未开始的课程"""
+    query = select(CourseSession).where(
+        CourseSession.teacher_id == teacher_id,
+        CourseSession.status == "scheduled"
     )
     return list(session.exec(query).all())
 

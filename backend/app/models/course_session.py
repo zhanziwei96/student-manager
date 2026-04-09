@@ -24,7 +24,7 @@ class CourseSessionBase(SQLModel):
     start_time: Optional[datetime] = Field(default=None, description="开始时间")
     end_time: Optional[datetime] = Field(default=None, description="结束时间")
     week_number: Optional[int] = Field(default=None, description="教学周次")
-    status: str = Field(default="active", description="课堂状态: active|ended|cancelled", max_length=20)
+    status: str = Field(default="active", description="课堂状态: scheduled|active|ended|cancelled", max_length=20)
     source_type: str = Field(default="manual", description="来源类型: scheduled|manual|makeup", max_length=20)
 
 

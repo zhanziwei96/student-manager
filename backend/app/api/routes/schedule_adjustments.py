@@ -54,8 +54,20 @@ def create_schedule_adjustment(
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权调整此课程")
 
     if data.type == "cancel":
-        if has_active_session(session, data.schedule_id, data.week_number):
-            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="进行中的课程不能停课")
+        # 修复：自动处理已存在的活跃课堂
+        from app.crud.course_session import get_course_sessions_by_schedule_and_week
+        existing_session = get_course_sessions_by_schedule_and_week(
+            session, data.schedule_id, data.week_number
+        )
+        if existing_session:
+            if existing_session.status == "active":
+                # 自动结束活跃课堂
+                existing_session.status = "ended"
+                from app.core.timezone import get_now
+                existing_session.end_time = get_now()
+                session.add(existing_session)
+            elif existing_session.status == "ended":
+                raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已结束的课程不能停课")
 
     if data.type == "modify":
         if has_ended_session(session, data.schedule_id, data.week_number):
@@ -65,6 +77,11 @@ def create_schedule_adjustment(
     if data.type == "makeup":
         if not data.new_date:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="补课必须指定日期")
+        
+        # 修复：创建 scheduled 状态的课堂（而非 active）
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        
         course_session = start_course_session(
             session=session,
             class_name=schedule.class_name,
@@ -76,6 +93,11 @@ def create_schedule_adjustment(
             classroom=data.new_classroom or schedule.classroom,
             source_type="makeup",
         )
+        # 设置为 scheduled 状态
+        course_session.status = "scheduled"
+        session.add(course_session)
+        session.commit()
+        session.refresh(course_session)
         generated_session_id = course_session.id
 
     create_adjustment(
