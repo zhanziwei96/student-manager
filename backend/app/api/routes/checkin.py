@@ -142,13 +142,14 @@ async def do_checkin(
         if device_checked:
             raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该设备已签到')
 
-    # 创建签到记录
+    # 创建签到记录 - 使用课堂班级作为快照
+    # 这样即使学生后续转班，历史签到仍显示正确的班级
     try:
         checkin = create_checkin(
             db_session,
             data.student_id,
             data.student_name or student.name,
-            cs.class_name,
+            cs.class_name,  # 使用课堂班级快照
             cs.id,
             device_id=data.device_id,
             device_info=data.device_info
