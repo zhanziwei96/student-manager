@@ -5,6 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
 from sqlmodel import Session, select
+from sqlalchemy import update
 import pandas as pd
 from io import BytesIO
 
@@ -21,6 +22,7 @@ from app.core.upload import (
 from app.api.deps import get_current_user, require_login, require_admin, require_admin_or_teacher
 from app.crud import get_schedules as crud_get_schedules, delete_schedule as crud_delete_schedule
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
+from app.models.course_session import CourseSession
 from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse

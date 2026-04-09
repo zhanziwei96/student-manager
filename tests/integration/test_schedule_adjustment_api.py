@@ -123,8 +123,8 @@ class TestScheduleAdjustmentAPI:
         # 补课应生成 course_session
         assert "调整记录已创建" in data.get("message", "")
 
-    def test_cancel_with_active_session_fails(self, teacher_client, create_test_schedule, test_engine):
-        """进行中的课程不能停课"""
+    def test_cancel_with_active_session_auto_ends(self, teacher_client, create_test_schedule, test_engine):
+        """进行中的课程取消时自动结束课堂"""
         from app.crud.course_session import start_course_session
 
         schedule = create_test_schedule(course_name="化学", class_name="一班")
@@ -141,14 +141,15 @@ class TestScheduleAdjustmentAPI:
                 week_number=4
             )
 
+        # cancel 现在会自动结束活跃课堂并返回 200
         response = teacher_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
             "week_number": 4,
             "type": "cancel",
             "reason": "临时停课"
         })
-        assert response.status_code == 400
-        assert "进行中的课程不能停课" in response.text
+        assert response.status_code == 200
+        assert response.json()["success"] is True
 
     def test_modify_with_ended_session_fails(self, teacher_client, create_test_schedule, test_engine):
         """已结束的课程不能调课"""
@@ -166,7 +167,7 @@ class TestScheduleAdjustmentAPI:
                 schedule_id=schedule.id,
                 week_number=6
             )
-            end_course_session(session, cs.id)
+            end_course_session(session, teacher_id=1, class_name="一班")
 
         response = teacher_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
