@@ -35,7 +35,7 @@ def get_schedules(
 
 def delete_schedule(session: Session, schedule_id: int) -> bool:
     """
-    删除课表
+    删除课表 - 修复：级联删除关联数据
     
     Args:
         session: 数据库会话
@@ -43,10 +43,48 @@ def delete_schedule(session: Session, schedule_id: int) -> bool:
         
     Returns:
         bool: 删除成功返回 True，不存在返回 False
+        
+    Raises:
+        HTTPException: 如果存在活跃的关联课堂
     """
+    from sqlalchemy import delete, func
+    from fastapi import HTTPException
+    from app.core.config import HttpStatus
+    from app.models import ScheduleAdjustment, CourseSession
+    
     schedule = session.get(CourseSchedule, schedule_id)
     if not schedule:
         return False
+    
+    # 修复：检查是否有活跃的关联课堂
+    active_count = session.exec(
+        select(func.count())
+        .where(
+            CourseSession.schedule_id == schedule_id,
+            CourseSession.status == "active"
+        )
+    ).one()
+    
+    if active_count > 0:
+        raise HTTPException(
+            status_code=HttpStatus.BAD_REQUEST,
+            detail="该课程存在进行中的课堂，请先结束课堂再删除课表"
+        )
+    
+    # 修复：先删除关联的调课记录
+    session.execute(
+        delete(ScheduleAdjustment)
+        .where(ScheduleAdjustment.schedule_id == schedule_id)
+    )
+    
+    # 修复：删除关联的非活跃课堂记录
+    session.execute(
+        delete(CourseSession)
+        .where(
+            CourseSession.schedule_id == schedule_id,
+            CourseSession.status.in_(["ended", "cancelled", "scheduled"])
+        )
+    )
     
     session.delete(schedule)
     session.commit()
