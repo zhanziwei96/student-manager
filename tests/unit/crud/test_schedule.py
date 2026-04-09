@@ -106,6 +106,173 @@ class TestScheduleCRUD:
         success = delete_schedule(session, 99999)
         assert success is False
 
+    def test_delete_schedule_cascade_adjustments(self, session: Session):
+        """测试删除课表级联删除关联的 ScheduleAdjustment"""
+        from app.models import ScheduleAdjustment
+        from app.crud.schedule_adjustment import create_adjustment
+
+        # 1. 创建课表
+        schedule = create_schedule(
+            session=session,
+            course_name="待删除课程",
+            class_name="班级X",
+            teacher_id=1,
+            teacher_name="张老师",
+            day_of_week=1,
+            start_time="08:00",
+            end_time="09:40",
+            classroom="X-101",
+            week_start=1,
+            week_end=20
+        )
+
+        # 2. 创建关联的调课记录
+        adjustment = create_adjustment(
+            session=session,
+            schedule_id=schedule.id,
+            week_number=10,
+            adjustment_type="modify",
+            created_by=1,
+            reason="测试调课",
+            new_classroom="B202"
+        )
+        session.commit()
+
+        # 验证调课记录存在
+        assert adjustment.id is not None
+
+        # 3. 删除课表
+        success = delete_schedule(session, schedule.id)
+        assert success is True
+
+        # 4. 验证调课记录也被级联删除
+        remaining = session.get(ScheduleAdjustment, adjustment.id)
+        assert remaining is None
+
+    def test_delete_schedule_cascade_non_active_sessions(self, session: Session):
+        """测试删除课表级联删除非活跃的 CourseSession"""
+        from app.crud.course_session import start_course_session
+        from app.models import CourseSession
+
+        # 1. 创建课表
+        schedule = create_schedule(
+            session=session,
+            course_name="待删除课程",
+            class_name="班级Y",
+            teacher_id=1,
+            teacher_name="张老师",
+            day_of_week=1,
+            start_time="08:00",
+            end_time="09:40",
+            classroom="Y-101",
+            week_start=1,
+            week_end=20
+        )
+
+        # 2. 创建 ended 状态的课堂
+        ended_session = start_course_session(
+            session=session,
+            class_name="班级Y",
+            teacher_id=1,
+            teacher_name="张老师",
+            course_name="待删除课程",
+            schedule_id=schedule.id,
+            source_type="scheduled"
+        )
+        ended_session.status = "ended"
+        session.add(ended_session)
+
+        # 3. 创建 cancelled 状态的课堂
+        cancelled_session = start_course_session(
+            session=session,
+            class_name="班级Y",
+            teacher_id=1,
+            teacher_name="张老师",
+            course_name="待删除课程",
+            schedule_id=schedule.id,
+            source_type="scheduled"
+        )
+        cancelled_session.status = "cancelled"
+        session.add(cancelled_session)
+
+        # 4. 创建 scheduled 状态的课堂
+        scheduled_session = start_course_session(
+            session=session,
+            class_name="班级Y",
+            teacher_id=1,
+            teacher_name="张老师",
+            course_name="待删除课程",
+            schedule_id=schedule.id,
+            source_type="scheduled"
+        )
+        scheduled_session.status = "scheduled"
+        session.add(scheduled_session)
+
+        session.commit()
+
+        ended_id = ended_session.id
+        cancelled_id = cancelled_session.id
+        scheduled_id = scheduled_session.id
+
+        # 5. 删除课表
+        success = delete_schedule(session, schedule.id)
+        assert success is True
+
+        # 6. 验证非活跃课堂都被级联删除
+        assert session.get(CourseSession, ended_id) is None
+        assert session.get(CourseSession, cancelled_id) is None
+        assert session.get(CourseSession, scheduled_id) is None
+
+    def test_delete_schedule_blocked_by_active_session(self, session: Session):
+        """测试活跃课堂阻止删除课表"""
+        from app.crud.course_session import start_course_session
+        from app.models import CourseSession
+        from fastapi import HTTPException
+
+        # 1. 创建课表
+        schedule = create_schedule(
+            session=session,
+            course_name="有活跃课堂的课程",
+            class_name="班级Z",
+            teacher_id=1,
+            teacher_name="张老师",
+            day_of_week=1,
+            start_time="08:00",
+            end_time="09:40",
+            classroom="Z-101",
+            week_start=1,
+            week_end=20
+        )
+
+        # 2. 创建 active 状态的课堂
+        active_session = start_course_session(
+            session=session,
+            class_name="班级Z",
+            teacher_id=1,
+            teacher_name="张老师",
+            course_name="有活跃课堂的课程",
+            schedule_id=schedule.id,
+            source_type="scheduled"
+        )
+        session.commit()
+
+        # 3. 尝试删除课表应该失败
+        with pytest.raises(HTTPException) as exc_info:
+            delete_schedule(session, schedule.id)
+
+        assert exc_info.value.status_code == 400
+        assert "进行中的课堂" in exc_info.value.detail
+
+        # 4. 验证课表和课堂都还在
+        assert get_schedule(session, schedule.id) is not None
+        assert session.get(CourseSession, active_session.id) is not None
+
+        # 清理
+        active_session.status = "ended"
+        session.add(active_session)
+        session.commit()
+        delete_schedule(session, schedule.id)
+
     def test_import_schedules(self, session: Session):
         """测试批量导入课表 - 完整业务逻辑封装"""
         records = [

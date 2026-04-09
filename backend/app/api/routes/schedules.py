@@ -389,13 +389,14 @@ async def unassign_teacher_from_schedule(
     session.add(schedule)
     
     # 修复：级联清除 CourseSession 的教师信息
+    # 注意：teacher_id 有 NOT NULL 约束，使用 0 表示未分配
     session.execute(
         update(CourseSession)
         .where(
             CourseSession.schedule_id == schedule_id,
             CourseSession.status == "active"
         )
-        .values(teacher_id=None, teacher_name=None)
+        .values(teacher_id=0, teacher_name=None)
     )
     
     session.commit()

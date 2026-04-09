@@ -144,36 +144,6 @@ def begin_course_session(
     new_start_time = None
     new_end_time = None
 
-    if schedule_id:
-        schedule = session.get(CourseSchedule, schedule_id)
-        if not schedule:
-            raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课表不存在")
-        if schedule.class_name != data.class_name:
-            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级与课表不匹配")
-        if data.course_name and schedule.course_name != data.course_name:
-            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程名称与课表不匹配")
-        week_number = _get_current_week_number()
-        classroom = schedule.classroom
-        source_type = "scheduled"
-        if not data.course_name:
-            data.course_name = schedule.course_name
-
-        # 修复：检查是否有 modify 类型的调课
-        from app.crud.schedule_adjustment import get_adjustment
-        adjustment = get_adjustment(session, schedule_id, week_number)
-        if adjustment:
-            if adjustment.type == "modify":
-                # 使用调课后的信息（教室和时间）
-                classroom = adjustment.new_classroom or classroom
-                # 保存调课时间用于后续设置
-                new_start_time = adjustment.new_start_time
-                new_end_time = adjustment.new_end_time
-            elif adjustment.type == "cancel":
-                raise HTTPException(
-                    status_code=HttpStatus.BAD_REQUEST,
-                    detail="该周课程已取消，无法开始上课"
-                )
-
     try:
         course_session = start_course_session(
             session=session,
