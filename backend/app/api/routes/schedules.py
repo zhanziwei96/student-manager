@@ -334,7 +334,7 @@ async def assign_teacher_to_schedule(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin)
 ):
-    """为课程分配教师（仅管理员）"""
+    """为课程分配教师（仅管理员）- 修复级联更新"""
     # 查询课程
     schedule = session.get(CourseSchedule, schedule_id)
     if not schedule:
@@ -347,6 +347,17 @@ async def assign_teacher_to_schedule(
     schedule.teacher_id = teacher_id
     schedule.teacher_name = teacher_name
     session.add(schedule)
+    
+    # 修复：级联更新活跃的 CourseSession
+    session.execute(
+        update(CourseSession)
+        .where(
+            CourseSession.schedule_id == schedule_id,
+            CourseSession.status == "active"
+        )
+        .values(teacher_id=teacher_id, teacher_name=teacher_name)
+    )
+    
     session.commit()
     
     return {
@@ -361,7 +372,7 @@ async def unassign_teacher_from_schedule(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin)
 ):
-    """取消课程的教师分配（仅管理员）"""
+    """取消课程的教师分配（仅管理员）- 修复级联更新"""
     # 查询课程
     schedule = session.get(CourseSchedule, schedule_id)
     if not schedule:
@@ -374,6 +385,17 @@ async def unassign_teacher_from_schedule(
     schedule.teacher_id = None
     schedule.teacher_name = None
     session.add(schedule)
+    
+    # 修复：级联清除 CourseSession 的教师信息
+    session.execute(
+        update(CourseSession)
+        .where(
+            CourseSession.schedule_id == schedule_id,
+            CourseSession.status == "active"
+        )
+        .values(teacher_id=None, teacher_name=None)
+    )
+    
     session.commit()
     
     return {
