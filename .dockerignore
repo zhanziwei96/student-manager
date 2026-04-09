@@ -34,7 +34,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # 数据库和日志（挂载卷，不需要打包）
-backend/data/
+backend/app/data/
 backend/logs/
 backups/
 uploads/

@@ -4,7 +4,7 @@ set -e
 echo "=== Starting ClassHub ==="
 
 # 创建必要的目录（确保挂载卷存在）
-mkdir -p /app/backend/data /app/uploads /app/backups /app/backend/logs
+mkdir -p /app/backend/app/data /app/uploads /app/backups /app/backend/logs
 
 # 检查数据库文件是否存在，如果不存在初始化
 cd /app/backend

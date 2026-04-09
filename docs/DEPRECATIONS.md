@@ -64,7 +64,7 @@ is_valid = verify_password("user_password", stored_hash)
 
 **执行迁移脚本**:
 ```bash
-sqlite3 backend/data/class_system.db < migrations/remove_salt_field.sql
+sqlite3 backend/app/data/class_system.db < migrations/remove_salt_field.sql
 ```
 
 **变更内容**:

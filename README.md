@@ -367,7 +367,7 @@ student-manager/
 
 ```bash
 # 备份数据库
-cp backend/data/class_system.db backup/class_system_$(date +%Y%m%d).db
+cp backend/app/data/class_system.db backup/class_system_$(date +%Y%m%d).db
 
 # 或使用备份脚本
 ./backup/backup-data.sh
@@ -410,7 +410,7 @@ docker-compose logs -f
 ps aux | grep "python main.py"
 
 # 查看数据库大小
-ls -lh backend/data/
+ls -lh backend/app/data/
 
 # 查看日志
 tail -f backend/logs/app.log

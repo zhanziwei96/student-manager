@@ -155,7 +155,7 @@ RATE_LIMIT__CHECKIN_MAX_REQUESTS=10
 ```bash
 # 数据库会在首次启动时自动创建
 # 如需手动初始化，执行迁移脚本
-sqlite3 backend/data/class_system.db < migrations/migrate_v1_to_v2.sql
+sqlite3 backend/app/data/class_system.db < migrations/migrate_v1_to_v2.sql
 ```
 
 #### 4. 启动后端服务
@@ -331,8 +331,8 @@ pytest tests/integration -v         # 仅集成测试
 pytest tests/ --cov=app --cov-report=html
 
 # 数据库操作
-sqlite3 backend/data/class_system.db ".tables"
-sqlite3 backend/data/class_system.db ".schema users"
+sqlite3 backend/app/data/class_system.db ".tables"
+sqlite3 backend/app/data/class_system.db ".schema users"
 ```
 
 ### 前端命令
@@ -409,7 +409,7 @@ pnpm install
 python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
 
 # 检查数据库文件是否存在
-ls -la backend/data/class_system.db
+ls -la backend/app/data/class_system.db
 ```
 
 ### 调试技巧

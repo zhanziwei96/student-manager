@@ -142,7 +142,7 @@ uploads/*
 data/*
 !data/.gitkeep
 backend/app/data/*
-!backend/data/.gitkeep
+!backend/app/data/.gitkeep
 node_modules
 
 # Backup and sensitive config

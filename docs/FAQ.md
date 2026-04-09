@@ -159,7 +159,7 @@ curl -s --max-time 5 http://localhost:8000/api/v1/health
 python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
 
 # 默认路径
-backend/data/class_system.db
+backend/app/data/class_system.db
 ```
 
 ---
@@ -168,7 +168,7 @@ backend/data/class_system.db
 
 ```bash
 # 手动备份
-cp backend/data/class_system.db backup/class_system_$(date +%Y%m%d).db
+cp backend/app/data/class_system.db backup/class_system_$(date +%Y%m%d).db
 
 # 或使用备份脚本
 ./backup/backup-data.sh
@@ -180,14 +180,14 @@ cp backend/data/class_system.db backup/class_system_$(date +%Y%m%d).db
 
 ```bash
 # 查看所有表
-sqlite3 backend/data/class_system.db ".tables"
+sqlite3 backend/app/data/class_system.db ".tables"
 
 # 查看表结构
-sqlite3 backend/data/class_system.db ".schema users"
-sqlite3 backend/data/class_system.db ".schema students"
+sqlite3 backend/app/data/class_system.db ".schema users"
+sqlite3 backend/app/data/class_system.db ".schema students"
 
 # 查看数据量
-sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM students;"
+sqlite3 backend/app/data/class_system.db "SELECT COUNT(*) FROM students;"
 ```
 
 ---
@@ -200,8 +200,8 @@ sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM students;"
 pkill -f "python main.py"
 
 # 2. 恢复备份
-mv backend/data/class_system.db backend/data/class_system.db.failed
-mv backend/data/class_system.db.backup.YYYYMMDD backend/data/class_system.db
+mv backend/app/data/class_system.db backend/app/data/class_system.db.failed
+mv backend/app/data/class_system.db.backup.YYYYMMDD backend/app/data/class_system.db
 
 # 3. 重新启动后端
 conda run -n student-manage python main.py

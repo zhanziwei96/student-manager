@@ -87,7 +87,7 @@ pnpm test                           # 交互式测试模式
 
 - **Python**: 3.11+，使用 Conda 环境 `student-manage`
 - **Node.js**: 20+，使用 pnpm 8+
-- **数据库**: SQLite，位于 `backend/data/class_system.db`
+- **数据库**: SQLite，位于 `backend/app/data/class_system.db`
 
 运行 Python 命令前必须激活 Conda 环境：
 ```bash
@@ -152,7 +152,7 @@ frontend-v3/src/
 
 ### 数据库
 
-- SQLite 文件数据库，位于 `backend/data/class_system.db`
+- SQLite 文件数据库，位于 `backend/app/data/class_system.db`
 - 配置使用双下划线格式：`DATABASE__PATH`、`SECURITY__SECRET_KEY`（不是单下划线）
 - 查看实际路径：`python -c "from backend.app.core.config import get_settings; print(get_settings().get_database_path())"`
 - 集成测试使用内存数据库（隔离）

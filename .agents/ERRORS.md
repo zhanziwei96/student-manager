@@ -299,7 +299,7 @@ pytest tests/unit/crud/test_student.py tests/integration/test_students_api_enhan
 python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
 ```
 
-通常是: `/home/yufeng/student-manager/backend/data/class_system.db`
+通常是: `/home/yufeng/student-manager/backend/app/data/class_system.db`
 
 ### 集成测试隔离 (强制)
 集成测试使用内存数据库，**禁止**连接到生产数据库。

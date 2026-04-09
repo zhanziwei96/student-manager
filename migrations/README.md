@@ -27,13 +27,13 @@
 
 ```bash
 # 备份旧数据库
-cp backend/data/class_system.db backend/data/class_system.db.backup.$(date +%Y%m%d)
+cp backend/app/data/class_system.db backend/app/data/class_system.db.backup.$(date +%Y%m%d)
 
 # 执行迁移
-sqlite3 backend/data/class_system.db < migrations/migrate_v1_to_v2.sql
+sqlite3 backend/app/data/class_system.db < migrations/migrate_v1_to_v2.sql
 
 # 验证
-sqlite3 backend/data/class_system.db ".schema"
+sqlite3 backend/app/data/class_system.db ".schema"
 ```
 
 ---
@@ -45,7 +45,7 @@ sqlite3 backend/data/class_system.db ".schema"
 **使用场景**: 数据库结构已是最新，只需要添加安全功能表
 
 ```bash
-sqlite3 backend/data/student_manage.db < migrations/add_security_tables.sql
+sqlite3 backend/app/data/student_manage.db < migrations/add_security_tables.sql
 ```
 
 ---
@@ -65,11 +65,11 @@ sqlite3 backend/data/student_manage.db < migrations/add_security_tables.sql
 
 ```bash
 # 执行迁移
-sqlite3 backend/data/class_system.db < migrations/add_version_optimistic_lock.sql
+sqlite3 backend/app/data/class_system.db < migrations/add_version_optimistic_lock.sql
 
 # 验证迁移结果
-sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM students WHERE version IS NOT NULL;"
-sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM users WHERE version IS NOT NULL;"
+sqlite3 backend/app/data/class_system.db "SELECT COUNT(*) FROM students WHERE version IS NOT NULL;"
+sqlite3 backend/app/data/class_system.db "SELECT COUNT(*) FROM users WHERE version IS NOT NULL;"
 ```
 
 **注意事项**:
@@ -99,30 +99,30 @@ sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM users WHERE version I
 
 ```bash
 # 执行迁移
-sqlite3 backend/data/class_system.db < migrations/remove_salt_field.sql
+sqlite3 backend/app/data/class_system.db < migrations/remove_salt_field.sql
 
 # 验证迁移结果 - 检查 users 表结构
-sqlite3 backend/data/class_system.db ".schema users"
+sqlite3 backend/app/data/class_system.db ".schema users"
 
 # 验证迁移结果 - 检查 students 表结构
-sqlite3 backend/data/class_system.db ".schema students"
+sqlite3 backend/app/data/class_system.db ".schema students"
 
 # 确认 salt 字段已移除（查询应报错或显示无 salt 列）
-sqlite3 backend/data/class_system.db "SELECT salt FROM users LIMIT 1;" 2>&1 || echo "salt 字段已移除"
+sqlite3 backend/app/data/class_system.db "SELECT salt FROM users LIMIT 1;" 2>&1 || echo "salt 字段已移除"
 ```
 
 **执行前检查**:
 
 ```bash
 # 1. 确认当前密码哈希算法为 bcrypt
-sqlite3 backend/data/class_system.db "SELECT password_hash FROM users WHERE role='admin' LIMIT 1;"
+sqlite3 backend/app/data/class_system.db "SELECT password_hash FROM users WHERE role='admin' LIMIT 1;"
 # 应返回 $2b$12$... 格式的 bcrypt 哈希
 
 # 2. 备份数据库
-cp backend/data/class_system.db backend/data/class_system.db.backup.pre-salt-removal.$(date +%Y%m%d)
+cp backend/app/data/class_system.db backend/app/data/class_system.db.backup.pre-salt-removal.$(date +%Y%m%d)
 
 # 3. 确认所有新用户都使用 bcrypt
-sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM users WHERE password_hash NOT LIKE '\$2b\$%';"
+sqlite3 backend/app/data/class_system.db "SELECT COUNT(*) FROM users WHERE password_hash NOT LIKE '\$2b\$%';"
 # 应返回 0（如果返回非零，表示还有旧版 SHA256 密码需要处理）
 ```
 
@@ -149,7 +149,7 @@ sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM users WHERE password_
 **使用场景**: 学生需要使用学号登录系统
 
 ```bash
-sqlite3 backend/data/class_system.db < migrations/add_student_account.sql
+sqlite3 backend/app/data/class_system.db < migrations/add_student_account.sql
 ```
 
 ---
@@ -167,7 +167,7 @@ sqlite3 backend/data/class_system.db < migrations/add_student_account.sql
 **使用场景**: 需要课程表功能
 
 ```bash
-sqlite3 backend/data/class_system.db < migrations/add_course_schedule.sql
+sqlite3 backend/app/data/class_system.db < migrations/add_course_schedule.sql
 ```
 
 ---
@@ -191,10 +191,10 @@ sqlite3 backend/data/class_system.db < migrations/add_course_schedule.sql
 
 ```bash
 # 执行迁移
-sqlite3 backend/data/class_system.db < migrations/add_class_session_active_index.sql
+sqlite3 backend/app/data/class_system.db < migrations/add_class_session_active_index.sql
 
 # 验证索引创建
-sqlite3 backend/data/class_system.db ".schema class_session"
+sqlite3 backend/app/data/class_system.db ".schema class_session"
 # 应包含: CREATE INDEX idx_session_active ON class_session(active)
 ```
 
@@ -230,26 +230,26 @@ sqlite3 backend/data/class_system.db ".schema class_session"
 
 ```bash
 # 1. 基础结构迁移（如果是从旧版本升级）
-# sqlite3 backend/data/class_system.db < migrations/migrate_v1_to_v2.sql
+# sqlite3 backend/app/data/class_system.db < migrations/migrate_v1_to_v2.sql
 
 # 2. 添加安全表
-sqlite3 backend/data/class_system.db < migrations/add_security_tables.sql
+sqlite3 backend/app/data/class_system.db < migrations/add_security_tables.sql
 
 # 3. 添加学生账号支持
-sqlite3 backend/data/class_system.db < migrations/add_student_account.sql
+sqlite3 backend/app/data/class_system.db < migrations/add_student_account.sql
 
 # 4. 添加乐观锁版本字段
-sqlite3 backend/data/class_system.db < migrations/add_version_optimistic_lock.sql
+sqlite3 backend/app/data/class_system.db < migrations/add_version_optimistic_lock.sql
 
 # 5. 添加课程表支持（可选）
-# sqlite3 backend/data/class_system.db < migrations/add_course_schedule.sql
+# sqlite3 backend/app/data/class_system.db < migrations/add_course_schedule.sql
 
 # 6. 移除 salt 字段（完成 SEC-003 升级后）
-# sqlite3 backend/data/class_system.db < migrations/remove_salt_field.sql
+# sqlite3 backend/app/data/class_system.db < migrations/remove_salt_field.sql
 
 # 验证迁移结果
-sqlite3 backend/data/class_system.db ".schema"
-sqlite3 backend/data/class_system.db ".tables"
+sqlite3 backend/app/data/class_system.db ".schema"
+sqlite3 backend/app/data/class_system.db ".tables"
 ```
 
 ---
@@ -273,17 +273,17 @@ sqlite3 backend/data/class_system.db ".tables"
 
 ```bash
 # 1. 检查表结构
-sqlite3 backend/data/class_system.db ".schema users"
+sqlite3 backend/app/data/class_system.db ".schema users"
 
 # 2. 检查数据量
-sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM users;"
-sqlite3 backend/data/class_system.db "SELECT COUNT(*) FROM students;"
+sqlite3 backend/app/data/class_system.db "SELECT COUNT(*) FROM users;"
+sqlite3 backend/app/data/class_system.db "SELECT COUNT(*) FROM students;"
 
 # 3. 验证角色转换
-sqlite3 backend/data/class_system.db "SELECT username, role FROM users WHERE role='admin';"
+sqlite3 backend/app/data/class_system.db "SELECT username, role FROM users WHERE role='admin';"
 
 # 4. 验证乐观锁字段
-sqlite3 backend/data/class_system.db "SELECT username, version FROM users LIMIT 5;"
+sqlite3 backend/app/data/class_system.db "SELECT username, version FROM users LIMIT 5;"
 
 # 5. 启动后端测试
 ENV=testing python backend/main.py
@@ -300,8 +300,8 @@ ENV=testing python backend/main.py
 pkill -f "python main.py"
 
 # 恢复备份
-mv backend/data/class_system.db backend/data/class_system.db.failed
-mv backend/data/class_system.db.backup.YYYYMMDD backend/data/class_system.db
+mv backend/app/data/class_system.db backend/app/data/class_system.db.failed
+mv backend/app/data/class_system.db.backup.YYYYMMDD backend/app/data/class_system.db
 
 # 重新启动后端
 python backend/main.py

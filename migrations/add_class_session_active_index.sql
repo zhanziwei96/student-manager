@@ -6,4 +6,4 @@
 CREATE INDEX IF NOT EXISTS idx_session_active ON class_session(active);
 
 -- 验证索引创建
--- sqlite3 backend/data/class_system.db ".schema class_session"
+-- sqlite3 backend/app/data/class_system.db ".schema class_session"

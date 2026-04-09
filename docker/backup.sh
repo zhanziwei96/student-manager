@@ -7,7 +7,7 @@ set -e
 
 # 配置
 BACKUP_DIR="${BACKUP_DIR:-/app/backups}"
-DB_FILE="${DB_FILE:-/app/backend/data/student_manage.db}"
+DB_FILE="${DB_FILE:-/app/backend/app/data/student_manage.db}"
 LOG_FILE="${LOG_FILE:-/app/backend/logs/backup.log}"
 KEEP_DAYS="${1:-30}"
 
