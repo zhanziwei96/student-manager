@@ -54,20 +54,22 @@ def create_schedule_adjustment(
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权调整此课程")
 
     if data.type == "cancel":
-        # 修复：自动处理已存在的活跃课堂
+        # 修复：自动处理已存在的活跃或已安排的课堂
         from app.crud.course_session import get_course_sessions_by_schedule_and_week
         existing_session = get_course_sessions_by_schedule_and_week(
             session, data.schedule_id, data.week_number
         )
         if existing_session:
-            if existing_session.status == "active":
-                # 自动结束活跃课堂
-                existing_session.status = "ended"
+            if existing_session.status in ["active", "scheduled"]:
+                # 自动结束活跃课堂或取消已安排的课堂
+                existing_session.status = "cancelled"
                 from app.core.timezone import get_now
                 existing_session.end_time = get_now()
                 session.add(existing_session)
             elif existing_session.status == "ended":
                 raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已结束的课程不能停课")
+            elif existing_session.status == "cancelled":
+                raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已取消的课程不能再次停课")
 
     if data.type == "modify":
         if has_ended_session(session, data.schedule_id, data.week_number):
@@ -77,11 +79,26 @@ def create_schedule_adjustment(
     if data.type == "makeup":
         if not data.new_date:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="补课必须指定日期")
-        
+
         # 修复：创建 scheduled 状态的课堂（而非 active）
         from datetime import datetime
         from zoneinfo import ZoneInfo
-        
+
+        # 构建补课的开始和结束时间
+        makeup_start = None
+        makeup_end = None
+        if data.new_start_time:
+            time_parts = data.new_start_time.split(":")
+            makeup_start = datetime.combine(
+                data.new_date,
+                datetime.strptime(data.new_start_time, "%H:%M").time()
+            ).replace(tzinfo=ZoneInfo("Asia/Shanghai"))
+        if data.new_end_time:
+            makeup_end = datetime.combine(
+                data.new_date,
+                datetime.strptime(data.new_end_time, "%H:%M").time()
+            ).replace(tzinfo=ZoneInfo("Asia/Shanghai"))
+
         course_session = start_course_session(
             session=session,
             class_name=schedule.class_name,
@@ -93,8 +110,12 @@ def create_schedule_adjustment(
             classroom=data.new_classroom or schedule.classroom,
             source_type="makeup",
         )
-        # 设置为 scheduled 状态
+        # 设置为 scheduled 状态并设置正确的时间
         course_session.status = "scheduled"
+        if makeup_start:
+            course_session.start_time = makeup_start
+        if makeup_end:
+            course_session.end_time = makeup_end
         session.add(course_session)
         session.commit()
         session.refresh(course_session)

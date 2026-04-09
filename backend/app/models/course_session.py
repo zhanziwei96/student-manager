@@ -4,7 +4,7 @@
 from datetime import datetime, date
 from typing import Optional
 from sqlmodel import SQLModel, Field
-from sqlalchemy import Index, text
+from sqlalchemy import Index, text, UniqueConstraint
 from app.core.timezone import get_now
 
 
@@ -67,6 +67,10 @@ class ScheduleAdjustmentBase(SQLModel):
 class ScheduleAdjustment(ScheduleAdjustmentBase, table=True):
     """课表调整记录数据库模型"""
     __tablename__ = "schedule_adjustments"
+    __table_args__ = (
+        # 同一课表同一周次只能有一条调整记录
+        UniqueConstraint('schedule_id', 'week_number', name='uix_schedule_week'),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
