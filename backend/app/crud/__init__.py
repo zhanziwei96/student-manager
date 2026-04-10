@@ -49,6 +49,12 @@ from app.crud.group import (
     reject_dissolution_request, transfer_group_leader,
     auto_assign_unassigned_students,
 )
+from app.crud.group_task import (
+    create_group_task, get_group_task, get_group_tasks_by_class,
+    get_task_dimensions, start_group_task, close_group_task,
+    get_evaluation_assignments, submit_teacher_score,
+    submit_student_scores, get_task_results,
+)
 
 __all__ = [
     # Student
@@ -85,4 +91,9 @@ __all__ = [
     "get_pending_dissolution_requests", "approve_dissolution_request",
     "reject_dissolution_request", "transfer_group_leader",
     "auto_assign_unassigned_students",
+    # GroupTask
+    "create_group_task", "get_group_task", "get_group_tasks_by_class",
+    "get_task_dimensions", "start_group_task", "close_group_task",
+    "get_evaluation_assignments", "submit_teacher_score",
+    "submit_student_scores", "get_task_results",
 ]
