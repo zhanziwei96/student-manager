@@ -33,22 +33,6 @@ const formatDateTime = (iso?: string) => {
   return `${mm}-${dd} ${hh}:${min}`
 }
 
-// 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
-
-const getCardGlowStyle = () => ({
-  backgroundColor: 'var(--card-indigo-glow)',
-})
-
 const statusBadge = (status: CourseSession['status']) => {
   switch (status) {
     case 'ended':
@@ -79,11 +63,11 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
       <div class="min-w-0">
-        <h1 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-          <History class="h-6 w-6 text-primary" />
+        <h1 class="text-xl sm:text-2xl font-medium text-black flex items-center gap-2">
+          <History class="h-6 w-6 text-black" />
           课堂历史
         </h1>
-        <p class="text-sm text-white/60 mt-1">
+        <p class="text-sm text-[#737373] mt-1">
           查看已结束和已取消的课程记录
         </p>
       </div>
@@ -101,44 +85,42 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
         <Card
           v-for="session in historySessions"
           :key="session.id"
-          class="relative overflow-hidden p-4 transition-all duration-300 hover:scale-[1.01]"
-          :style="getCardStyle()"
+          class="relative overflow-hidden p-4 transition-colors border-[#e5e5e5] bg-[#fafafa] rounded-xl"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <div class="relative z-10 flex items-center gap-2 mb-2">
                 <div
-                  class="flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 shadow-inner"
-                  :style="getCardIconStyle()"
+                  class="flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 bg-[#f5f5f5] text-[#525252]"
                 >
-                  <BookOpen class="h-4 w-4" :style="{ color: 'var(--card-indigo-icon-text)' }" />
+                  <BookOpen class="h-4 w-4" />
                 </div>
-                <h4 class="font-semibold text-base text-white truncate">
+                <h4 class="font-medium text-base text-black truncate">
                   {{ session.course_name || '未命名课程' }}
                 </h4>
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
-                <div class="flex items-center gap-2 text-white/60">
-                  <Calendar class="h-3.5 w-3.5 text-white/40" />
+                <div class="flex items-center gap-2 text-[#737373]">
+                  <Calendar class="h-3.5 w-3.5 text-[#a3a3a3]" />
                   <span>{{ session.class_name }}</span>
                 </div>
                 <div
                   v-if="session.classroom"
-                  class="flex items-center gap-2 text-white/60"
+                  class="flex items-center gap-2 text-[#737373]"
                 >
-                  <MapPin class="h-3.5 w-3.5 text-white/40" />
+                  <MapPin class="h-3.5 w-3.5 text-[#a3a3a3]" />
                   <span>{{ session.classroom }}</span>
                 </div>
-                <div class="flex items-center gap-2 text-white/60">
-                  <Clock class="h-3.5 w-3.5 text-white/40" />
+                <div class="flex items-center gap-2 text-[#737373]">
+                  <Clock class="h-3.5 w-3.5 text-[#a3a3a3]" />
                   <span>{{ formatDateTime(session.start_time) }} ~ {{ formatDateTime(session.end_time) }}</span>
                 </div>
                 <div
                   v-if="session.week_number != null"
-                  class="flex items-center gap-2 text-white/60"
+                  class="flex items-center gap-2 text-[#737373]"
                 >
-                  <span class="text-xs px-1.5 py-0.5 rounded bg-white/5">第{{ session.week_number }}周</span>
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-[#f5f5f5]">第{{ session.week_number }}周</span>
                 </div>
               </div>
 
@@ -155,7 +137,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
                 >
                   {{ sourceBadge(session.source_type).label }}
                 </Badge>
-                <span class="text-xs text-white/30">
+                <span class="text-xs text-[#a3a3a3]">
                   课堂码: {{ session.session_code }}
                 </span>
               </div>
@@ -165,7 +147,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
             <Button
               variant="ghost"
               size="sm"
-              class="h-8 px-2 text-white/40 hover:text-white flex-shrink-0"
+              class="h-8 px-2 text-[#a3a3a3] hover:text-black flex-shrink-0"
               @click="toggleExpand(session.id)"
             >
               <Users class="h-4 w-4 mr-1" />
@@ -184,18 +166,13 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
           <!-- 展开内容：签到人数（mock） -->
           <div
             v-if="expandedIds.has(session.id)"
-            class="mt-3 pt-3 border-t border-white/10"
+            class="mt-3 pt-3 border-t border-[#e5e5e5]"
           >
-            <div class="flex items-center gap-2 text-sm text-white/60">
-              <Users class="h-4 w-4 text-white/40" />
+            <div class="flex items-center gap-2 text-sm text-[#737373]">
+              <Users class="h-4 w-4 text-[#a3a3a3]" />
               <span>已签到：--</span>
             </div>
           </div>
-          <!-- 背景装饰 -->
-          <div
-            class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-            :style="getCardGlowStyle()"
-          />
         </Card>
       </div>
     </DataContainer>
