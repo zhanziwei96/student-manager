@@ -76,7 +76,7 @@
 **Files:**
 - Modify: `frontend-v3/src/styles/tokens.css`
 
-- [ ] **Step 1: 替换 tokens.css 全部内容**
+- [x] **Step 1: 替换 tokens.css 全部内容**
 
 ```css
 /**
@@ -169,7 +169,7 @@
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/styles/tokens.css
@@ -183,7 +183,7 @@ git commit -m "refactor(styles): 重写 tokens.css 为 Ollama 白色主题"
 **Files:**
 - Modify: `frontend-v3/index.html`
 
-- [ ] **Step 1: 替换 index.html 全部内容**
+- [x] **Step 1: 替换 index.html 全部内容**
 
 ```html
 <!DOCTYPE html>
@@ -229,7 +229,7 @@ git commit -m "refactor(styles): 重写 tokens.css 为 Ollama 白色主题"
 - body 颜色删除（跟随 token）
 - 保留 AMap 脚本
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/index.html
@@ -243,7 +243,7 @@ git commit -m "refactor(html): 移除暗色主题和外部字体引用"
 **Files:**
 - Modify: `frontend-v3/src/index.css`
 
-- [ ] **Step 1: 替换 index.css 全部内容**
+- [x] **Step 1: 替换 index.css 全部内容**
 
 ```css
 @import "tailwindcss";
@@ -313,7 +313,7 @@ git commit -m "refactor(html): 移除暗色主题和外部字体引用"
 - 滚动条颜色改为灰色系
 - 选中色改为浅灰
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/index.css
@@ -327,7 +327,7 @@ git commit -m "refactor(styles): 清理 index.css，移除渐变/发光/动画"
 **Files:**
 - Modify: `frontend-v3/src/styles/components.css`
 
-- [ ] **Step 1: 替换 components.css 全部内容**
+- [x] **Step 1: 替换 components.css 全部内容**
 
 ```css
 /**
@@ -640,7 +640,7 @@ git commit -m "refactor(styles): 清理 index.css，移除渐变/发光/动画"
 - 移除所有 `backdrop-filter`
 - 移除动画关键帧
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/styles/components.css
@@ -654,7 +654,7 @@ git commit -m "refactor(styles): 重写 components.css 为 Ollama 白色主题"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Button.vue`
 
-- [ ] **Step 1: 替换 Button.vue 全部内容**
+- [x] **Step 1: 替换 Button.vue 全部内容**
 
 ```vue
 <script setup lang="ts">
@@ -731,7 +731,7 @@ const classes = computed(() =>
 - 移除 `ring-offset-background`
 - focus ring 改为 `ring-[#3b82f6]/50`
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Button.vue
@@ -745,7 +745,7 @@ git commit -m "refactor(ui): 重写 Button 组件为 Ollama 药丸形按钮"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Card.vue`
 
-- [ ] **Step 1: 替换 Card.vue 全部内容**
+- [x] **Step 1: 替换 Card.vue 全部内容**
 
 ```vue
 <script setup lang="ts">
@@ -783,7 +783,7 @@ const classes = computed(() =>
 </template>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Card.vue
@@ -797,7 +797,7 @@ git commit -m "refactor(ui): 重写 Card 组件为 Ollama 风格"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Input.vue`
 
-- [ ] **Step 1: 替换 Input.vue 中基础样式类**
+- [x] **Step 1: 替换 Input.vue 中基础样式类**
 
 将 Input.vue 的 `<input>` 基础类从：
 
@@ -811,7 +811,7 @@ flex h-9 w-full rounded-md px-3 py-2 border border-border bg-transparent text-sm
 flex h-9 w-full rounded-full px-4 py-2 border border-[#e5e5e5] bg-white text-sm text-black placeholder:text-[#a3a3a3] file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 focus-visible:border-black disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[#fafafa]
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Input.vue
@@ -825,7 +825,7 @@ git commit -m "refactor(ui): Input 改为药丸形白色风格"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Select.vue`
 
-- [ ] **Step 1: 替换 Select.vue 中基础样式类**
+- [x] **Step 1: 替换 Select.vue 中基础样式类**
 
 将 `<select>` 的基础类从：
 
@@ -841,7 +841,7 @@ flex h-9 w-full items-center justify-between rounded-full px-4 py-2 pr-10 border
 
 将 options 的 `bg-background-elevated text-text-primary` 改为 `bg-white text-black`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Select.vue
@@ -855,7 +855,7 @@ git commit -m "refactor(ui): Select 改为药丸形白色风格"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Dialog.vue`
 
-- [ ] **Step 1: 修改 Dialog.vue 样式**
+- [x] **Step 1: 修改 Dialog.vue 样式**
 
 Overlay 类从：
 `fixed inset-0 z-50 bg-black/80 backdrop-blur-sm`
@@ -875,7 +875,7 @@ Description 从 `text-sm text-text-secondary` 改为 `text-sm text-[#737373]`。
 
 Close 按钮 focus ring 从 `focus-visible:ring-primary/50` 改为 `focus-visible:ring-[#3b82f6]/50`，颜色从 `text-text-tertiary hover:text-text-primary` 改为 `text-[#a3a3a3] hover:text-black`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Dialog.vue
@@ -889,7 +889,7 @@ git commit -m "refactor(ui): Dialog 改为白色主题，移除阴影和模糊"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Toast.vue`
 
-- [ ] **Step 1: 修改 Toast.vue 样式**
+- [x] **Step 1: 修改 Toast.vue 样式**
 
 基础类从 `rounded-lg ... shadow-2xl` 改为 `rounded-xl ... shadow-none`（移除 shadow-2xl）。
 
@@ -904,7 +904,7 @@ variant 类映射：
 
 Close 按钮颜色从 `text-text-tertiary hover:text-text-primary` 改为 `text-[#a3a3a3] hover:text-black`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Toast.vue
@@ -918,7 +918,7 @@ git commit -m "refactor(ui): Toast 改为白色主题"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Badge.vue`
 
-- [ ] **Step 1: 替换 Badge.vue variant 定义**
+- [x] **Step 1: 替换 Badge.vue variant 定义**
 
 将 cva variants 从暗色改为白色：
 
@@ -944,7 +944,7 @@ const badgeVariants = cva(
 )
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Badge.vue
@@ -958,7 +958,7 @@ git commit -m "refactor(ui): Badge 改为白色灰度风格"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/StatCard.vue`
 
-- [ ] **Step 1: 大幅简化 StatCard**
+- [x] **Step 1: 大幅简化 StatCard**
 
 移除所有 CSS 变量主题系统（`--card-indigo-*` 等）、移除 glow 装饰、移除 hover scale。
 
@@ -981,7 +981,7 @@ git commit -m "refactor(ui): Badge 改为白色灰度风格"
 
 移除底部的 glow 装饰 div（`absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl`）。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/StatCard.vue
@@ -995,13 +995,13 @@ git commit -m "refactor(ui): StatCard 简化为白色风格，移除发光效果
 **Files:**
 - Modify: `frontend-v3/src/components/ui/Checkbox.vue`
 
-- [ ] **Step 1: 修改颜色**
+- [x] **Step 1: 修改颜色**
 
 选中态从 `bg-primary border-primary` 改为 `bg-black border-black`。
 未选中态从 `bg-transparent border-border hover:border-border-hover` 改为 `bg-white border-[#e5e5e5] hover:border-[#d4d4d4]`。
 Check 图标颜色保持 `text-white`（黑底白勾）。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/Checkbox.vue
@@ -1015,7 +1015,7 @@ git commit -m "refactor(ui): Checkbox 改为黑白色"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/SearchableSelect.vue`
 
-- [ ] **Step 1: 修改样式**
+- [x] **Step 1: 修改样式**
 
 Trigger 按钮从 `h-10 rounded-lg border-white/10 bg-white/5` 改为 `h-10 rounded-full border-[#e5e5e5] bg-white`。
 
@@ -1027,7 +1027,7 @@ Option 选中态从 `bg-primary/20 text-primary` 改为 `bg-[#e5e5e5] text-black
 Option hover 从 `hover:bg-white/10` 改为 `hover:bg-[#fafafa]`。
 Option 文字从 `text-white/70` 改为 `text-[#737373]`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/SearchableSelect.vue
@@ -1041,7 +1041,7 @@ git commit -m "refactor(ui): SearchableSelect 改为白色主题"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/MobilePicker.vue`
 
-- [ ] **Step 1: 修改样式**
+- [x] **Step 1: 修改样式**
 
 移动端底部面板从 `bg-[#1a1a2e] rounded-t-[20px]` 改为 `bg-white rounded-t-xl`。
 
@@ -1058,7 +1058,7 @@ Trigger 按钮从暗色改为白色：`border-[#e5e5e5] bg-white text-black`。
 
 搜索输入框：`bg-[#fafafa] border-[#e5e5e5] rounded-full text-black placeholder:text-[#a3a3a3]`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/MobilePicker.vue
@@ -1072,11 +1072,11 @@ git commit -m "refactor(ui): MobilePicker 改为白色主题"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/NetworkErrorBanner.vue`
 
-- [ ] **Step 1: 修改样式**
+- [x] **Step 1: 修改样式**
 
 从 `bg-red-500/90 backdrop-blur-sm text-white shadow-lg` 改为 `bg-[#ef4444] text-white`。移除 `backdrop-blur-sm` 和 `shadow-lg`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/NetworkErrorBanner.vue
@@ -1090,7 +1090,7 @@ git commit -m "refactor(ui): NetworkErrorBanner 移除模糊和阴影"
 **Files:**
 - Modify: `frontend-v3/src/layouts/DashboardLayout.vue`
 
-- [ ] **Step 1: 修改桌面端侧边栏**
+- [x] **Step 1: 修改桌面端侧边栏**
 
 背景从 `bg-[#0a0a0f] border-r border-white/10` 改为 `bg-white border-r border-[#e5e5e5]`。
 
@@ -1105,7 +1105,7 @@ Logo 文字从 `text-white font-bold` 改为 `text-black font-medium`。
 
 登出按钮从 `text-white/50 hover:text-white` 改为 `text-[#a3a3a3] hover:text-black`。
 
-- [ ] **Step 2: 修改移动端头部**
+- [x] **Step 2: 修改移动端头部**
 
 从 `bg-[#0a0a0f] border-b border-white/10` 改为 `bg-white border-b border-[#e5e5e5]`。
 
@@ -1113,11 +1113,11 @@ Logo 从 `text-white font-bold` 改为 `text-black font-medium`。
 
 汉堡按钮从 `text-white` 改为 `text-black`。
 
-- [ ] **Step 3: 修改内容区**
+- [x] **Step 3: 修改内容区**
 
 内容区不需要显式背景色（继承 body 白色）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend-v3/src/layouts/DashboardLayout.vue
@@ -1131,7 +1131,7 @@ git commit -m "refactor(layout): DashboardLayout 改为白色主题"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/MobileDrawer.vue`
 
-- [ ] **Step 1: 修改样式**
+- [x] **Step 1: 修改样式**
 
 Overlay 从 `bg-black/80 backdrop-blur-sm` 改为 `bg-black/30`。
 
@@ -1143,7 +1143,7 @@ Header Logo 从 `text-white font-bold` 改为 `text-black font-medium`。关闭�
 
 导航项同 DashboardLayout 的改法：默认 `text-[#737373] hover:bg-[#fafafa]`，激活 `bg-[#e5e5e5] text-black`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/MobileDrawer.vue
@@ -1157,13 +1157,13 @@ git commit -m "refactor(ui): MobileDrawer 改为白色主题"
 **Files:**
 - Modify: `frontend-v3/src/components/ui/BottomNav.vue`
 
-- [ ] **Step 1: 修改样式**
+- [x] **Step 1: 修改样式**
 
 从 `bg-[#0a0a0f] border-t border-white/10` 改为 `bg-white border-t border-[#e5e5e5]`。
 
 导航项：默认从 `text-white/50` 改为 `text-[#a3a3a3]`，激活从 `text-primary` 改为 `text-black`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/components/ui/BottomNav.vue
@@ -1177,7 +1177,7 @@ git commit -m "refactor(ui): BottomNav 改为白色主题"
 **Files:**
 - Modify: `frontend-v3/src/views/LoginPage.vue`
 
-- [ ] **Step 1: 全面重构为白色主题**
+- [x] **Step 1: 全面重构为白色主题**
 
 背景从 `bg-[#030307]` 改为 `bg-white`。
 
@@ -1199,7 +1199,7 @@ Logo 图标容器从暗色改为 `bg-[#fafafa] border border-[#e5e5e5] rounded-x
 
 Label 从暗色改为 `text-black`。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/LoginPage.vue
@@ -1213,7 +1213,7 @@ git commit -m "refactor(views): LoginPage 改为 Ollama 白色主题"
 **Files:**
 - Modify: `frontend-v3/src/views/NotFound.vue`
 
-- [ ] **Step 1: 全面简化**
+- [x] **Step 1: 全面简化**
 
 背景从所有渐变改为 `bg-white`。
 
@@ -1225,7 +1225,7 @@ git commit -m "refactor(views): LoginPage 改为 Ollama 白色主题"
 
 按钮改为使用 Button 组件的 `cta` variant。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/NotFound.vue
@@ -1239,7 +1239,7 @@ git commit -m "refactor(views): NotFound 改为纯白风格"
 **Files:**
 - Modify: `frontend-v3/src/views/LandingPage.vue`
 
-- [ ] **Step 1: 全面简化**
+- [x] **Step 1: 全面简化**
 
 背景从 `bg-[#030307]` 加各种渐变改为 `bg-white`。
 
@@ -1253,7 +1253,7 @@ CTA 按钮使用 `variant="cta"`。
 
 特性卡片使用白色 Card 组件。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/src/views/LandingPage.vue
@@ -1363,11 +1363,11 @@ git commit -m "refactor(views): admin/Dashboard 改为白色主题"
 **Files:**
 - Modify: `frontend-v3/DESIGN_SYSTEM.md`
 
-- [ ] **Step 1: 重写设计系统文档**
+- [x] **Step 1: 重写设计系统文档**
 
 将文档完全重写为 Ollama 设计系统文档，反映新的色彩、字体、圆角、阴影规范。使用设计规格 `docs/superpowers/specs/2026-04-10-ollama-design-refactor.md` 作为内容源。
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend-v3/DESIGN_SYSTEM.md
@@ -1378,7 +1378,7 @@ git commit -m "docs: 重写设计系统文档为 Ollama 风格"
 
 ## Task 46: 验证
 
-- [ ] **Step 1: 运行类型检查**
+- [x] **Step 1: 运行类型检查**
 
 ```bash
 cd frontend-v3 && npx vue-tsc --noEmit 2>&1 | tail -30
@@ -1386,7 +1386,7 @@ cd frontend-v3 && npx vue-tsc --noEmit 2>&1 | tail -30
 
 Expected: 无类型错误
 
-- [ ] **Step 2: 运行前端测试**
+- [x] **Step 2: 运行前端测试**
 
 ```bash
 cd frontend-v3 && pnpm test:run 2>&1 | tail -30
@@ -1394,19 +1394,19 @@ cd frontend-v3 && pnpm test:run 2>&1 | tail -30
 
 Expected: 全部通过（130 个测试）
 
-- [ ] **Step 3: 启动开发服务器，手动验证视觉效果**
+- [x] **Step 3: 启动开发服务器，手动验证视觉效果**
 
 ```bash
 cd frontend-v3 && pnpm dev
 ```
 
 检查清单：
-- [ ] 页面背景纯白
-- [ ] 文字为黑色
-- [ ] 按钮为药丸形
-- [ ] 卡片 12px 圆角、零阴影
-- [ ] 边框 1px solid #e5e5e5
-- [ ] 无渐变
-- [ ] 字重只有 400/500
-- [ ] 状态色正常显示
-- [ ] 移动端同步白色主题
+- [x] 页面背景纯白
+- [x] 文字为黑色
+- [x] 按钮为药丸形
+- [x] 卡片 12px 圆角、零阴影
+- [x] 边框 1px solid #e5e5e5
+- [x] 无渐变
+- [x] 字重只有 400/500
+- [x] 状态色正常显示
+- [x] 移动端同步白色主题
