@@ -18,11 +18,12 @@ describe('UI Components Exports', () => {
     expect(UI.DataContainer).toBeDefined()
     expect(UI.SearchableSelect).toBeDefined()
     expect(UI.StatCard).toBeDefined()
+    expect(UI.ChangePasswordDialog).toBeDefined()
   })
 
   it('should export components as Vue components', () => {
     // Verify each export is a valid component (has render function or setup)
-    const componentNames = ['Button', 'Checkbox', 'Dialog', 'Input', 'Label', 'Card', 'Badge', 'Select', 'Toast', 'DataContainer', 'SearchableSelect', 'StatCard']
+    const componentNames = ['Button', 'Checkbox', 'Dialog', 'Input', 'Label', 'Card', 'Badge', 'Select', 'Toast', 'DataContainer', 'SearchableSelect', 'StatCard', 'ChangePasswordDialog']
     
     for (const name of componentNames) {
       const component = (UI as Record<string, unknown>)[name]
