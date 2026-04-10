@@ -109,6 +109,8 @@ def begin_course_session(
     week_number = None
     classroom = None
     source_type = "manual"
+    new_start_time = None
+    new_end_time = None
 
     if schedule_id:
         schedule = session.get(CourseSchedule, schedule_id)
@@ -139,10 +141,6 @@ def begin_course_session(
                     status_code=HttpStatus.BAD_REQUEST,
                     detail="该周课程已取消，无法开始上课"
                 )
-
-    # 初始化调课时间变量
-    new_start_time = None
-    new_end_time = None
 
     try:
         course_session = start_course_session(

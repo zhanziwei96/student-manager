@@ -32,6 +32,10 @@ export interface CourseSchedule {
     new_end_time?: string
     new_classroom?: string
   }
+  is_virtual?: boolean
+  parent_schedule_id?: number
+  has_makeup?: boolean
+  parent_adjustment_reason?: string
 }
 
 export interface ImportResult {

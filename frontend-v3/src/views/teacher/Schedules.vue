@@ -36,6 +36,9 @@ const computedCourseCardClass = (schedule: typeof schedules.value[0]) => {
   const theme = getCourseTheme(schedule.course_name)
   const baseClass = 'flex-1 p-4 transition-all duration-200 relative overflow-hidden'
 
+  if (schedule.is_virtual) {
+    return `${baseClass} border-dashed ${theme.border} ${theme.bg} hover:border-[#737373]`
+  }
   if (hasConflict(schedule)) {
     return `${baseClass} border-red-500/50 bg-red-500/5 hover:border-red-500/70`
   }
@@ -743,7 +746,10 @@ const handleBatchDelete = async () => {
                             class="font-medium text-base truncate"
                             :class="hasConflict(schedule) ? 'text-red-400' : 'text-black'"
                           >
-                            {{ schedule.course_name }}
+                            <span v-if="schedule.is_virtual">
+                              {{ schedule.session_status === 'makeup' ? '【补课】' : '【调课】' }}{{ schedule.course_name }}
+                            </span>
+                            <span v-else>{{ schedule.course_name }}</span>
                           </h4>
                           <span
                             v-if="getStatusBadge(schedule)"
@@ -751,6 +757,12 @@ const handleBatchDelete = async () => {
                             :class="getStatusBadge(schedule)!.class"
                           >
                             {{ getStatusBadge(schedule)!.label }}
+                          </span>
+                          <span
+                            v-if="!schedule.is_virtual && schedule.has_makeup"
+                            class="text-xs px-2 py-0.5 rounded-full border flex-shrink-0 bg-[#f59e0b]/10 text-[#b45309] border-[#f59e0b]/30"
+                          >
+                            有补课安排
                           </span>
                         </div>
 
@@ -786,9 +798,9 @@ const handleBatchDelete = async () => {
                           </div>
                         </div>
 
-                        <!-- 调课/补课信息 -->
+                        <!-- 调课/补课信息（仅虚拟卡片展示详细变更） -->
                         <div
-                          v-if="schedule.adjustment && (schedule.session_status === 'adjusted' || schedule.session_status === 'makeup')"
+                          v-if="schedule.is_virtual && schedule.adjustment"
                           class="mt-3 space-y-1"
                         >
                           <div
@@ -819,6 +831,15 @@ const handleBatchDelete = async () => {
                             <AlertCircle class="h-3 w-3 flex-shrink-0 text-[#3b82f6]" />
                             <span>原因：{{ schedule.adjustment.reason }}</span>
                           </div>
+                        </div>
+
+                        <!-- 停课原因 -->
+                        <div
+                          v-if="!schedule.is_virtual && schedule.session_status === 'cancelled' && schedule.parent_adjustment_reason"
+                          class="mt-3 text-xs text-[#737373] flex items-center gap-1.5"
+                        >
+                          <AlertCircle class="h-3 w-3 flex-shrink-0 text-[#ef4444]" />
+                          <span>停课原因：{{ schedule.parent_adjustment_reason }}</span>
                         </div>
 
                         <!-- 冲突提示 -->
@@ -853,17 +874,23 @@ const handleBatchDelete = async () => {
                             第{{ schedule.week_start }}-{{ schedule.week_end }}周
                           </span>
                           <span
-                            v-if="schedule.adjustment?.reason"
+                            v-if="!schedule.is_virtual && schedule.session_status === 'adjusted' && schedule.parent_adjustment_reason"
                             class="text-xs text-[#737373] px-2 py-0.5 rounded-full bg-[#f5f5f5] border border-[#e5e5e5]"
                           >
-                            {{ schedule.adjustment.reason }}
+                            {{ schedule.parent_adjustment_reason }}
+                          </span>
+                          <span
+                            v-if="!schedule.is_virtual && schedule.session_status === 'cancelled' && schedule.parent_adjustment_reason"
+                            class="text-xs text-[#dc2626] px-2 py-0.5 rounded-full bg-[#ef4444]/10 border border-[#ef4444]/20"
+                          >
+                            {{ schedule.parent_adjustment_reason }}
                           </span>
                         </div>
                       </div>
 
                       <!-- 调课按钮 -->
                       <Button
-                        v-if="canAdjustSchedule(schedule)"
+                        v-if="!schedule.is_virtual && canAdjustSchedule(schedule)"
                         variant="ghost"
                         size="sm"
                         class="h-8 w-8 p-0 text-[#a3a3a3] hover:text-primary flex-shrink-0 ml-1"
@@ -874,7 +901,7 @@ const handleBatchDelete = async () => {
 
                       <!-- 删除按钮 -->
                       <Button
-                        v-if="isAdmin"
+                        v-if="!schedule.is_virtual && isAdmin"
                         variant="ghost"
                         size="sm"
                         class="h-8 w-8 p-0 text-[#a3a3a3] hover:text-red-400 flex-shrink-0 ml-1"

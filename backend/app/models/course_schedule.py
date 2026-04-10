@@ -43,6 +43,10 @@ class CourseScheduleWithWeekResponse(CourseScheduleResponse):
     session_status: str
     active_session_id: Optional[int] = None
     adjustment: Optional[dict] = None
+    is_virtual: bool = False
+    parent_schedule_id: Optional[int] = None
+    has_makeup: bool = False
+    parent_adjustment_reason: Optional[str] = None
 
 
 class CourseScheduleImport(SQLModel):
