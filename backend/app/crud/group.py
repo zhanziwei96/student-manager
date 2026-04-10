@@ -1,12 +1,11 @@
 """小组 CRUD"""
-from datetime import datetime
 from typing import List, Optional
 import random
 from sqlmodel import Session, select
 from app.core.timezone import get_now
 from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
-    GroupDissolutionRequest, GroupTask
+    GroupDissolutionRequest
 )
 
 
@@ -105,6 +104,7 @@ def approve_membership_request(session: Session, request_id: int) -> Optional[Gr
     member = GroupMember(group_id=group.id, student_id=req.student_id)
     session.add(member)
     session.commit()
+    session.refresh(member)
     return member
 
 
