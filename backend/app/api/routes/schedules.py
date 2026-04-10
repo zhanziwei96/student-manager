@@ -2,7 +2,7 @@
 课表管理 API
 """
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
 from sqlmodel import Session, select
 from sqlalchemy import update
@@ -23,6 +23,7 @@ from app.api.deps import get_current_user, require_login, require_admin, require
 from app.crud import get_schedules as crud_get_schedules, delete_schedule as crud_delete_schedule
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse, CourseScheduleWithWeekResponse
 from app.models.course_session import CourseSession
+from app.models import ScheduleAdjustment
 from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse
@@ -38,6 +39,22 @@ def _get_current_week_number():
     if now < semester_start:
         semester_start = datetime(now.year - 1, 2, 1)
     week = (now - semester_start).days // 7 + 1
+    return max(1, week)
+
+def _get_week_number_for_date(target_date: date) -> int:
+    """计算指定日期所在的教学周次（与前端 getCurrentWeek 保持一致）"""
+    from datetime import timedelta
+    # 基准设定: 2026-03-30 是第4周的周一
+    reference_date = date(2026, 3, 30)
+    reference_week = 4
+
+    # 获取 target_date 所在周的周一
+    current_day = target_date.isoweekday()  # 1=周一, 7=周日
+    days_since_monday = current_day - 1
+    current_monday = target_date - timedelta(days=days_since_monday)
+
+    delta = current_monday - reference_date
+    week = reference_week + delta.days // 7
     return max(1, week)
 
 def _enrich_schedule_with_week_data(
@@ -172,12 +189,95 @@ async def get_schedules(
         item["parent_adjustment_reason"] = None
         data.append(item)
 
-    # 为 modify 和 makeup 生成虚拟卡片，并修正原卡片状态
+    # 处理调课和停课，并在原周次修正原卡片状态
     from app.crud.schedule_adjustment import get_adjustment
     from app.crud.course_session import get_course_sessions_by_schedule_and_week
     for s in schedules:
         adj = get_adjustment(session, s.id, target_week)
-        if adj and adj.type in ("modify", "makeup"):
+        if adj:
+            if adj.type == "cancel":
+                for item in data:
+                    if item.get("id") == s.id and not item.get("is_virtual"):
+                        item["parent_adjustment_reason"] = adj.reason
+                        break
+            elif adj.type == "modify":
+                new_day = s.day_of_week
+                if adj.new_date:
+                    if hasattr(adj.new_date, "isoweekday"):
+                        new_day = adj.new_date.isoweekday()
+                    elif isinstance(adj.new_date, str):
+                        new_day = datetime.strptime(adj.new_date, "%Y-%m-%d").isoweekday()
+
+                virtual = {
+                    **s.model_dump(),
+                    "id": -adj.id,
+                    "is_virtual": True,
+                    "parent_schedule_id": s.id,
+                    "day_of_week": new_day,
+                    "start_time": adj.new_start_time or s.start_time,
+                    "end_time": adj.new_end_time or s.end_time,
+                    "classroom": adj.new_classroom or s.classroom,
+                    "week_number": target_week,
+                    "week_type_match": True,
+                    "session_status": "adjusted",
+                    "active_session_id": adj.generated_session_id,
+                    "adjustment": {
+                        "type": adj.type,
+                        "reason": adj.reason,
+                        "new_date": adj.new_date.isoformat() if adj.new_date else None,
+                        "new_start_time": adj.new_start_time,
+                        "new_end_time": adj.new_end_time,
+                        "new_classroom": adj.new_classroom,
+                    },
+                    "has_makeup": False,
+                    "parent_adjustment_reason": adj.reason,
+                }
+                data.append(virtual)
+
+                for item in data:
+                    if item.get("id") == s.id and not item.get("is_virtual"):
+                        item["session_status"] = "adjusted"
+                        item["parent_adjustment_reason"] = adj.reason
+                        break
+            elif adj.type == "makeup":
+                # 原周次不生成虚拟卡片，仅标记 has_makeup
+                for item in data:
+                    if item.get("id") == s.id and not item.get("is_virtual"):
+                        cs = get_course_sessions_by_schedule_and_week(session, s.id, target_week)
+                        if cs:
+                            if cs.status == "active":
+                                item["session_status"] = "active"
+                                item["active_session_id"] = cs.id
+                            elif cs.status == "ended":
+                                item["session_status"] = "ended"
+                                item["active_session_id"] = cs.id
+                            else:
+                                item["session_status"] = "none"
+                                item["active_session_id"] = None
+                        else:
+                            item["session_status"] = "none"
+                            item["active_session_id"] = None
+                        item["has_makeup"] = True
+                        item["parent_adjustment_reason"] = adj.reason
+                        break
+
+    # 为补课在补课日期实际所在周生成虚拟卡片
+    schedule_ids = [s.id for s in schedules]
+    makeup_adjs = session.exec(
+        select(ScheduleAdjustment).where(
+            ScheduleAdjustment.schedule_id.in_(schedule_ids),
+            ScheduleAdjustment.type == "makeup",
+            ScheduleAdjustment.new_date != None
+        )
+    ).all()
+
+    for adj in makeup_adjs:
+        makeup_week = _get_week_number_for_date(adj.new_date)
+        if makeup_week == target_week:
+            s = next((sched for sched in schedules if sched.id == adj.schedule_id), None)
+            if not s:
+                continue
+
             new_day = s.day_of_week
             if adj.new_date:
                 if hasattr(adj.new_date, "isoweekday"):
@@ -196,7 +296,7 @@ async def get_schedules(
                 "classroom": adj.new_classroom or s.classroom,
                 "week_number": target_week,
                 "week_type_match": True,
-                "session_status": "makeup" if adj.type == "makeup" else "adjusted",
+                "session_status": "makeup",
                 "active_session_id": adj.generated_session_id,
                 "adjustment": {
                     "type": adj.type,
@@ -210,31 +310,6 @@ async def get_schedules(
                 "parent_adjustment_reason": adj.reason,
             }
             data.append(virtual)
-
-            # 修正原卡片状态
-            for item in data:
-                if item.get("id") == s.id and not item.get("is_virtual"):
-                    if adj.type == "makeup":
-                        # 原卡片恢复为正常课堂状态
-                        cs = get_course_sessions_by_schedule_and_week(session, s.id, target_week)
-                        if cs:
-                            if cs.status == "active":
-                                item["session_status"] = "active"
-                                item["active_session_id"] = cs.id
-                            elif cs.status == "ended":
-                                item["session_status"] = "ended"
-                                item["active_session_id"] = cs.id
-                            else:
-                                item["session_status"] = "none"
-                                item["active_session_id"] = None
-                        else:
-                            item["session_status"] = "none"
-                            item["active_session_id"] = None
-                        item["has_makeup"] = True
-                    elif adj.type == "modify":
-                        item["session_status"] = "adjusted"
-                    item["parent_adjustment_reason"] = adj.reason
-                    break
 
     return {
         ApiResponseConst.SUCCESS: True,
