@@ -108,8 +108,7 @@ const statCards = computed(() => [
               </p>
             </div>
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform"
-              :class="'bg-primary/10 text-primary'"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform bg-[#f5f5f5] text-primary"
             >
               <component
                 :is="card.icon"
@@ -159,7 +158,7 @@ const statCards = computed(() => [
             :key="schedule.id"
             class="group flex items-center gap-3 rounded-xl border border-[#e5e5e5] bg-white p-3.5 hover:bg-[#fafafa] hover:border-[#e5e5e5]"
           >
-            <div class="flex h-11 w-11 flex-col items-center justify-center rounded-xl bg-primary/20 text-primary">
+            <div class="flex h-11 w-11 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-primary">
               <Clock class="h-3.5 w-3.5 mb-0.5" />
               <span class="text-[10px] font-medium">{{ schedule.start_time?.slice(0, 5) }}</span>
             </div>

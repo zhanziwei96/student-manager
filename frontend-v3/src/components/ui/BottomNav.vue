@@ -42,15 +42,19 @@ const isActive = (path: string) => {
         v-for="item in navItems"
         :key="item.path"
         :to="item.path"
-        :class="[
-          'flex flex-col items-center justify-center gap-1 flex-1 h-full min-w-0',
-          isActive(item.path)
-            ? 'text-black'
-            : 'text-[#a3a3a3]'
-        ]"
+        class="flex flex-col items-center justify-center gap-1 flex-1 h-full min-w-0"
       >
-        <component :is="item.icon" class="h-6 w-6" />
-        <span class="text-xs truncate max-w-full px-1">{{ item.name }}</span>
+        <div
+          :class="[
+            'flex flex-col items-center justify-center gap-1 rounded-full py-1.5 px-3',
+            isActive(item.path)
+              ? 'bg-[#e5e5e5] text-black'
+              : 'text-[#a3a3a3]'
+          ]"
+        >
+          <component :is="item.icon" class="h-6 w-6" />
+          <span class="text-xs truncate max-w-full px-1">{{ item.name }}</span>
+        </div>
       </RouterLink>
     </div>
   </nav>
