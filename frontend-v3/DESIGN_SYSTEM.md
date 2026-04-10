@@ -2,25 +2,23 @@
 
 ---
 
-**文档版本**: v1.1.0  
-**最后更新**: 2026-04-03  
+**文档版本**: v3.0.0  
+**最后更新**: 2026-04-10  
 **适用版本**: v3.0.0+  
-**状态**: ✅ 已同步代码
-
----
+**状态**: 已同步代码 (Ollama 白色主题)
 
 ---
 
 ## 1. 设计原则
 
 ### 1.1 核心设计理念
-- **暗色优先**: 深色系为主，减少视觉疲劳，营造专业感
-- **玻璃拟态**: 使用 backdrop-blur 和半透明背景创造层次感
-- **简洁现代**: 去除冗余装饰，强调内容本身
-- **高对比度**: 确保文字在深色背景上的可读性
+- **白色优先**: 以纯净白色为基底，营造简洁、明亮、专业的视觉体验
+- **极简主义**: 去除冗余装饰（渐变、发光、毛玻璃、复杂阴影），内容即焦点
+- **清晰层级**: 通过颜色深浅（黑/灰/浅灰）和微妙边框建立空间层次
+- **高可读性**: 深色文字在白色背景上提供最佳阅读体验
 
 ### 1.2 设计关键词
-`科技` `专业` `清晰` `现代` `沉浸`
+`简洁` `专业` `明亮` `现代` `高效`
 
 ---
 
@@ -29,530 +27,186 @@
 ### 2.1 主色调 (Primary)
 | Token | 值 | 用途 |
 |-------|-----|------|
-| `--color-primary` | `#6366f1` | 主按钮、链接、高亮 |
-| `--color-primary-foreground` | `#ffffff` | 主色上的文字 |
-| `--color-primary-hover` | `#818cf8` | 主色悬停状态 |
-| `--color-primary-muted` | `rgba(99, 102, 241, 0.2)` | 背景装饰、图标容器 |
+| `--color-primary` | `#000000` | 标题、主按钮文字、链接高亮 |
+| `--color-primary-foreground` | `#ffffff` | 深色背景上的文字 |
+| `--color-primary-hover` | `#737373` | 主色悬停状态 |
+| `--color-primary-muted` | `#e5e5e5` | 图标容器背景、次级按钮背景 |
 
-### 2.2 强调色 (Accent)
+### 2.2 背景色 (Background)
 | Token | 值 | 用途 |
 |-------|-----|------|
-| `--color-accent` | `#22d3ee` | 渐变、特殊高亮、成功状态 |
-| `--color-accent-cyan` | `#22d3ee` | 渐变终点、装饰性元素 |
-| `--color-accent-foreground` | `#ffffff` | 强调色上的文字 |
+| `--color-background` | `#ffffff` | 页面主背景、卡片背景 |
+| `--color-background-elevated` | `#fafafa` | 抬升表面、悬停背景 |
+| `--color-background-card` | `#ffffff` | 卡片内容区 |
+| `--color-background-hover` | `#f5f5f5` | 悬停背景、斑马纹 |
 
-### 2.3 背景色 (Background)
+### 2.3 文字色 (Foreground)
 | Token | 值 | 用途 |
 |-------|-----|------|
-| `--color-background` | `#030307` | 页面主背景 |
-| `--color-background-elevated` | `#0a0a0f` | 侧边栏、卡片默认背景 |
-| `--color-background-card` | `rgba(255, 255, 255, 0.02)` | 卡片内容区 |
-| `--color-background-hover` | `rgba(255, 255, 255, 0.04)` | 悬停背景 |
+| `--color-text-primary` | `#000000` / `#262626` | 标题、重要文字 |
+| `--color-text-secondary` | `#737373` | 正文、描述、标签 |
+| `--color-text-tertiary` | `#a3a3a3` | 辅助信息、时间戳、占位符 |
+| `--color-text-muted` | `#737373` | 禁用状态提示 |
 
-### 2.4 文字色 (Foreground)
+### 2.4 边框色 (Border)
 | Token | 值 | 用途 |
 |-------|-----|------|
-| `--color-text-primary` | `#ffffff` | 标题、重要文字 |
-| `--color-text-secondary` | `rgba(255, 255, 255, 0.7)` | 正文、描述 |
-| `--color-text-tertiary` | `rgba(255, 255, 255, 0.4)` | 辅助信息、时间戳 |
-| `--color-text-muted` | `rgba(255, 255, 255, 0.5)` | 占位符、禁用状态 |
+| `--color-border` | `#e5e5e5` | 卡片边框、分隔线、输入框边框 |
+| `--color-border-hover` | `#d4d4d4` | 悬停边框 |
+| `--color-border-focus` | `#3b82f6` | 聚焦状态环 |
 
 ### 2.5 状态色 (Status)
-| 状态 | 颜色 | Token |
-|------|------|-------|
-| 成功 (Success) | `#22c55e` | `--color-success` |
-| 警告 (Warning) | `#f59e0b` | `--color-warning` |
-| 错误 (Error) | `#ef4444` | `--color-error` |
-| 信息 (Info) | `#3b82f6` | `--color-info` |
-
-### 2.6 边框与分割线
-| Token | 值 | 用途 |
-|-------|-----|------|
-| `--color-border` | `rgba(255, 255, 255, 0.1)` | 卡片边框、分割线 |
-| `--color-border-hover` | `rgba(255, 255, 255, 0.2)` | 悬停时边框 |
-| `--color-divider` | `rgba(255, 255, 255, 0.05)` | 内部分割线 |
+状态色保留原有语义，但改为在白色背景上使用低饱和背景：
+| Token | 文字色 | 背景色 | 边框色 | 用途 |
+|-------|--------|--------|--------|------|
+| `success` | `#22c55e` | `#22c55e/15` | `#22c55e/30` | 成功、已签到 |
+| `warning` | `#f97316` | `#f97316/15` | `#f97316/30` | 警告、待处理 |
+| `error` | `#ef4444` | `#ef4444/15` | `#ef4444/30` | 错误、冲突 |
+| `info` | `#3b82f6` | `#3b82f6/15` | `#3b82f6/30` | 信息提示 |
 
 ---
 
-## 3. 字体系统
+## 3. 全局替换规则
 
-### 3.1 字体族
-```css
---font-sans: 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
---font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-```
+所有页面视图重构时遵循以下 Tailwind 类名替换规则：
 
-### 3.2 字号规范
-| 级别 | 大小 | 字重 | 行高 | 用途 |
-|------|------|------|------|------|
-| H1 | 2rem (32px) | 700 | 1.2 | 页面大标题 |
-| H2 | 1.5rem (24px) | 600 | 1.3 | 区块标题 |
-| H3 | 1.25rem (20px) | 600 | 1.4 | 卡片标题 |
-| H4 | 1.125rem (18px) | 500 | 1.4 | 小标题 |
-| Body | 1rem (16px) | 400 | 1.5 | 正文 |
-| Small | 0.875rem (14px) | 400 | 1.5 | 辅助文字 |
-| XSmall | 0.75rem (12px) | 400 | 1.5 | 标签、时间 |
+| 旧值（暗色） | 新值（Ollama 白色） |
+|---|---|
+| `bg-background` | `bg-white` |
+| `bg-background-elevated` | `bg-[#fafafa]` |
+| `bg-[#030307]` | `bg-white` |
+| `bg-[#0a0a0f]` | `bg-white` |
+| `bg-white/[0.02]` | `bg-white` |
+| `bg-white/5` | `bg-white` |
+| `bg-white/10` | `bg-[#fafafa]` |
+| `bg-white/20` | `bg-[#f5f5f5]` |
+| `text-white` (非按钮) | `text-black` |
+| `text-white/70` | `text-[#737373]` |
+| `text-white/50` | `text-[#a3a3a3]` |
+| `text-white/40` | `text-[#a3a3a3]` |
+| `border-white/10` | `border-[#e5e5e5]` |
+| `border-white/20` | `border-[#d4d4d4]` |
+| `hover:bg-white/10` | `hover:bg-[#fafafa]` |
+| `hover:bg-white/20` | `hover:bg-[#f5f5f5]` |
+| `font-bold` | `font-medium` |
+| `font-semibold` | `font-medium` |
+| `rounded-md` (按钮/输入) | `rounded-full` |
+| `rounded-md` (容器) | `rounded-xl` |
+| `rounded-lg` (按钮/输入) | `rounded-full` |
+| `rounded-lg` (容器) | `rounded-xl` |
+| `rounded-2xl` | `rounded-xl` |
 
-### 3.3 字重规范
-| 字重 | 值 | 用途 |
-|------|-----|------|
-| Regular | 400 | 正文 |
-| Medium | 500 | 按钮、导航 |
-| Semibold | 600 | 标题 |
-| Bold | 700 | 大标题、强调 |
+**需删除的效果：**
+- `shadow-sm/md/lg/xl/2xl` -> 删除
+- `shadow-inner` -> 删除
+- `shadow-glow-primary/glow-accent` -> 删除
+- `backdrop-blur-sm/backdrop-blur-lg` -> 删除
+- `bg-gradient-to-*` 及 `from-*` `via-*` `to-*` -> 删除（时间线等可替换为纯色）
+- `hover:scale-[1.02]` / `group-hover:scale-110` -> 删除
+- `active:scale-[0.98]` -> 删除
+- `transition-all duration-150` -> 删除或改为 `transition-colors`
 
----
-
-## 4. 间距系统
-
-### 4.1 基础单位
-基础单位: `4px` (0.25rem)
-
-| Token | 值 | 用途 |
-|-------|-----|------|
-| `--space-1` | 0.25rem (4px) | 图标内边距 |
-| `--space-2` | 0.5rem (8px) | 小间距 |
-| `--space-3` | 0.75rem (12px) | 按钮内边距 |
-| `--space-4` | 1rem (16px) | 标准间距 |
-| `--space-5` | 1.25rem (20px) | 卡片内边距 |
-| `--space-6` | 1.5rem (24px) | 区块间距 |
-| `--space-8` | 2rem (32px) | 大区块间距 |
-| `--space-10` | 2.5rem (40px) | 页面内边距 |
-| `--space-12` | 3rem (48px) | 大标题间距 |
-
-### 4.2 组件间距
-| 组件 | 内边距 | 说明 |
-|------|--------|------|
-| Card | 1.5rem (24px) | 标准卡片 |
-| Button (sm) | 0.5rem 0.75rem | 小按钮 |
-| Button (default) | 0.5rem 1rem | 默认按钮 |
-| Button (lg) | 0.75rem 1.5rem | 大按钮 |
-| Input | 0.5rem 0.75rem | 输入框 |
-| NavItem | 0.5rem 0.75rem | 导航项 |
+**保留不动的：**
+- 状态色类名：`text-success`、`bg-success/10` 等保留
+- `rounded-full` (已经是药丸形) 保留
+- `rounded-xl` (12px 容器圆角) 保留
+- 所有功能性逻辑代码和 TypeScript 类型不动
 
 ---
 
-## 5. 圆角系统
+## 4. 排版系统
 
-| Token | 值 | 用途 |
-|-------|-----|------|
-| `--radius-sm` | 0.375rem (6px) | 小元素、标签 |
-| `--radius-md` | 0.5rem (8px) | 按钮、输入框 |
-| `--radius-lg` | 0.75rem (12px) | 卡片、容器 |
-| `--radius-xl` | 1rem (16px) | 大卡片、模态框 |
-| `--radius-2xl` | 1.5rem (24px) | 特色卡片 |
-| `--radius-full` | 9999px | 圆形元素、头像 |
+### 4.1 字体
+- **主字体**: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif
+- **字重规范**: 统一使用 `font-medium`（500），避免 `font-bold`（700）和 `font-semibold`（600）
+- **行高**: 正文 `leading-relaxed` (1.625)，标题 `leading-tight` (1.25)
 
----
-
-## 6. 阴影系统
-
-| Token | 值 | 用途 |
-|-------|-----|------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.3)` | 轻微阴影 |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.4)` | 卡片阴影 |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.5)` | 模态框、下拉菜单 |
-| `--shadow-glow-primary` | `0 0 20px rgba(99, 102, 241, 0.4)` | 主色发光效果 |
-| `--shadow-glow-accent` | `0 0 20px rgba(34, 211, 238, 0.4)` | 强调色发光效果 |
+### 4.2 字号层级
+| 层级 | Tailwind | 用途 |
+|------|----------|------|
+| 页面标题 | `text-2xl font-medium` | 页面级 H1 |
+| 区块标题 | `text-lg font-medium` | 卡片标题、分组标题 |
+| 正文 | `text-sm` | 列表、描述 |
+| 辅助文字 | `text-xs` | 标签、时间戳、Badge |
 
 ---
 
-## 7. 组件规范
+## 5. 组件规范
 
-### 7.1 按钮 (Button)
+### 5.1 Button
+- **形状**: 所有按钮统一使用 `rounded-full`（药丸形）
+- **主按钮**: `bg-black text-white hover:bg-[#262626]`
+- **次级按钮**: `bg-[#e5e5e5] text-black hover:bg-[#d4d4d4]`
+- **幽灵按钮**: `bg-transparent border border-[#e5e5e5] text-black hover:bg-[#fafafa]`
+- **危险按钮**: `bg-red-500 text-white hover:bg-red-600`
 
-#### 变体 (Variants)
-| 变体 | 背景 | 文字 | 边框 | 悬停背景 |
-|------|------|------|------|----------|
-| Default | `--color-primary` | white | none | `--color-primary-hover` |
-| Outline | transparent | `--color-text-secondary` | `--color-border` | `rgba(255,255,255,0.1)` |
-| Ghost | transparent | `--color-text-secondary` | none | `rgba(255,255,255,0.1)` |
-| Destructive | `--color-error` | white | none | 深红色 |
+### 5.2 Card
+- **背景**: `bg-white`
+- **边框**: `border border-[#e5e5e5]`
+- **圆角**: `rounded-xl`
+- **无阴影**: 不使用任何 shadow 类
 
-#### 尺寸 (Sizes)
-| 尺寸 | 高度 | 内边距 | 字号 |
-|------|------|--------|------|
-| sm | 2rem (32px) | 0 0.75rem | 0.75rem |
-| default | 2.25rem (36px) | 0 1rem | 0.875rem |
-| lg | 2.5rem (40px) | 0 1.5rem | 1rem |
+### 5.3 Input / Select
+- **形状**: 按钮和输入框使用 `rounded-full`，容器使用 `rounded-xl`
+- **边框**: `border border-[#e5e5e5]`
+- **聚焦**: `focus:border-[#3b82f6] focus:ring-[#3b82f6]/50`
+- **背景**: `bg-white`
 
-### 7.2 卡片 (Card)
+### 5.4 Badge
+- **形状**: `rounded-full px-2.5 py-0.5 text-xs font-medium`
+- **default**: `bg-[#e5e5e5] text-[#262626]`
+- **secondary**: `bg-[#fafafa] text-[#737373]`
+- **outline**: `border border-[#e5e5e5] text-[#737373] bg-transparent`
+- **success/error/warning/info**: 对应状态色低饱和背景
 
-#### 基础样式
-```css
-background: rgba(255, 255, 255, 0.02);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: 0.75rem;
-padding: 1.5rem;
-```
-
-#### 变体
-| 变体 | 背景 | 边框 | 用途 |
-|------|------|------|------|
-| Default | `rgba(255,255,255,0.02)` | `rgba(255,255,255,0.1)` | 标准卡片 |
-| Elevated | `#0a0a0f` | `rgba(255,255,255,0.1)` | 侧边栏、导航 |
-| Glass | `rgba(255,255,255,0.05)` + blur | `rgba(255,255,255,0.1)` | 浮层、模态框 |
-| Active | `rgba(99,102,241,0.1)` | `--color-primary` | 选中状态 |
-
-### 7.3 输入框 (Input)
-
-#### 基础样式
-```css
-background: transparent;
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: 0.5rem;
-padding: 0.5rem 0.75rem;
-color: white;
-```
-
-#### 状态
-| 状态 | 边框 | 背景 |
-|------|------|------|
-| Default | `rgba(255,255,255,0.1)` | transparent |
-| Focus | `--color-primary` | transparent |
-| Disabled | `rgba(255,255,255,0.05)` | `rgba(255,255,255,0.02)` |
-
-### 7.4 徽章 (Badge)
-
-#### 变体
-| 变体 | 背景 | 文字 | 用途 |
-|------|------|------|------|
-| Default | `rgba(255,255,255,0.1)` | `--color-text-secondary` | 默认标签 |
-| Success | `rgba(34,197,94,0.2)` | `#22c55e` | 成功状态 |
-| Warning | `rgba(245,158,11,0.2)` | `#f59e0b` | 警告状态 |
-| Error | `rgba(239,68,68,0.2)` | `#ef4444` | 错误状态 |
-| Primary | `rgba(99,102,241,0.2)` | `--color-primary` | 主色标签 |
-
-### 7.5 导航 (Navigation)
-
-#### 侧边栏导航项
-```css
-/* 默认 */
-color: rgba(255, 255, 255, 0.7);
-background: transparent;
-padding: 0.5rem 0.75rem;
-border-radius: 0.5rem;
-
-/* 悬停 */
-background: rgba(255, 255, 255, 0.1);
-color: white;
-
-/* 激活 */
-background: rgba(99, 102, 241, 0.1);
-color: #6366f1;
-```
+### 5.5 图标容器
+- **背景**: `bg-primary/10`（即 `#e5e5e5`）
+- **图标色**: `text-primary`（即 `text-black`）
+- **圆角**: `rounded-full` 或 `rounded-xl`
+- **尺寸**: 默认 `h-10 w-10`
 
 ---
 
-## 8. 布局规范
+## 6. 布局规范
 
-### 8.1 页面结构
-```
-Page
-├── Sidebar (fixed, 16rem width)
-└── Main (margin-left: 16rem)
-    ├── Header (optional)
-    └── Content (padding: 2rem, max-width: 80rem)
-```
+### 6.1 页面边距
+- 桌面端: `px-6 py-5`
+- 移动端: `px-4 py-4`
 
-### 8.2 响应式断点
-| 断点 | 宽度 | 说明 |
-|------|------|------|
-| sm | 640px | 小屏手机 |
-| md | 768px | 平板 |
-| lg | 1024px | 小桌面 |
-| xl | 1280px | 标准桌面 |
-| 2xl | 1400px | 大桌面 |
+### 6.2 间距
+- 区块间距: `space-y-5`
+- 卡片内间距: `p-4` 到 `p-6`
+- 元素间隙: `gap-3` 或 `gap-4`
 
-### 8.3 容器宽度
-- 最大宽度: `80rem` (1280px)
-- 内容区最大宽度: `64rem` (1024px)
-- 窄内容区: `48rem` (768px)
+### 6.3 侧边栏
+- **桌面**: `w-64 bg-white border-r border-[#e5e5e5]`
+- **移动端**: 抽屉式导航，白色背景
 
 ---
 
-## 9. 动效规范
+## 7. 反模式清单
 
-### 9.1 过渡时间
-| 用途 | 时长 | 缓动函数 |
-|------|------|----------|
-| 微交互（hover） | 150ms | ease-out |
-| 按钮点击 | 100ms | ease-in-out |
-| 卡片悬停 | 200ms | ease-out |
-| 模态框出现 | 300ms | cubic-bezier(0.4, 0, 0.2, 1) |
-| 页面切换 | 300ms | ease-in-out |
+以下效果在 Ollama 白色主题中被明确移除，禁止在新代码中使用：
 
-### 9.2 预设动画
-| 动画 | 描述 | 用途 |
-|------|------|------|
-| fade-in | 淡入 | 内容加载 |
-| slide-in-right | 从右滑入 | 侧边栏 |
-| slide-in-up | 从下向上滑入 | 模态框 |
-| pulse-glow | 发光脉冲 | 装饰性背景 |
-| spin | 旋转 | 加载图标 |
+- `blur-2xl` 发光装饰背景
+- `shadow-glow-*` 任何发光阴影
+- `backdrop-blur` 毛玻璃效果
+- `bg-gradient-to-*` 渐变色背景
+- `group-hover:scale-110` 缩放动画
+- `text-white` 在普通文字上（按钮除外）
+- `border-white/10` 任何基于白色透明的边框
+- 通过 `getCardStyle()` 等运行时 JS 函数注入样式
 
 ---
 
-## 10. 图标规范
+## 8. 文件索引
 
-### 10.1 图标库
-使用 `lucide-vue-next`，统一风格为线性图标。
-
-### 10.2 图标尺寸
-| 尺寸 | 用途 |
+| 文件 | 说明 |
 |------|------|
-| 12px (h-3 w-3) | 小按钮内 |
-| 16px (h-4 w-4) | 标准按钮、输入框 |
-| 20px (h-5 w-5) | 导航项 |
-| 24px (h-6 w-6) | 功能图标、标题旁 |
-| 32px (h-8 w-8) | Logo、大图标 |
-
-### 10.3 图标颜色
-- 默认: `rgba(255, 255, 255, 0.7)`
-- 悬停: `white`
-- 主色: `--color-primary`
-- 成功: `--color-success`
-
----
-
-## 11. 特殊效果
-
-### 11.1 玻璃拟态 (Glassmorphism)
-```css
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-```
-
-### 11.2 渐变文字
-```css
-.gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-```
-
-### 11.3 背景光晕
-```css
-.glow-background {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: rgba(99, 102, 241, 0.1);
-  filter: blur(120px);
-}
-```
-
----
-
-## 12. Teleport 使用规范
-
-### 12.1 使用场景
-Teleport 用于将组件渲染到 DOM 的其他位置，避免 z-index 和定位问题。
-
-### 12.2 规范要求
-
-#### 模态框和浮层必须使用 Teleport
-```vue
-<template>
-  <Teleport to="body">
-    <div v-if="visible" class="modal-overlay">
-      <div class="modal-content">
-        <!-- 模态框内容 -->
-      </div>
-    </div>
-  </Teleport>
-</template>
-```
-
-#### SSR 安全封装
-```vue
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-const isMounted = ref(false)
-
-onMounted(() => {
-  isMounted.value = true
-})
-</script>
-
-<template>
-  <Teleport to="body" v-if="isMounted">
-    <!-- 只在客户端渲染的内容 -->
-  </Teleport>
-</template>
-```
-
-### 12.3 目标位置
-| 目标 | 用途 |
-|------|------|
-| `to="body"` | 全局模态框、Toast、Dialog |
-| `to="#modal-container"` | 特定容器内的模态框 |
-
----
-
-## 13. SSR 安全检查说明
-
-### 13.1 问题背景
-服务端渲染（SSR）时，`window`、`document` 等浏览器对象不存在，直接访问会导致错误。
-
-### 13.2 安全模式
-
-#### 使用环境检测
-```typescript
-// ✅ 正确：检测环境后再访问浏览器对象
-const isClient = typeof window !== 'undefined'
-
-if (isClient) {
-  // 安全访问 window/document
-  localStorage.setItem('key', value)
-}
-```
-
-#### 使用 onMounted 钩子
-```vue
-<script setup lang="ts">
-import { onMounted, ref } from 'vue'
-
-const clientData = ref('')
-
-onMounted(() => {
-  // onMounted 只在客户端执行
-  clientData.value = localStorage.getItem('data') || ''
-})
-</script>
-```
-
-### 13.3 常见场景
-
-| 场景 | 解决方案 |
-|------|----------|
-| localStorage/sessionStorage | 在 onMounted 中访问 |
-| window/document | 使用 typeof 检测或 onMounted |
-| 浏览器 API (Notification) | 在 onMounted 中初始化 |
-| 第三方库（依赖 window）| 动态导入或客户端标记 |
-
----
-
-## 14. 全局 Toast 系统
-
-### 14.1 系统概述
-使用全局 `useToast` composable 提供统一的 Toast 通知体验。
-
-### 14.2 使用方式
-
-#### 在组件中使用
-```vue
-<script setup lang="ts">
-import { useToast } from '@/composables/useToast'
-
-const { showToast } = useToast()
-
-const handleAction = () => {
-  showToast('操作成功', 'success')
-}
-</script>
-```
-
-#### 在 composable 中使用
-```typescript
-import { useToast } from '@/composables/useToast'
-
-export function useStudentActions() {
-  const { showToast } = useToast()
-  
-  const deleteStudent = async (id: string) => {
-    try {
-      await api.deleteStudent(id)
-      showToast('学生已删除', 'success')
-    } catch (error) {
-      showToast('删除失败', 'error')
-    }
-  }
-  
-  return { deleteStudent }
-}
-```
-
-### 14.3 Toast 类型
-| 类型 | 用途 | 颜色 |
-|------|------|------|
-| success | 操作成功 | 绿色 `#22c55e` |
-| error | 操作失败 | 红色 `#ef4444` |
-| warning | 警告提示 | 黄色 `#f59e0b` |
-| info | 普通信息 | 蓝色 `#3b82f6` |
-
-### 14.4 位置配置
-```typescript
-// Toast 默认位置
-position: 'top-right' | 'top-center' | 'top-left' | 
-          'bottom-right' | 'bottom-center' | 'bottom-left'
-```
-
----
-
-## 15. 命名规范
-
-### 15.1 CSS 类名
-使用 Tailwind CSS 命名约定，自定义类名前加前缀避免冲突：
-- 组件类: `ch-` (ClassHub)
-- 工具类: 直接使用 Tailwind
-
-### 15.2 CSS 变量
-```
---color-{property}
---space-{scale}
---radius-{scale}
---shadow-{scale}
---font-{property}
-```
-
----
-
-## 16. 文件组织
-
-```
-frontend-v3/
-├── src/
-│   ├── styles/
-│   │   ├── index.css          # 主样式入口
-│   │   ├── tokens.css         # CSS 变量定义
-│   │   ├── components.css     # 组件样式
-│   │   └── utilities.css      # 工具类
-│   ├── components/ui/         # UI 组件
-│   │   ├── Button.vue
-│   │   ├── Card.vue
-│   │   ├── Input.vue
-│   │   ├── Dialog.vue         # 使用 Teleport
-│   │   ├── Toast.vue          # 全局 Toast
-│   │   └── ...
-│   └── composables/           # Composables
-│       ├── useToast.ts        # 全局 Toast
-│       └── ...
-└── DESIGN_SYSTEM.md           # 本文档
-```
-
----
-
-## 17. 更新日志
-
-### v1.1.0 (2026-03-27)
-- 添加 Teleport 使用规范
-- 添加 SSR 安全检查说明
-- 添加全局 Toast 系统说明
-- 更新文件组织结构
-
-### v1.0.0 (2026-03-23)
-- 初始版本
-- 定义完整的色彩、字体、间距系统
-- 规范常用组件样式
-- 建立布局与响应式标准
+| `src/styles/tokens.css` | CSS 设计 Token（颜色、圆角、间距） |
+| `src/styles/index.css` | 全局基础样式、Tailwind v4 主题导入 |
+| `src/styles/components.css` | 组件级基础样式覆盖 |
+| `src/components/ui/*.vue` | 核心 UI 组件（Button、Card、Input、Badge 等） |
 
 ---
 
