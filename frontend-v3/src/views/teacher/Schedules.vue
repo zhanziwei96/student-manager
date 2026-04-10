@@ -42,7 +42,7 @@ const computedCourseCardClass = (schedule: typeof schedules.value[0]) => {
   if (isSelected(schedule.id)) {
     return `${baseClass} border-primary/50 bg-primary/5 ${theme.border} ${theme.bg}`
   }
-  return `${baseClass} hover:border-white/20 ${theme.border} ${theme.bg}`
+  return `${baseClass} hover:border-[#d4d4d4] ${theme.border} ${theme.bg}`
 }
 
 // 获取当前用户
@@ -389,10 +389,10 @@ const handleBatchDelete = async () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
       <div class="min-w-0">
-        <h1 class="text-xl sm:text-2xl font-bold text-white">
+        <h1 class="text-xl sm:text-2xl font-bold text-black">
           课表管理
         </h1>
-        <p class="text-sm text-white/60 mt-1">
+        <p class="text-sm text-[#737373] mt-1">
           管理课程安排，支持批量导入
         </p>
       </div>
@@ -436,45 +436,43 @@ const handleBatchDelete = async () => {
     <!-- 统计卡片 -->
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-5">
       <!-- 总课程数 - Indigo主题 -->
-      <Card class="relative overflow-hidden p-4 transition-all duration-300 border-indigo-500/30 bg-indigo-500/10">
+      <Card class="relative overflow-hidden p-4 transition-all duration-300 border-[#e5e5e5] bg-white">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner bg-indigo-500/20 text-indigo-300">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 bg-[#f5f5f5] text-[#525252]">
             <Layers class="h-5 w-5" />
           </div>
           <div class="min-w-0">
-            <p class="text-sm text-white/60 truncate">
+            <p class="text-sm text-[#737373] truncate">
               总课程数
             </p>
-            <p class="text-2xl font-bold text-white">
+            <p class="text-2xl font-bold text-black">
               {{ totalSchedules }}
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30 bg-indigo-500/40" />
       </Card>
 
       <!-- 本周课程 - Indigo主题 -->
-      <Card class="relative overflow-hidden p-4 transition-all duration-300 border-indigo-500/30 bg-indigo-500/10">
+      <Card class="relative overflow-hidden p-4 transition-all duration-300 border-[#e5e5e5] bg-white">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 shadow-inner bg-indigo-500/20 text-indigo-300">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 bg-[#f5f5f5] text-[#525252]">
             <Calendar class="h-5 w-5" />
           </div>
           <div class="min-w-0">
-            <p class="text-sm text-white/60 truncate">
+            <p class="text-sm text-[#737373] truncate">
               本周课程（第{{ currentWeek }}周）
             </p>
-            <p class="text-2xl font-bold text-white">
+            <p class="text-2xl font-bold text-black">
               {{ thisWeekSchedules }}
             </p>
           </div>
         </div>
-        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30 bg-indigo-500/40" />
       </Card>
 
       <!-- 冲突检测 -->
       <Card 
-        class="border-white/10 p-4 transition-colors"
-        :class="conflictCount > 0 ? 'bg-red-500/5 border-red-500/20' : 'bg-white/[0.02]'"
+        class="border-[#e5e5e5] p-4 transition-colors"
+        :class="conflictCount > 0 ? 'bg-red-500/5 border-red-500/20' : 'bg-white'"
       >
         <div class="flex items-center gap-3">
           <div 
@@ -489,13 +487,13 @@ const handleBatchDelete = async () => {
           <div>
             <p
               class="text-sm"
-              :class="conflictCount > 0 ? 'text-red-400' : 'text-white/60'"
+              :class="conflictCount > 0 ? 'text-red-400' : 'text-[#737373]'"
             >
               冲突检测
             </p>
             <p 
               class="text-2xl font-bold"
-              :class="conflictCount > 0 ? 'text-red-400' : 'text-white'"
+              :class="conflictCount > 0 ? 'text-red-400' : 'text-black'"
             >
               {{ conflictCount }}
             </p>
@@ -505,8 +503,8 @@ const handleBatchDelete = async () => {
 
       <!-- 未分配教师 -->
       <Card 
-        class="border-white/10 p-4 transition-colors"
-        :class="unassignedSchedules > 0 ? 'bg-orange-500/5 border-orange-500/20' : 'bg-white/[0.02]'"
+        class="border-[#e5e5e5] p-4 transition-colors"
+        :class="unassignedSchedules > 0 ? 'bg-orange-500/5 border-orange-500/20' : 'bg-white'"
       >
         <div class="flex items-center gap-3">
           <div 
@@ -521,13 +519,13 @@ const handleBatchDelete = async () => {
           <div>
             <p
               class="text-sm"
-              :class="unassignedSchedules > 0 ? 'text-orange-400' : 'text-white/60'"
+              :class="unassignedSchedules > 0 ? 'text-orange-400' : 'text-[#737373]'"
             >
               未分配教师
             </p>
             <p 
               class="text-2xl font-bold"
-              :class="unassignedSchedules > 0 ? 'text-orange-400' : 'text-white'"
+              :class="unassignedSchedules > 0 ? 'text-orange-400' : 'text-black'"
             >
               {{ unassignedSchedules }}
             </p>
@@ -540,7 +538,7 @@ const handleBatchDelete = async () => {
     <Card class="p-4 mb-5">
       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-4">
         <div class="w-full sm:w-48">
-          <label class="mb-1 block text-sm text-white/60">班级</label>
+          <label class="mb-1 block text-sm text-[#737373]">班级</label>
           <MobilePicker
             v-model="selectedClass"
             title="选择班级"
@@ -550,7 +548,7 @@ const handleBatchDelete = async () => {
           />
         </div>
         <div class="w-full sm:w-32">
-          <label class="mb-1 block text-sm text-white/60">星期</label>
+          <label class="mb-1 block text-sm text-[#737373]">星期</label>
           <MobilePicker
             v-model="selectedDay"
             title="选择星期"
@@ -561,7 +559,7 @@ const handleBatchDelete = async () => {
         </div>
         <!-- 周次筛选器 -->
         <div class="w-full sm:w-40">
-          <label class="mb-1 block text-sm text-white/60">周次</label>
+          <label class="mb-1 block text-sm text-[#737373]">周次</label>
           <MobilePicker
             v-model="selectedWeek"
             title="选择周次"
@@ -608,10 +606,10 @@ const handleBatchDelete = async () => {
               <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/20 text-sm font-bold text-primary shadow-lg shadow-primary/10">
                 {{ day.label.charAt(1) }}
               </div>
-              <h3 class="text-lg font-semibold text-white">
+              <h3 class="text-lg font-semibold text-black">
                 {{ day.label }}
               </h3>
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 text-white/60 border border-white/10">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f5f5f5] text-[#737373] border border-[#e5e5e5]">
                 {{ filteredSchedulesByDay[day.value].length }} 节课
               </span>
             </div>
@@ -635,7 +633,7 @@ const handleBatchDelete = async () => {
               >
                 取消全选
               </Button>
-              <span class="text-sm text-white/60">
+              <span class="text-sm text-[#737373]">
                 已选择 {{ selectedScheduleIds.length }} 门课程
               </span>
             </div>
@@ -643,7 +641,7 @@ const handleBatchDelete = async () => {
             <!-- Courses Timeline -->
             <div class="relative">
               <!-- 时间线轴线 -->
-              <div class="absolute left-[7px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/10 via-white/5 to-transparent" />
+              <div class="absolute left-[7px] top-0 bottom-0 w-0.5 bg-[#e5e5e5]" />
 
               <div class="space-y-3">
                 <div
@@ -694,11 +692,11 @@ const handleBatchDelete = async () => {
                         class="flex h-5 w-5 items-center justify-center rounded border transition-colors"
                         :class="isSelected(schedule.id)
                           ? 'bg-primary border-primary'
-                          : 'border-white/30 bg-white/5'"
+                          : 'border-[#d4d4d4] bg-[#f5f5f5]'"
                       >
                         <CheckSquare
                           v-if="isSelected(schedule.id)"
-                          class="h-3.5 w-3.5 text-white"
+                          class="h-3.5 w-3.5 text-black"
                         />
                       </div>
                     </div>
@@ -727,7 +725,7 @@ const handleBatchDelete = async () => {
                           </div>
                           <h4
                             class="font-semibold text-base truncate"
-                            :class="hasConflict(schedule) ? 'text-red-400' : 'text-white'"
+                            :class="hasConflict(schedule) ? 'text-red-400' : 'text-black'"
                           >
                             {{ schedule.course_name }}
                           </h4>
@@ -737,7 +735,7 @@ const handleBatchDelete = async () => {
                         <div class="flex items-center gap-2 mb-3">
                           <div
                             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium"
-                            :class="hasConflict(schedule) ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-white/80'"
+                            :class="hasConflict(schedule) ? 'bg-red-500/10 text-red-400' : 'bg-[#f5f5f5] text-[#525252]'"
                           >
                             <Clock class="h-3.5 w-3.5" />
                             {{ schedule.start_time }} - {{ schedule.end_time }}
@@ -746,7 +744,7 @@ const handleBatchDelete = async () => {
 
                         <!-- 详细信息网格 -->
                         <div class="grid grid-cols-2 gap-2 text-sm">
-                          <div class="flex items-center gap-2 text-white/60">
+                          <div class="flex items-center gap-2 text-[#737373]">
                             <Calendar
                               class="h-3.5 w-3.5"
                               :class="hasConflict(schedule) ? 'text-red-400/60' : getCourseTheme(schedule.course_name).icon"
@@ -755,7 +753,7 @@ const handleBatchDelete = async () => {
                           </div>
                           <div
                             v-if="schedule.classroom"
-                            class="flex items-center gap-2 text-white/60"
+                            class="flex items-center gap-2 text-[#737373]"
                           >
                             <MapPin
                               class="h-3.5 w-3.5"
@@ -793,7 +791,7 @@ const handleBatchDelete = async () => {
                           >
                             {{ schedule.teacher_name || '未分配教师' }}
                           </Badge>
-                          <span class="text-xs text-white/40">
+                          <span class="text-xs text-[#a3a3a3]">
                             第{{ schedule.week_start }}-{{ schedule.week_end }}周
                           </span>
                         </div>
@@ -804,7 +802,7 @@ const handleBatchDelete = async () => {
                         v-if="canAdjustSchedule(schedule)"
                         variant="ghost"
                         size="sm"
-                        class="h-8 w-8 p-0 text-white/40 hover:text-primary flex-shrink-0 ml-1"
+                        class="h-8 w-8 p-0 text-[#a3a3a3] hover:text-primary flex-shrink-0 ml-1"
                         @click="openAdjustmentDialog(schedule)"
                       >
                         <Settings2 class="h-4 w-4" />
@@ -815,7 +813,7 @@ const handleBatchDelete = async () => {
                         v-if="isAdmin"
                         variant="ghost"
                         size="sm"
-                        class="h-8 w-8 p-0 text-white/40 hover:text-red-400 flex-shrink-0 ml-1"
+                        class="h-8 w-8 p-0 text-[#a3a3a3] hover:text-red-400 flex-shrink-0 ml-1"
                         :loading="isDeleting"
                         @click="handleDelete(schedule.id)"
                       >
@@ -846,10 +844,10 @@ const handleBatchDelete = async () => {
     >
       <div class="space-y-4">
         <div class="rounded-lg border border-border bg-background-card p-4">
-          <h4 class="mb-2 text-sm font-medium text-white">
+          <h4 class="mb-2 text-sm font-medium text-black">
             导入说明
           </h4>
-          <ul class="space-y-1 text-sm text-white/60">
+          <ul class="space-y-1 text-sm text-[#737373]">
             <li>1. 支持 .xlsx 或 .csv 格式</li>
             <li>2. 请先下载模板，按模板格式填写</li>
             <li>3. 必填字段：课程名称、班级、教师姓名、星期、开始时间、结束时间</li>
@@ -858,16 +856,16 @@ const handleBatchDelete = async () => {
         </div>
 
         <div>
-          <label class="mb-2 block text-sm text-white/60">选择文件</label>
+          <label class="mb-2 block text-sm text-[#737373]">选择文件</label>
           <input
             type="file"
             accept=".xlsx,.csv"
-            class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:text-white hover:file:bg-primary/80"
+            class="w-full rounded-lg border border-[#e5e5e5] bg-[#f5f5f5] px-3 py-2 text-sm text-black file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:text-white hover:file:bg-primary/80"
             @change="handleFileChange"
           >
           <p
             v-if="selectedFile"
-            class="mt-2 text-sm text-white/60"
+            class="mt-2 text-sm text-[#737373]"
           >
             已选择: {{ selectedFile.name }}
           </p>
@@ -894,12 +892,12 @@ const handleBatchDelete = async () => {
     <!-- 底部批量操作栏 -->
     <div
       v-if="showBatchActions"
-      class="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-white/10 bg-[#030307] px-4 py-3 shadow-lg"
+      class="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#e5e5e5] bg-[#030307] px-4 py-3 shadow-lg"
     >
-      <span class="text-sm text-white/80">
+      <span class="text-sm text-[#525252]">
         已选择 <span class="font-bold text-primary">{{ selectedScheduleIds.length }}</span> 门课程
       </span>
-      <div class="h-4 w-px bg-white/10" />
+      <div class="h-4 w-px bg-[#e5e5e5]" />
       <Button
         variant="destructive"
         size="sm"

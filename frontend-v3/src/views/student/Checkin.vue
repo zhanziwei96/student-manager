@@ -5,22 +5,6 @@ import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession 
 import { Card, Button, Badge } from '@/components/ui'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
 
-// 获取卡片样式 - 统一使用 indigo 主题
-const getCardStyle = () => {
-  return {
-    backgroundColor: 'var(--card-indigo-bg)',
-    borderColor: 'var(--card-indigo-border)',
-    '--tw-shadow-color': 'var(--card-indigo-shadow)',
-  } as Record<string, string>
-}
-
-// 获取图标容器样式
-const getIconStyle = () => {
-  return {
-    backgroundColor: 'var(--card-indigo-icon-bg)',
-    color: 'var(--card-indigo-icon-text)',
-  } as Record<string, string>
-}
 
 
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
@@ -106,14 +90,14 @@ const formatTime = (time: string) => {
     <Card
       v-else-if="studentProfile"
       class="relative overflow-hidden p-4 md:p-6 mb-5"
-      :style="getCardStyle()"
+      :class="'bg-white border-[#e5e5e5]'"
     >
       <div class="flex items-center gap-3 md:gap-4 relative z-10">
         <div
           class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0"
-          :style="getIconStyle()"
+          :class="'bg-primary/10 text-primary'"
         >
-          <User class="h-5 w-5 md:h-6 md:w-6" :style="{ color: 'var(--card-indigo-icon-text)' }" />
+          <User class="h-5 w-5 md:h-6 md:w-6 text-primary" />
         </div>
         <div class="min-w-0 flex-1">
           <h2 class="font-medium text-black truncate">
@@ -225,37 +209,37 @@ const formatTime = (time: string) => {
     <!-- Checkin Tips - Indigo 主题 -->
     <Card
       class="relative overflow-hidden p-4 md:p-6"
-      :style="getCardStyle()"
+      :class="'bg-white border-[#e5e5e5]'"
     >
       <div class="relative z-10">
         <h3 class="font-medium text-black mb-4 text-base md:text-lg">
           签到说明
         </h3>
-        <ul class="space-y-3 md:space-y-4 text-sm" :style="{ color: 'var(--card-indigo-icon-text)' }">
+        <ul class="space-y-3 md:space-y-4 text-sm text-primary">
           <li class="flex items-start gap-3">
             <div
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-              :style="getIconStyle()"
+              :class="'bg-primary/10 text-primary'"
             >
-              <span class="text-xs font-medium" style="color: #fff">1</span>
+              <span class="text-xs font-medium text-primary">1</span>
             </div>
             <span class="leading-relaxed text-[#737373]">请在老师开启课堂后进行签到</span>
           </li>
           <li class="flex items-start gap-3">
             <div
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-              :style="getIconStyle()"
+              :class="'bg-primary/10 text-primary'"
             >
-              <span class="text-xs font-medium" style="color: #fff">2</span>
+              <span class="text-xs font-medium text-primary">2</span>
             </div>
             <span class="leading-relaxed text-[#737373]">每节课只能签到一次，不可重复签到</span>
           </li>
           <li class="flex items-start gap-3">
             <div
               class="h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-              :style="getIconStyle()"
+              :class="'bg-primary/10 text-primary'"
             >
-              <span class="text-xs font-medium" style="color: #fff">3</span>
+              <span class="text-xs font-medium text-primary">3</span>
             </div>
             <span class="leading-relaxed text-[#737373]">签到可获得课堂参与积分</span>
           </li>

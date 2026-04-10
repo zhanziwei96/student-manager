@@ -12,21 +12,6 @@ import { getErrorMessage } from '@/lib/error'
  * 使用 Feature-based 架构，使用共享的 StudentFilters 组件
  */
 
-// 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
-
-const getCardGlowStyle = () => ({
-  backgroundColor: 'var(--card-indigo-glow)',
-})
 
 // === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
@@ -168,20 +153,16 @@ const handleAddStudent = async () => {
           v-for="student in filteredStudents"
           :key="student.id"
           class="relative overflow-hidden p-4"
-          :style="getCardStyle()"
+          :class="'bg-white border-[#e5e5e5]'"
         >
           <!-- 背景光晕效果 -->
-          <div
-            class="absolute -right-4 -bottom-4 h-20 w-20 rounded-full blur-2xl opacity-30"
-            :style="getCardGlowStyle()"
-          />
 
           <div class="relative z-10 flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <div
                   class="flex h-8 w-8 items-center justify-center rounded-lg"
-                  :style="getCardIconStyle()"
+                  :class="'bg-primary/10 text-primary'"
                 >
                   <span
                     class="text-sm font-medium"

@@ -35,16 +35,6 @@ function formatDate(dateStr: string): string {
 }
 
 // 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
 
 const getCardTextMutedColor = () => 'text-[#737373]'
 </script>
@@ -131,12 +121,12 @@ const getCardTextMutedColor = () => 'text-[#737373]'
         <!-- 班级卡片 -->
         <Card
           class="group relative overflow-hidden p-4"
-          :style="getCardStyle()"
+          :class="'bg-white border-[#e5e5e5]'"
         >
           <div class="relative z-10">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-              :style="getCardIconStyle()"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform"
+              :class="'bg-primary/10 text-primary'"
             >
               <Users class="h-5 w-5" />
             </div>
@@ -152,12 +142,12 @@ const getCardTextMutedColor = () => 'text-[#737373]'
         <!-- 学号卡片 -->
         <Card
           class="group relative overflow-hidden p-4"
-          :style="getCardStyle()"
+          :class="'bg-white border-[#e5e5e5]'"
         >
           <div class="relative z-10">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-              :style="getCardIconStyle()"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform"
+              :class="'bg-primary/10 text-primary'"
             >
               <Award class="h-5 w-5" />
             </div>
@@ -173,13 +163,13 @@ const getCardTextMutedColor = () => 'text-[#737373]'
         <!-- 状态卡片 - 跨两列 -->
         <Card
           class="group col-span-2 relative overflow-hidden p-4"
-          :style="getCardStyle()"
+          :class="'bg-white border-[#e5e5e5]'"
         >
           <div class="relative z-10 flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div
-                class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-                :style="getCardIconStyle()"
+                class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform"
+                :class="'bg-primary/10 text-primary'"
               >
                 <TrendingUp class="h-5 w-5" />
               </div>
@@ -237,7 +227,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-8 w-8 items-center justify-center rounded-lg transition-transform group-hover:scale-110"
+                class="flex h-8 w-8 items-center justify-center rounded-lg transition-transform"
                 :class="log.delta >= 0 ? 'bg-emerald-500/25' : 'bg-rose-500/25'"
               >
                 <TrendingUp

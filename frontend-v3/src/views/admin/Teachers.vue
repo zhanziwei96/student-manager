@@ -9,21 +9,6 @@ import ManageSchedulesDialog from '@/components/admin/ManageSchedulesDialog.vue'
 import type { User } from '@/types'
 import { getErrorMessage } from '@/lib/error'
 
-// 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
-
-const getCardGlowStyle = () => ({
-  backgroundColor: 'var(--card-indigo-glow)',
-})
 
 // Toast
 const { showToast } = useToast()
@@ -286,18 +271,14 @@ const handleResetPassword = async () => {
         v-for="teacher in filteredTeachers"
         :key="teacher.id"
         class="relative overflow-hidden p-6"
-        :style="getCardStyle()"
+        :class="'bg-white border-[#e5e5e5]'"
       >
         <!-- 背景光晕效果 -->
-        <div
-          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl opacity-30"
-          :style="getCardGlowStyle()"
-        />
 
         <div class="relative z-10 flex items-start gap-4">
           <div
             class="flex h-12 w-12 items-center justify-center rounded-xl"
-            :style="getCardIconStyle()"
+            :class="'bg-primary/10 text-primary'"
           >
             <UserCircle
               class="h-6 w-6"

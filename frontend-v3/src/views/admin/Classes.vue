@@ -33,21 +33,6 @@ const getScoreColor = (score: number) => {
   return 'text-[var(--color-error)]'
 }
 
-// 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
-
-const getCardGlowStyle = () => ({
-  backgroundColor: 'var(--card-indigo-glow)',
-})
 </script>
 
 <template>
@@ -91,19 +76,15 @@ const getCardGlowStyle = () => ({
         v-for="(cls) in filteredClasses"
         :key="cls.name"
         class="relative overflow-hidden p-6"
-        :style="getCardStyle()"
+        :class="'bg-white border-[#e5e5e5]'"
       >
         <!-- 背景光晕效果 -->
-        <div
-          class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full blur-2xl opacity-30"
-          :style="getCardGlowStyle()"
-        />
 
         <div class="relative z-10 flex items-start justify-between">
           <div class="flex items-center gap-3">
             <div
               class="flex h-10 w-10 items-center justify-center rounded-xl"
-              :style="getCardIconStyle()"
+              :class="'bg-primary/10 text-primary'"
             >
               <GraduationCap
                 class="h-5 w-5"

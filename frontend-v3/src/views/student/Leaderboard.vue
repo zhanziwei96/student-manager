@@ -10,21 +10,6 @@ const currentStudentId = computed(() => authStore.user?.id)
 
 const activeTab = ref<'class' | 'school'>('class')
 
-// 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
-
-const getCardGlowStyle = () => ({
-  backgroundColor: 'var(--card-indigo-glow)',
-})
 
 const { isPending, students, myRank } = useLeaderboard(
   computed(() => ({ scope: activeTab.value, limit: 50 }))
@@ -108,13 +93,13 @@ const maskName = (name: string, studentId: string) => {
     <Card
       v-if="myRank"
       class="relative overflow-hidden p-4 mb-5"
-      :style="getCardStyle()"
+      :class="'bg-white border-[#e5e5e5]'"
     >
       <div class="relative z-10 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div
             class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
-            :style="getCardIconStyle()"
+            :class="'bg-primary/10 text-primary'"
           >
             <User class="h-5 w-5" :style="{ color: 'var(--card-indigo-icon-text)' }" />
           </div>

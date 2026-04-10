@@ -19,21 +19,6 @@ import { Users, GraduationCap, Search } from 'lucide-vue-next'
 // === 数据获取 ===
 const { data: students, isPending, error, refetch } = useStudents()
 
-// 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
-
-const getCardGlowStyle = () => ({
-  backgroundColor: 'var(--card-indigo-glow)',
-})
 
 // 统计信息
 const stats = computed(() => {
@@ -135,13 +120,13 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
         v-for="stat in stats"
         :key="stat.title"
         class="group relative overflow-hidden p-3 sm:p-4"
-        :style="getCardStyle()"
+        :class="'bg-white border-[#e5e5e5]'"
       >
         <div class="relative z-10">
           <div class="flex items-center justify-between">
             <div
-              class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-              :style="getCardIconStyle()"
+              class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl transition-transform"
+              :class="'bg-primary/10 text-primary'"
             >
               <component
                 :is="stat.icon"
@@ -157,10 +142,6 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
           </p>
         </div>
         <!-- 背景装饰 -->
-        <div
-          class="absolute -right-4 -bottom-4 h-12 w-12 sm:h-16 sm:w-16 rounded-full blur-2xl transition-colors opacity-30"
-          :style="getCardGlowStyle()"
-        />
       </Card>
     </div>
 

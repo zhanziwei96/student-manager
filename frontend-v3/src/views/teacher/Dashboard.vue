@@ -40,21 +40,6 @@ const statCards = computed(() => [
   },
 ])
 
-// 统一的 Indigo 卡片样式
-const getCardStyle = () => ({
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-})
-
-const getCardIconStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
-
-const getCardGlowStyle = () => ({
-  backgroundColor: 'var(--card-indigo-glow)',
-})
 </script>
 
 <template>
@@ -109,7 +94,7 @@ const getCardGlowStyle = () => ({
         v-for="card in statCards"
         :key="card.title"
         class="group relative overflow-hidden p-4 cursor-pointer"
-        :style="getCardStyle()"
+        :class="'bg-white border-[#e5e5e5]'"
         @click="router.push(card.link)"
       >
         <div class="relative z-10">
@@ -123,8 +108,8 @@ const getCardGlowStyle = () => ({
               </p>
             </div>
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-              :style="getCardIconStyle()"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform"
+              :class="'bg-primary/10 text-primary'"
             >
               <component
                 :is="card.icon"
@@ -140,10 +125,6 @@ const getCardGlowStyle = () => ({
           </div>
         </div>
         <!-- 背景装饰 -->
-        <div
-          class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl transition-colors opacity-30"
-          :style="getCardGlowStyle()"
-        />
       </Card>
     </div>
 

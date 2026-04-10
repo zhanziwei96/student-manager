@@ -110,9 +110,9 @@ const getAvatarColor = (studentId: string): string => {
 </script>
 
 <template>
-  <Card class="border-white/10 bg-white/[0.02] overflow-hidden">
+  <Card class="border-[#e5e5e5] bg-white overflow-hidden">
     <!-- 头部 - 卡片化设计 -->
-    <div class="p-5 border-b border-white/10 bg-gradient-to-r from-white/[0.03] to-transparent">
+    <div class="p-5 border-b border-[#e5e5e5] bg-[#f5f5f5]">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <!-- 标题和统计 -->
         <div class="flex items-center gap-3">
@@ -120,9 +120,9 @@ const getAvatarColor = (studentId: string): string => {
             <GraduationCap class="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 class="font-semibold text-white flex items-center gap-2">
+            <h3 class="font-semibold text-black flex items-center gap-2">
               班级学生列表
-              <Badge variant="secondary" class="text-xs bg-white/10">
+              <Badge variant="secondary" class="text-xs bg-[#f5f5f5]">
                 {{ stats.total }}人
               </Badge>
             </h3>
@@ -152,11 +152,11 @@ const getAvatarColor = (studentId: string): string => {
 
           <!-- 搜索框 -->
           <div class="relative w-52">
-            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
             <Input
               v-model="search"
               placeholder="搜索学生姓名或学号..."
-              class="pl-10 h-10 bg-white/5 border-white/10 focus:border-primary/50"
+              class="pl-10 h-10 bg-[#f5f5f5] border-[#e5e5e5] focus:border-primary/50"
             />
           </div>
         </div>
@@ -170,7 +170,7 @@ const getAvatarColor = (studentId: string): string => {
     >
       <div class="flex flex-col items-center gap-3">
         <div class="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p class="text-sm text-white/50">加载学生数据...</p>
+        <p class="text-sm text-[#a3a3a3]">加载学生数据...</p>
       </div>
     </div>
 
@@ -188,21 +188,21 @@ const getAvatarColor = (studentId: string): string => {
           <h4 class="text-sm font-medium text-orange-400">
             未签到 ({{ notCheckedInStudents.length }}人)
           </h4>
-          <div class="flex-1 h-px bg-gradient-to-r from-orange-500/30 to-transparent" />
+          <div class="flex-1 h-px bg-orange-500/20" />
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           <div
             v-for="student in notCheckedInStudents"
             :key="student.id"
-            class="group relative rounded-xl border border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-orange-500/[0.02] p-4 transition-all duration-200 cursor-pointer hover:border-orange-500/40 hover:shadow-lg hover:shadow-orange-500/10 hover:-translate-y-0.5"
+            class="group relative rounded-xl border border-orange-500/20 bg-white p-4 transition-all duration-200 cursor-pointer hover:border-orange-500/40"
             :class="{ 'opacity-60 cursor-not-allowed pointer-events-none': isStudentCheckingIn(student.student_id) }"
             @click="handleQuickCheckIn(student)"
           >
             <!-- Loading 遮罩 -->
             <div
               v-if="isStudentCheckingIn(student.student_id)"
-              class="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/20"
+              class="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/10"
             >
               <div class="h-5 w-5 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
             </div>
@@ -216,19 +216,19 @@ const getAvatarColor = (studentId: string): string => {
             <div class="flex flex-col items-center text-center">
               <!-- 头像 -->
               <div
-                class="flex h-12 w-12 items-center justify-center rounded-full text-base font-bold mb-2 transition-transform group-hover:scale-110"
+                class="flex h-12 w-12 items-center justify-center rounded-full text-base font-bold mb-2"
                 :class="getAvatarColor(student.student_id)"
               >
                 {{ getInitials(student.name) }}
               </div>
 
               <!-- 姓名 -->
-              <p class="text-sm font-semibold text-white truncate w-full">
+              <p class="text-sm font-semibold text-black truncate w-full">
                 {{ student.name }}
               </p>
 
               <!-- 学号 -->
-              <p class="text-xs text-white/40 mt-0.5 font-mono">
+              <p class="text-xs text-[#a3a3a3] mt-0.5 font-mono">
                 {{ student.student_id }}
               </p>
 
@@ -251,14 +251,14 @@ const getAvatarColor = (studentId: string): string => {
           <h4 class="text-sm font-medium text-green-400">
             已签到 ({{ checkedInStudents.length }}人)
           </h4>
-          <div class="flex-1 h-px bg-gradient-to-r from-green-500/30 to-transparent" />
+          <div class="flex-1 h-px bg-green-500/20" />
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           <div
             v-for="student in checkedInStudents"
             :key="student.id"
-            class="relative rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/5 to-green-500/[0.02] p-4 transition-all duration-200"
+            class="relative rounded-xl border border-green-500/20 bg-white p-4 transition-all duration-200"
           >
             <!-- 状态指示器 -->
             <div class="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-green-500/20 text-green-400">
@@ -281,14 +281,14 @@ const getAvatarColor = (studentId: string): string => {
               </p>
 
               <!-- 学号 -->
-              <p class="text-xs text-white/40 mt-0.5 font-mono">
+              <p class="text-xs text-[#a3a3a3] mt-0.5 font-mono">
                 {{ student.student_id }}
               </p>
 
               <!-- 签到时间 -->
               <div
                 v-if="student.checkinTime"
-                class="mt-2 flex items-center gap-1 text-xs text-white/50"
+                class="mt-2 flex items-center gap-1 text-xs text-[#a3a3a3]"
               >
                 <Clock class="h-3 w-3" />
                 <span>{{ formatTime(student.checkinTime) }}</span>
@@ -302,13 +302,13 @@ const getAvatarColor = (studentId: string): string => {
     <!-- 空状态 -->
     <div
       v-else
-      class="flex h-64 flex-col items-center justify-center text-white/60"
+      class="flex h-64 flex-col items-center justify-center text-[#737373]"
     >
-      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 mb-4">
+      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#f5f5f5] mb-4">
         <GraduationCap class="h-8 w-8 opacity-50" />
       </div>
       <p class="text-lg font-medium">暂无学生数据</p>
-      <p class="text-sm text-white/40 mt-1">该班级暂时没有学生</p>
+      <p class="text-sm text-[#a3a3a3] mt-1">该班级暂时没有学生</p>
     </div>
   </Card>
 </template>

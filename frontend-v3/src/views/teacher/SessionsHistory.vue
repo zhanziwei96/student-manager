@@ -51,7 +51,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
     case 'manual':
       return { label: '手动', variant: 'secondary' as const }
     case 'makeup':
-      return { label: '补课', variant: 'primary' as const }
+      return { label: '补课', variant: 'default' as const }
     default:
       return { label: sourceType, variant: 'default' as const }
   }

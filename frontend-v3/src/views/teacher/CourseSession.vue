@@ -36,26 +36,6 @@ import StudentCheckinGrid from '@/components/teacher/StudentCheckinGrid.vue'
 import CheckinStats from '@/components/teacher/CheckinStats.vue'
 
 // ===== 卡片主题辅助函数 - 统一使用 Indigo 主题 =====
-const getCardStyle = () => {
-  return {
-    backgroundColor: 'var(--card-indigo-bg)',
-    borderColor: 'var(--card-indigo-border)',
-    '--tw-shadow-color': 'var(--card-indigo-shadow)',
-  } as Record<string, string>
-}
-
-const getCardIconStyle = () => {
-  return {
-    backgroundColor: 'var(--card-indigo-icon-bg)',
-    color: 'var(--card-indigo-icon-text)',
-  }
-}
-
-const getCardGlowStyle = () => {
-  return {
-    backgroundColor: 'var(--card-indigo-glow)',
-  }
-}
 
 // ===== 辅助函数 =====
 
@@ -440,8 +420,8 @@ const getSourceTypeBadge = (sourceType: string) => {
     <!-- 今日课表快捷开始 - Indigo 主题 -->
     <Card
       v-if="quickStartSchedules.length > 0"
-      class="relative overflow-hidden p-4 md:p-6 mb-5"
-      :style="getCardStyle()"
+      class="relative overflow-hidden p-4 md:p-6 mb-5 bg-white border-[#e5e5e5]"
+      
     >
       <div class="relative z-10">
         <h3 class="font-medium text-black text-base md:text-lg mb-3">
@@ -474,15 +454,13 @@ const getSourceTypeBadge = (sourceType: string) => {
 
     <!-- Session status - 课堂状态卡片 -->
     <Card
-      class="relative overflow-hidden p-4 md:p-6 mb-5"
-      :style="isSessionActive ? { backgroundColor: 'var(--card-success-bg)', borderColor: 'var(--card-success-border)', '--tw-shadow-color': 'var(--card-success-shadow)' } : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: '#e5e5e5' }"
+      :class="isSessionActive ? 'bg-green-50 border-green-200' : 'bg-white border-[#e5e5e5]'" class="relative overflow-hidden p-4 md:p-6 mb-5"
     >
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3 md:gap-4">
           <!-- 状态图标 -->
           <div
-            class="relative flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-xl flex-shrink-0 transition-all duration-300"
-            :style="isSessionActive ? { backgroundColor: 'var(--card-success-icon-bg)', color: 'var(--card-success-icon-text)' } : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }"
+            :class="isSessionActive ? 'bg-green-100 text-green-600' : 'bg-[#f5f5f5] text-[#737373]'" class="relative flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-xl flex-shrink-0 transition-all duration-300"
           >
             <component
               :is="sessionStatusTheme.icon"
@@ -590,13 +568,6 @@ const getSourceTypeBadge = (sourceType: string) => {
         </div>
       </div>
 
-      <!-- 背景装饰 -->
-      <div
-        v-if="isSessionActive"
-        class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl opacity-30"
-        :style="{ backgroundColor: 'var(--card-success-glow)' }"
-      />
-
       <!-- 签到进度条 - 仅在活跃课堂显示 -->
       <div
         v-if="isSessionActive && checkinStats.total > 0"
@@ -624,8 +595,8 @@ const getSourceTypeBadge = (sourceType: string) => {
     <!-- Start session form - Indigo 主题 -->
     <Card
       v-if="!isSessionActive"
-      class="relative overflow-hidden p-4 md:p-6 mb-5"
-      :style="getCardStyle()"
+      class="relative overflow-hidden p-4 md:p-6 mb-5 bg-white border-[#e5e5e5]"
+      
     >
       <div class="relative z-10">
         <h3 class="font-medium text-black text-base md:text-lg">
@@ -740,8 +711,8 @@ const getSourceTypeBadge = (sourceType: string) => {
     <!-- 开始新课堂表单 (在有一个课堂进行时显示) -->
     <Card
       v-if="isSessionActive && showStartForm"
-      class="relative overflow-hidden p-4 md:p-6 mb-5"
-      :style="getCardStyle()"
+      class="relative overflow-hidden p-4 md:p-6 mb-5 bg-white border-[#e5e5e5]"
+      
     >
       <div class="relative z-10 flex items-center justify-between mb-4">
         <div>
@@ -841,8 +812,8 @@ const getSourceTypeBadge = (sourceType: string) => {
       <!-- Selected session info (for multi-session) - Indigo 主题 -->
       <Card
         v-if="hasMultipleSessions"
-        class="relative overflow-hidden p-4 mb-5"
-        :style="getCardStyle()"
+        class="relative overflow-hidden p-4 mb-5 bg-white border-[#e5e5e5]"
+        
       >
         <div class="relative z-10 flex items-center justify-between">
           <div>
@@ -878,10 +849,10 @@ const getSourceTypeBadge = (sourceType: string) => {
       </Card>
 
       <!-- Check-in form - Indigo 主题 -->
-      <Card class="relative overflow-hidden p-4 md:p-6 mb-5" :style="getCardStyle()">
+      <Card class="relative overflow-hidden p-4 md:p-6 mb-5 bg-white border-[#e5e5e5]">
         <div class="relative z-10 flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0" :style="getCardIconStyle()">
-            <CheckCircle class="h-5 w-5" :style="{ color: 'var(--card-indigo-icon-text)' }" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 bg-primary/10 text-primary">
+            <CheckCircle class="h-5 w-5 text-primary" />
           </div>
           <div class="min-w-0 flex-1">
             <h3 class="font-medium text-black">
