@@ -3,6 +3,7 @@
 """
 from datetime import datetime
 from typing import Optional
+import sqlalchemy as sa
 from sqlmodel import SQLModel, Field
 from app.core.timezone import get_now
 
@@ -49,8 +50,8 @@ class GroupTask(SQLModel, table=True):
     class_name: str = Field(..., description="班级名称", max_length=100, index=True)
     title: str = Field(..., description="任务标题", max_length=200)
     description: Optional[str] = Field(default=None, description="任务描述")
-    status: str = Field(default="pending", description="状态: pending|active|closed", max_length=20)
-    created_by: int = Field(..., description="创建人ID")
+    status: str = Field(default="preparing", description="状态: preparing|evaluating|closed", max_length=20)
+    created_by: str = Field(..., description="创建人用户名（教师）", max_length=50)
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
     started_at: Optional[datetime] = Field(default=None, description="开始时间")
     closed_at: Optional[datetime] = Field(default=None, description="结束时间")
@@ -81,18 +82,16 @@ class GroupEvaluationScore(SQLModel, table=True):
     """小组评分结果表"""
     __tablename__ = "group_evaluation_scores"
     __table_args__ = (
-        # 每个评分方对同一维度只能打一次分
-        # evaluation_type 区分组间互评/教师评分
-        # (PostgreSQL 语法: UniqueConstraint)
+        sa.UniqueConstraint("task_id", "target_group_id", "evaluator_type", "evaluator_id", "dimension_id", name="uix_evaluation_score"),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     task_id: int = Field(..., foreign_key="group_tasks.id", description="任务ID", index=True)
     target_group_id: int = Field(..., foreign_key="groups.id", description="被评分小组ID", index=True)
-    evaluator_type: str = Field(..., description="评分方类型: peer|teacher", max_length=20)
-    evaluator_id: str = Field(..., description="评分方标识（小组ID或教师用户ID）", max_length=50)
+    evaluator_type: str = Field(..., description="评分方类型: teacher|student", max_length=20)
+    evaluator_id: str = Field(..., description="评分方标识（教师用户名或学生学号）", max_length=50)
     dimension_id: int = Field(..., foreign_key="group_task_dimensions.id", description="维度ID", index=True)
-    score: float = Field(..., description="分数")
+    score: int = Field(..., ge=0, le=100, description="分数（0-100）")
     created_at: datetime = Field(default_factory=get_now, description="打分时间")
 
 
@@ -102,8 +101,8 @@ class GroupDissolutionRequest(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     group_id: int = Field(..., foreign_key="groups.id", description="小组ID", index=True)
-    reason: Optional[str] = Field(default=None, description="解散原因")
+    reason: str = Field(..., description="解散原因")
     status: str = Field(default="pending", description="状态: pending|approved|rejected", max_length=20)
     created_at: datetime = Field(default_factory=get_now, description="申请时间")
     resolved_at: Optional[datetime] = Field(default=None, description="处理时间")
-    resolved_by: Optional[int] = Field(default=None, description="处理人ID")
+    resolved_by: Optional[str] = Field(default=None, description="处理人用户名", max_length=50)
