@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X, User, LayoutDashboard, Users, GraduationCap, BookOpen, CheckCircle, School } from 'lucide-vue-next'
+import { X, User, LayoutDashboard, Users, GraduationCap, BookOpen, CheckCircle, School, KeyRound } from 'lucide-vue-next'
 import { Button } from '.'
 import { useAuthStore } from '@/stores'
 import { computed, watch } from 'vue'
@@ -11,6 +11,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
+  'changePassword': []
 }>()
 
 const authStore = useAuthStore()
@@ -61,6 +62,11 @@ const handleClose = () => {
 
 const handleLogout = async () => {
   await authStore.logout()
+  handleClose()
+}
+
+const handleChangePassword = () => {
+  emit('changePassword')
   handleClose()
 }
 
@@ -148,6 +154,17 @@ watch(() => route.path, () => {
           {{ item.name }}
         </RouterLink>
       </nav>
+
+      <!-- Change password -->
+      <div class="px-2 pt-2 border-t border-[#e5e5e5] mx-2">
+        <button
+          class="flex w-full items-center gap-4 rounded-full px-4 py-3.5 text-base font-medium text-[#737373] hover:bg-[#fafafa] hover:text-black"
+          @click="handleChangePassword"
+        >
+          <KeyRound class="h-6 w-6" />
+          修改密码
+        </button>
+      </div>
 
       <!-- Bottom actions -->
       <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-[#e5e5e5]">

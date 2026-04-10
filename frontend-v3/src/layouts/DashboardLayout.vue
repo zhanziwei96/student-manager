@@ -15,6 +15,9 @@ import {
   BookOpen,
   Menu,
 } from 'lucide-vue-next'
+import { KeyRound } from 'lucide-vue-next'
+import { onClickOutside } from '@vueuse/core'
+import { ChangePasswordDialog } from '@/components/ui'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -23,6 +26,9 @@ const user = computed(() => authStore.user)
 const isAdmin = computed(() => authStore.isAdmin)
 
 const showMobileMenu = ref(false)
+const showDropdown = ref(false)
+const showChangePassword = ref(false)
+const dropdownRef = ref<HTMLElement | null>(null)
 
 // Navigation items based on role
 const navItems = computed(() => {
@@ -61,6 +67,16 @@ const isActive = (path: string) => {
 const handleLogout = async () => {
   await authStore.logout()
 }
+
+// 点击外部关闭下拉菜单
+onClickOutside(dropdownRef, () => {
+  showDropdown.value = false
+})
+
+const handleChangePassword = () => {
+  showDropdown.value = false
+  showChangePassword.value = true
+}
 </script>
 
 <template>
@@ -91,13 +107,16 @@ const handleLogout = async () => {
         <span class="ml-3 text-xl font-medium text-black">智慧课堂</span>
       </div>
 
-      <!-- User info -->
-      <div class="border-b border-[#e5e5e5] p-4">
-        <div class="flex items-center gap-3">
+      <!-- User info - clickable dropdown -->
+      <div ref="dropdownRef" class="relative border-b border-[#e5e5e5] p-4">
+        <button
+          class="flex w-full items-center gap-3 rounded-xl p-1 hover:bg-[#fafafa]"
+          @click="showDropdown = !showDropdown"
+        >
           <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#fafafa]">
             <User class="h-5 w-5 text-[#737373]" />
           </div>
-          <div class="flex-1 min-w-0">
+          <div class="flex-1 min-w-0 text-left">
             <p class="truncate text-sm font-medium text-black">
               {{ user?.name }}
             </p>
@@ -105,6 +124,27 @@ const handleLogout = async () => {
               {{ user?.role === 'admin' ? '管理员' : user?.role === 'teacher' ? '教师' : '学生' }}
             </p>
           </div>
+        </button>
+
+        <!-- Dropdown menu -->
+        <div
+          v-if="showDropdown"
+          class="absolute left-4 right-4 top-full mt-1 rounded-xl border border-[#e5e5e5] bg-white py-1 z-10"
+        >
+          <button
+            class="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#737373] hover:bg-[#fafafa] hover:text-black"
+            @click="handleChangePassword"
+          >
+            <KeyRound class="h-4 w-4" />
+            修改密码
+          </button>
+          <button
+            class="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#737373] hover:bg-[#fafafa] hover:text-black"
+            @click="handleLogout"
+          >
+            <LogOut class="h-4 w-4" />
+            退出登录
+          </button>
         </div>
       </div>
 
@@ -126,21 +166,13 @@ const handleLogout = async () => {
         </RouterLink>
       </nav>
 
-      <!-- Bottom actions -->
-      <div class="absolute bottom-0 left-0 right-0 border-t border-[#e5e5e5] p-4">
-        <Button
-          variant="ghost"
-          class="w-full justify-start gap-2 text-[#a3a3a3] hover:text-black"
-          @click="handleLogout"
-        >
-          <LogOut class="h-5 w-5" />
-          退出登录
-        </Button>
+      <!-- Bottom spacer -->
+      <div class="absolute bottom-0 left-0 right-0 p-4">
       </div>
     </aside>
 
     <!-- 移动端：抽屉菜单 -->
-    <MobileDrawer v-model:open="showMobileMenu" />
+    <MobileDrawer v-model:open="showMobileMenu" @change-password="showChangePassword = true" />
 
     <!-- 移动端：底部导航栏（仅学生/教师） -->
     <BottomNav v-if="!isAdmin" class="lg:hidden" />
@@ -154,5 +186,8 @@ const handleLogout = async () => {
 
     <!-- Toast 通知容器 -->
     <ToastContainer />
+
+    <!-- Change Password Dialog -->
+    <ChangePasswordDialog v-model:open="showChangePassword" />
   </div>
 </template>
