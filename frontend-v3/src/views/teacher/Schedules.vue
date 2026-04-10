@@ -39,10 +39,25 @@ const computedCourseCardClass = (schedule: typeof schedules.value[0]) => {
   if (hasConflict(schedule)) {
     return `${baseClass} border-red-500/50 bg-red-500/5 hover:border-red-500/70`
   }
+  if (schedule.session_status === 'cancelled' || schedule.session_status === 'skipped') {
+    return `${baseClass} opacity-60 ${theme.border} ${theme.bg}`
+  }
   if (isSelected(schedule.id)) {
     return `${baseClass} border-primary/50 bg-primary/5 ${theme.border} ${theme.bg}`
   }
   return `${baseClass} hover:border-[#d4d4d4] ${theme.border} ${theme.bg}`
+}
+
+const getStatusBadge = (schedule: typeof schedules.value[0]) => {
+  const map: Record<string, { label: string; class: string }> = {
+    cancelled: { label: '已停课', class: 'bg-[#ef4444]/10 text-[#dc2626] border-[#ef4444]/30' },
+    adjusted: { label: '已调课', class: 'bg-[#3b82f6]/10 text-[#2563eb] border-[#3b82f6]/30' },
+    makeup: { label: '补课', class: 'bg-[#f59e0b]/10 text-[#b45309] border-[#f59e0b]/30' },
+    skipped: { label: '本周跳过', class: 'bg-[#e5e5e5] text-[#737373] border-[#d4d4d4]' },
+    active: { label: '进行中', class: 'bg-[#22c55e]/10 text-[#16a34a] border-[#22c55e]/30' },
+    ended: { label: '已结束', class: 'bg-[#e5e5e5] text-[#737373] border-[#d4d4d4]' },
+  }
+  return map[schedule.session_status]
 }
 
 // 获取当前用户
@@ -62,6 +77,7 @@ const { data: classes } = useClasses()
 const queryParams = computed(() => ({
   class_name: selectedClass.value || undefined,
   day_of_week: selectedDay.value,
+  week_number: selectedWeek.value || undefined,
   // 教师只看到自己的课程，管理员看到所有
   teacher_id: isAdmin.value ? undefined : currentUser.value?.id
 }))
@@ -729,6 +745,13 @@ const handleBatchDelete = async () => {
                           >
                             {{ schedule.course_name }}
                           </h4>
+                          <span
+                            v-if="getStatusBadge(schedule)"
+                            class="text-xs px-2 py-0.5 rounded-full border flex-shrink-0"
+                            :class="getStatusBadge(schedule)!.class"
+                          >
+                            {{ getStatusBadge(schedule)!.label }}
+                          </span>
                         </div>
 
                         <!-- 时间信息 - 突出显示 -->
@@ -763,6 +786,41 @@ const handleBatchDelete = async () => {
                           </div>
                         </div>
 
+                        <!-- 调课/补课信息 -->
+                        <div
+                          v-if="schedule.adjustment && (schedule.session_status === 'adjusted' || schedule.session_status === 'makeup')"
+                          class="mt-3 space-y-1"
+                        >
+                          <div
+                            v-if="schedule.adjustment.new_date"
+                            class="text-xs text-[#737373] flex items-center gap-1.5"
+                          >
+                            <Calendar class="h-3 w-3 flex-shrink-0 text-[#3b82f6]" />
+                            <span>新日期：{{ schedule.adjustment.new_date }}</span>
+                          </div>
+                          <div
+                            v-if="schedule.adjustment.new_start_time && schedule.adjustment.new_end_time"
+                            class="text-xs text-[#737373] flex items-center gap-1.5"
+                          >
+                            <Clock class="h-3 w-3 flex-shrink-0 text-[#3b82f6]" />
+                            <span>新时间：{{ schedule.adjustment.new_start_time }} - {{ schedule.adjustment.new_end_time }}</span>
+                          </div>
+                          <div
+                            v-if="schedule.adjustment.new_classroom"
+                            class="text-xs text-[#737373] flex items-center gap-1.5"
+                          >
+                            <MapPin class="h-3 w-3 flex-shrink-0 text-[#3b82f6]" />
+                            <span>新教室：{{ schedule.adjustment.new_classroom }}</span>
+                          </div>
+                          <div
+                            v-if="schedule.adjustment.reason"
+                            class="text-xs text-[#737373] flex items-center gap-1.5"
+                          >
+                            <AlertCircle class="h-3 w-3 flex-shrink-0 text-[#3b82f6]" />
+                            <span>原因：{{ schedule.adjustment.reason }}</span>
+                          </div>
+                        </div>
+
                         <!-- 冲突提示 -->
                         <div
                           v-if="hasConflict(schedule)"
@@ -793,6 +851,12 @@ const handleBatchDelete = async () => {
                           </Badge>
                           <span class="text-xs text-[#a3a3a3]">
                             第{{ schedule.week_start }}-{{ schedule.week_end }}周
+                          </span>
+                          <span
+                            v-if="schedule.adjustment?.reason"
+                            class="text-xs text-[#737373] px-2 py-0.5 rounded-full bg-[#f5f5f5] border border-[#e5e5e5]"
+                          >
+                            {{ schedule.adjustment.reason }}
                           </span>
                         </div>
                       </div>

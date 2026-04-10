@@ -20,6 +20,18 @@ export interface CourseSchedule {
   week_start: number
   week_end: number
   created_at?: string
+  week_number: number
+  week_type_match: boolean
+  session_status: 'none' | 'active' | 'ended' | 'cancelled' | 'adjusted' | 'makeup' | 'skipped'
+  active_session_id?: number
+  adjustment?: {
+    type: string
+    reason?: string
+    new_date?: string
+    new_start_time?: string
+    new_end_time?: string
+    new_classroom?: string
+  }
 }
 
 export interface ImportResult {
@@ -36,6 +48,7 @@ export const schedulesApi = {
     class_name?: string
     teacher_id?: number
     day_of_week?: number
+    week_number?: number
   }): Promise<CourseSchedule[]> =>
     get('/schedules', params),
 

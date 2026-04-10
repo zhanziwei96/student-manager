@@ -13,6 +13,7 @@ export function useSchedules(params?: Ref<{
   class_name?: string
   teacher_id?: number
   day_of_week?: number
+  week_number?: number
 } | undefined>) {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: computed(() => ['schedules', params?.value]),
