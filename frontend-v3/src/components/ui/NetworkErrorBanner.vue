@@ -31,7 +31,7 @@ const emit = defineEmits<{
         <Button
           variant="ghost"
           size="sm"
-          class="text-white hover:bg-white/20"
+          class="text-white hover:bg-black/10"
           @click="emit('retry')"
         >
           <RefreshCw class="h-4 w-4 mr-1" />
@@ -40,7 +40,7 @@ const emit = defineEmits<{
         <Button
           variant="ghost"
           size="sm"
-          class="text-white hover:bg-white/20 p-1"
+          class="text-white hover:bg-black/10 p-1"
           @click="emit('dismiss')"
         >
           <X class="h-4 w-4" />

@@ -72,12 +72,12 @@ export function getInitials(name: string): string {
  */
 export function generateAvatarColor(name: string): string {
   const colors = [
-    'from-violet-500 to-purple-600',
-    'from-cyan-500 to-blue-600',
-    'from-emerald-500 to-teal-600',
-    'from-amber-500 to-orange-600',
-    'from-pink-500 to-rose-600',
-    'from-indigo-500 to-violet-600',
+    'bg-[#e5e5e5] text-[#7c3aed]',
+    'bg-[#e5e5e5] text-[#0891b2]',
+    'bg-[#e5e5e5] text-[#10b981]',
+    'bg-[#e5e5e5] text-[#f59e0b]',
+    'bg-[#e5e5e5] text-[#ec4899]',
+    'bg-[#e5e5e5] text-[#6366f1]',
   ]
   const index = name.charCodeAt(0) % colors.length
   return colors[index]

@@ -120,7 +120,7 @@ const getAvatarColor = (studentId: string): string => {
             <GraduationCap class="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 class="font-semibold text-black flex items-center gap-2">
+            <h3 class="font-medium text-black flex items-center gap-2">
               班级学生列表
               <Badge variant="secondary" class="text-xs bg-[#f5f5f5]">
                 {{ stats.total }}人
@@ -144,7 +144,7 @@ const getAvatarColor = (studentId: string): string => {
           <!-- 签到率徽章 -->
           <Badge
             v-if="stats.total > 0"
-            class="px-2.5 py-1 text-sm font-semibold border"
+            class="px-2.5 py-1 text-sm font-medium border"
             :class="getRateColor(checkinRate)"
           >
             {{ checkinRate }}% 签到率
@@ -209,21 +209,21 @@ const getAvatarColor = (studentId: string): string => {
 
             <!-- 状态指示器 -->
             <div class="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500/20 text-orange-400">
-              <span class="text-xs font-bold">!</span>
+              <span class="text-xs font-medium">!</span>
             </div>
 
             <!-- 学生信息 -->
             <div class="flex flex-col items-center text-center">
               <!-- 头像 -->
               <div
-                class="flex h-12 w-12 items-center justify-center rounded-full text-base font-bold mb-2"
+                class="flex h-12 w-12 items-center justify-center rounded-full text-base font-medium mb-2"
                 :class="getAvatarColor(student.student_id)"
               >
                 {{ getInitials(student.name) }}
               </div>
 
               <!-- 姓名 -->
-              <p class="text-sm font-semibold text-black truncate w-full">
+              <p class="text-sm font-medium text-black truncate w-full">
                 {{ student.name }}
               </p>
 
@@ -269,14 +269,14 @@ const getAvatarColor = (studentId: string): string => {
             <div class="flex flex-col items-center text-center">
               <!-- 头像 -->
               <div
-                class="flex h-12 w-12 items-center justify-center rounded-full text-base font-bold mb-2"
+                class="flex h-12 w-12 items-center justify-center rounded-full text-base font-medium mb-2"
                 :class="getAvatarColor(student.student_id)"
               >
                 {{ getInitials(student.name) }}
               </div>
 
               <!-- 姓名 -->
-              <p class="text-sm font-semibold text-green-400 truncate w-full">
+              <p class="text-sm font-medium text-green-400 truncate w-full">
                 {{ student.name }}
               </p>
 

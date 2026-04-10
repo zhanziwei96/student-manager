@@ -117,14 +117,11 @@ const formatTime = (time: string) => {
 
     <!-- Checkin Status Card - 动态主题 -->
     <Card
-      class="relative overflow-hidden p-4 md:p-6 mb-5"
-      :class="hasActiveSession ? '' : 'bg-[#fafafa] border-[#e5e5e5]'"
-      :style="hasActiveSession ? { backgroundColor: 'var(--card-success-bg)', borderColor: 'var(--card-success-border)', '--tw-shadow-color': 'var(--card-success-shadow)' } : {}"
+      :class="hasActiveSession ? 'bg-green-50 border-green-200' : 'bg-[#fafafa] border-[#e5e5e5]'" class="relative overflow-hidden p-4 md:p-6 mb-5"
     >
       <div class="flex items-center gap-3 md:gap-4 relative z-10">
         <div
-          class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0 transition-transform"
-          :style="hasActiveSession ? { backgroundColor: 'var(--card-success-icon-bg)', color: 'var(--card-success-icon-text)' } : { backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }"
+          :class="hasActiveSession ? 'bg-green-100 text-green-600' : 'bg-[#f5f5f5] text-[#a3a3a3]'" class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0"
         >
           <Clock
             v-if="!hasActiveSession"
@@ -156,8 +153,7 @@ const formatTime = (time: string) => {
         <Badge
           v-if="showCheckedInStatus"
           variant="success"
-          class="flex-shrink-0 border-0"
-          :style="{ backgroundColor: 'var(--card-success-icon-bg)', color: 'var(--card-success-icon-text)' }"
+          class="flex-shrink-0 border-0 bg-green-100 text-green-600"
         >
           <CalendarCheck class="mr-1 h-3 w-3" />
           已签到

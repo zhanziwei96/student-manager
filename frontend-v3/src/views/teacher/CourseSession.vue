@@ -906,11 +906,11 @@ const getSourceTypeBadge = (sourceType: string) => {
       <div class="py-4">
         <div class="flex justify-center gap-8 text-center">
           <div>
-            <p class="text-2xl font-bold text-green-400">{{ endConfirmStats.checkedIn }}</p>
+            <p class="text-2xl font-medium text-green-400">{{ endConfirmStats.checkedIn }}</p>
             <p class="text-sm text-[#737373]">已签到</p>
           </div>
           <div>
-            <p class="text-2xl font-bold text-red-400">{{ endConfirmStats.notCheckedIn }}</p>
+            <p class="text-2xl font-medium text-red-400">{{ endConfirmStats.notCheckedIn }}</p>
             <p class="text-sm text-[#737373]">未签到</p>
           </div>
         </div>

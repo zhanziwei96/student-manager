@@ -45,10 +45,6 @@ const statCards = computed(() => [
 ])
 
 
-const getTrendBadgeStyle = () => ({
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-})
 </script>
 
 <template>
@@ -112,8 +108,8 @@ const getTrendBadgeStyle = () => ({
           </div>
           <div class="mt-3 flex items-center gap-2">
             <Badge
-              class="text-xs px-2 py-0.5 border-0"
-              :style="getTrendBadgeStyle()"
+              class="text-xs px-2 py-0.5 border-0 bg-[#e5e5e5] text-black"
+              
             >
               {{ card.trend }}
             </Badge>

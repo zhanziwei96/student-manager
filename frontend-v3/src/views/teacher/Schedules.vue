@@ -389,7 +389,7 @@ const handleBatchDelete = async () => {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
       <div class="min-w-0">
-        <h1 class="text-xl sm:text-2xl font-bold text-black">
+        <h1 class="text-xl sm:text-2xl font-medium text-black">
           课表管理
         </h1>
         <p class="text-sm text-[#737373] mt-1">
@@ -445,7 +445,7 @@ const handleBatchDelete = async () => {
             <p class="text-sm text-[#737373] truncate">
               总课程数
             </p>
-            <p class="text-2xl font-bold text-black">
+            <p class="text-2xl font-medium text-black">
               {{ totalSchedules }}
             </p>
           </div>
@@ -462,7 +462,7 @@ const handleBatchDelete = async () => {
             <p class="text-sm text-[#737373] truncate">
               本周课程（第{{ currentWeek }}周）
             </p>
-            <p class="text-2xl font-bold text-black">
+            <p class="text-2xl font-medium text-black">
               {{ thisWeekSchedules }}
             </p>
           </div>
@@ -492,7 +492,7 @@ const handleBatchDelete = async () => {
               冲突检测
             </p>
             <p 
-              class="text-2xl font-bold"
+              class="text-2xl font-medium"
               :class="conflictCount > 0 ? 'text-red-400' : 'text-black'"
             >
               {{ conflictCount }}
@@ -524,7 +524,7 @@ const handleBatchDelete = async () => {
               未分配教师
             </p>
             <p 
-              class="text-2xl font-bold"
+              class="text-2xl font-medium"
               :class="unassignedSchedules > 0 ? 'text-orange-400' : 'text-black'"
             >
               {{ unassignedSchedules }}
@@ -603,10 +603,10 @@ const handleBatchDelete = async () => {
           >
             <!-- Day Header -->
             <div class="flex items-center gap-3 mb-4">
-              <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/20 text-sm font-bold text-primary shadow-lg shadow-primary/10">
+              <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/20 text-sm font-medium text-primary">
                 {{ day.label.charAt(1) }}
               </div>
-              <h3 class="text-lg font-semibold text-black">
+              <h3 class="text-lg font-medium text-black">
                 {{ day.label }}
               </h3>
               <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#f5f5f5] text-[#737373] border border-[#e5e5e5]">
@@ -704,7 +704,7 @@ const handleBatchDelete = async () => {
                     <!-- 冲突标记 -->
                     <div
                       v-if="hasConflict(schedule)"
-                      class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-lg shadow-red-500/30"
+                      class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white"
                       title="存在冲突"
                     >
                       <AlertTriangle class="h-3.5 w-3.5" />
@@ -724,7 +724,7 @@ const handleBatchDelete = async () => {
                             />
                           </div>
                           <h4
-                            class="font-semibold text-base truncate"
+                            class="font-medium text-base truncate"
                             :class="hasConflict(schedule) ? 'text-red-400' : 'text-black'"
                           >
                             {{ schedule.course_name }}
@@ -892,10 +892,10 @@ const handleBatchDelete = async () => {
     <!-- 底部批量操作栏 -->
     <div
       v-if="showBatchActions"
-      class="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#e5e5e5] bg-[#030307] px-4 py-3 shadow-lg"
+      class="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#e5e5e5] bg-white px-4 py-3"
     >
       <span class="text-sm text-[#525252]">
-        已选择 <span class="font-bold text-primary">{{ selectedScheduleIds.length }}</span> 门课程
+        已选择 <span class="font-medium text-primary">{{ selectedScheduleIds.length }}</span> 门课程
       </span>
       <div class="h-4 w-px bg-[#e5e5e5]" />
       <Button

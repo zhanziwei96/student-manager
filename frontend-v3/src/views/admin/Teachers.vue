@@ -282,14 +282,14 @@ const handleResetPassword = async () => {
           >
             <UserCircle
               class="h-6 w-6"
-              :style="{ color: 'var(--card-indigo-icon-text)' }"
+              :style="{ color: 'black' }"
             />
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="truncate font-medium text-black">
               {{ teacher.name }}
             </h3>
-            <p class="text-sm text-[var(--color-text-tertiary)]">
+            <p class="text-sm text-[#a3a3a3]">
               @{{ teacher.username }}
             </p>
             <div class="mt-2 flex items-center gap-2">
@@ -301,12 +301,12 @@ const handleResetPassword = async () => {
         </div>
 
         <!-- 任课信息展示 -->
-        <div class="relative z-10 mt-4 rounded-xl bg-[var(--color-background-card)] p-3 border border-[var(--color-divider)]">
-          <div class="flex items-center gap-2 text-[var(--color-text-tertiary)]">
+        <div class="relative z-10 mt-4 rounded-xl bg-[white] p-3 border border-[#e5e5e5]">
+          <div class="flex items-center gap-2 text-[#a3a3a3]">
             <BookOpen class="h-4 w-4" />
             <span class="text-xs">任课信息</span>
           </div>
-          <p class="text-sm text-[var(--color-text-secondary)] mt-1">
+          <p class="text-sm text-[#737373] mt-1">
             管理班级和课表安排
           </p>
         </div>
@@ -336,7 +336,7 @@ const handleResetPassword = async () => {
             class="hover:bg-red-500/10"
             @click="openDeleteDialog(teacher)"
           >
-            <Trash2 class="h-4 w-4 text-[var(--color-error)]" />
+            <Trash2 class="h-4 w-4 text-[#ef4444]" />
           </Button>
         </div>
         <div class="relative z-10 mt-2 flex gap-2">
@@ -365,11 +365,11 @@ const handleResetPassword = async () => {
     <!-- Empty state -->
     <div
       v-else
-      class="flex h-64 flex-col items-center justify-center text-[var(--color-text-tertiary)]"
+      class="flex h-64 flex-col items-center justify-center text-[#a3a3a3]"
     >
       <UserCircle class="mb-4 h-12 w-12 opacity-50" />
       <p>暂无教师数据</p>
-      <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+      <p class="mt-1 text-sm text-[#737373]">
         点击右上角按钮添加教师
       </p>
     </div>

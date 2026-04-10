@@ -34,7 +34,7 @@ const emit = defineEmits<{
 // 图标背景色和文字色映射
 const iconColorClasses = computed(() => {
   const colors: Record<CardColor, { bg: string; text: string }> = {
-    indigo: { bg: 'bg-indigo-100', text: 'text-indigo-600' },
+    indigo: { bg: 'bg-[#e5e5e5]', text: 'text-[#404040]' },
     neutral: { bg: 'bg-[#e5e5e5]', text: 'text-[#404040]' },
     success: { bg: 'bg-green-100', text: 'text-green-600' },
     warning: { bg: 'bg-amber-100', text: 'text-amber-600' },
@@ -46,7 +46,7 @@ const iconColorClasses = computed(() => {
 // 趋势标签色映射
 const trendColorClasses = computed(() => {
   const colors: Record<CardColor, string> = {
-    indigo: 'bg-indigo-100 text-indigo-600',
+    indigo: 'bg-[#e5e5e5] text-[#404040]',
     neutral: 'bg-[#e5e5e5] text-[#404040]',
     success: 'bg-green-100 text-green-600',
     warning: 'bg-amber-100 text-amber-600',

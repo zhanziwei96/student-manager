@@ -166,7 +166,7 @@ const handleAddStudent = async () => {
                 >
                   <span
                     class="text-sm font-medium"
-                    :style="{ color: 'var(--card-indigo-icon-text)' }"
+                    :style="{ color: 'black' }"
                   >
                     {{ student.name.charAt(0) }}
                   </span>
@@ -179,39 +179,39 @@ const handleAddStudent = async () => {
                   {{ student.is_account_enabled ? '启用' : '禁用' }}
                 </Badge>
               </div>
-              <p class="text-sm text-[var(--color-text-tertiary)] mt-1">{{ student.student_id }}</p>
-              <p class="text-sm text-[var(--color-text-muted)] mt-0.5 truncate">{{ student.class_name }}</p>
+              <p class="text-sm text-[#a3a3a3] mt-1">{{ student.student_id }}</p>
+              <p class="text-sm text-[#737373] mt-0.5 truncate">{{ student.class_name }}</p>
             </div>
             <div class="text-right flex-shrink-0 ml-4">
-              <span class="text-xl font-medium text-[var(--color-primary)]">{{ student.score }}</span>
-              <p class="text-xs text-[var(--color-text-muted)]">分</p>
+              <span class="text-xl font-medium text-[black]">{{ student.score }}</span>
+              <p class="text-xs text-[#737373]">分</p>
             </div>
           </div>
         </Card>
       </div>
 
       <!-- Desktop: Table -->
-      <Card class="hidden lg:block overflow-hidden border-[var(--color-border)]">
+      <Card class="hidden lg:block overflow-hidden border-[#e5e5e5]">
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead>
-              <tr class="border-b border-[var(--color-divider)] bg-[var(--color-background-card)]">
-                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
+              <tr class="border-b border-[#e5e5e5] bg-[white]">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   学号
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   姓名
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   班级
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   分数
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   状态
                 </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">
+                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   操作
                 </th>
               </tr>
@@ -220,18 +220,18 @@ const handleAddStudent = async () => {
               <tr
                 v-for="student in filteredStudents"
                 :key="student.id"
-                class="border-b border-[var(--color-divider)] transition-colors hover:bg-[var(--color-background-hover)]"
+                class="border-b border-[#e5e5e5] transition-colors hover:bg-[#f5f5f5]"
               >
-                <td class="px-4 py-3 text-sm text-[var(--color-text-tertiary)]">
+                <td class="px-4 py-3 text-sm text-[#a3a3a3]">
                   {{ student.student_id }}
                 </td>
                 <td class="px-4 py-3 text-sm font-medium text-black">
                   {{ student.name }}
                 </td>
-                <td class="px-4 py-3 text-sm text-[var(--color-text-tertiary)]">
+                <td class="px-4 py-3 text-sm text-[#a3a3a3]">
                   {{ student.class_name }}
                 </td>
-                <td class="px-4 py-3 text-sm font-medium text-[var(--color-primary)]">
+                <td class="px-4 py-3 text-sm font-medium text-[black]">
                   {{ student.score }}
                 </td>
                 <td class="px-4 py-3">
@@ -240,7 +240,7 @@ const handleAddStudent = async () => {
                   </Badge>
                 </td>
                 <td class="px-4 py-3">
-                  <span class="text-[var(--color-text-muted)] text-sm">-</span>
+                  <span class="text-[#737373] text-sm">-</span>
                 </td>
               </tr>
             </tbody>
@@ -261,11 +261,11 @@ const handleAddStudent = async () => {
             id="studentId"
             v-model="newStudent.student_id"
             placeholder="输入学号"
-            :class="addFormErrors.student_id ? 'border-[var(--color-error)]' : ''"
+            :class="addFormErrors.student_id ? 'border-[#ef4444]' : ''"
           />
           <p
             v-if="addFormErrors.student_id"
-            class="text-sm text-[var(--color-error)]"
+            class="text-sm text-[#ef4444]"
           >
             {{ addFormErrors.student_id }}
           </p>
@@ -276,11 +276,11 @@ const handleAddStudent = async () => {
             id="studentName"
             v-model="newStudent.name"
             placeholder="输入姓名"
-            :class="addFormErrors.name ? 'border-[var(--color-error)]' : ''"
+            :class="addFormErrors.name ? 'border-[#ef4444]' : ''"
           />
           <p
             v-if="addFormErrors.name"
-            class="text-sm text-[var(--color-error)]"
+            class="text-sm text-[#ef4444]"
           >
             {{ addFormErrors.name }}
           </p>
@@ -291,11 +291,11 @@ const handleAddStudent = async () => {
             id="className"
             v-model="newStudent.class_name"
             placeholder="输入班级名称"
-            :class="addFormErrors.class_name ? 'border-[var(--color-error)]' : ''"
+            :class="addFormErrors.class_name ? 'border-[#ef4444]' : ''"
           />
           <p
             v-if="addFormErrors.class_name"
-            class="text-sm text-[var(--color-error)]"
+            class="text-sm text-[#ef4444]"
           >
             {{ addFormErrors.class_name }}
           </p>

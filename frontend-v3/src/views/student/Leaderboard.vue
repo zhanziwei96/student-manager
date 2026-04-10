@@ -101,7 +101,7 @@ const maskName = (name: string, studentId: string) => {
             class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
             :class="'bg-primary/10 text-primary'"
           >
-            <User class="h-5 w-5" :style="{ color: 'var(--card-indigo-icon-text)' }" />
+            <User class="h-5 w-5" :style="{ color: 'black' }" />
           </div>
           <div>
             <p class="text-sm text-[#737373]">我的排名</p>
@@ -111,7 +111,7 @@ const maskName = (name: string, studentId: string) => {
           </div>
         </div>
         <div class="text-right">
-          <p class="text-2xl font-medium text-[var(--card-indigo-icon-text)]">
+          <p class="text-2xl font-medium text-[black]">
             {{ myRank.score }}
           </p>
           <p class="text-sm text-[#a3a3a3]">分</p>
