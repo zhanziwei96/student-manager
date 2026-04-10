@@ -232,3 +232,50 @@ def test_schedule_api_smoke(admin_client):
     # 3. 下载模板
     response = admin_client.get("/api/v1/schedules/template")
     assert response.status_code == 200
+
+
+def test_get_schedules_includes_week_data(teacher_client, create_test_schedule):
+    """测试获取课表列表包含调课/课堂状态数据"""
+    from datetime import datetime
+
+    schedule = create_test_schedule(course_name="状态测试课", day_of_week=1)
+    current_week = 5
+
+    # 先创建一条停课调整记录
+    teacher_client.post("/api/v1/schedule-adjustments", json={
+        "schedule_id": schedule.id,
+        "week_number": current_week,
+        "type": "cancel",
+        "reason": "测试停课"
+    })
+
+    response = teacher_client.get(f"/api/v1/schedules?week_number={current_week}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+
+    item = next((s for s in data["data"] if s["id"] == schedule.id), None)
+    assert item is not None
+    assert item["week_number"] == current_week
+    assert "week_type_match" in item
+    assert "session_status" in item
+    assert "active_session_id" in item
+    assert "adjustment" in item
+    assert item["session_status"] == "cancelled"
+    assert item["adjustment"] is not None
+    assert item["adjustment"]["type"] == "cancel"
+
+
+def test_get_schedules_default_week_uses_current(teacher_client, create_test_schedule):
+    """测试不传 week_number 时默认使用当前周"""
+    schedule = create_test_schedule(course_name="默认周测试", day_of_week=1)
+
+    response = teacher_client.get("/api/v1/schedules")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+
+    item = next((s for s in data["data"] if s["id"] == schedule.id), None)
+    assert item is not None
+    assert "week_number" in item
+    assert "session_status" in item

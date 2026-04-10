@@ -36,6 +36,15 @@ class CourseScheduleResponse(CourseScheduleBase):
     created_at: Optional[str] = None
 
 
+class CourseScheduleWithWeekResponse(CourseScheduleResponse):
+    """课表响应模型（包含周次状态数据）"""
+    week_number: int
+    week_type_match: bool
+    session_status: str
+    active_session_id: Optional[int] = None
+    adjustment: Optional[dict] = None
+
+
 class CourseScheduleImport(SQLModel):
     """课表导入数据模型"""
     course_name: str
