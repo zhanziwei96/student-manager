@@ -12,13 +12,18 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     """
     处理 FastAPI HTTPException
     将默认的 {"detail": "..."} 转换为统一的 {"success": false, "message": "..."}
+    如果 detail 是字典，直接展开其字段到响应中
     """
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
+    if isinstance(exc.detail, dict):
+        content = {ApiResponseConst.SUCCESS: False, **exc.detail}
+    else:
+        content = {
             ApiResponseConst.SUCCESS: False,
             ApiResponseConst.MESSAGE: exc.detail
         }
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=content
     )
 
 

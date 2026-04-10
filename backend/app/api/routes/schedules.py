@@ -21,7 +21,7 @@ from app.core.upload import (
 )
 from app.api.deps import get_current_user, require_login, require_admin, require_admin_or_teacher
 from app.crud import get_schedules as crud_get_schedules, delete_schedule as crud_delete_schedule
-from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
+from app.models.course_schedule import CourseSchedule, CourseScheduleResponse, CourseScheduleWithWeekResponse
 from app.models.course_session import CourseSession
 from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst,
@@ -40,14 +40,79 @@ def _get_current_week_number():
     week = (now - semester_start).days // 7 + 1
     return max(1, week)
 
+def _enrich_schedule_with_week_data(
+    session: Session, schedule: CourseSchedule, week_number: int
+) -> dict:
+    """为课表记录追加指定周次的调课/课堂状态数据"""
+    from app.crud.schedule_adjustment import get_adjustment
+    from app.crud.course_session import get_course_sessions_by_schedule_and_week
+
+    schedule_data = schedule.model_dump()
+    schedule_data["week_number"] = week_number
+
+    week_type = getattr(schedule, "week_type", "all")
+    week_type_match = True
+    session_status = "none"
+    active_session_id = None
+    adjustment = None
+
+    if week_type == "odd" and week_number % 2 == 0:
+        week_type_match = False
+        session_status = "skipped"
+    elif week_type == "even" and week_number % 2 == 1:
+        week_type_match = False
+        session_status = "skipped"
+
+    if week_type_match:
+        adj = get_adjustment(session, schedule.id, week_number)
+        if adj:
+            adjustment = {
+                "type": adj.type,
+                "reason": adj.reason,
+            }
+            if adj.type in ("modify", "makeup"):
+                adjustment.update({
+                    "new_date": adj.new_date.isoformat() if adj.new_date else None,
+                    "new_start_time": adj.new_start_time,
+                    "new_end_time": adj.new_end_time,
+                    "new_classroom": adj.new_classroom,
+                })
+
+            if adj.type == "cancel":
+                session_status = "cancelled"
+            elif adj.type == "modify":
+                session_status = "adjusted"
+            elif adj.type == "makeup":
+                session_status = "makeup"
+        else:
+            cs = get_course_sessions_by_schedule_and_week(
+                session, schedule.id, week_number
+            )
+            if cs:
+                if cs.status == "active":
+                    session_status = "active"
+                    active_session_id = cs.id
+                elif cs.status == "ended":
+                    session_status = "ended"
+                    active_session_id = cs.id
+            else:
+                session_status = "none"
+
+    schedule_data["week_type_match"] = week_type_match
+    schedule_data["session_status"] = session_status
+    schedule_data["active_session_id"] = active_session_id
+    schedule_data["adjustment"] = adjustment
+    return schedule_data
+
+
 
 # 响应模型定义
-class ScheduleListResponse(ApiListResponse[CourseScheduleResponse]):
+class ScheduleListResponse(ApiListResponse[CourseScheduleWithWeekResponse]):
     """课表列表响应"""
     pass
 
 
-class ScheduleTodayResponse(ApiListResponse[CourseScheduleResponse]):
+class ScheduleTodayResponse(ApiListResponse[CourseScheduleWithWeekResponse]):
     """今日课表响应"""
     pass
 
@@ -73,10 +138,11 @@ async def get_schedules(
     class_name: Optional[str] = Query(None, description="按班级筛选"),
     teacher_id: Optional[int] = Query(None, description="按教师筛选"),
     day_of_week: Optional[int] = Query(None, description="按星期筛选(1-7)"),
+    week_number: Optional[int] = Query(None, description="指定周次(1-20)，不传则使用当前周"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取课表列表"""
+    """获取课表列表（包含调课/课堂状态）"""
     query = select(CourseSchedule)
     
     # 教师只能查看自己的课表（除非有admin角色）
@@ -94,10 +160,11 @@ async def get_schedules(
     query = query.order_by(CourseSchedule.day_of_week, CourseSchedule.start_time)
     
     schedules = session.exec(query).all()
+    target_week = week_number if week_number is not None else _get_current_week_number()
     
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [s.model_dump() for s in schedules]
+        ApiResponseConst.DATA: [_enrich_schedule_with_week_data(session, s, target_week) for s in schedules]
     }
 
 
@@ -107,10 +174,6 @@ async def get_today_schedules(
     user: dict = Depends(get_current_user)
 ):
     """获取今日课表"""
-    from app.crud.schedule_adjustment import get_adjustment
-    from app.crud.course_session import get_course_sessions_by_schedule_and_week
-
-    # 获取今天是星期几 (1-7)
     today = datetime.now().isoweekday()
     current_week = _get_current_week_number()
 
@@ -123,67 +186,7 @@ async def get_today_schedules(
     query = query.order_by(CourseSchedule.start_time)
     schedules = session.exec(query).all()
 
-    data = []
-    for schedule in schedules:
-        schedule_data = schedule.model_dump()
-        schedule_data["week_number"] = current_week
-
-        # 检查 week_type 是否匹配当前周
-        week_type = getattr(schedule, "week_type", "all")
-        week_type_match = True
-        session_status = "none"
-        active_session_id = None
-        adjustment = None
-
-        if week_type == "odd" and current_week % 2 == 0:
-            week_type_match = False
-            session_status = "skipped"
-        elif week_type == "even" and current_week % 2 == 1:
-            week_type_match = False
-            session_status = "skipped"
-
-        if week_type_match:
-            # 查询调整记录
-            adj = get_adjustment(session, schedule.id, current_week)
-            if adj:
-                adjustment = {
-                    "type": adj.type,
-                    "reason": adj.reason,
-                }
-                if adj.type in ("modify", "makeup"):
-                    adjustment.update({
-                        "new_date": adj.new_date.isoformat() if adj.new_date else None,
-                        "new_start_time": adj.new_start_time,
-                        "new_end_time": adj.new_end_time,
-                        "new_classroom": adj.new_classroom,
-                    })
-
-                if adj.type == "cancel":
-                    session_status = "cancelled"
-                elif adj.type == "modify":
-                    session_status = "adjusted"
-                elif adj.type == "makeup":
-                    session_status = "makeup"
-            else:
-                # 查询课程会话
-                cs = get_course_sessions_by_schedule_and_week(
-                    session, schedule.id, current_week
-                )
-                if cs:
-                    if cs.status == "active":
-                        session_status = "active"
-                        active_session_id = cs.id
-                    elif cs.status == "ended":
-                        session_status = "ended"
-                        active_session_id = cs.id
-                else:
-                    session_status = "none"
-
-        schedule_data["week_type_match"] = week_type_match
-        schedule_data["session_status"] = session_status
-        schedule_data["active_session_id"] = active_session_id
-        schedule_data["adjustment"] = adjustment
-        data.append(schedule_data)
+    data = [_enrich_schedule_with_week_data(session, s, current_week) for s in schedules]
 
     return {
         ApiResponseConst.SUCCESS: True,

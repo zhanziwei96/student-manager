@@ -12,7 +12,7 @@ from app.core.jwt import get_current_user
 from app.models import CourseSchedule
 from app.models.constants import ApiResponseConst, ApiResponse, ApiSuccessResponse
 from app.crud.schedule_adjustment import (
-    get_adjustments, create_adjustment, has_active_session, has_ended_session
+    get_adjustment, get_adjustments, create_adjustment, has_active_session, has_ended_session
 )
 from app.crud.course_session import start_course_session
 
@@ -52,6 +52,38 @@ def create_schedule_adjustment(
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课表不存在")
     if role == "teacher" and schedule.teacher_id != user_id:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权调整此课程")
+
+    # 周次范围验证
+    if data.week_number < 1 or data.week_number > 20:
+        raise HTTPException(
+            status_code=HttpStatus.BAD_REQUEST,
+            detail="周次必须在 1-20 范围内"
+        )
+
+    # 重复检查：同一课表同一周次只能有一条调整记录
+    existing_adjustment = get_adjustment(session, data.schedule_id, data.week_number)
+    if existing_adjustment:
+        raise HTTPException(
+            status_code=HttpStatus.CONFLICT,
+            detail={
+                "success": False,
+                "message": "该课表在当前周次已存在调课记录",
+                "data": {
+                    "id": existing_adjustment.id,
+                    "schedule_id": existing_adjustment.schedule_id,
+                    "week_number": existing_adjustment.week_number,
+                    "type": existing_adjustment.type,
+                    "reason": existing_adjustment.reason,
+                    "new_date": str(existing_adjustment.new_date) if existing_adjustment.new_date else None,
+                    "new_start_time": existing_adjustment.new_start_time,
+                    "new_end_time": existing_adjustment.new_end_time,
+                    "new_classroom": existing_adjustment.new_classroom,
+                    "generated_session_id": existing_adjustment.generated_session_id,
+                    "created_by": existing_adjustment.created_by,
+                    "created_at": existing_adjustment.created_at.isoformat() if existing_adjustment.created_at else None,
+                }
+            }
+        )
 
     if data.type == "cancel":
         # 修复：自动处理已存在的活跃或已安排的课堂

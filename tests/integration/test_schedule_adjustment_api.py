@@ -237,3 +237,56 @@ class TestScheduleAdjustmentAPI:
             "reason": "不想上课"
         })
         assert response.status_code == 403
+
+    def test_create_adjustment_invalid_week_number(self, teacher_client, create_test_schedule):
+        """创建调课时周次必须在 1-20 范围内"""
+        schedule = create_test_schedule(course_name="语文", class_name="一班")
+
+        # 周次为 0
+        response = teacher_client.post("/api/v1/schedule-adjustments", json={
+            "schedule_id": schedule.id,
+            "week_number": 0,
+            "type": "cancel",
+            "reason": "测试"
+        })
+        assert response.status_code == 400
+        assert "1-20" in response.text
+
+        # 周次为 21
+        response = teacher_client.post("/api/v1/schedule-adjustments", json={
+            "schedule_id": schedule.id,
+            "week_number": 21,
+            "type": "cancel",
+            "reason": "测试"
+        })
+        assert response.status_code == 400
+        assert "1-20" in response.text
+
+    def test_create_duplicate_adjustment_returns_409(self, teacher_client, create_test_schedule):
+        """同一课表同一周次重复创建调课应返回 409 并包含已有记录"""
+        schedule = create_test_schedule(course_name="美术", class_name="一班")
+
+        # 第一次创建成功
+        response = teacher_client.post("/api/v1/schedule-adjustments", json={
+            "schedule_id": schedule.id,
+            "week_number": 8,
+            "type": "cancel",
+            "reason": "第一次停课"
+        })
+        assert response.status_code == 200
+
+        # 第二次重复创建应返回 409
+        response = teacher_client.post("/api/v1/schedule-adjustments", json={
+            "schedule_id": schedule.id,
+            "week_number": 8,
+            "type": "modify",
+            "reason": "重复调课"
+        })
+        assert response.status_code == 409
+        data = response.json()
+        assert data["success"] is False
+        assert "已存在调课记录" in data.get("message", "")
+        assert "data" in data
+        assert data["data"]["schedule_id"] == schedule.id
+        assert data["data"]["week_number"] == 8
+        assert data["data"]["type"] == "cancel"
