@@ -39,6 +39,21 @@ function isApiResponse(data: unknown): data is ApiResponse<unknown> {
 }
 
 /**
+ * API 错误类 - 携带后端返回的状态码和完整数据
+ */
+export class ApiError extends Error {
+  statusCode: number
+  data?: unknown
+
+  constructor(message: string, statusCode: number, data?: unknown) {
+    super(message)
+    this.name = 'ApiError'
+    this.statusCode = statusCode
+    this.data = data
+  }
+}
+
+/**
  * 创建基础 API 客户端
  */
 export const api = ofetch.create({
@@ -50,7 +65,15 @@ export const api = ofetch.create({
 
   async onResponseError({ response, request }) {
     // 优先使用后端返回的错误消息
-    const data = response._data
+    let data = response._data
+    // 在测试/某些环境中 _data 可能未填充，尝试手动解析 response body
+    if (data === undefined && response.json) {
+      try {
+        data = await response.json()
+      } catch {
+        // ignored
+      }
+    }
     const message =
       (isApiResponse(data) ? data.message : undefined) ||
       response.statusText ||
@@ -61,8 +84,8 @@ export const api = ofetch.create({
       window.location.href = '/login'
     }
 
-    // 抛出错误，让调用方可以捕获
-    throw new Error(message)
+    // 抛出错误，让调用方可以捕获完整数据
+    throw new ApiError(message, response.status, isApiResponse(data) ? data : undefined)
   },
 })
 

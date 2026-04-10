@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { Dialog, Button, Input } from '@/components/ui'
-import { useCreateScheduleAdjustment } from '@/composables'
+import { useCreateScheduleAdjustment, useToast } from '@/composables'
+import { ApiError } from '@/lib/api'
 import type { CreateScheduleAdjustmentRequest } from '@/types'
 
 interface ScheduleInfo {
@@ -35,6 +36,7 @@ const newEndTime = ref('')
 const newClassroom = ref('')
 
 const { mutateAsync: createAdjustment, isPending } = useCreateScheduleAdjustment()
+const { error: showErrorToast } = useToast()
 
 // 当弹窗打开时重置表单
 watch(() => props.open, (isOpen) => {
@@ -86,8 +88,22 @@ const handleSubmit = async () => {
     await createAdjustment(payload)
     emit('success')
     handleClose()
-  } catch {
-    // 错误由 mutation 的 error 状态处理，可在外层展示
+  } catch (err: unknown) {
+    let msg = '创建失败'
+    if (err instanceof ApiError) {
+      msg = err.message
+      if (err.statusCode === 409 && err.data && typeof err.data === 'object') {
+        const data = (err.data as Record<string, unknown>).data as Record<string, unknown> | undefined
+        if (data) {
+          const typeMap: Record<string, string> = { cancel: '停课', modify: '调课', makeup: '补课' }
+          const typeLabel = typeMap[String(data.type)] || String(data.type)
+          msg = `${err.message}（已有${typeLabel}记录${data.reason ? '：' + data.reason : ''}）`
+        }
+      }
+    } else if (err instanceof Error) {
+      msg = err.message
+    }
+    showErrorToast(msg)
   }
 }
 </script>
