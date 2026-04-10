@@ -40,15 +40,15 @@ const emit = defineEmits<{
     class="flex items-center justify-center"
     :style="{ height: loadingHeight }"
   >
-    <Loader2 class="h-8 w-8 animate-spin text-primary" />
+    <Loader2 class="h-8 w-8 animate-spin text-[#737373]" />
   </div>
 
   <!-- 错误状态 -->
   <Card
     v-else-if="error"
-    class="border-red-500/20 bg-red-500/10 p-4"
+    class="border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] p-4"
   >
-    <div class="flex items-center gap-3 text-red-400">
+    <div class="flex items-center gap-3 text-[#dc2626]">
       <AlertCircle class="h-5 w-5" />
       <div class="flex-1">
         <p class="font-medium">
@@ -59,7 +59,7 @@ const emit = defineEmits<{
         </p>
       </div>
       <button
-        class="rounded-md px-3 py-1 text-sm hover:bg-red-500/20"
+        class="rounded-full px-3 py-1 text-sm hover:bg-[rgba(239,68,68,0.15)]"
         @click="emit('retry')"
       >
         重试
@@ -70,9 +70,9 @@ const emit = defineEmits<{
   <!-- 空数据状态 -->
   <Card
     v-else-if="!hasData"
-    class="border-white/10 bg-white/[0.02] p-8 text-center"
+    class="border-[#e5e5e5] bg-[#fafafa] p-8 text-center"
   >
-    <p class="text-white/60">
+    <p class="text-[#737373]">
       {{ emptyText }}
     </p>
   </Card>

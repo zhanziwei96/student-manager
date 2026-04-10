@@ -37,11 +37,11 @@ const isPositive = props.score > 0
 
 <template>
   <button
-    class="group relative flex flex-col items-center gap-1 rounded-lg py-2.5 px-1 text-xs transition-colors disabled:opacity-50"
+    class="group relative flex flex-col items-center gap-1 rounded-xl py-2.5 px-1 text-xs transition-colors disabled:opacity-50"
     :class="[
       isPositive
-        ? 'bg-success-soft-muted text-success-soft hover:bg-success-soft/25'
-        : 'bg-error-soft-muted text-error-soft hover:bg-error-soft/25'
+        ? 'bg-[rgba(34,197,94,0.15)] text-[#16a34a] hover:bg-[rgba(34,197,94,0.25)]'
+        : 'bg-[rgba(239,68,68,0.15)] text-[#dc2626] hover:bg-[rgba(239,68,68,0.25)]'
     ]"
     :disabled="disabled"
     @click="emit('click')"

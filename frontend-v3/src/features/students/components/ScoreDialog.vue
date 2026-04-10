@@ -58,9 +58,9 @@ const handleCancel = () => {
     <div class="space-y-4">
       <p
         v-if="student"
-        class="text-white/60"
+        class="text-[#737373]"
       >
-        更新 <span class="font-medium text-white">{{ student.name }}</span> 的分数
+        更新 <span class="font-medium text-black">{{ student.name }}</span> 的分数
       </p>
       <div class="space-y-2">
         <Label for="scoreChange">分数变化</Label>
