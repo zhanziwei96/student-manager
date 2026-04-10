@@ -2,7 +2,7 @@
 import { computed, type Component, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores'
-import { Button, ToastContainer, MobileDrawer, BottomNav } from '@/components/ui'
+import { ToastContainer, MobileDrawer, BottomNav } from '@/components/ui'
 import {
   LayoutDashboard,
   Users,

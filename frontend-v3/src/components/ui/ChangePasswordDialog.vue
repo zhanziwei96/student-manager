@@ -6,7 +6,7 @@ import { useToast } from '@/composables'
 import { getErrorMessage } from '@/lib/error'
 import { Dialog, Input, Label, Button } from '@/components/ui'
 
-const props = defineProps<{
+defineProps<{
   open: boolean
 }>()
 
