@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from app.core.timezone import get_now
 from app.models.group import (
     GroupTask, GroupTaskDimension, EvaluationAssignment,
-    GroupEvaluationScore, Group
+    GroupEvaluationScore, Group, GroupMember
 )
 
 
@@ -16,6 +16,8 @@ def create_group_task(
     created_by: str,
     dimensions: List[str],
 ) -> GroupTask:
+    if not dimensions:
+        raise ValueError("评分维度不能为空")
     task = GroupTask(
         class_name=class_name,
         title=title,
@@ -60,6 +62,9 @@ def start_group_task(session: Session, task_id: int) -> Optional[GroupTask]:
     ).all()
     if len(groups) < 2:
         raise ValueError("班级小组数量不足，无法启动互评")
+    dimensions = get_task_dimensions(session, task_id)
+    if len(dimensions) == 0:
+        raise ValueError("任务未配置评分维度，无法启动互评")
     # 生成互评指派
     sorted_groups = sorted(groups, key=lambda g: g.id)
     n = len(sorted_groups)
@@ -102,6 +107,17 @@ def get_evaluation_assignments(session: Session, task_id: int, evaluator_group_i
     ).all()
 
 
+def _validate_dimension_belongs_to_task(session: Session, task_id: int, dimension_id: int) -> None:
+    dim = session.exec(
+        select(GroupTaskDimension).where(
+            GroupTaskDimension.id == dimension_id,
+            GroupTaskDimension.task_id == task_id,
+        )
+    ).first()
+    if not dim:
+        raise ValueError("评分维度不存在或不属于当前任务")
+
+
 def submit_teacher_score(
     session: Session,
     task_id: int,
@@ -110,6 +126,7 @@ def submit_teacher_score(
     score: int,
     teacher_username: str,
 ) -> GroupEvaluationScore:
+    _validate_dimension_belongs_to_task(session, task_id, dimension_id)
     # 先删除旧记录（如果存在）
     old = session.exec(
         select(GroupEvaluationScore).where(
@@ -142,8 +159,33 @@ def submit_student_scores(
     student_id: str,
     scores: Dict[int, int],
 ) -> List[GroupEvaluationScore]:
+    task = session.get(GroupTask, task_id)
+    if not task:
+        raise ValueError("任务不存在")
+    # 验证学生所在小组是否有对被评小组的评估权限
+    evaluator_group = session.exec(
+        select(Group)
+        .join(GroupMember, GroupMember.group_id == Group.id)
+        .where(
+            GroupMember.student_id == student_id,
+            Group.class_name == task.class_name,
+            Group.is_active.is_(True),
+        )
+    ).first()
+    if not evaluator_group:
+        raise ValueError("学生不在任何活跃小组中")
+    assignment = session.exec(
+        select(EvaluationAssignment).where(
+            EvaluationAssignment.task_id == task_id,
+            EvaluationAssignment.evaluator_group_id == evaluator_group.id,
+            EvaluationAssignment.target_group_id == target_group_id,
+        )
+    ).first()
+    if not assignment:
+        raise ValueError("无评估权限")
     records = []
     for dim_id, score in scores.items():
+        _validate_dimension_belongs_to_task(session, task_id, dim_id)
         old = session.exec(
             select(GroupEvaluationScore).where(
                 GroupEvaluationScore.task_id == task_id,
