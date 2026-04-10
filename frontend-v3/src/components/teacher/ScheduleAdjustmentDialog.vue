@@ -49,9 +49,9 @@ watch(() => props.open, (isOpen) => {
 })
 
 const typeOptions: { value: AdjustmentType; label: string; color: string }[] = [
-  { value: 'cancel', label: '停课', color: 'text-red-400 bg-red-500/10 border-red-500/30' },
-  { value: 'modify', label: '调课', color: 'text-indigo-300 bg-indigo-500/20 border-indigo-500/40' },
-  { value: 'makeup', label: '补课', color: 'text-amber-300 bg-amber-500/20 border-amber-500/40' },
+  { value: 'cancel', label: '停课', color: 'text-[#dc2626] bg-[rgba(239,68,68,0.15)] border-[rgba(239,68,68,0.3)]' },
+  { value: 'modify', label: '调课', color: 'text-[#262626] bg-[#e5e5e5] border-[#d4d4d4]' },
+  { value: 'makeup', label: '补课', color: 'text-[#92400e] bg-[rgba(245,158,11,0.15)] border-[rgba(245,158,11,0.3)]' },
 ]
 
 const showExtraFields = computed(() => adjustmentType.value === 'modify' || adjustmentType.value === 'makeup')
@@ -100,7 +100,7 @@ const handleSubmit = async () => {
   >
     <div class="space-y-4">
       <!-- 课程上下文信息 -->
-      <p class="text-xs text-white/50">
+      <p class="text-xs text-[#a3a3a3]">
         课程：{{ schedule?.course_name }} | 班级：{{ schedule?.class_name }} | 第{{ weekNumber }}周
       </p>
 
@@ -126,7 +126,7 @@ const handleSubmit = async () => {
 
       <!-- 公共字段：原因 -->
       <div>
-        <label class="mb-1.5 block text-sm text-white/70">调整原因</label>
+        <label class="mb-1.5 block text-sm text-[#737373]">调整原因</label>
         <Input
           v-model="reason"
           placeholder="请输入调整原因"
@@ -139,35 +139,35 @@ const handleSubmit = async () => {
         class="space-y-3"
       >
         <div>
-          <label class="mb-1.5 block text-sm text-white/70">新日期</label>
+          <label class="mb-1.5 block text-sm text-[#737373]">新日期</label>
           <input
             v-model="newDate"
             type="date"
-            class="w-full border border-white/10 bg-white/5 rounded-lg px-3 py-2 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            class="w-full border border-[#e5e5e5] bg-[#fafafa] rounded-full px-3 py-2 text-black text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50"
           >
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1.5 block text-sm text-white/70">新开始时间</label>
+            <label class="mb-1.5 block text-sm text-[#737373]">新开始时间</label>
             <input
               v-model="newStartTime"
               type="time"
-              class="w-full border border-white/10 bg-white/5 rounded-lg px-3 py-2 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              class="w-full border border-[#e5e5e5] bg-[#fafafa] rounded-full px-3 py-2 text-black text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50"
             >
           </div>
           <div>
-            <label class="mb-1.5 block text-sm text-white/70">新结束时间</label>
+            <label class="mb-1.5 block text-sm text-[#737373]">新结束时间</label>
             <input
               v-model="newEndTime"
               type="time"
-              class="w-full border border-white/10 bg-white/5 rounded-lg px-3 py-2 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              class="w-full border border-[#e5e5e5] bg-[#fafafa] rounded-full px-3 py-2 text-black text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50"
             >
           </div>
         </div>
 
         <div>
-          <label class="mb-1.5 block text-sm text-white/70">新教室</label>
+          <label class="mb-1.5 block text-sm text-[#737373]">新教室</label>
           <Input
             v-model="newClassroom"
             placeholder="请输入新教室"

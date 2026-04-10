@@ -24,34 +24,17 @@ defineEmits<{
   'open-score-dialog': [student: Student, defaultScore: number, defaultReason: string]
 }>()
 
-// 统一的 Indigo 卡片样式
-const cardStyle = {
-  backgroundColor: 'var(--card-indigo-bg)',
-  borderColor: 'var(--card-indigo-border)',
-  '--tw-shadow-color': 'var(--card-indigo-shadow)',
-} as Record<string, string>
-
-const cardIconStyle = {
-  backgroundColor: 'var(--card-indigo-icon-bg)',
-  color: 'var(--card-indigo-icon-text)',
-}
-
-const cardGlowStyle = {
-  backgroundColor: 'var(--card-indigo-glow)',
-}
-
 const getScoreColorClass = (score: number): string => {
-  if (score >= 80) return 'text-green-400'
-  if (score >= 60) return 'text-blue-400'
-  if (score >= 40) return 'text-yellow-400'
-  return 'text-red-400'
+  if (score >= 80) return 'text-[#16a34a]'
+  if (score >= 60) return 'text-[#3b82f6]'
+  if (score >= 40) return 'text-[#ca8a04]'
+  return 'text-[#dc2626]'
 }
 </script>
 
 <template>
   <Card
-    class="group relative overflow-hidden p-4"
-    :style="cardStyle"
+    class="group relative overflow-hidden p-4 border-[#e5e5e5] bg-white"
     :class="student.checkin_status === 'checked_in' ? 'ring-1 ring-green-500/50' : ''"
   >
     <!-- 学生信息 -->
@@ -59,8 +42,7 @@ const getScoreColorClass = (score: number): string => {
       <div class="flex items-start justify-between mb-4">
         <div class="flex items-center gap-3">
           <div
-            class="flex h-11 w-11 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-            :style="cardIconStyle"
+            class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f5f5f5] text-[#525252]"
           >
             <User class="h-5 w-5" />
           </div>
@@ -110,7 +92,7 @@ const getScoreColorClass = (score: number): string => {
       <!-- 自定义分数按钮 - 主题色统一 -->
       <div class="flex gap-2">
         <button
-          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-colors disabled:opacity-50 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30"
+          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-colors disabled:opacity-50 bg-[#e5e5e5] text-[#262626] hover:bg-[#d4d4d4] border border-[#d4d4d4]"
           :disabled="isUpdating"
           @click="$emit('open-score-dialog', student, 10, '加分')"
         >
@@ -118,7 +100,7 @@ const getScoreColorClass = (score: number): string => {
           加分
         </button>
         <button
-          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-colors disabled:opacity-50 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border border-orange-500/30"
+          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-3 text-xs font-medium transition-colors disabled:opacity-50 bg-[rgba(245,158,11,0.15)] text-[#92400e] hover:bg-[rgba(245,158,11,0.25)] border border-[rgba(245,158,11,0.3)]"
           :disabled="isUpdating"
           @click="$emit('open-score-dialog', student, -10, '扣分')"
         >

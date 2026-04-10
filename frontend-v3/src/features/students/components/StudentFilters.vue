@@ -60,7 +60,7 @@ const handleClassUpdate = (value: string | number) => {
           <Input
             :model-value="searchQuery"
             placeholder="输入姓名或学号搜索..."
-            class="pl-10 bg-[#fafafa] border-[#e5e5e5] focus:border-primary/50 focus:ring-[#3b82f6]/50"
+            class="pl-10 bg-[#fafafa] border-[#e5e5e5] focus:border-black focus:ring-[#3b82f6]/50"
             @update:model-value="handleSearchUpdate"
           />
         </div>
