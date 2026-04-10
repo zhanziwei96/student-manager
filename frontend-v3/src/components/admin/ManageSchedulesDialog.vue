@@ -230,17 +230,17 @@ const handleClose = () => {
         v-if="isLoadingSchedules"
         class="flex h-32 items-center justify-center"
       >
-        <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        <Loader2 class="h-6 w-6 animate-spin text-black" />
       </div>
 
       <template v-else>
         <!-- 筛选和搜索 -->
         <div class="flex gap-2">
           <div class="relative flex-1">
-            <Filter class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <Filter class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
             <select
               v-model="selectedClass"
-              class="w-full appearance-none rounded-lg border border-white/10 bg-white/[0.02] py-2 pl-10 pr-8 text-sm text-white focus:border-primary focus:outline-none"
+              class="w-full appearance-none rounded-full border border-[#e5e5e5] bg-[#fafafa] py-2 pl-10 pr-8 text-sm text-black focus:border-black focus:outline-none"
             >
               <option value="">
                 全部班级
@@ -255,12 +255,12 @@ const handleClose = () => {
             </select>
           </div>
           <div class="relative flex-1">
-            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
             <input
               v-model="searchQuery"
               type="text"
               placeholder="搜索课程..."
-              class="w-full rounded-lg border border-white/10 bg-white/[0.02] py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/30 focus:border-primary focus:outline-none"
+              class="w-full rounded-full border border-[#e5e5e5] bg-[#fafafa] py-2 pl-10 pr-4 text-sm text-black placeholder:text-[#a3a3a3] focus:border-black focus:outline-none"
             >
           </div>
         </div>
@@ -279,10 +279,10 @@ const handleClose = () => {
               class="space-y-2"
             >
               <!-- 星期标题 -->
-              <div class="flex items-center justify-between sticky top-0 bg-[#030307] py-1">
-                <h4 class="text-sm font-medium text-primary">
+              <div class="flex items-center justify-between sticky top-0 bg-white py-1">
+                <h4 class="text-sm font-medium text-black">
                   {{ dayNames[day] }}
-                  <span class="text-xs text-white/40 ml-1">
+                  <span class="text-xs text-[#a3a3a3] ml-1">
                     ({{ groupedSchedules[day].assigned.length }}已分配, {{ groupedSchedules[day].available.filter(s => !isOccupiedByOther(s)).length }}可分配)
                   </span>
                 </h4>
@@ -290,7 +290,7 @@ const handleClose = () => {
                   <button
                     v-if="groupedSchedules[day].available.filter(s => !isOccupiedByOther(s)).length > 0"
                     type="button"
-                    class="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    class="text-xs px-2 py-0.5 rounded bg-[#e5e5e5] text-black hover:bg-[#d4d4d4] transition-colors"
                     @click="addAllAvailableForDay(day)"
                   >
                     全部添加
@@ -298,7 +298,7 @@ const handleClose = () => {
                   <button
                     v-if="groupedSchedules[day].assigned.length > 0"
                     type="button"
-                    class="text-xs px-2 py-0.5 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                    class="text-xs px-2 py-0.5 rounded bg-[rgba(239,68,68,0.1)] text-[#dc2626] hover:bg-[rgba(239,68,68,0.1)] transition-colors"
                     @click="removeAllForDay(day)"
                   >
                     全部移除
@@ -314,17 +314,17 @@ const handleClose = () => {
                 <div
                   v-for="schedule in groupedSchedules[day].assigned"
                   :key="schedule.id"
-                  class="flex items-center gap-2 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2 group hover:bg-green-500/15 transition-colors cursor-pointer"
+                  class="flex items-center gap-2 rounded-xl bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)] px-3 py-2 group hover:bg-[rgba(34,197,94,0.15)] transition-colors cursor-pointer"
                   @click="removeSchedule(schedule.id)"
                 >
-                  <Check class="h-4 w-4 text-green-400" />
-                  <Calendar class="h-4 w-4 text-green-400/70" />
+                  <Check class="h-4 w-4 text-[#16a34a]" />
+                  <Calendar class="h-4 w-4 text-[#16a34a]" />
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                      <span class="text-sm font-medium text-white">{{ schedule.course_name }}</span>
-                      <span class="text-xs text-white/60">({{ schedule.class_name }})</span>
+                      <span class="text-sm font-medium text-black">{{ schedule.course_name }}</span>
+                      <span class="text-xs text-[#737373]">({{ schedule.class_name }})</span>
                     </div>
-                    <div class="text-xs text-white/50">
+                    <div class="text-xs text-[#a3a3a3]">
                       {{ schedule.start_time }} - {{ schedule.end_time }}
                       <span
                         v-if="schedule.classroom"
@@ -334,7 +334,7 @@ const handleClose = () => {
                   </div>
                   <button
                     type="button"
-                    class="p-1 rounded hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                    class="p-1 rounded hover:bg-[rgba(239,68,68,0.1)] text-[#a3a3a3] hover:text-[#dc2626] transition-colors opacity-0 group-hover:opacity-100"
                     title="移除"
                   >
                     <X class="h-3.5 w-3.5" />
@@ -350,26 +350,26 @@ const handleClose = () => {
                 <div
                   v-for="schedule in groupedSchedules[day].available"
                   :key="schedule.id"
-                  class="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 transition-colors"
-                  :class="isOccupiedByOther(schedule) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/[0.04] cursor-pointer'"
+                  class="flex items-center gap-2 rounded-xl border border-[#e5e5e5] bg-[#fafafa] px-3 py-2 transition-colors"
+                  :class="isOccupiedByOther(schedule) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#fafafa] cursor-pointer'"
                   @click="!isOccupiedByOther(schedule) && addSchedule(schedule.id)"
                 >
                   <div 
                     class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
-                    :class="isOccupiedByOther(schedule) ? 'border-white/10' : 'border-white/20 group-hover:border-primary/50'"
+                    :class="isOccupiedByOther(schedule) ? 'border-[#e5e5e5]' : 'border-[#d4d4d4] group-hover:border-[#d4d4d4]'"
                   >
                     <Plus 
                       v-if="!isOccupiedByOther(schedule)" 
-                      class="h-3 w-3 text-white/0 group-hover:text-primary/70 transition-colors" 
+                      class="h-3 w-3 text-transparent group-hover:text-[#525252] transition-colors" 
                     />
                   </div>
-                  <Calendar class="h-4 w-4 text-white/40" />
+                  <Calendar class="h-4 w-4 text-[#a3a3a3]" />
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                      <span class="text-sm text-white/80">{{ schedule.course_name }}</span>
-                      <span class="text-xs text-white/50">({{ schedule.class_name }})</span>
+                      <span class="text-sm text-[#262626]">{{ schedule.course_name }}</span>
+                      <span class="text-xs text-[#a3a3a3]">({{ schedule.class_name }})</span>
                     </div>
-                    <div class="text-xs text-white/40">
+                    <div class="text-xs text-[#a3a3a3]">
                       {{ schedule.start_time }} - {{ schedule.end_time }}
                       <span
                         v-if="schedule.classroom"
@@ -379,7 +379,7 @@ const handleClose = () => {
                   </div>
                   <div
                     v-if="isOccupiedByOther(schedule)"
-                    class="flex items-center gap-1 text-xs text-yellow-400/70"
+                    class="flex items-center gap-1 text-xs text-[#d97706]"
                   >
                     <Users class="h-3 w-3" />
                     <span>已由 {{ schedule.teacher_name }} 授课</span>
@@ -388,7 +388,7 @@ const handleClose = () => {
               </div>
 
               <!-- 分隔线 -->
-              <div class="border-t border-white/5 pt-2" />
+              <div class="border-t border-[#f5f5f5] pt-2" />
             </div>
           </div>
         </div>
@@ -396,7 +396,7 @@ const handleClose = () => {
         <!-- 空状态 -->
         <div
           v-else
-          class="flex h-32 flex-col items-center justify-center text-white/60"
+          class="flex h-32 flex-col items-center justify-center text-[#737373]"
         >
           <Calendar class="mb-2 h-8 w-8" />
           <p>{{ searchQuery || selectedClass ? '未找到匹配的课程' : '暂无课程数据' }}</p>
@@ -404,11 +404,11 @@ const handleClose = () => {
 
         <!-- 变更摘要 -->
         <div 
-          class="rounded-lg border p-3 transition-colors"
-          :class="changes.hasChanges ? 'border-primary/30 bg-primary/5' : 'border-white/10 bg-white/[0.02]'"
+          class="rounded-xl border p-3 transition-colors"
+          :class="changes.hasChanges ? 'border-[#d4d4d4] bg-[#fafafa]' : 'border-[#e5e5e5] bg-[#fafafa]'"
         >
           <div class="flex items-center justify-between">
-            <p class="text-sm text-white/70">
+            <p class="text-sm text-[#737373]">
               <span v-if="!changes.hasChanges">暂无变更</span>
               <span
                 v-else
@@ -416,19 +416,19 @@ const handleClose = () => {
               >
                 <span
                   v-if="changes.added.length > 0"
-                  class="text-green-400"
+                  class="text-[#16a34a]"
                 >
                   +{{ changes.added.length }} 门新增
                 </span>
                 <span
                   v-if="changes.removed.length > 0"
-                  class="text-red-400"
+                  class="text-[#dc2626]"
                 >
                   -{{ changes.removed.length }} 门移除
                 </span>
               </span>
             </p>
-            <span class="text-xs text-white/40">
+            <span class="text-xs text-[#a3a3a3]">
               共负责 {{ selectedScheduleIds.length }} 门课程
             </span>
           </div>

@@ -174,24 +174,24 @@ const handleClose = () => {
         v-if="isLoadingClasses"
         class="flex h-32 items-center justify-center"
       >
-        <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        <Loader2 class="h-6 w-6 animate-spin text-black" />
       </div>
 
       <template v-else>
         <!-- 已分配班级区域 -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <h4 class="text-sm font-medium text-white/90 flex items-center gap-2">
-              <Check class="h-4 w-4 text-green-400" />
+            <h4 class="text-sm font-medium text-black flex items-center gap-2">
+              <Check class="h-4 w-4 text-[#16a34a]" />
               已分配班级
-              <span class="text-xs text-white/50">({{ assignedClassesList.length }})</span>
+              <span class="text-xs text-[#a3a3a3]">({{ assignedClassesList.length }})</span>
             </h4>
             <Button
               v-if="assignedClassesList.length > 0"
               type="button"
               variant="ghost"
               size="sm"
-              class="h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              class="h-7 text-xs text-[#dc2626] hover:text-[#b91c1c] hover:bg-[rgba(239,68,68,0.1)]"
               @click="removeAll"
             >
               <X class="mr-1 h-3 w-3" />
@@ -201,35 +201,35 @@ const handleClose = () => {
           
           <div
             v-if="assignedClassesList.length === 0"
-            class="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center"
+            class="rounded-xl border border-dashed border-[#e5e5e5] bg-[#fafafa] p-4 text-center"
           >
-            <p class="text-sm text-white/40">
+            <p class="text-sm text-[#a3a3a3]">
               暂无分配的班级
             </p>
           </div>
           
           <div
             v-else
-            class="max-h-[120px] space-y-1.5 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.02] p-2"
+            class="max-h-[120px] space-y-1.5 overflow-y-auto rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-2"
           >
             <div
               v-for="cls in assignedClassesList"
               :key="cls.name"
-              class="flex items-center gap-2 rounded-md bg-green-500/10 px-3 py-2 group hover:bg-green-500/15 transition-colors"
+              class="flex items-center gap-2 rounded-md bg-[rgba(34,197,94,0.15)] px-3 py-2 group hover:bg-green-500/15 transition-colors"
             >
-              <BookOpen class="h-4 w-4 text-green-400" />
-              <span class="flex-1 text-sm text-white">{{ cls.name }}</span>
+              <BookOpen class="h-4 w-4 text-[#16a34a]" />
+              <span class="flex-1 text-sm text-black">{{ cls.name }}</span>
               <span 
                 class="text-[10px] px-1.5 py-0.5 rounded border"
                 :class="cls.status === 'active' 
-                  ? 'border-green-500/30 text-green-400/70 bg-green-500/5' 
+                  ? 'border-[rgba(34,197,94,0.3)] text-[#16a34a] bg-[rgba(34,197,94,0.1)]' 
                   : 'border-gray-500/30 text-gray-400/70 bg-gray-500/5'"
               >
                 {{ cls.status === 'active' ? '启用' : '停用' }}
               </span>
               <button
                 type="button"
-                class="ml-1 p-1 rounded hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                class="ml-1 p-1 rounded hover:bg-[rgba(239,68,68,0.1)] text-[#a3a3a3] hover:text-[#dc2626] transition-colors opacity-0 group-hover:opacity-100"
                 title="移除"
                 @click="removeClass(cls.name)"
               >
@@ -240,26 +240,26 @@ const handleClose = () => {
         </div>
 
         <!-- 分隔线 -->
-        <div class="border-t border-white/10" />
+        <div class="border-t border-[#e5e5e5]" />
 
         <!-- 可分配班级区域 -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <h4 class="text-sm font-medium text-white/90 flex items-center gap-2">
-              <Users class="h-4 w-4 text-primary" />
+            <h4 class="text-sm font-medium text-black flex items-center gap-2">
+              <Users class="h-4 w-4 text-black" />
               可分配班级
-              <span class="text-xs text-white/50">({{ availableClassesList.length }})</span>
+              <span class="text-xs text-[#a3a3a3]">({{ availableClassesList.length }})</span>
             </h4>
           </div>
 
           <!-- 搜索框 -->
           <div class="relative">
-            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
             <input
               v-model="searchQuery"
               type="text"
               placeholder="搜索班级..."
-              class="w-full rounded-lg border border-white/10 bg-white/[0.02] py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/30 focus:border-primary focus:outline-none"
+              class="w-full rounded-full border border-[#e5e5e5] bg-[#fafafa] py-2 pl-10 pr-4 text-sm text-black placeholder:text-[#a3a3a3] focus:border-black focus:outline-none"
             >
           </div>
 
@@ -282,32 +282,32 @@ const handleClose = () => {
           <!-- 可分配班级列表 -->
           <div
             v-if="availableClassesList.length === 0"
-            class="rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center"
+            class="rounded-xl border border-dashed border-[#e5e5e5] bg-[#fafafa] p-4 text-center"
           >
-            <p class="text-sm text-white/40">
+            <p class="text-sm text-[#a3a3a3]">
               {{ searchQuery ? '未找到匹配的班级' : '暂无可分配的班级' }}
             </p>
           </div>
           
           <div
             v-else
-            class="max-h-[160px] space-y-1.5 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.02] p-2"
+            class="max-h-[160px] space-y-1.5 overflow-y-auto rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-2"
           >
             <div
               v-for="cls in availableClassesList"
               :key="cls.name"
-              class="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/[0.04] cursor-pointer transition-colors group"
+              class="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-[#fafafa] cursor-pointer transition-colors group"
               @click="addClass(cls.name)"
             >
-              <div class="w-4 h-4 rounded border border-white/20 flex items-center justify-center group-hover:border-primary/50 transition-colors">
-                <Plus class="h-3 w-3 text-white/0 group-hover:text-primary/70 transition-colors" />
+              <div class="w-4 h-4 rounded border border-[#d4d4d4] flex items-center justify-center group-hover:border-[#d4d4d4] transition-colors">
+                <Plus class="h-3 w-3 text-transparent group-hover:text-[#525252] transition-colors" />
               </div>
-              <BookOpen class="h-4 w-4 text-white/40" />
-              <span class="flex-1 text-sm text-white/80">{{ cls.name }}</span>
+              <BookOpen class="h-4 w-4 text-[#a3a3a3]" />
+              <span class="flex-1 text-sm text-[#262626]">{{ cls.name }}</span>
               <span 
                 class="text-[10px] px-1.5 py-0.5 rounded border"
                 :class="cls.status === 'active' 
-                  ? 'border-green-500/30 text-green-400/70 bg-green-500/5' 
+                  ? 'border-[rgba(34,197,94,0.3)] text-[#16a34a] bg-[rgba(34,197,94,0.1)]' 
                   : 'border-gray-500/30 text-gray-400/70 bg-gray-500/5'"
               >
                 {{ cls.status === 'active' ? '启用' : '停用' }}
@@ -318,11 +318,11 @@ const handleClose = () => {
 
         <!-- 变更摘要 -->
         <div 
-          class="rounded-lg border p-3 transition-colors"
-          :class="changes.hasChanges ? 'border-primary/30 bg-primary/5' : 'border-white/10 bg-white/[0.02]'"
+          class="rounded-xl border p-3 transition-colors"
+          :class="changes.hasChanges ? 'border-[#d4d4d4] bg-[#fafafa]' : 'border-[#e5e5e5] bg-[#fafafa]'"
         >
           <div class="flex items-center justify-between">
-            <p class="text-sm text-white/70">
+            <p class="text-sm text-[#737373]">
               <span v-if="!changes.hasChanges">暂无变更</span>
               <span
                 v-else
@@ -330,19 +330,19 @@ const handleClose = () => {
               >
                 <span
                   v-if="changes.added.length > 0"
-                  class="text-green-400"
+                  class="text-[#16a34a]"
                 >
                   +{{ changes.added.length }} 个新增
                 </span>
                 <span
                   v-if="changes.removed.length > 0"
-                  class="text-red-400"
+                  class="text-[#dc2626]"
                 >
                   -{{ changes.removed.length }} 个移除
                 </span>
               </span>
             </p>
-            <span class="text-xs text-white/40">
+            <span class="text-xs text-[#a3a3a3]">
               共 {{ selectedClasses.length }} 个班级
             </span>
           </div>
