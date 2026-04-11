@@ -83,3 +83,22 @@ def test_teacher_dissolution_requests(teacher_client: TestClient, student_client
     resp = teacher_client.post(f"/api/v1/teacher/group-dissolution-requests/{req_id}/approve")
     assert resp.status_code == 200
     assert resp.json()["success"] is True
+
+
+def test_teacher_get_class_group_settings_default(teacher_client: TestClient):
+    resp = teacher_client.get("/api/v1/teacher/class-group-settings?class_name=一班")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert data["data"]["max_members_per_group"] == 5
+
+
+def test_teacher_update_class_group_settings(teacher_client: TestClient):
+    resp = teacher_client.put("/api/v1/teacher/class-group-settings", json={
+        "class_name": "一班",
+        "max_members_per_group": 6,
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert data["data"]["max_members_per_group"] == 6

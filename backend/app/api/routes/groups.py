@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 
 from app.core.db import get_session
 from app.core.config import HttpStatus
-from app.core.jwt import get_current_user
+from app.core.jwt import get_current_user, require_teacher
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse
 from app.models.group import GroupMember, GroupMembershipRequest, GroupTask, Group, GroupEvaluationScore
 from app.crud import (
@@ -21,6 +21,8 @@ from app.crud import (
     get_pending_membership_requests, approve_membership_request,
     reject_membership_request, create_dissolution_request,
     get_evaluation_assignments, submit_student_scores, get_group,
+    get_class_group_settings, get_or_create_class_group_settings,
+    update_class_group_settings,
 )
 
 router = APIRouter(tags=["groups"])
@@ -42,6 +44,11 @@ class TeacherScoreRequest(BaseModel):
 class AutoAssignRequest(BaseModel):
     class_name: str = Field(..., min_length=1)
     group_size: int = Field(default=4, ge=2, le=10)
+
+
+class UpdateClassGroupSettingsRequest(BaseModel):
+    class_name: str = Field(..., min_length=1)
+    max_members_per_group: int = Field(..., ge=2, le=10)
 
 
 class TransferLeaderRequest(BaseModel):
@@ -67,13 +74,43 @@ class DissolutionRequestCreate(BaseModel):
     reason: str = Field(..., min_length=1)
 
 
-# Teacher endpoints
+def _check_class_not_evaluating(session: Session, class_name: str) -> None:
+    """检查班级是否处于互评阶段，若是则拒绝组队操作"""
+    evaluating_task = session.exec(
+        select(GroupTask).where(
+            GroupTask.class_name == class_name,
+            GroupTask.status == "evaluating",
+        )
+    ).first()
+    if evaluating_task:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级正在互评阶段，不可变更小组")
+
+
+# ============================================================
+# Teacher endpoints — 使用 require_teacher 校验角色
+# ============================================================
+
+@router.get("/teacher/group-tasks", response_model=ApiResponse[list])
+async def api_teacher_group_tasks(
+    class_name: str,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    tasks = get_group_tasks_by_class(session, class_name)
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: [
+            {"id": t.id, "title": t.title, "status": t.status, "class_name": t.class_name}
+            for t in tasks
+        ],
+    }
+
 
 @router.post("/teacher/group-tasks", response_model=ApiResponse[dict])
 async def api_create_group_task(
     data: CreateGroupTaskRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     username = user.get("username", "")
     task = create_group_task(
@@ -89,7 +126,7 @@ async def api_create_group_task(
 async def api_start_group_task(
     task_id: int,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     task = get_group_task(session, task_id)
     if not task:
@@ -109,7 +146,7 @@ async def api_start_group_task(
 async def api_close_group_task(
     task_id: int,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     task = close_group_task(session, task_id)
     if not task:
@@ -125,7 +162,7 @@ async def api_close_group_task(
 async def api_get_task_results(
     task_id: int,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     task = get_group_task(session, task_id)
     if not task:
@@ -136,7 +173,7 @@ async def api_get_task_results(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
             "task": {"id": task.id, "title": task.title, "status": task.status},
-            "dimensions": [d.name for d in dimensions],
+            "dimensions": [{"id": d.id, "name": d.name} for d in dimensions],
             "results": results,
         },
     }
@@ -147,8 +184,14 @@ async def api_submit_teacher_score(
     task_id: int,
     data: TeacherScoreRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
+    # C3: 校验任务必须在 evaluating 状态才允许评分
+    task = get_group_task(session, task_id)
+    if not task:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
+    if task.status != "evaluating":
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="任务不在评分阶段")
     username = user.get("username", "")
     submit_teacher_score(
         session, task_id, data.target_group_id, data.dimension_id, data.score, username
@@ -163,9 +206,19 @@ async def api_submit_teacher_score(
 async def api_teacher_groups(
     class_name: str,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
+    from app.models import Student
+    from sqlmodel import col, select as sql_select
     groups = get_groups_by_class(session, class_name)
+    # 批量查询所有相关学生姓名
+    all_member_ids = []
+    for g in groups:
+        all_member_ids.extend(m.student_id for m in get_group_members(session, g.id))
+    student_map = {}
+    if all_member_ids:
+        students = session.exec(sql_select(Student).where(col(Student.student_id).in_(set(all_member_ids)))).all()
+        student_map = {s.student_id: s.name for s in students}
     result = []
     for g in groups:
         members = get_group_members(session, g.id)
@@ -173,7 +226,7 @@ async def api_teacher_groups(
             "id": g.id,
             "name": g.name,
             "leader_student_id": g.leader_student_id,
-            "members": [{"student_id": m.student_id} for m in members],
+            "members": [{"student_id": m.student_id, "name": student_map.get(m.student_id, m.student_id)} for m in members],
         })
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
 
@@ -182,7 +235,7 @@ async def api_teacher_groups(
 async def api_auto_assign(
     data: AutoAssignRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     new_groups = auto_assign_unassigned_students(session, data.class_name, data.group_size)
     return {
@@ -191,12 +244,56 @@ async def api_auto_assign(
     }
 
 
+@router.get("/teacher/class-group-settings", response_model=ApiResponse[dict])
+async def api_get_class_group_settings(
+    class_name: str,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    settings = get_class_group_settings(session, class_name)
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: {
+            "class_name": class_name,
+            "max_members_per_group": settings.max_members_per_group if settings else 5,
+        },
+    }
+
+
+@router.put("/teacher/class-group-settings", response_model=ApiResponse[dict])
+async def api_update_class_group_settings(
+    data: UpdateClassGroupSettingsRequest,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    # 校验：新上限 >= 该班所有小组中当前最大成员数
+    groups = get_groups_by_class(session, data.class_name)
+    max_current = 0
+    for g in groups:
+        count = len(get_group_members(session, g.id))
+        if count > max_current:
+            max_current = count
+    if data.max_members_per_group < max_current:
+        raise HTTPException(
+            status_code=HttpStatus.BAD_REQUEST,
+            detail=f"当前有小组已有 {max_current} 人，上限不能小于此值",
+        )
+    settings = update_class_group_settings(session, data.class_name, data.max_members_per_group)
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: {
+            "class_name": settings.class_name,
+            "max_members_per_group": settings.max_members_per_group,
+        },
+    }
+
+
 @router.post("/teacher/groups/{group_id}/transfer-leader", response_model=ApiResponse[dict])
 async def api_transfer_leader(
     group_id: int,
     data: TransferLeaderRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     group = transfer_group_leader(session, group_id, data.new_leader_id)
     if not group:
@@ -210,7 +307,7 @@ async def api_transfer_leader(
 @router.get("/teacher/group-dissolution-requests", response_model=ApiResponse[list])
 async def api_dissolution_requests(
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     reqs = get_pending_dissolution_requests(session)
     return {
@@ -232,7 +329,7 @@ async def api_dissolution_requests(
 async def api_approve_dissolution(
     req_id: int,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     username = user.get("username", "")
     group = approve_dissolution_request(session, req_id, username)
@@ -248,7 +345,7 @@ async def api_approve_dissolution(
 async def api_reject_dissolution(
     req_id: int,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher),
 ):
     username = user.get("username", "")
     req = reject_dissolution_request(session, req_id, username)
@@ -260,7 +357,9 @@ async def api_reject_dissolution(
     }
 
 
+# ============================================================
 # Student endpoints
+# ============================================================
 
 @router.post("/student/groups", response_model=ApiResponse[dict])
 async def api_student_create_group(
@@ -272,6 +371,8 @@ async def api_student_create_group(
     role = user.get("role", "")
     if role != UserRoleConst.STUDENT:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="仅限学生")
+    # C2: 组队锁定 — evaluating 状态下禁止创建小组
+    _check_class_not_evaluating(session, data.class_name)
     student_id = user.get("sub", "")
     existing = get_student_active_group(session, student_id, data.class_name)
     if existing:
@@ -312,6 +413,8 @@ async def api_create_join_request(
     group = get_group(session, group_id)
     if not group or not group.is_active:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
+    # C2: 组队锁定 — evaluating 状态下禁止申请加入
+    _check_class_not_evaluating(session, group.class_name)
     existing = session.exec(
         select(GroupMembershipRequest).where(
             GroupMembershipRequest.group_id == group_id,
@@ -341,6 +444,8 @@ async def api_approve_join_request(
     group = get_group(session, req.group_id)
     if not group or group.leader_student_id != student_id:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权审批")
+    # C2: 组队锁定 — evaluating 状态下禁止批准入组
+    _check_class_not_evaluating(session, group.class_name)
     member = approve_membership_request(session, req_id)
     if not member:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="审批失败")
@@ -438,30 +543,28 @@ async def api_student_evaluations(
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="未在小组中")
     assignments = get_evaluation_assignments(session, task_id, my_group.id)
     dimensions = get_task_dimensions(session, task_id)
+    # 优化 N+1 查询：一次查出该学生对当前任务的所有评分
+    all_my_scores = session.exec(
+        select(GroupEvaluationScore).where(
+            GroupEvaluationScore.task_id == task_id,
+            GroupEvaluationScore.evaluator_type == "student",
+            GroupEvaluationScore.evaluator_id == student_id,
+        )
+    ).all()
+    scored_set = {(s.target_group_id, s.dimension_id) for s in all_my_scores}
     result = []
     for assign in assignments:
         target = get_group(session, assign.target_group_id)
-        scored_dims = set()
-        for d in dimensions:
-            has_score = session.exec(
-                select(GroupEvaluationScore).where(
-                    GroupEvaluationScore.task_id == task_id,
-                    GroupEvaluationScore.target_group_id == assign.target_group_id,
-                    GroupEvaluationScore.evaluator_type == "student",
-                    GroupEvaluationScore.evaluator_id == student_id,
-                    GroupEvaluationScore.dimension_id == d.id,
-                )
-            ).first()
-            if has_score:
-                scored_dims.add(d.id)
         result.append({
             "target_group_id": assign.target_group_id,
             "target_group_name": target.name if target else "",
             "dimensions": [
-                {"id": d.id, "name": d.name, "scored": d.id in scored_dims}
+                {"id": d.id, "name": d.name, "scored": (assign.target_group_id, d.id) in scored_set}
                 for d in dimensions
             ],
-            "all_scored": len(scored_dims) == len(dimensions),
+            "all_scored": all(
+                (assign.target_group_id, d.id) in scored_set for d in dimensions
+            ),
         })
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
 
@@ -473,6 +576,12 @@ async def api_submit_student_scores(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    # C3: 校验任务必须在 evaluating 状态才允许评分
+    task = get_group_task(session, task_id)
+    if not task:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
+    if task.status != "evaluating":
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="任务不在评分阶段")
     student_id = user.get("sub", "")
     scores_map = {item.dimension_id: item.score for item in data.scores}
     submit_student_scores(session, task_id, data.target_group_id, student_id, scores_map)
@@ -527,6 +636,13 @@ async def api_student_my_group(
         return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: None}
     members = get_group_members(session, my_group.id)
     pending_reqs = get_pending_membership_requests(session, my_group.id)
+    # 批量查询成员姓名
+    member_ids = [m.student_id for m in members]
+    student_map = {}
+    if member_ids:
+        from sqlmodel import col
+        students = session.exec(select(Student).where(col(Student.student_id).in_(member_ids))).all()
+        student_map = {s.student_id: s.name for s in students}
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
@@ -535,7 +651,7 @@ async def api_student_my_group(
             "class_name": my_group.class_name,
             "leader_student_id": my_group.leader_student_id,
             "is_leader": my_group.leader_student_id == student_id,
-            "members": [{"student_id": m.student_id} for m in members],
+            "members": [{"student_id": m.student_id, "name": student_map.get(m.student_id, m.student_id)} for m in members],
             "pending_requests": [
                 {"id": r.id, "student_id": r.student_id, "created_at": r.created_at.isoformat()}
                 for r in pending_reqs
