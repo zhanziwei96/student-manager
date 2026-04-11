@@ -13,8 +13,6 @@
 - [ ] **重启服务前**: 已运行 `make status` 或 `curl -s --max-time 5 http://localhost:8000/api/v1/health` 检查状态
 - [ ] **服务重启**: 按完整流程（停止→等待3秒→检查残留→启动→等待5秒→验证）
   - 禁止快速连续执行停止+启动命令
-- [ ] **数据库操作**: 已确认实际路径
-  - `python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"`
 
 ### Read 工具强制预检（每次调用前必须执行）
 - [ ] **参数检查**: 在 commentary 中显式输出一行确认（如：`Read preflight: limit=200, offset=1. OK.`）
@@ -22,12 +20,6 @@
   - `offset` >= 1
   - 超大文件优先用 `Grep`，不盲目读全文
   - **未输出此行即调用 Read，视为违规**
-
-### 前端操作
-- [ ] **修改代码后**: 已评估是否需要创建/修改测试
-- [ ] **重启服务前**: 已检查当前状态
-- [ ] **API 响应**: 使用 `res.data.xxx` 而非 `res.xxx`
-- [ ] **Tailwind v4**: 自定义 `@theme` 时保留 `--spacing: 0.25rem` 或使用 `@theme inline`
 
 ### 通用操作
 - [ ] **curl 命令**: 已添加 `--max-time 10` 或 `--connect-timeout 5` 超时
@@ -115,13 +107,6 @@ backend/app/
 └── events/        # 事件处理器
 ```
 
-**关键模式：**
-- 所有 API 响应使用 `app.models.constants` 中的常量（ApiResponseConst、MessageConst）
-- JWT Token 包含：`sub` (用户ID)、`username`、`name`、`role`、`is_admin`
-- 访问响应数据使用 `res.data.xxx`，禁止使用 `res.xxx`
-- 时区：JWT 过期时间必须使用 `Asia/Shanghai` 时区
-- 密码哈希使用 `bcrypt`（自动处理盐值），通过 `verify_password()` / `hash_password()` 使用
-
 ### 前端（Vue 3.5 + TypeScript）
 
 位于 `frontend-v3/` 目录，采用特性化组织方式：
@@ -141,21 +126,6 @@ frontend-v3/src/
 ├── types/         # TypeScript 类型定义
 └── views/         # 页面级组件
 ```
-
-**关键模式：**
-- Tailwind CSS v4 自定义主题：背景色 `#030307`，主色 `#6366f1`
-- 自定义 `@theme` 时必须保留 `--spacing: 0.25rem` 或使用 `@theme inline`
-- API 响应：后端返回 `{success, data, message}` 格式，通过 `res.data.xxx` 访问
-- 使用 `@tanstack/vue-query` 进行服务端状态管理和缓存
-- HTTP 请求使用 `ofetch`
-- 图标来自 `lucide-vue-next`
-
-### 数据库
-
-- SQLite 文件数据库，位于 `backend/app/data/class_system.db`
-- 配置使用双下划线格式：`DATABASE__PATH`、`SECURITY__SECRET_KEY`（不是单下划线）
-- 查看实际路径：`python -c "from backend.app.core.config import get_settings; print(get_settings().get_database_path())"`
-- 集成测试使用内存数据库（隔离）
 
 ### 测试结构
 
@@ -187,33 +157,6 @@ tests/
 
 ### 后端开发约束
 
-#### 密码验证（SEC-003 修复后）
-**必须使用新接口**：
-```python
-from app.core.security import verify_password, hash_password
-
-# ✅ 正确 - bcrypt 自动处理盐值
-is_valid = verify_password("plain_password", stored_hash)
-new_hash = hash_password("new_password")
-
-# ❌ 错误 - 旧接口已弃用
-# is_valid = verify_password_hash("plain_password", stored_hash, salt)
-```
-
-#### JWT 时区处理
-**所有 JWT Token 的过期时间必须使用 Asia/Shanghai 时区**：
-```python
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
-
-# ✅ 正确
-now = datetime.now(ZoneInfo("Asia/Shanghai"))
-expire = now + timedelta(hours=24)
-
-# ❌ 错误 - 可能导致时区不一致
-# expire = datetime.utcnow() + timedelta(hours=24)
-```
-
 #### API 响应常量
 **禁止硬编码响应字段名**，必须使用常量：
 ```python
@@ -228,26 +171,6 @@ return {
 
 # ❌ 错误
 # return {"success": True, "message": "用户创建成功"}
-```
-
-#### JWT Claims 访问
-**禁止假设字段存在**，始终使用 `.get()` 方法：
-```python
-# ✅ 正确
-user_id = user.get("sub")
-
-# ❌ 错误 - 可能报错
-# user_id = user["sub"]
-```
-
-#### 限流状态码
-限流触发时必须返回 **429 Too Many Requests**，而非 503：
-```python
-# ✅ 正确
-raise HTTPException(status_code=429, detail="请求过于频繁")
-
-# ❌ 错误
-# raise HTTPException(status_code=503, detail="服务不可用")
 ```
 
 #### 环境变量格式
@@ -272,21 +195,6 @@ res.user.role
 
 // ✅ 正确
 res.data.role
-```
-
-#### Tailwind CSS v4
-自定义 `@theme` 会**完全覆盖**默认主题，必须保留 `--spacing`：
-```css
-/* ✅ 正确 */
-@theme inline {
-  --color-primary: #6366f1;
-}
-
-/* 或 */
-@theme {
-  --spacing: 0.25rem;  /* 必须保留！ */
-  --color-primary: #6366f1;
-}
 ```
 
 ### 测试执行约束
