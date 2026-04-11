@@ -28,6 +28,8 @@ export interface Group {
   name: string
   leader_student_id: string
   member_count?: number
+  max_members?: number | null
+  is_full?: boolean
 }
 
 export interface GroupTask {
