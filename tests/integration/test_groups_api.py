@@ -102,3 +102,38 @@ def test_teacher_update_class_group_settings(teacher_client: TestClient):
     data = resp.json()
     assert data["success"] is True
     assert data["data"]["max_members_per_group"] == 6
+
+
+def test_student_cannot_join_full_group(teacher_client: TestClient):
+    """教师设置上限后，设置端点返回正确值"""
+    # 教师设置上限为 2
+    resp = teacher_client.put("/api/v1/teacher/class-group-settings", json={
+        "class_name": "一班",
+        "max_members_per_group": 2,
+    })
+    assert resp.status_code == 200
+    # 验证设置端点返回正确值
+    resp = teacher_client.get("/api/v1/teacher/class-group-settings?class_name=一班")
+    assert resp.json()["data"]["max_members_per_group"] == 2
+
+
+def test_student_groups_returns_max_members_and_is_full(student_client: TestClient):
+    """学生小组列表应返回 max_members 和 is_full 字段"""
+    # 学生创建小组
+    resp = student_client.post("/api/v1/student/groups", json={
+        "class_name": "一班",
+        "name": "测试组",
+    })
+    assert resp.status_code == 200
+    # 获取小组列表
+    resp = student_client.get("/api/v1/student/groups?class_name=一班")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    groups = data["data"]
+    assert len(groups) >= 1
+    group = groups[-1]
+    assert "max_members" in group
+    assert "is_full" in group
+    # 默认上限为 5，学生创建组后只有 1 人，不应满
+    assert group["is_full"] is False

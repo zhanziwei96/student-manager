@@ -391,14 +391,19 @@ async def api_student_groups(
     user: dict = Depends(get_current_user),
 ):
     groups = get_groups_by_class(session, class_name)
+    settings = get_class_group_settings(session, class_name)
+    max_m = settings.max_members_per_group if settings else None
     result = []
     for g in groups:
         members = get_group_members(session, g.id)
+        member_count = len(members)
         result.append({
             "id": g.id,
             "name": g.name,
             "leader_student_id": g.leader_student_id,
-            "member_count": len(members),
+            "member_count": member_count,
+            "max_members": max_m,
+            "is_full": max_m is not None and member_count >= max_m,
         })
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
 
@@ -415,6 +420,15 @@ async def api_create_join_request(
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
     # C2: 组队锁定 — evaluating 状态下禁止申请加入
     _check_class_not_evaluating(session, group.class_name)
+    # 检查小组是否已满
+    settings = get_class_group_settings(session, group.class_name)
+    if settings:
+        current_count = len(get_group_members(session, group.id))
+        if current_count >= settings.max_members_per_group:
+            raise HTTPException(
+                status_code=HttpStatus.BAD_REQUEST,
+                detail="该小组已满，无法申请加入",
+            )
     existing = session.exec(
         select(GroupMembershipRequest).where(
             GroupMembershipRequest.group_id == group_id,
@@ -446,6 +460,15 @@ async def api_approve_join_request(
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权审批")
     # C2: 组队锁定 — evaluating 状态下禁止批准入组
     _check_class_not_evaluating(session, group.class_name)
+    # 检查小组是否已满
+    settings = get_class_group_settings(session, group.class_name)
+    if settings:
+        current_count = len(get_group_members(session, group.id))
+        if current_count >= settings.max_members_per_group:
+            raise HTTPException(
+                status_code=HttpStatus.BAD_REQUEST,
+                detail="该小组已满，无法批准加入",
+            )
     member = approve_membership_request(session, req_id)
     if not member:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="审批失败")
