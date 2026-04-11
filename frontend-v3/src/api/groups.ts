@@ -1,4 +1,4 @@
-import { get, post } from '@/lib/api'
+import { get, post, put } from '@/lib/api'
 
 export interface CreateGroupTaskRequest {
   class_name: string
@@ -56,6 +56,8 @@ export interface EvaluationTarget {
 
 export const groupsApi = {
   // Teacher
+  getTeacherTasks: (className: string): Promise<GroupTask[]> =>
+    get('/teacher/group-tasks', { class_name: className }),
   createTask: (data: CreateGroupTaskRequest): Promise<{ task_id: number; status: string }> =>
     post('/teacher/group-tasks', data),
   startTask: (taskId: number): Promise<any> =>
@@ -70,6 +72,10 @@ export const groupsApi = {
     get('/teacher/groups', { class_name: className }),
   autoAssign: (className: string, groupSize = 4): Promise<any> =>
     post('/teacher/groups/auto-assign', { class_name: className, group_size: groupSize }),
+  getClassGroupSettings: (className: string): Promise<{ class_name: string; max_members_per_group: number }> =>
+    get('/teacher/class-group-settings', { class_name: className }),
+  updateClassGroupSettings: (data: { class_name: string; max_members_per_group: number }): Promise<{ class_name: string; max_members_per_group: number }> =>
+    put('/teacher/class-group-settings', data),
   transferLeader: (groupId: number, newLeaderId: string): Promise<any> =>
     post(`/teacher/groups/${groupId}/transfer-leader`, { new_leader_id: newLeaderId }),
   getDissolutionRequests: (): Promise<any[]> =>
