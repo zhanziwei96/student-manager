@@ -11,6 +11,7 @@ from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
     GroupTask, GroupTaskDimension, EvaluationAssignment,
     GroupEvaluationScore, GroupDissolutionRequest,
+    ClassGroupSettings,
 )
 from app.models.constants import (
     UserRole, UserRoleConst, UserStatus, CheckinType,
@@ -35,7 +36,7 @@ __all__ = [
     # Group Collaboration
     "Group", "GroupMember", "GroupMembershipRequest",
     "GroupTask", "GroupTaskDimension", "EvaluationAssignment",
-    "GroupEvaluationScore", "GroupDissolutionRequest",
+    "GroupEvaluationScore", "GroupDissolutionRequest", "ClassGroupSettings",
     # API Response Models
     "ApiResponse", "ApiSuccessResponse", "ApiListResponse", "ApiErrorResponse",
 ]

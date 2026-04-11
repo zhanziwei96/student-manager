@@ -106,3 +106,12 @@ class GroupDissolutionRequest(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_now, description="申请时间")
     resolved_at: Optional[datetime] = Field(default=None, description="处理时间")
     resolved_by: Optional[str] = Field(default=None, description="处理人用户名", max_length=50)
+
+
+class ClassGroupSettings(SQLModel, table=True):
+    """班级小组设置表"""
+    __tablename__ = "class_group_settings"
+
+    class_name: str = Field(..., description="班级名称", max_length=100, primary_key=True)
+    max_members_per_group: int = Field(default=5, description="每组上限人数")
+    updated_at: datetime = Field(default_factory=get_now, description="最后修改时间")
