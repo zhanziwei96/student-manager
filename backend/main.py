@@ -67,7 +67,7 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 50)
     logger.info("班级管理系统 FastAPI + SQLModel 架构")
     logger.info("=" * 50)
-    logger.info(f"数据库路径: {settings.get_database_path()}")
+    logger.info(f"数据库: {settings.get_database_url()}")
     
     # 初始化数据库
     init_db()

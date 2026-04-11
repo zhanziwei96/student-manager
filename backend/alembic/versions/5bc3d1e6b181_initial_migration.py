@@ -98,7 +98,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     with op.batch_alter_table('course_sessions', schema=None) as batch_op:
-        batch_op.create_index('uix_active_class_name', ['class_name'], unique=True, sqlite_where=text('status="active"'))
+        batch_op.create_index('uix_active_class_name', ['class_name'], unique=True, sqlite_where=text('status="active"'), postgresql_where=text("status='active'"))
 
     op.create_table('schedule_adjustments',
     sa.Column('id', sa.Integer(), nullable=False),

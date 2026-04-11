@@ -64,7 +64,8 @@ class DatabaseSettings(BaseSettings):
     """数据库配置"""
     model_config = SettingsConfigDict(env_prefix="DATABASE_")
 
-    path: Optional[str] = Field(default=None, description="数据库文件路径")
+    url: Optional[str] = Field(default=None, description="数据库连接URL（优先使用）")
+    path: Optional[str] = Field(default=None, description="数据库文件路径（SQLite备用）")
     timeout: int = Field(default=30, description="连接超时（秒）")
 
 
@@ -204,8 +205,14 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.app.env.lower() == "production"
 
+    def get_database_url(self) -> str:
+        """获取数据库连接 URL"""
+        if self.database.url:
+            return self.database.url
+        return f"sqlite:///{self.get_database_path()}"
+
     def get_database_path(self) -> str:
-        """获取数据库路径"""
+        """获取数据库路径（SQLite 备用）"""
         if self.database.path:
             return self.database.path
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

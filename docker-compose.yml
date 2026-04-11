@@ -1,33 +1,51 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: classhub-postgres
+    environment:
+      POSTGRES_USER: classhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-classhub_secret}
+      POSTGRES_DB: classhub
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./backups/postgres:/backups
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - classhub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U classhub -d classhub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: classhub-backend
-    # 不暴露端口，只通过内部网络访问
     expose:
       - "8000"
     env_file:
       - backend/.env.production
     volumes:
-      # 数据目录挂载（使用相对路径或环境变量）
-      - ${DATA_DIR:-./backend/app/data}:/app/data
-      # 上传文件目录挂载
       - ${UPLOADS_DIR:-./uploads}:/app/uploads
-      # 备份目录挂载
       - ${BACKUPS_DIR:-./backups}:/app/backups
-      # 日志目录挂载
       - ${LOGS_DIR:-./backend/logs}:/app/logs
     environment:
       - ENV=production
       - DEBUG=false
-      # 使用双下划线格式
-      - DATABASE__PATH=/app/data/class_system.db
+      - DATABASE__URL=postgresql+psycopg2://classhub:${POSTGRES_PASSWORD:-classhub_secret}@postgres:5432/classhub
       - BACKUP__DIR=/app/backups
       - APP__HOST=0.0.0.0
       - APP__PORT=8000
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8000/health"]
@@ -48,14 +66,11 @@ services:
     image: nginx:alpine
     container_name: classhub-nginx
     ports:
-      - "80:80"       # HTTP - 自动跳转 HTTPS
-      - "443:443"     # HTTPS
+      - "80:80"
+      - "443:443"
     volumes:
-      # Nginx 配置文件（使用相对路径或环境变量）
       - ${NGINX_CONFIG:-./docker/nginx.conf}:/etc/nginx/nginx.conf:ro
-      # SSL 证书
       - ${SSL_CERTS_DIR:-./docker/certs}:/etc/nginx/certs:ro
-      # 前端静态文件
       - ${FRONTEND_DIST:-./frontend-v3/dist}:/var/www/html:ro
     depends_on:
       backend:
@@ -69,6 +84,28 @@ services:
           memory: 64M
     networks:
       - classhub-network
+
+  pg_backup:
+    image: postgres:15-alpine
+    container_name: classhub-pg-backup
+    environment:
+      POSTGRES_USER: classhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-classhub_secret}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-classhub_secret}
+      POSTGRES_DB: classhub
+      PGHOST: postgres
+    volumes:
+      - ./backups/postgres:/backups
+      - ./docker/postgres/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c", "echo '0 2 * * * /bin/sh /backup.sh' | crontab - && crond -f -l 2"]
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - classhub-network
+
+volumes:
+  postgres_data:
 
 networks:
   classhub-network:

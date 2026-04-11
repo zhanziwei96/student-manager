@@ -33,9 +33,9 @@ from app.models.group import (
 # Alembic 配置对象
 config = context.config
 
-# 从项目配置获取数据库 URL
+# 获取应用配置
 settings = get_settings()
-database_url = f"sqlite:///{settings.get_database_path()}"
+database_url = settings.get_database_url()
 
 # 设置 sqlalchemy.url
 config.set_main_option("sqlalchemy.url", database_url)
