@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from app.core.timezone import get_now
 from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
-    GroupDissolutionRequest
+    GroupDissolutionRequest, ClassGroupSettings
 )
 
 
@@ -218,3 +218,27 @@ def auto_assign_unassigned_students(session: Session, class_name: str, group_siz
         session.commit()
         groups.append(group)
     return groups
+
+
+def get_class_group_settings(session: Session, class_name: str) -> Optional[ClassGroupSettings]:
+    return session.get(ClassGroupSettings, class_name)
+
+
+def get_or_create_class_group_settings(session: Session, class_name: str) -> ClassGroupSettings:
+    settings = session.get(ClassGroupSettings, class_name)
+    if not settings:
+        settings = ClassGroupSettings(class_name=class_name)
+        session.add(settings)
+        session.commit()
+        session.refresh(settings)
+    return settings
+
+
+def update_class_group_settings(session: Session, class_name: str, max_members: int) -> ClassGroupSettings:
+    settings = get_or_create_class_group_settings(session, class_name)
+    settings.max_members_per_group = max_members
+    settings.updated_at = get_now()
+    session.add(settings)
+    session.commit()
+    session.refresh(settings)
+    return settings

@@ -7,6 +7,7 @@ from app.crud import (
     create_membership_request, approve_membership_request, reject_membership_request,
     create_dissolution_request, approve_dissolution_request,
     auto_assign_unassigned_students, transfer_group_leader,
+    get_or_create_class_group_settings, update_class_group_settings,
 )
 
 
@@ -61,3 +62,22 @@ def test_dissolution_approval(session: Session):
     approved = approve_dissolution_request(session, req.id, "teacher_001")
     assert approved is not None
     assert approved.is_active is False
+
+
+def test_get_or_create_class_group_settings_creates_default(session: Session):
+    settings = get_or_create_class_group_settings(session, "一班")
+    assert settings.class_name == "一班"
+    assert settings.max_members_per_group == 5
+
+
+def test_get_or_create_class_group_settings_returns_existing(session: Session):
+    settings1 = get_or_create_class_group_settings(session, "一班")
+    settings2 = get_or_create_class_group_settings(session, "一班")
+    assert settings1.class_name == settings2.class_name
+    assert settings2.max_members_per_group == 5
+
+
+def test_update_class_group_settings(session: Session):
+    get_or_create_class_group_settings(session, "一班")
+    updated = update_class_group_settings(session, "一班", 8)
+    assert updated.max_members_per_group == 8

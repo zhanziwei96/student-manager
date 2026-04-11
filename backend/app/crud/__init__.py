@@ -48,6 +48,8 @@ from app.crud.group import (
     get_pending_dissolution_requests, approve_dissolution_request,
     reject_dissolution_request, transfer_group_leader,
     auto_assign_unassigned_students,
+    get_class_group_settings, get_or_create_class_group_settings,
+    update_class_group_settings,
 )
 from app.crud.group_task import (
     create_group_task, get_group_task, get_group_tasks_by_class,
@@ -91,6 +93,8 @@ __all__ = [
     "get_pending_dissolution_requests", "approve_dissolution_request",
     "reject_dissolution_request", "transfer_group_leader",
     "auto_assign_unassigned_students",
+    "get_class_group_settings", "get_or_create_class_group_settings",
+    "update_class_group_settings",
     # GroupTask
     "create_group_task", "get_group_task", "get_group_tasks_by_class",
     "get_task_dimensions", "start_group_task", "close_group_task",
