@@ -25,14 +25,8 @@ def upgrade() -> None:
     op.create_index('ix_course_schedules_class_name', 'course_schedules', ['class_name'], unique=False)
     op.create_index('ix_course_schedules_day_of_week', 'course_schedules', ['day_of_week'], unique=False)
 
-    # course_sessions 索引：活跃班级唯一约束 + 常用查询字段
-    op.create_index(
-        'uix_active_class_name',
-        'course_sessions',
-        ['class_name'],
-        unique=True,
-        sqlite_where=sa.text('status="active"')
-    )
+    # course_sessions 索引
+    # uix_active_class_name 已在 initial migration 中创建，此处不再重复
     op.create_index('ix_sessions_schedule_week', 'course_sessions', ['schedule_id', 'week_number'], unique=False)
     op.create_index('ix_sessions_teacher_id', 'course_sessions', ['teacher_id'], unique=False)
 
@@ -53,7 +47,6 @@ def downgrade() -> None:
 
     op.drop_index('ix_sessions_teacher_id', table_name='course_sessions')
     op.drop_index('ix_sessions_schedule_week', table_name='course_sessions')
-    op.drop_index('uix_active_class_name', table_name='course_sessions')
     op.drop_index('ix_course_schedules_day_of_week', table_name='course_schedules')
     op.drop_index('ix_course_schedules_class_name', table_name='course_schedules')
     op.drop_index('ix_course_schedules_teacher_id', table_name='course_schedules')
