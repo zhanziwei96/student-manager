@@ -17,7 +17,7 @@ const router = useRouter()
 const { success: toastSuccess, error: toastError } = useToast()
 
 // 班级选择
-const { data: classes, isPending: loadingClasses } = useClasses()
+const { data: classes } = useClasses()
 const selectedClass = ref('')
 watch(
   () => classes.value,
@@ -218,7 +218,7 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
             评分维度
           </p>
           <div
-            v-for="(dim, idx) in newTask.dimensions"
+            v-for="(_, idx) in newTask.dimensions"
             :key="idx"
             class="flex gap-2"
           >

@@ -29,9 +29,20 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'query-vendor': ['@tanstack/vue-query'],
+        manualChunks(id) {
+          // 合并 node_modules 依赖到几个大的 vendor chunk，减少 HTTP 请求数
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+              return 'vue-vendor'
+            }
+            if (id.includes('@tanstack')) {
+              return 'query-vendor'
+            }
+            if (id.includes('lucide-vue-next')) {
+              return 'icons'
+            }
+            return 'vendor'
+          }
         },
       },
     },

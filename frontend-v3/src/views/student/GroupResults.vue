@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useMyGroupResults } from '@/features/group-collaboration'
 import { JojoRadarChart } from '@/features/group-collaboration/components'
 import { Card, DataContainer, Badge } from '@/components/ui'
-import { Trophy, TrendingUp } from 'lucide-vue-next'
+import { Trophy } from 'lucide-vue-next'
 
 const { data: results, isPending } = useMyGroupResults()
 

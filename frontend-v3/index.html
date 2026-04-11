@@ -7,14 +7,9 @@
     <meta name="description" content="ClassHub - Smart Student Management System" />
     <title>ClassHub</title>
 
-    <!-- 高德地图 JavaScript API -->
-    <script src="https://webapi.amap.com/maps?v=2.0&key=ef9c57844e2b4ab9f0838d88099a4b5b&plugin=AMap.Geocoder,AMap.Marker,AMap.ToolBar"></script>
-    <script>
-      // 高德地图安全密钥配置（需要在控制台配置）
-      window._AMapSecurityConfig = {
-        securityJsCode: '', // 如需安全密钥，在此配置
-      }
-    </script>
+    <!-- 预解析高德地图域名，减少连接耗时 -->
+    <link rel="dns-prefetch" href="https://webapi.amap.com">
+    <link rel="preconnect" href="https://webapi.amap.com" crossorigin>
 
     <style>
       /* Critical CSS to prevent flash */
@@ -41,5 +36,12 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <!-- 高德地图 JavaScript API - 延迟加载避免阻塞首屏渲染 -->
+    <script defer src="https://webapi.amap.com/maps?v=2.0&key=ef9c57844e2b4ab9f0838d88099a4b5b&plugin=AMap.Geocoder,AMap.Marker,AMap.ToolBar"></script>
+    <script>
+      window._AMapSecurityConfig = {
+        securityJsCode: '',
+      }
+    </script>
   </body>
 </html>
