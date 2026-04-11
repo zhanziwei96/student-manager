@@ -4,6 +4,7 @@
 from typing import Optional
 from datetime import time
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Index
 
 
 class CourseScheduleBase(SQLModel):
@@ -24,7 +25,12 @@ class CourseScheduleBase(SQLModel):
 class CourseSchedule(CourseScheduleBase, table=True):
     """课表数据库模型"""
     __tablename__ = "course_schedules"
-    
+    __table_args__ = (
+        Index('ix_course_schedules_teacher_id', 'teacher_id'),
+        Index('ix_course_schedules_class_name', 'class_name'),
+        Index('ix_course_schedules_day_of_week', 'day_of_week'),
+    )
+
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: Optional[str] = Field(default=None, description="创建时间")
     updated_at: Optional[str] = Field(default=None, description="更新时间")

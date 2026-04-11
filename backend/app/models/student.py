@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, List, Tuple
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Index, desc
 from app.core.timezone import get_now
 
 
@@ -21,7 +22,10 @@ class StudentBase(SQLModel):
 class Student(StudentBase, table=True):
     """学生表模型"""
     __tablename__ = "students"
-    
+    __table_args__ = (
+        Index('idx_students_score', desc('score')),
+    )
+
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
     last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
     password_hash: Optional[str] = Field(default=None, description="密码哈希 (bcrypt)")

@@ -3,7 +3,7 @@
 """
 from datetime import datetime
 from typing import Optional
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, UniqueConstraint
 from app.models.constants import CheckinTypeConst
 from app.core.timezone import get_now
 
@@ -11,6 +11,10 @@ from app.core.timezone import get_now
 class CheckinRecord(SQLModel, table=True):
     """签到记录表"""
     __tablename__ = "checkin_records"
+    __table_args__ = (
+        # 同一学生在同一课堂只能签到一次
+        UniqueConstraint('session_id', 'student_id', name='idx_unique_session_student'),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     session_id: Optional[int] = Field(

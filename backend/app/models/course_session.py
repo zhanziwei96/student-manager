@@ -34,6 +34,9 @@ class CourseSession(CourseSessionBase, table=True):
     __table_args__ = (
         # 同一班级在同一时间只能有一个活跃课堂，防止并发重复创建（P0 并发安全）
         Index('uix_active_class_name', 'class_name', unique=True, sqlite_where=text('status="active"')),
+        # 性能优化索引
+        Index('ix_sessions_schedule_week', 'schedule_id', 'week_number'),
+        Index('ix_sessions_teacher_id', 'teacher_id'),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)

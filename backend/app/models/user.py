@@ -13,7 +13,7 @@ from app.core.timezone import get_now
 
 class UserBase(SQLModel):
     """用户基础属性"""
-    username: str = Field(..., description="用户名")
+    username: str = Field(..., description="用户名", unique=True)
     name: str = Field(..., description="姓名")
     role: str = Field(default=UserRoleConst.TEACHER, description="角色")
     assigned_classes: str = Field(default="[]", description="负责班级列表（JSON字符串）")
