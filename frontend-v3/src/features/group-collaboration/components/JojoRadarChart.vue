@@ -1,242 +1,409 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import * as echarts from 'echarts'
 
 const props = defineProps<{
   dimensions: string[]
-  teacherScores: number[]
-  peerScores: number[]
+  finalScores: number[]
+  groupName?: string
 }>()
 
-const chartRef = ref<HTMLDivElement | null>(null)
-let chartInstance: echarts.ECharts | null = null
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+const containerRef = ref<HTMLDivElement | null>(null)
 
-function hasCanvasSupport(): boolean {
-  try {
-    const canvas = document.createElement('canvas')
-    return !!canvas.getContext('2d')
-  } catch {
-    return false
+const canvasSize = ref({ width: 800, height: 800 })
+const hoveredIndex = ref<number | null>(null)
+const animationProgress = ref(0)
+const coinDone = ref(false)
+
+let rafId: number | null = null
+let resizeObserver: ResizeObserver | null = null
+
+const COLORS = {
+  paper: '#e8e4d9',
+  ringFill1: 'rgba(255, 248, 150, 0.65)',
+  ringFill2: 'rgba(255, 255, 220, 0.45)',
+  ringStroke: '#5a5a5a',
+  axisText: '#2a2a2a',
+  dataFill: 'rgba(220, 50, 60, 0.6)',
+  dataStroke: '#1a1a1a',
+  dotFill: '#ffffff',
+  dotStroke: '#1a1a1a',
+  highlight: '#c9a227',
+}
+
+function easeOutBack(t: number): number {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
+}
+
+function setupCanvas() {
+  const canvas = canvasRef.value
+  const container = containerRef.value
+  if (!canvas || !container) return
+
+  const rect = container.getBoundingClientRect()
+  // 正方形：取宽高最小值
+  const size = Math.floor(Math.min(rect.width, rect.height))
+  const ratio = window.devicePixelRatio || 1
+
+  canvasSize.value = { width: size, height: size }
+
+  canvas.width = size * ratio
+  canvas.height = size * ratio
+  canvas.style.width = `${size}px`
+  canvas.style.height = `${size}px`
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+}
+
+function drawOuterRing(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+) {
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius + 40, 0, Math.PI * 2)
+
+  const gradient = ctx.createLinearGradient(cx - radius - 40, cy - radius - 40, cx + radius + 40, cy + radius + 40)
+  gradient.addColorStop(0, '#aaa')
+  gradient.addColorStop(0.5, '#e0e0e0')
+  gradient.addColorStop(1, '#888')
+
+  ctx.fillStyle = gradient
+  ctx.fill()
+
+  ctx.strokeStyle = '#333'
+  ctx.lineWidth = 2
+  ctx.stroke()
+}
+
+function drawInnerBackground(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+) {
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius)
+  gradient.addColorStop(0, '#ffffe0')
+  gradient.addColorStop(0.7, '#fffacd')
+  gradient.addColorStop(1, '#ffe4b5')
+
+  ctx.fillStyle = gradient
+  ctx.fill()
+
+  ctx.strokeStyle = '#666'
+  ctx.lineWidth = 1
+  ctx.stroke()
+}
+
+function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  count: number,
+) {
+  const angles = Array.from({ length: count }, (_, i) => -Math.PI / 2 + (Math.PI * 2 * i) / count)
+  const levels = 5
+
+  // concentric circles (wireframe only)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)'
+  ctx.lineWidth = 1
+  for (let l = 1; l <= levels; l++) {
+    const r = (radius / levels) * l
+    ctx.beginPath()
+    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  // axis lines + tick marks
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'
+  for (let i = 0; i < count; i++) {
+    const a = angles[i]
+    const isHover = hoveredIndex.value === i
+
+    ctx.beginPath()
+    ctx.moveTo(cx, cy)
+    ctx.lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius)
+    ctx.lineWidth = isHover ? 3 : 1.2
+    ctx.strokeStyle = isHover ? COLORS.highlight : 'rgba(0, 0, 0, 0.4)'
+    ctx.stroke()
+
+    for (let lv = 1; lv <= levels; lv++) {
+      const tr = (radius / levels) * lv
+      const tx = cx + Math.cos(a) * tr
+      const ty = cy + Math.sin(a) * tr
+      const tickAngle = a + Math.PI / 2
+
+      ctx.beginPath()
+      ctx.moveTo(tx + 3 * Math.cos(tickAngle), ty + 3 * Math.sin(tickAngle))
+      ctx.lineTo(tx - 3 * Math.cos(tickAngle), ty - 3 * Math.sin(tickAngle))
+      ctx.lineWidth = 1
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'
+      ctx.stroke()
+    }
+  }
+
+  // numeric labels on the vertical axis (left side)
+  const labels = ['20', '40', '60', '80', '100']
+  ctx.textAlign = 'right'
+  ctx.textBaseline = 'middle'
+  ctx.font = 'bold 11px Arial'
+  ctx.fillStyle = '#333'
+  for (let lv = 1; lv <= levels; lv++) {
+    const r = (radius / levels) * lv
+    const lx = cx - 5
+    const ly = cy - r
+    ctx.fillText(labels[lv - 1], lx, ly)
   }
 }
 
-function initChart() {
-  if (!chartRef.value || !hasCanvasSupport()) return
-  chartInstance = echarts.init(chartRef.value, undefined, { renderer: 'canvas' })
-  updateChart()
-}
+function drawDataPolygon(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  scores: number[],
+  progress: number,
+) {
+  const count = scores.length
+  if (count === 0) return
+  const angles = Array.from({ length: count }, (_, i) => -Math.PI / 2 + (Math.PI * 2 * i) / count)
+  const scale = easeOutBack(progress)
 
-function updateChart() {
-  if (!chartInstance) return
-
-  const option: echarts.EChartsOption = {
-    // 深色背景
-    backgroundColor: 'transparent',
-
-    // 雷达配置 —— 替身面板圆形风格
-    radar: {
-      indicator: props.dimensions.map((name) => ({ name, max: 100 })),
-      shape: 'circle',
-      splitNumber: 5,
-      radius: '68%',
-      center: ['50%', '48%'],
-
-      // 轴名称：粗体锐利字体，金属白
-      axisName: {
-        color: '#e8e6e3',
-        fontWeight: 900,
-        fontSize: 14,
-        fontFamily: '"Noto Sans SC", "Impact", "Arial Black", sans-serif',
-        textShadowColor: 'rgba(163, 130, 255, 0.8)',
-        textShadowBlur: 6,
-      },
-
-      // 同心圆分隔线：银灰金属感 + 辉光
-      splitLine: {
-        lineStyle: {
-          color: '#8a8a8a',
-          width: 1.5,
-          opacity: 0.5,
-          shadowColor: 'rgba(180, 160, 220, 0.4)',
-          shadowBlur: 4,
-        },
-      },
-
-      // 同心圆区域填充：金色渐变能量核心
-      splitArea: {
-        show: true,
-        areaStyle: {
-          color: [
-            'rgba(255, 215, 0, 0.04)',
-            'rgba(255, 200, 0, 0.07)',
-            'rgba(255, 185, 0, 0.10)',
-            'rgba(255, 170, 0, 0.14)',
-            'rgba(255, 155, 0, 0.18)',
-          ],
-        },
-      },
-
-      // 径向轴线：金属银线
-      axisLine: {
-        lineStyle: {
-          color: '#9a9a9a',
-          width: 1.5,
-          opacity: 0.6,
-          shadowColor: 'rgba(163, 130, 255, 0.3)',
-          shadowBlur: 3,
-        },
-      },
-    },
-
-    // 装饰性图形：外圈辉光环
-    graphic: [
-      // 外圈金属环
-      {
-        type: 'circle',
-        shape: { cx: '50%', cy: '48%', r: '71%' },
-        style: {
-          stroke: 'rgba(200, 180, 230, 0.35)',
-          lineWidth: 3,
-          shadowColor: 'rgba(140, 100, 255, 0.6)',
-          shadowBlur: 15,
-          fill: 'none',
-        },
-        silent: true,
-      },
-      // 最外层辉光
-      {
-        type: 'circle',
-        shape: { cx: '50%', cy: '48%', r: '74%' },
-        style: {
-          stroke: 'rgba(180, 150, 255, 0.15)',
-          lineWidth: 1,
-          shadowColor: 'rgba(140, 100, 255, 0.3)',
-          shadowBlur: 20,
-          fill: 'none',
-        },
-        silent: true,
-      },
-    ],
-
-    series: [
-      {
-        type: 'radar',
-        data: [
-          {
-            value: props.teacherScores,
-            name: '教师评分',
-            symbol: 'diamond',
-            symbolSize: 10,
-            lineStyle: {
-              color: '#ff4757',
-              width: 2.5,
-              shadowColor: 'rgba(255, 71, 87, 0.6)',
-              shadowBlur: 8,
-            },
-            itemStyle: {
-              color: '#ff4757',
-              borderColor: '#ff6b81',
-              borderWidth: 1.5,
-              shadowColor: 'rgba(255, 71, 87, 0.8)',
-              shadowBlur: 6,
-            },
-            areaStyle: {
-              color: new echarts.graphic.RadialGradient(0.5, 0.5, 1, [
-                { offset: 0, color: 'rgba(255, 71, 87, 0.35)' },
-                { offset: 1, color: 'rgba(255, 71, 87, 0.05)' },
-              ]),
-            },
-          },
-          {
-            value: props.peerScores,
-            name: '组外学生评分',
-            symbol: 'diamond',
-            symbolSize: 10,
-            lineStyle: {
-              color: '#ffd32a',
-              width: 2.5,
-              shadowColor: 'rgba(255, 211, 42, 0.6)',
-              shadowBlur: 8,
-            },
-            itemStyle: {
-              color: '#ffd32a',
-              borderColor: '#fff200',
-              borderWidth: 1.5,
-              shadowColor: 'rgba(255, 211, 42, 0.8)',
-              shadowBlur: 6,
-            },
-            areaStyle: {
-              color: new echarts.graphic.RadialGradient(0.5, 0.5, 1, [
-                { offset: 0, color: 'rgba(255, 211, 42, 0.25)' },
-                { offset: 1, color: 'rgba(255, 211, 42, 0.03)' },
-              ]),
-            },
-          },
-        ],
-      },
-    ],
-
-    // 图例：动漫风格
-    legend: {
-      data: ['教师评分', '组外学生评分'],
-      bottom: 4,
-      textStyle: {
-        color: '#d4d0cb',
-        fontWeight: 'bold',
-        fontSize: 13,
-        fontFamily: '"Noto Sans SC", "Arial Black", sans-serif',
-        textShadowColor: 'rgba(163, 130, 255, 0.5)',
-        textShadowBlur: 4,
-      },
-      itemGap: 24,
-      itemWidth: 18,
-      itemHeight: 10,
-    },
+  ctx.beginPath()
+  for (let i = 0; i < count; i++) {
+    const a = angles[i]
+    const val = Math.min(100, Math.max(0, scores[i] ?? 0)) / 100
+    const r = radius * val * scale
+    const x = cx + Math.cos(a) * r
+    const y = cy + Math.sin(a) * r
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
   }
-
-  chartInstance.setOption(option, true)
+  ctx.closePath()
+  ctx.fillStyle = COLORS.dataFill
+  ctx.fill()
+  ctx.lineWidth = 2
+  ctx.strokeStyle = COLORS.dataStroke
+  ctx.stroke()
 }
 
-function handleResize() {
-  chartInstance?.resize()
+function drawLabels(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  dimensions: string[],
+) {
+  const count = dimensions.length
+  const angles = Array.from({ length: count }, (_, i) => -Math.PI / 2 + (Math.PI * 2 * i) / count)
+  const labelRadius = radius + 28
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  for (let i = 0; i < count; i++) {
+    const a = angles[i]
+    const x = cx + Math.cos(a) * labelRadius
+    const y = cy + Math.sin(a) * labelRadius
+    const isHover = hoveredIndex.value === i
+
+    ctx.font = 'bold 13px "Noto Sans SC", "Microsoft YaHei", sans-serif'
+    ctx.fillStyle = isHover ? '#8B0000' : '#1a1a1a'
+    if (isHover) {
+      ctx.save()
+      ctx.shadowColor = 'rgba(201, 162, 39, 0.9)'
+      ctx.shadowBlur = 8
+      ctx.fillText(dimensions[i], x, y)
+      ctx.restore()
+    } else {
+      ctx.save()
+      ctx.shadowColor = 'rgba(255,255,255,0.8)'
+      ctx.shadowBlur = 4
+      ctx.fillText(dimensions[i], x, y)
+      ctx.restore()
+    }
+  }
+}
+
+function draw() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const { width, height } = canvasSize.value
+  const cx = width / 2
+  const cy = height / 2
+  const radius = Math.min(width, height) * 0.30
+
+  ctx.clearRect(0, 0, width, height)
+
+  const dims = props.dimensions || []
+  const scores = props.finalScores || []
+
+  if (dims.length > 2) {
+    drawOuterRing(ctx, cx, cy, radius)
+    drawInnerBackground(ctx, cx, cy, radius)
+    drawGrid(ctx, cx, cy, radius, dims.length)
+    drawDataPolygon(ctx, cx, cy, radius, scores, animationProgress.value)
+    drawLabels(ctx, cx, cy, radius, dims)
+  }
+}
+
+function animate() {
+  if (animationProgress.value >= 1) {
+    animationProgress.value = 1
+    draw()
+    return
+  }
+  animationProgress.value += 0.024
+  if (animationProgress.value > 1) animationProgress.value = 1
+  draw()
+  rafId = requestAnimationFrame(animate)
+}
+
+function startAnimation() {
+  animationProgress.value = 0
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(animate)
+}
+
+function onMouseMove(e: MouseEvent) {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  const rect = canvas.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  const { width, height } = canvasSize.value
+  const cx = width / 2
+  const cy = height / 2
+  const labelRadius = Math.min(width, height) * 0.30 + 28
+
+  const dims = props.dimensions || []
+  let found: number | null = null
+  for (let i = 0; i < dims.length; i++) {
+    const a = -Math.PI / 2 + (Math.PI * 2 * i) / dims.length
+    const lx = cx + Math.cos(a) * labelRadius
+    const ly = cy + Math.sin(a) * labelRadius
+    const dx = x - lx
+    const dy = y - ly
+    if (dx * dx + dy * dy < 900) {
+      found = i
+      break
+    }
+  }
+  if (found !== hoveredIndex.value) {
+    hoveredIndex.value = found
+    draw()
+  }
+}
+
+function onMouseLeave() {
+  if (hoveredIndex.value !== null) {
+    hoveredIndex.value = null
+    draw()
+  }
 }
 
 onMounted(() => {
-  initChart()
-  window.addEventListener('resize', handleResize)
+  setupCanvas()
+
+  const canvas = canvasRef.value
+  canvas?.addEventListener('mousemove', onMouseMove)
+  canvas?.addEventListener('mouseleave', onMouseLeave)
+
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => {
+      setupCanvas()
+      draw()
+    })
+    if (containerRef.value) resizeObserver.observe(containerRef.value)
+  }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-  chartInstance?.dispose()
-  chartInstance = null
+  if (rafId) cancelAnimationFrame(rafId)
+  resizeObserver?.disconnect()
+  const canvas = canvasRef.value
+  canvas?.removeEventListener('mousemove', onMouseMove)
+  canvas?.removeEventListener('mouseleave', onMouseLeave)
 })
 
-watch(() => [props.dimensions, props.teacherScores, props.peerScores], updateChart, { deep: true })
+watch(
+  () => [props.dimensions, props.finalScores, props.groupName],
+  () => {
+    // 重置硬币动画
+    coinDone.value = false
+  },
+  { deep: true },
+)
 </script>
 
 <template>
-  <div
-    ref="chartRef"
-    class="jojo-stand-panel w-full"
-  />
+  <div class="jojo-radar-wrapper flex items-center justify-center">
+    <div
+      ref="containerRef"
+      class="jojo-radar-chart relative overflow-hidden"
+      :class="{ 'coin-enter': !coinDone }"
+      :style="{ width: '100%', aspectRatio: '1 / 1' }"
+      @animationend="onCoinDone"
+    >
+      <canvas ref="canvasRef" class="block w-full h-full" />
+    </div>
+  </div>
 </template>
 
+<script lang="ts">
+export default {
+  methods: {
+    onCoinDone() {
+      (this as any).coinDone = true
+      // 硬币动画结束后启动雷达图入场动画
+      ;(this as any).startAnimation()
+    },
+  },
+}
+</script>
+
 <style scoped>
-.jojo-stand-panel {
-  background:
-    radial-gradient(
-      ellipse at 50% 48%,
-      rgba(60, 30, 90, 0.25) 0%,
-      rgba(25, 15, 50, 0.5) 45%,
-      rgba(10, 5, 20, 0.85) 80%,
-      rgba(5, 2, 10, 1) 100%
-    );
-  border-radius: 12px;
-  border: 2px solid rgba(120, 90, 180, 0.3);
-  box-shadow:
-    0 0 20px rgba(100, 60, 200, 0.25),
-    inset 0 0 30px rgba(80, 40, 160, 0.15);
-  padding: 8px;
+.jojo-radar-chart {
+  border-radius: 50%;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.08), 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.jojo-radar-chart.coin-enter {
+  animation: coinFlip 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes coinFlip {
+  0% {
+    transform: perspective(800px) rotateY(0deg);
+    opacity: 0.3;
+  }
+  30% {
+    transform: perspective(800px) rotateY(540deg);
+    opacity: 0.7;
+  }
+  60% {
+    transform: perspective(800px) rotateY(900deg);
+    opacity: 0.9;
+  }
+  80% {
+    transform: perspective(800px) rotateY(1040deg);
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(800px) rotateY(1080deg);
+    opacity: 1;
+  }
 }
 </style>
