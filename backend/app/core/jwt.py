@@ -107,5 +107,14 @@ async def require_admin(request: Request) -> str:
         raise HTTPException(status_code=401, detail="未登录")
     if not is_admin:
         raise HTTPException(status_code=403, detail="需要管理员权限")
-    
+
     return user_id
+
+
+async def require_teacher(request: Request) -> dict:
+    """要求教师或管理员权限，返回完整 user dict"""
+    user = await get_current_user(request)
+    role = user.get("role", "")
+    if role not in ("admin", "teacher"):
+        raise HTTPException(status_code=403, detail="需要教师权限")
+    return user

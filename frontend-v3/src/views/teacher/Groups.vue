@@ -157,9 +157,9 @@ async function handleRejectDissolution(reqId: number) {
 
     <!-- 班级小组 -->
     <Card class="bg-white border-[#e5e5e5] p-5">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div class="flex items-center gap-3">
-          <Select v-model="selectedClass" :options="classOptions" class="w-48" />
+      <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <Select v-model="selectedClass" :options="classOptions" class="w-full sm:w-48" />
           <div class="flex items-center gap-2">
             <span class="text-sm text-[#737373]">每组上限</span>
             <input

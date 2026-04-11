@@ -189,7 +189,7 @@ function formatTime(iso: string) {
               <div
                 v-for="req in myGroup.pending_requests"
                 :key="req.id"
-                class="flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-3"
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-3"
               >
                 <div class="text-sm">
                   <span class="text-black font-medium">{{ req.student_id }}</span>

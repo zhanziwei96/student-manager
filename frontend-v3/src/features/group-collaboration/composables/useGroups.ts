@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { groupsApi } from '@/api'
+import { toValue, type MaybeRefOrGetter } from 'vue'
 
-export function useTeacherGroups(className: string) {
+export function useTeacherGroups(className: MaybeRefOrGetter<string>) {
   return useQuery({
     queryKey: ['teacher-groups', className],
-    queryFn: () => groupsApi.getTeacherGroups(className),
-    enabled: !!className,
+    queryFn: () => groupsApi.getTeacherGroups(toValue(className)),
+    enabled: () => !!toValue(className),
   })
 }
 
@@ -20,11 +21,11 @@ export function useAutoAssign() {
   })
 }
 
-export function useStudentGroups(className: string) {
+export function useStudentGroups(className: MaybeRefOrGetter<string>) {
   return useQuery({
     queryKey: ['student-groups', className],
-    queryFn: () => groupsApi.getGroups(className),
-    enabled: !!className,
+    queryFn: () => groupsApi.getGroups(toValue(className)),
+    enabled: () => !!toValue(className),
   })
 }
 

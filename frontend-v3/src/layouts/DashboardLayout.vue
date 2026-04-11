@@ -66,7 +66,10 @@ const navItems = computed(() => {
 })
 
 const isActive = (path: string) => {
-  return route.path === path
+  if (path === '/admin' || path === '/teacher' || path === '/student') {
+    return route.path === path
+  }
+  return route.path.startsWith(path)
 }
 
 const handleLogout = async () => {

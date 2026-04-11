@@ -29,6 +29,10 @@ const taskOptions = computed(() => [
 const currentTaskId = computed(() => Number(selectedTaskId.value) || 0)
 const { data: evaluations, isPending: loadingEvaluations } = useEvaluations(currentTaskId)
 
+const isLoading = computed(() =>
+  loadingTasks.value || (currentTaskId.value > 0 && loadingEvaluations.value),
+)
+
 // 本地分数状态
 const localScores = ref<Record<number, Record<number, number>>>({})
 
@@ -94,9 +98,9 @@ async function handleSubmit(targetGroupId: number) {
     </div>
 
     <DataContainer
-      :loading="loadingEvaluations"
-      :has-data="(evaluations || []).length > 0"
-      empty-text="当前任务无互评对象"
+      :loading="isLoading"
+      :has-data="(tasks?.length || 0) > 0 && (evaluations || []).length > 0"
+      :empty-text="(tasks?.length || 0) === 0 ? '暂无任务' : '当前任务无互评对象'"
     >
       <div class="grid gap-4">
         <Card
@@ -124,7 +128,7 @@ async function handleSubmit(targetGroupId: number) {
             <div
               v-for="dim in target.dimensions"
               :key="dim.id"
-              class="flex items-center justify-between gap-4"
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4"
             >
               <div class="flex items-center gap-2">
                 <span class="text-sm text-[#737373]">
@@ -138,7 +142,7 @@ async function handleSubmit(targetGroupId: number) {
                 min="0"
                 max="100"
                 :disabled="dim.scored"
-                class="w-24 rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black text-right focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 disabled:bg-[#fafafa] disabled:text-[#a3a3a3]"
+                class="w-full sm:w-24 rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black text-right focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 disabled:bg-[#fafafa] disabled:text-[#a3a3a3]"
               >
             </div>
           </div>
