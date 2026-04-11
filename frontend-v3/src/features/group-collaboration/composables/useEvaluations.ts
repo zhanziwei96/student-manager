@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { groupsApi } from '@/api'
+import { toValue, type MaybeRefOrGetter } from 'vue'
 
 export function useStudentGroupTasks() {
   return useQuery({
@@ -8,11 +9,11 @@ export function useStudentGroupTasks() {
   })
 }
 
-export function useEvaluations(taskId: number) {
+export function useEvaluations(taskId: MaybeRefOrGetter<number>) {
   return useQuery({
     queryKey: ['evaluations', taskId],
-    queryFn: () => groupsApi.getEvaluations(taskId),
-    enabled: !!taskId,
+    queryFn: () => groupsApi.getEvaluations(toValue(taskId)),
+    enabled: () => !!toValue(taskId),
   })
 }
 
