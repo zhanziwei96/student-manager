@@ -256,6 +256,12 @@ function draw() {
     drawGrid(ctx, cx, cy, radius, dims.length)
     drawDataPolygon(ctx, cx, cy, radius, scores, animationProgress.value)
     drawLabels(ctx, cx, cy, radius, dims)
+  } else {
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = '14px "Noto Sans SC", "Microsoft YaHei", sans-serif'
+    ctx.fillStyle = '#666'
+    ctx.fillText('至少需要 3 个维度', cx, cy)
   }
 }
 
@@ -275,6 +281,11 @@ function startAnimation() {
   animationProgress.value = 0
   if (rafId) cancelAnimationFrame(rafId)
   rafId = requestAnimationFrame(animate)
+}
+
+function onCoinDone() {
+  coinDone.value = true
+  startAnimation()
 }
 
 function onMouseMove(e: MouseEvent) {
@@ -343,6 +354,7 @@ watch(
   () => {
     // 重置硬币动画
     coinDone.value = false
+    startAnimation()
   },
   { deep: true },
 )
@@ -361,18 +373,6 @@ watch(
     </div>
   </div>
 </template>
-
-<script lang="ts">
-export default {
-  methods: {
-    onCoinDone() {
-      (this as any).coinDone = true
-      // 硬币动画结束后启动雷达图入场动画
-      ;(this as any).startAnimation()
-    },
-  },
-}
-</script>
 
 <style scoped>
 .jojo-radar-chart {
