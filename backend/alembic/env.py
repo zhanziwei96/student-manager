@@ -27,6 +27,7 @@ from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
     GroupTask, GroupTaskDimension, EvaluationAssignment,
     GroupEvaluationScore, GroupDissolutionRequest,
+    ClassGroupSettings,
 )
 
 # Alembic 配置对象
