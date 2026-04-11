@@ -40,6 +40,23 @@ from app.crud.audit import (
     create_security_alert, get_unresolved_alerts, resolve_alert, cleanup_old_audit_logs
 )
 from app.crud.leaderboard import get_leaderboard
+from app.crud.group import (
+    get_group, get_groups_by_class, get_student_active_group,
+    get_group_members, create_group, create_membership_request,
+    get_pending_membership_requests, approve_membership_request,
+    reject_membership_request, create_dissolution_request,
+    get_pending_dissolution_requests, approve_dissolution_request,
+    reject_dissolution_request, transfer_group_leader,
+    auto_assign_unassigned_students,
+    get_class_group_settings, get_or_create_class_group_settings,
+    update_class_group_settings,
+)
+from app.crud.group_task import (
+    create_group_task, get_group_task, get_group_tasks_by_class,
+    get_task_dimensions, start_group_task, close_group_task,
+    get_evaluation_assignments, submit_teacher_score,
+    submit_student_scores, get_task_results,
+)
 
 __all__ = [
     # Student
@@ -68,4 +85,19 @@ __all__ = [
     "has_active_session", "has_ended_session",
     # Leaderboard
     "get_leaderboard",
+    # Group
+    "get_group", "get_groups_by_class", "get_student_active_group",
+    "get_group_members", "create_group", "create_membership_request",
+    "get_pending_membership_requests", "approve_membership_request",
+    "reject_membership_request", "create_dissolution_request",
+    "get_pending_dissolution_requests", "approve_dissolution_request",
+    "reject_dissolution_request", "transfer_group_leader",
+    "auto_assign_unassigned_students",
+    "get_class_group_settings", "get_or_create_class_group_settings",
+    "update_class_group_settings",
+    # GroupTask
+    "create_group_task", "get_group_task", "get_group_tasks_by_class",
+    "get_task_dimensions", "start_group_task", "close_group_task",
+    "get_evaluation_assignments", "submit_teacher_score",
+    "submit_student_scores", "get_task_results",
 ]

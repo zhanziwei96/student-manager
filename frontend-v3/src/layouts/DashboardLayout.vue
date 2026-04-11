@@ -48,12 +48,17 @@ const navItems = computed(() => {
       { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
       { name: '学生管理', path: '/teacher/students', icon: Users },
       { name: '课堂签到', path: '/teacher/session', icon: Calendar },
-      { name: '课表管理', path: '/teacher/schedules', icon: BookOpen }
+      { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
+      { name: '合作项目', path: '/teacher/group-tasks', icon: Users },
+      { name: '小组管理', path: '/teacher/groups', icon: GraduationCap }
     )
   } else if (authStore.isStudent) {
     items.push(
       { name: '仪表板', path: '/student', icon: LayoutDashboard },
-      { name: '课堂签到', path: '/student/checkin', icon: CheckCircle }
+      { name: '课堂签到', path: '/student/checkin', icon: CheckCircle },
+      { name: '我的小组', path: '/student/my-group', icon: Users },
+      { name: '组间互评', path: '/student/group-evaluations', icon: CheckCircle },
+      { name: '成绩单', path: '/student/group-results', icon: GraduationCap }
     )
   }
 
@@ -61,7 +66,10 @@ const navItems = computed(() => {
 })
 
 const isActive = (path: string) => {
-  return route.path === path
+  if (path === '/admin' || path === '/teacher' || path === '/student') {
+    return route.path === path
+  }
+  return route.path.startsWith(path)
 }
 
 const handleLogout = async () => {

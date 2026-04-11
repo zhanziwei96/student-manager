@@ -7,6 +7,12 @@ from app.models.checkin import CheckinRecord, ScoreLog
 from app.models.audit import AuditLog, SecurityAlert
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
 from app.models.course_session import CourseSession, ScheduleAdjustment, CourseSessionResponse
+from app.models.group import (
+    Group, GroupMember, GroupMembershipRequest,
+    GroupTask, GroupTaskDimension, EvaluationAssignment,
+    GroupEvaluationScore, GroupDissolutionRequest,
+    ClassGroupSettings,
+)
 from app.models.constants import (
     UserRole, UserRoleConst, UserStatus, CheckinType,
     ApiResponse, ApiSuccessResponse, ApiListResponse, ApiErrorResponse,
@@ -27,6 +33,10 @@ __all__ = [
     "CourseSession", "ScheduleAdjustment", "CourseSessionResponse",
     # Course Schedule
     "CourseSchedule", "CourseScheduleResponse",
+    # Group Collaboration
+    "Group", "GroupMember", "GroupMembershipRequest",
+    "GroupTask", "GroupTaskDimension", "EvaluationAssignment",
+    "GroupEvaluationScore", "GroupDissolutionRequest", "ClassGroupSettings",
     # API Response Models
     "ApiResponse", "ApiSuccessResponse", "ApiListResponse", "ApiErrorResponse",
 ]

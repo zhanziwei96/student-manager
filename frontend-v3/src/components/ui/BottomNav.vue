@@ -15,13 +15,18 @@ const teacherItems = [
   { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
   { name: '学生', path: '/teacher/students', icon: Users },
   { name: '签到', path: '/teacher/session', icon: CheckCircle },
-  { name: '课表', path: '/teacher/schedules', icon: BookOpen }
+  { name: '课表', path: '/teacher/schedules', icon: BookOpen },
+  { name: '合作', path: '/teacher/group-tasks', icon: Users },
+  { name: '小组', path: '/teacher/groups', icon: GraduationCap }
 ]
 
 // Student navigation items
 const studentItems = [
   { name: '仪表板', path: '/student', icon: LayoutDashboard },
-  { name: '签到', path: '/student/checkin', icon: CheckCircle }
+  { name: '签到', path: '/student/checkin', icon: CheckCircle },
+  { name: '小组', path: '/student/my-group', icon: Users },
+  { name: '互评', path: '/student/group-evaluations', icon: CheckCircle },
+  { name: '成绩', path: '/student/group-results', icon: GraduationCap }
 ]
 
 const navItems = computed(() => {

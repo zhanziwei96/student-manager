@@ -33,6 +33,7 @@ export interface User {
   username: string              // 用户名
   name: string                  // 姓名
   role: UserRole                // 角色
+  class_name?: string           // 学生所属班级
   assigned_classes?: string[]   // 负责班级列表（FE-004: 补充缺失字段）
   is_account_enabled: boolean   // 账户是否启用
   last_login?: string           // 最后登录时间（ISO格式）

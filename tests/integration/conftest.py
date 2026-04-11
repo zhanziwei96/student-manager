@@ -47,13 +47,21 @@ def _clear_all_data():
         tables = [
             "score_logs",
             "checkin_records",
+            "group_evaluation_scores",
+            "group_membership_requests",
+            "group_dissolution_requests",
+            "group_task_dimensions",
+            "group_tasks",
+            "group_members",
+            "groups",
+            "class_group_settings",
             "course_sessions",
             "schedule_adjustments",
             "course_schedules",
             "security_alerts",
             "audit_logs",
             "students",
-            "users"
+            "users",
         ]
         for table in tables:
             try:

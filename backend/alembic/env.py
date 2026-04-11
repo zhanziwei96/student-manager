@@ -23,6 +23,11 @@ from app.models.checkin import CheckinRecord, ScoreLog
 from app.models.audit import AuditLog
 from app.models.course_schedule import CourseSchedule
 from app.models.course_session import CourseSession, ScheduleAdjustment
+from app.models.group import (
+    Group, GroupMember, GroupMembershipRequest,
+    GroupTask, GroupTaskDimension, EvaluationAssignment,
+    GroupEvaluationScore, GroupDissolutionRequest,
+)
 
 # Alembic 配置对象
 config = context.config

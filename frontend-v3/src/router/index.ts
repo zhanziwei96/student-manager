@@ -51,6 +51,9 @@ const routes = [
         name: 'AdminSchedules',
         component: () => import('@/views/teacher/Schedules.vue'),
       },
+      { path: 'group-tasks', name: 'AdminGroupTasks', component: () => import('@/views/teacher/GroupTasks.vue') },
+      { path: 'group-tasks/:id/results', name: 'AdminGroupTaskResults', component: () => import('@/views/teacher/GroupTaskResults.vue') },
+      { path: 'groups', name: 'AdminGroups', component: () => import('@/views/teacher/Groups.vue') },
     ],
   },
   {
@@ -83,6 +86,10 @@ const routes = [
         name: 'TeacherSessionsHistory',
         component: () => import('@/views/teacher/SessionsHistory.vue'),
       },
+      { path: 'group-tasks', name: 'TeacherGroupTasks', component: () => import('@/views/teacher/GroupTasks.vue') },
+      { path: 'group-tasks/:id/results', name: 'TeacherGroupTaskResults', component: () => import('@/views/teacher/GroupTaskResults.vue') },
+      { path: 'group-tasks/:id/score', name: 'TeacherGroupTaskScore', component: () => import('@/views/teacher/GroupTaskScore.vue') },
+      { path: 'groups', name: 'TeacherGroups', component: () => import('@/views/teacher/Groups.vue') },
     ],
   },
   {
@@ -105,6 +112,9 @@ const routes = [
         name: 'StudentLeaderboard',
         component: () => import('@/views/student/Leaderboard.vue'),
       },
+      { path: 'my-group', name: 'StudentMyGroup', component: () => import('@/views/student/MyGroup.vue') },
+      { path: 'group-evaluations', name: 'StudentGroupEvaluations', component: () => import('@/views/student/GroupEvaluations.vue') },
+      { path: 'group-results', name: 'StudentGroupResults', component: () => import('@/views/student/GroupResults.vue') },
     ],
   },
   {
