@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision: str = '2026_04_11_add_group_collaboration_tables'
-down_revision: Union[str, None] = '2026_04_09_add_schedule_adjustment_unique_constraint'
+down_revision: Union[str, None] = 'fcfbc4da810e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -140,8 +140,19 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_group_dissolution_requests_group_id'), 'group_dissolution_requests', ['group_id'], unique=False)
 
+    # 9. class_group_settings
+    op.create_table(
+        'class_group_settings',
+        sa.Column('class_name', sa.String(length=100), nullable=False),
+        sa.Column('max_members_per_group', sa.Integer(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint('class_name')
+    )
+
 
 def downgrade() -> None:
+    op.drop_table('class_group_settings')
+
     op.drop_index(op.f('ix_group_dissolution_requests_group_id'), table_name='group_dissolution_requests')
     op.drop_table('group_dissolution_requests')
 
