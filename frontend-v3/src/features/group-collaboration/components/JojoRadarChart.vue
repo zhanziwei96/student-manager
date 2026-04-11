@@ -42,9 +42,8 @@ function setupCanvas() {
   const container = containerRef.value
   if (!canvas || !container) return
 
-  const rect = container.getBoundingClientRect()
-  // 正方形：取宽高最小值
-  const size = Math.floor(Math.min(rect.width, rect.height))
+  // 使用 offsetWidth/offsetHeight 避免动画 transform 压扁 getBoundingClientRect
+  const size = Math.floor(Math.min(container.offsetWidth, container.offsetHeight))
   const ratio = window.devicePixelRatio || 1
 
   canvasSize.value = { width: size, height: size }
@@ -91,15 +90,15 @@ function drawInnerBackground(
   ctx.arc(cx, cy, radius, 0, Math.PI * 2)
 
   const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius)
-  gradient.addColorStop(0, '#ffffe0')
-  gradient.addColorStop(0.7, '#fffacd')
-  gradient.addColorStop(1, '#ffe4b5')
+  gradient.addColorStop(0, '#fffee8')
+  gradient.addColorStop(0.5, '#fff4a8')
+  gradient.addColorStop(1, '#ffe066')
 
   ctx.fillStyle = gradient
   ctx.fill()
 
-  ctx.strokeStyle = '#666'
-  ctx.lineWidth = 1
+  ctx.strokeStyle = '#555'
+  ctx.lineWidth = 1.5
   ctx.stroke()
 }
 
@@ -113,18 +112,34 @@ function drawGrid(
   const angles = Array.from({ length: count }, (_, i) => -Math.PI / 2 + (Math.PI * 2 * i) / count)
   const levels = 5
 
-  // concentric circles (wireframe only)
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)'
-  ctx.lineWidth = 1
-  for (let l = 1; l <= levels; l++) {
-    const r = (radius / levels) * l
+  // 同心圆色带：由内到外逐渐加深
+  const ringColors = [
+    'rgba(255, 250, 205, 0.30)', // l=1 最内层（最浅）
+    'rgba(255, 245, 175, 0.42)', // l=2
+    'rgba(255, 240, 145, 0.54)', // l=3
+    'rgba(255, 235, 115, 0.66)', // l=4
+    'rgba(255, 230, 85,  0.78)', // l=5 最外层（最深）
+  ]
+  for (let l = levels; l >= 1; l--) {
+    const innerR = (radius / levels) * (l - 1)
+    const outerR = (radius / levels) * l
     ctx.beginPath()
-    ctx.arc(cx, cy, r, 0, Math.PI * 2)
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2)
+    if (innerR > 0) {
+      ctx.arc(cx, cy, innerR, 0, Math.PI * 2, true)
+    }
+    ctx.fillStyle = ringColors[l - 1]
+    ctx.fill()
+
+    ctx.beginPath()
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2)
+    ctx.lineWidth = 1.2
+    ctx.strokeStyle = 'rgba(80, 60, 20, 0.35)'
     ctx.stroke()
   }
 
   // axis lines + tick marks
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'
+  ctx.strokeStyle = 'rgba(60, 50, 10, 0.45)'
   for (let i = 0; i < count; i++) {
     const a = angles[i]
     const isHover = hoveredIndex.value === i
@@ -361,7 +376,7 @@ watch(
 </script>
 
 <template>
-  <div class="jojo-radar-wrapper flex items-center justify-center">
+  <div class="jojo-radar-wrapper flex items-center justify-center" :class="{ 'coin-fly-in': !coinDone }">
     <div
       ref="containerRef"
       class="jojo-radar-chart relative overflow-hidden"
@@ -380,30 +395,33 @@ watch(
   box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.08), 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
-.jojo-radar-chart.coin-enter {
-  animation: coinFlip 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+/* 飞入动画：外层控制平滑位移 */
+.jojo-radar-wrapper.coin-fly-in {
+  animation: coinFly 0.7s ease-out forwards;
 }
 
-@keyframes coinFlip {
-  0% {
-    transform: perspective(800px) rotateY(0deg);
-    opacity: 0.3;
+@keyframes coinFly {
+  from {
+    transform: translateX(50vw);
+    opacity: 0;
   }
-  30% {
-    transform: perspective(800px) rotateY(540deg);
-    opacity: 0.7;
-  }
-  60% {
-    transform: perspective(800px) rotateY(900deg);
-    opacity: 0.9;
-  }
-  80% {
-    transform: perspective(800px) rotateY(1040deg);
+  to {
+    transform: translateX(0);
     opacity: 1;
   }
-  100% {
-    transform: perspective(800px) rotateY(1080deg);
-    opacity: 1;
+}
+
+/* 旋转动画：内层控制自转 */
+.jojo-radar-chart.coin-enter {
+  animation: coinSpin 3s cubic-bezier(0.0, 0.7, 0.2, 1) forwards;
+}
+
+@keyframes coinSpin {
+  from {
+    transform: perspective(700px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(700px) rotateY(7200deg);
   }
 }
 </style>

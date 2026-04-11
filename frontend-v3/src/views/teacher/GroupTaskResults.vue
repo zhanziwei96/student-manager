@@ -73,8 +73,8 @@ const dimensions = computed(() =>
           <!-- 雷达图 -->
           <JojoRadarChart
             :dimensions="dimensions"
-            :teacher-scores="dimensions.map((d) => item.teacherScores[d] ?? 0)"
-            :peer-scores="dimensions.map((d) => item.peerScores[d] ?? 0)"
+            :final-scores="dimensions.map((d) => item.finalScores[d] ?? 0)"
+            :group-name="item.groupName"
             class="mb-4 h-64 sm:h-80 lg:h-96"
           />
 

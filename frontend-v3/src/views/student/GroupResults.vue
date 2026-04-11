@@ -12,8 +12,8 @@ const resultList = computed(() => {
   return results.value.map((r) => ({
     ...r,
     dimensions: Object.keys(r.final_scores || {}),
-    teacherValues: Object.values(r.final_scores || {}).map((_, i) => Object.values(r.teacher_scores || {})[i] || 0),
-    peerValues: Object.values(r.final_scores || {}).map((_, i) => Object.values(r.peer_scores || {})[i] || 0),
+    finalValues: Object.values(r.final_scores || {}),
+    groupName: (r as any).group_name || '',
   }))
 })
 
@@ -114,8 +114,8 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
             <div v-if="item.dimensions.length > 0" class="w-full lg:w-80 shrink-0 h-64 sm:h-80 lg:h-96">
               <JojoRadarChart
                 :dimensions="item.dimensions"
-                :teacher-scores="item.teacherValues"
-                :peer-scores="item.peerValues"
+                :final-scores="item.finalValues"
+                :group-name="item.groupName"
                 class="h-full"
               />
             </div>
