@@ -43,7 +43,7 @@ class TeacherScoreRequest(BaseModel):
 
 class AutoAssignRequest(BaseModel):
     class_name: str = Field(..., min_length=1)
-    group_size: int = Field(default=4, ge=2, le=10)
+    group_size: Optional[int] = Field(default=None, ge=2, le=10)
 
 
 class UpdateClassGroupSettingsRequest(BaseModel):
@@ -226,6 +226,7 @@ async def api_teacher_groups(
             "id": g.id,
             "name": g.name,
             "leader_student_id": g.leader_student_id,
+            "leader_name": student_map.get(g.leader_student_id, g.leader_student_id),
             "members": [{"student_id": m.student_id, "name": student_map.get(m.student_id, m.student_id)} for m in members],
         })
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
@@ -237,7 +238,9 @@ async def api_auto_assign(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    new_groups = auto_assign_unassigned_students(session, data.class_name, data.group_size)
+    settings = get_or_create_class_group_settings(session, data.class_name)
+    group_size = data.group_size if data.group_size is not None else settings.max_members_per_group
+    new_groups = auto_assign_unassigned_students(session, data.class_name, group_size)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [{"id": g.id, "name": g.name} for g in new_groups],
@@ -636,6 +639,7 @@ async def api_student_my_group_results(
                 "task_id": task.id,
                 "title": task.title,
                 "status": task.status,
+                "group_name": my_group.name,
                 "teacher_scores": group_result.get("teacher_scores", {}),
                 "peer_scores": group_result.get("peer_scores", {}),
                 "final_scores": group_result.get("final_scores", {}),

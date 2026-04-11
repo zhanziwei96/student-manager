@@ -208,7 +208,7 @@ async function handleRejectDissolution(reqId: number) {
               </div>
               <Badge variant="secondary">
                 <Crown class="h-3 w-3 mr-1" />
-                {{ g.leader_student_id }}
+                {{ g.leader_name || g.leader_student_id }}
               </Badge>
             </div>
             <div class="mt-3 flex gap-2">

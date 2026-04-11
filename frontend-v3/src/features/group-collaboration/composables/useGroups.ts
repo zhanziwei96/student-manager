@@ -13,8 +13,8 @@ export function useTeacherGroups(className: MaybeRefOrGetter<string>) {
 export function useAutoAssign() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ className, groupSize }: { className: string; groupSize?: number }) =>
-      groupsApi.autoAssign(className, groupSize),
+    mutationFn: ({ className }: { className: string }) =>
+      groupsApi.autoAssign(className),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
     },

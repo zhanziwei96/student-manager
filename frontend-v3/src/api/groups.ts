@@ -72,8 +72,8 @@ export const groupsApi = {
     post(`/teacher/group-tasks/${taskId}/scores`, data),
   getTeacherGroups: (className: string): Promise<Group[]> =>
     get('/teacher/groups', { class_name: className }),
-  autoAssign: (className: string, groupSize = 4): Promise<any> =>
-    post('/teacher/groups/auto-assign', { class_name: className, group_size: groupSize }),
+  autoAssign: (className: string): Promise<any> =>
+    post('/teacher/groups/auto-assign', { class_name: className }),
   getClassGroupSettings: (className: string): Promise<{ class_name: string; max_members_per_group: number }> =>
     get('/teacher/class-group-settings', { class_name: className }),
   updateClassGroupSettings: (data: { class_name: string; max_members_per_group: number }): Promise<{ class_name: string; max_members_per_group: number }> =>

@@ -43,7 +43,6 @@ def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient):
     # 自动分配（前提是班级有未分组学生）
     resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
         "class_name": "一班",
-        "group_size": 4,
     })
     assert resp.status_code == 200
     data = resp.json()

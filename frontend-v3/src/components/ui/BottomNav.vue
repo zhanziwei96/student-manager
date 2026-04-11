@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores'
-import { LayoutDashboard, Users, CheckCircle, BookOpen } from 'lucide-vue-next'
+import { LayoutDashboard, Users, CheckCircle, BookOpen, GraduationCap } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const route = useRoute()

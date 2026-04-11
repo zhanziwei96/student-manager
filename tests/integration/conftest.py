@@ -185,37 +185,57 @@ def sample_students(test_engine):
 
 
 @pytest.fixture
-def admin_client(client, admin_user):
-    """已登录管理员的客户端"""
-    response = client.post("/api/v1/login", json={
-        "username": "admin",
-        "password": "admin123",
-        "role": "admin"
-    })
-    assert response.status_code == 200, f"Admin login failed: {response.json()}"
-    # 保存 cookies 以保持会话
-    return client
+def admin_client(test_engine, admin_user):
+    """已登录管理员的客户端（独立实例，避免 cookie 冲突）"""
+    def get_session_override():
+        with Session(_test_engine) as session:
+            yield session
+    from app.core.db import get_session
+    app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app, cookies={}) as c:
+        response = c.post("/api/v1/login", json={
+            "username": "admin",
+            "password": "admin123",
+            "role": "admin"
+        })
+        assert response.status_code == 200, f"Admin login failed: {response.json()}"
+        yield c
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def teacher_client(client, teacher_user):
-    """已登录教师的客户端"""
-    response = client.post("/api/v1/login", json={
-        "username": "teacher1",
-        "password": "teacher123",
-        "role": "teacher"
-    })
-    assert response.status_code == 200, f"Teacher login failed: {response.json()}"
-    return client
+def teacher_client(test_engine, teacher_user):
+    """已登录教师的客户端（独立实例，避免 cookie 冲突）"""
+    def get_session_override():
+        with Session(_test_engine) as session:
+            yield session
+    from app.core.db import get_session
+    app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app, cookies={}) as c:
+        response = c.post("/api/v1/login", json={
+            "username": "teacher1",
+            "password": "teacher123",
+            "role": "teacher"
+        })
+        assert response.status_code == 200, f"Teacher login failed: {response.json()}"
+        yield c
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def student_client(client, student_user):
-    """已登录学生的客户端"""
-    response = client.post("/api/v1/login", json={
-        "username": "S001",
-        "password": "student123",
-        "role": "student"
-    })
-    assert response.status_code == 200, f"Student login failed: {response.json()}"
-    return client
+def student_client(test_engine, student_user):
+    """已登录学生的客户端（独立实例，避免 cookie 冲突）"""
+    def get_session_override():
+        with Session(_test_engine) as session:
+            yield session
+    from app.core.db import get_session
+    app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app, cookies={}) as c:
+        response = c.post("/api/v1/login", json={
+            "username": "S001",
+            "password": "student123",
+            "role": "student"
+        })
+        assert response.status_code == 200, f"Student login failed: {response.json()}"
+        yield c
+    app.dependency_overrides.clear()
