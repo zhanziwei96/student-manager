@@ -30,6 +30,13 @@ export function useStudentCourseSession(className?: string | Ref<string>) {
     staleTime: 5000, // 5秒内不重复请求，避免组件快速切换时堆积
     refetchInterval: 10000,
     refetchOnWindowFocus: false, // 签到页面不需要窗口聚焦时刷新
+    retry: (failureCount, error) => {
+      // 网络错误重试 2 次，业务错误不重试
+      const msg = (error as Error).message || ''
+      const isNetworkError = msg.includes('Network Error') || msg.includes('fetch') || msg.includes('Failed to fetch')
+      return isNetworkError && failureCount < 2
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 3000),
   })
 
   return {
@@ -72,6 +79,12 @@ export function useStudentSelfCheckin() {
       // 使用 exact: false 匹配所有以 ['session-checkins'] 开头的 query（包含 sessionId）
       queryClient.invalidateQueries({ queryKey: ['session-checkins'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
+    },
+    retry: (failureCount, error) => {
+      // 网络错误重试 1 次，业务错误（如 409 重复签到）不重试
+      const msg = (error as Error).message || ''
+      const isNetworkError = msg.includes('Network Error') || msg.includes('fetch') || msg.includes('Failed to fetch')
+      return isNetworkError && failureCount < 1
     },
   })
 

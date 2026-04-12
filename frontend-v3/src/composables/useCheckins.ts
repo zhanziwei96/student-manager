@@ -14,6 +14,12 @@ export function useSessionCheckinStats(sessionId?: number | Ref<number | undefin
     },
     refetchInterval: 10000,
     enabled: () => toValue(sessionId) !== undefined,
+    retry: (failureCount, error) => {
+      const msg = (error as Error).message || ''
+      const isNetworkError = msg.includes('Network Error') || msg.includes('fetch') || msg.includes('Failed to fetch')
+      return isNetworkError && failureCount < 2
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 3000),
   })
 
   return {
@@ -37,6 +43,12 @@ export function useSessionCheckins(sessionId?: number | Ref<number | undefined>)
     },
     refetchInterval: 10000,
     enabled: () => toValue(sessionId) !== undefined,
+    retry: (failureCount, error) => {
+      const msg = (error as Error).message || ''
+      const isNetworkError = msg.includes('Network Error') || msg.includes('fetch') || msg.includes('Failed to fetch')
+      return isNetworkError && failureCount < 2
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 3000),
   })
 
   return {
@@ -46,4 +58,3 @@ export function useSessionCheckins(sessionId?: number | Ref<number | undefined>)
     refetch,
   }
 }
-
