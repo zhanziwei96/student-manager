@@ -24,6 +24,7 @@ class Student(StudentBase, table=True):
     __tablename__ = "students"
     __table_args__ = (
         Index('idx_students_score', desc('score')),
+        Index('idx_students_class_name', 'class_name'),
     )
 
     created_at: datetime = Field(default_factory=get_now, description="创建时间")

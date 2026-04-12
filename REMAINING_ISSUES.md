@@ -27,22 +27,6 @@
 
 ## P1 级别（高优）
 
-### P1-2 前端网络/业务错误处理不完善
-- **状态**: 未修复
-- **问题描述**:
-  - `useStudentCourseSession`、`useStudentSelfCheckin` 等 query/mutation 在请求失败时没有向用户展示明确的错误提示
-  - 网络断开、后端 500、超时等场景缺少重试引导或 Toast 提示
-  - 学生端签到页面只显示了 `checkinError`，但没有处理 session 查询失败的场景
-- **影响**: 用户体验差，网络异常时页面空白或卡死，用户不知道发生了什么
-- **建议修复**:
-  - 为关键查询（课程 session、签到状态）添加全局错误边界或局部错误提示
-  - 网络错误时显示"连接失败，请刷新重试"的友好提示
-  - 为 `useMutation` 配置 retry 策略和统一的错误 Toast
-- **相关文件**:
-  - `frontend-v3/src/views/student/Checkin.vue`
-  - `frontend-v3/src/composables/useStudentCheckin.ts`
-  - `frontend-v3/src/composables/useCheckins.ts`
-
 ### P1-3 后端 API 响应格式仍有混用
 - **状态**: 大部分已修复，个别残留
 - **问题描述**:
@@ -68,7 +52,7 @@
   - `frontend-v3/src/views/teacher/CheckinManagement.vue`（如存在）
 
 ### P1-5 数据库索引缺失影响查询性能
-- **状态**: 未修复
+- **状态**: 已修复
 - **问题描述**:
   - `students` 表的 `class_name` 字段没有索引，班级含 400+ 学生时按班级查询会变慢
   - `score_logs` 表的 `student_id + created_at` 缺少复合索引，分数历史查询性能低
@@ -94,11 +78,13 @@
 | P0-4 | 数据库 schema/migration 不一致 | 2026-04-12 |
 | P0-5 | 签到竞态条件（前后端同时修复） | 2026-04-12 |
 | P1-1 | 前端 API 响应解构残余不规范（schedulesApi.import 等） | 2026-04-12 |
+| P1-2 | 前端网络/业务错误处理不完善（Checkin.vue + TanStack Query retry） | 2026-04-12 |
+| P1-5 | 数据库索引缺失影响查询性能 | 2026-04-12 |
 
 ---
 
 ## 推荐下一步行动
 
-1. **如果要修用户体验**: 优先处理 **P1-2（前端错误处理）**
+1. **如果要修用户体验**: 优先处理 **P1-4（签到列表分页）**
 2. **如果要修性能**: 优先处理 **P1-5（数据库索引）**
 3. **如果要修代码规范**: 优先处理 **P1-3（后端 API 响应格式混用）**

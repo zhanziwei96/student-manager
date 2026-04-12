@@ -4,6 +4,7 @@
 from datetime import datetime
 from typing import Optional
 from sqlmodel import SQLModel, Field, UniqueConstraint
+from sqlalchemy import Index, desc
 from app.models.constants import CheckinTypeConst
 from app.core.timezone import get_now
 
@@ -14,6 +15,7 @@ class CheckinRecord(SQLModel, table=True):
     __table_args__ = (
         # 同一学生在同一课堂只能签到一次
         UniqueConstraint('session_id', 'student_id', name='idx_unique_session_student'),
+        Index('idx_checkin_records_checkin_time', desc('checkin_time')),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -35,9 +37,12 @@ class CheckinRecord(SQLModel, table=True):
 class ScoreLog(SQLModel, table=True):
     """分数变更日志表"""
     __tablename__ = "score_logs"
+    __table_args__ = (
+        Index('idx_score_logs_student_created_at', 'student_id', desc('created_at')),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    student_id: str = Field(..., description="学号", index=True)
+    student_id: str = Field(..., description="学号")
     old_score: Optional[float] = Field(default=None, description="旧分数")
     new_score: Optional[float] = Field(default=None, description="新分数")
     delta: Optional[float] = Field(default=None, description="变化值")
