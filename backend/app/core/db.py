@@ -4,7 +4,7 @@
 """
 from typing import Generator
 from sqlalchemy import event
-from sqlalchemy.pool import QueuePool, NullPool
+from sqlalchemy.pool import QueuePool
 from sqlmodel import SQLModel, Session, create_engine
 from app.core.config import get_settings
 
@@ -44,11 +44,16 @@ if IS_SQLITE:
     )
     event.listen(engine, "connect", _set_sqlite_pragma)
 else:
-    # PostgreSQL 使用 NullPool 避免 Gunicorn 多 worker 连接池冲突
-    # 或根据负载调整 pool_size
+    # PostgreSQL 使用 QueuePool 并合理配置连接池参数
+    # Gunicorn 多 worker 为独立进程，各自维护连接池子集，无需 NullPool
     engine = create_engine(
         DATABASE_URL,
-        poolclass=NullPool,
+        poolclass=QueuePool,
+        pool_size=10,
+        max_overflow=10,
+        pool_timeout=30,
+        pool_recycle=1800,
+        pool_pre_ping=True,
         echo=settings.app.debug
     )
 

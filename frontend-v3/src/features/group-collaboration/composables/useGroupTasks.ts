@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { groupsApi } from '@/api'
+import { groupsApi, type TeacherScoreRequest } from '@/api'
 
 import { toValue, type MaybeRefOrGetter } from 'vue'
 
@@ -52,7 +52,7 @@ export function useTaskResults(taskId: number) {
 export function useSubmitTeacherScore() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ taskId, data }: { taskId: number; data: any }) =>
+    mutationFn: ({ taskId, data }: { taskId: number; data: TeacherScoreRequest }) =>
       groupsApi.submitTeacherScore(taskId, data),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['group-task-results', variables.taskId] })

@@ -15,9 +15,6 @@ const { hasCheckedIn, sessionCheckin } = useHasCheckedInSession(computed(() => c
 const showSuccessToast = ref(false)
 const successMessage = ref('')
 
-// 本地签到锁定（防止快速重复点击导致并发请求）
-const isSelfCheckingIn = ref(false)
-
 // Toast 定时器引用（用于组件卸载时清理）
 let toastTimeoutId: ReturnType<typeof setTimeout> | null = null
 
@@ -30,7 +27,7 @@ onUnmounted(() => {
 })
 
 const canCheckin = computed(() => {
-  return hasActiveSession.value && !hasCheckedIn.value && !isSelfCheckingIn.value
+  return hasActiveSession.value && !hasCheckedIn.value && !isCheckingIn.value
 })
 
 // 是否显示已签到状态（必须有活跃课堂且已签到）
@@ -39,8 +36,7 @@ const showCheckedInStatus = computed(() => {
 })
 
 const handleCheckin = async () => {
-  if (isSelfCheckingIn.value) return
-  isSelfCheckingIn.value = true
+  if (isCheckingIn.value) return
   try {
     await doCheckin()
     showSuccessToast.value = true
@@ -52,8 +48,6 @@ const handleCheckin = async () => {
   } catch (err: unknown) {
     // 错误已由 mutation 的 error 状态暴露给 UI，无需额外处理
     // 捕获是为了防止未处理的 Promise 拒绝
-  } finally {
-    isSelfCheckingIn.value = false
   }
 }
 
@@ -169,7 +163,7 @@ const formatTime = (time: string) => {
           v-if="canCheckin"
           size="lg"
           class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm border-0"
-          :loading="isCheckingIn || isSelfCheckingIn"
+          :loading="isCheckingIn"
           @click="handleCheckin"
         >
           <CheckCircle class="mr-2 h-5 w-5 md:h-4 md:w-4" />

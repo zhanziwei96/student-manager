@@ -1,10 +1,10 @@
 /**
  * 课表 API
- * 
+ *
  * REVIEW-P1: 统一使用 request<T>() 包装，返回类型为 T（已自动提取 data）
  * 与 lib/api.ts 中的 get/post/del 函数保持一致
  */
-import { get, put, del } from '@/lib/api'
+import { get, put, del, api, post } from '@/lib/api'
 import type { TodayScheduleItem } from '@/types'
 
 export interface CourseSchedule {
@@ -65,31 +65,13 @@ export const schedulesApi = {
 
   /**
    * 导入课表
-   * 使用原生 fetch 处理文件上传，避免 ofetch 的 Content-Type 问题
+   * 通过 ofetch 的 FormData 自动处理 multipart boundary
    * 返回提取后的 ImportResult（与 request<T>() 行为一致）
    */
   import: async (file: File): Promise<ImportResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    
-    const res = await fetch('/api/v1/schedules/import', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include'
-    })
-    
-    const responseData = await res.json().catch(() => ({ 
-      success: false, 
-      message: '解析响应失败' 
-    }))
-    
-    // HTTP 错误或非成功响应
-    if (!res.ok || responseData.success === false) {
-      throw new Error(responseData.message || `上传失败: ${res.status}`)
-    }
-    
-    // 提取 data 部分（与 api.ts 中 request 函数行为一致）
-    return responseData.data as ImportResult
+    return post<ImportResult, FormData>('/schedules/import', formData)
   },
 
   /**
@@ -106,7 +88,7 @@ export const schedulesApi = {
   assign: (id: number, teacherId: number, teacherName: string): Promise<void> =>
     put(`/schedules/${id}/assign`, null, {
       teacher_id: teacherId,
-      teacher_name: teacherName
+      teacher_name: teacherName,
     }),
 
   /**
@@ -121,7 +103,5 @@ export const schedulesApi = {
    * 返回类型: Blob（原始响应，非 JSON）
    */
   downloadTemplate: (): Promise<Blob> =>
-    get('/schedules/template', {
-      responseType: 'blob'
-    })
+    api('/schedules/template', { method: 'GET', responseType: 'blob' }),
 }

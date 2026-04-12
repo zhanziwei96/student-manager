@@ -67,6 +67,31 @@ describe('API utils', () => {
     })
   })
 
+  describe('FormData upload', () => {
+    it('should not force Content-Type: application/json for FormData', async () => {
+      const mockResponse = { success: true, data: { imported: 3 } }
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockResponse),
+        headers: new Headers({ 'content-type': 'application/json' }),
+      })
+
+      // @ts-expect-error - mock global fetch
+      global.fetch = mockFetch
+
+      const formData = new FormData()
+      formData.append('file', new Blob(['test']))
+
+      await api('/upload', { method: 'POST', body: formData })
+
+      const callOptions = mockFetch.mock.calls[0][1]
+      // ofetch 不应在 body 为 FormData 时仍硬编码 application/json
+      expect(callOptions.headers?.['Content-Type']).not.toBe('application/json')
+      expect(callOptions.body).toBeInstanceOf(FormData)
+    })
+  })
+
   describe('ApiError', () => {
     it('should carry statusCode and data from backend response', async () => {
       const mockResponse = {

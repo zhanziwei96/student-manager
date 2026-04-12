@@ -19,7 +19,7 @@ from app.crud.course_session import (
     get_active_course_session_by_class_name,
     get_teacher_active_course_sessions,
 )
-from app.crud.checkin import has_checked_in_session, is_device_checked_in_session, DuplicateCheckinError
+from app.crud.checkin import DuplicateCheckinError
 from app.core.jwt import get_current_user
 from app.models.constants import (
     ApiResponseConst, MessageConst,
@@ -131,18 +131,7 @@ async def do_checkin(
     if not cs or cs.status != "active":
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
 
-    # 检查是否在当前课堂已签到
-    already_checked = has_checked_in_session(db_session, data.student_id, cs.id)
-    if already_checked:
-        raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
-
-    # 验证设备唯一性（如果提供了设备ID）
-    if data.device_id:
-        device_checked = is_device_checked_in_session(db_session, data.device_id, cs.id)
-        if device_checked:
-            raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该设备已签到')
-
-    # 创建签到记录 - 使用课堂班级作为快照
+    # 创建签到记录 - 在同一事务内完成重复检查与插入
     # 这样即使学生后续转班，历史签到仍显示正确的班级
     try:
         checkin = create_checkin(

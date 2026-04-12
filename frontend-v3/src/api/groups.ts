@@ -41,10 +41,26 @@ export interface GroupTask {
   class_name: string
 }
 
+export interface TaskResultItem {
+  group_id: number
+  group_name: string
+  teacher_scores: Record<string, number>
+  peer_scores: Record<string, number>
+  final_scores: Record<string, number>
+  task_final: number
+}
+
+export interface TaskResultData {
+  task: { id: number; title: string; status: string }
+  dimensions: { id: number; name: string }[]
+  results: Record<string, TaskResultItem>
+}
+
 export interface GroupTaskResult {
   task_id: number
   title: string
   status: string
+  group_name: string
   teacher_scores: Record<string, number>
   peer_scores: Record<string, number>
   final_scores: Record<string, number>
@@ -58,58 +74,76 @@ export interface EvaluationTarget {
   all_scored: boolean
 }
 
+export interface DissolutionRequest {
+  id: number
+  group_id: number
+  reason: string
+  status: string
+  created_at: string
+}
+
+export interface MyGroup {
+  id: number
+  name: string
+  class_name: string
+  leader_student_id: string
+  is_leader: boolean
+  members: { student_id: string; name: string }[]
+  pending_requests: { id: number; student_id: string; created_at: string }[]
+}
+
 export const groupsApi = {
   // Teacher
   getTeacherTasks: (className: string): Promise<GroupTask[]> =>
     get('/teacher/group-tasks', { class_name: className }),
   createTask: (data: CreateGroupTaskRequest): Promise<{ task_id: number; status: string }> =>
     post('/teacher/group-tasks', data),
-  startTask: (taskId: number): Promise<any> =>
+  startTask: (taskId: number): Promise<{ task_id: number; status: string }> =>
     post(`/teacher/group-tasks/${taskId}/start`, {}),
-  closeTask: (taskId: number): Promise<any> =>
+  closeTask: (taskId: number): Promise<{ task_id: number; status: string }> =>
     post(`/teacher/group-tasks/${taskId}/close`, {}),
-  getTaskResults: (taskId: number): Promise<any> =>
+  getTaskResults: (taskId: number): Promise<TaskResultData> =>
     get(`/teacher/group-tasks/${taskId}/results`),
-  submitTeacherScore: (taskId: number, data: TeacherScoreRequest): Promise<any> =>
+  submitTeacherScore: (taskId: number, data: TeacherScoreRequest): Promise<unknown> =>
     post(`/teacher/group-tasks/${taskId}/scores`, data),
   getTeacherGroups: (className: string): Promise<Group[]> =>
     get('/teacher/groups', { class_name: className }),
-  autoAssign: (className: string): Promise<any> =>
+  autoAssign: (className: string): Promise<Group[]> =>
     post('/teacher/groups/auto-assign', { class_name: className }),
   getClassGroupSettings: (className: string): Promise<{ class_name: string; max_members_per_group: number }> =>
     get('/teacher/class-group-settings', { class_name: className }),
   updateClassGroupSettings: (data: { class_name: string; max_members_per_group: number }): Promise<{ class_name: string; max_members_per_group: number }> =>
     put('/teacher/class-group-settings', data),
-  transferLeader: (groupId: number, newLeaderId: string): Promise<any> =>
+  transferLeader: (groupId: number, newLeaderId: string): Promise<{ leader_student_id: string }> =>
     post(`/teacher/groups/${groupId}/transfer-leader`, { new_leader_id: newLeaderId }),
-  getDissolutionRequests: (): Promise<any[]> =>
+  getDissolutionRequests: (): Promise<DissolutionRequest[]> =>
     get('/teacher/group-dissolution-requests'),
-  approveDissolution: (reqId: number): Promise<any> =>
+  approveDissolution: (reqId: number): Promise<unknown> =>
     post(`/teacher/group-dissolution-requests/${reqId}/approve`, {}),
-  rejectDissolution: (reqId: number): Promise<any> =>
+  rejectDissolution: (reqId: number): Promise<unknown> =>
     post(`/teacher/group-dissolution-requests/${reqId}/reject`, {}),
 
   // Student
-  createGroup: (className: string, name: string): Promise<any> =>
+  createGroup: (className: string, name: string): Promise<unknown> =>
     post('/student/groups', { class_name: className, name }),
   getGroups: (className: string): Promise<Group[]> =>
     get('/student/groups', { class_name: className }),
-  requestJoin: (groupId: number): Promise<any> =>
+  requestJoin: (groupId: number): Promise<unknown> =>
     post(`/student/groups/${groupId}/join-requests`, {}),
-  approveJoin: (reqId: number): Promise<any> =>
+  approveJoin: (reqId: number): Promise<unknown> =>
     post(`/student/groups/join-requests/${reqId}/approve`, {}),
-  rejectJoin: (reqId: number): Promise<any> =>
+  rejectJoin: (reqId: number): Promise<unknown> =>
     post(`/student/groups/join-requests/${reqId}/reject`, {}),
-  requestDissolution: (reason: string): Promise<any> =>
+  requestDissolution: (reason: string): Promise<unknown> =>
     post('/student/groups/dissolution-requests', { reason }),
   getStudentTasks: (): Promise<GroupTask[]> =>
     get('/student/group-tasks'),
   getEvaluations: (taskId: number): Promise<EvaluationTarget[]> =>
     get(`/student/group-tasks/${taskId}/evaluations`),
-  submitStudentScores: (taskId: number, data: StudentScoresSubmit): Promise<any> =>
+  submitStudentScores: (taskId: number, data: StudentScoresSubmit): Promise<unknown> =>
     post(`/student/group-tasks/${taskId}/scores`, data),
   getMyGroupResults: (): Promise<GroupTaskResult[]> =>
     get('/student/groups/my-group/results'),
-  getMyGroup: (): Promise<any> =>
+  getMyGroup: (): Promise<MyGroup> =>
     get('/student/groups/my-group'),
 }

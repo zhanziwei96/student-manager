@@ -5,6 +5,7 @@ import { useTaskResults } from '@/features/group-collaboration'
 import { JojoRadarChart } from '@/features/group-collaboration/components'
 import { Card, DataContainer, Badge } from '@/components/ui'
 import { ArrowLeft } from 'lucide-vue-next'
+import type { TaskResultItem } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,7 +14,7 @@ const { data, isPending, error } = useTaskResults(taskId.value)
 
 const resultsList = computed(() => {
   if (!data.value?.results) return []
-  return Object.values(data.value.results).map((r: any) => ({
+  return Object.values(data.value.results).map((r: TaskResultItem) => ({
     groupId: r.group_id,
     groupName: r.group_name,
     teacherScores: r.teacher_scores,
@@ -24,7 +25,7 @@ const resultsList = computed(() => {
 })
 
 const dimensions = computed(() =>
-  (data.value?.dimensions || []).map((d: any) =>
+  (data.value?.dimensions || []).map((d) =>
     typeof d === 'string' ? d : d.name
   )
 )

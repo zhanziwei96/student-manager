@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision: str = '2026_04_11_add_group_collaboration_tables'
-down_revision: Union[str, None] = 'fcfbc4da810e'
+down_revision: Union[str, None] = '2026_04_09_add_schedule_adjustment_unique_constraint'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -38,7 +38,7 @@ def upgrade() -> None:
         sa.Column('group_id', sa.Integer(), nullable=False),
         sa.Column('student_id', sa.String(length=50), nullable=False),
         sa.Column('joined_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
+        sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_group_members_group_id'), 'group_members', ['group_id'], unique=False)
@@ -53,7 +53,7 @@ def upgrade() -> None:
         sa.Column('status', sa.String(length=20), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('resolved_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
+        sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_group_membership_requests_group_id'), 'group_membership_requests', ['group_id'], unique=False)
@@ -82,7 +82,7 @@ def upgrade() -> None:
         sa.Column('task_id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=100), nullable=False),
         sa.Column('sort_order', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['task_id'], ['group_tasks.id'], ),
+        sa.ForeignKeyConstraint(['task_id'], ['group_tasks.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_group_task_dimensions_task_id'), 'group_task_dimensions', ['task_id'], unique=False)
@@ -97,7 +97,7 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(['evaluator_group_id'], ['groups.id'], ),
         sa.ForeignKeyConstraint(['target_group_id'], ['groups.id'], ),
-        sa.ForeignKeyConstraint(['task_id'], ['group_tasks.id'], ),
+        sa.ForeignKeyConstraint(['task_id'], ['group_tasks.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_evaluation_assignments_evaluator_group_id'), 'evaluation_assignments', ['evaluator_group_id'], unique=False)
@@ -115,9 +115,9 @@ def upgrade() -> None:
         sa.Column('dimension_id', sa.Integer(), nullable=False),
         sa.Column('score', sa.Integer(), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['dimension_id'], ['group_task_dimensions.id'], ),
+        sa.ForeignKeyConstraint(['dimension_id'], ['group_task_dimensions.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['target_group_id'], ['groups.id'], ),
-        sa.ForeignKeyConstraint(['task_id'], ['group_tasks.id'], ),
+        sa.ForeignKeyConstraint(['task_id'], ['group_tasks.id'], ondelete='CASCADE'),
         sa.UniqueConstraint('task_id', 'target_group_id', 'evaluator_type', 'evaluator_id', 'dimension_id', name='uix_evaluation_score'),
         sa.PrimaryKeyConstraint('id')
     )
@@ -135,7 +135,7 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('resolved_at', sa.DateTime(), nullable=True),
         sa.Column('resolved_by', sa.String(length=50), nullable=True),
-        sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
+        sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_group_dissolution_requests_group_id'), 'group_dissolution_requests', ['group_id'], unique=False)

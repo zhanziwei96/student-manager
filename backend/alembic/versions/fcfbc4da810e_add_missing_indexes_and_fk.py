@@ -36,7 +36,8 @@ def upgrade() -> None:
             'fk_checkin_records_session_id',
             'course_sessions',
             ['session_id'],
-            ['id']
+            ['id'],
+            ondelete='SET NULL'
         )
 
 

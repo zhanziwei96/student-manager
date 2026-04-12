@@ -6,6 +6,7 @@ import { Card, Button, Select, DataContainer } from '@/components/ui'
 import { useToast } from '@/composables'
 import { ArrowLeft } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
+import type { TaskResultItem } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,7 +17,7 @@ const { data, isPending } = useTaskResults(taskId.value)
 
 const groups = computed(() => {
   if (!data.value?.results) return []
-  return Object.values(data.value.results).map((r: any) => ({
+  return Object.values(data.value.results).map((r: TaskResultItem) => ({
     id: r.group_id,
     name: r.group_name,
   }))
@@ -24,7 +25,7 @@ const groups = computed(() => {
 
 const dimensions = computed(() => {
   if (!data.value?.dimensions) return []
-  return (data.value.dimensions as any[]).map((d) =>
+  return data.value.dimensions.map((d) =>
     typeof d === 'string' ? { id: 0, name: d } : { id: d.id, name: d.name }
   )
 })

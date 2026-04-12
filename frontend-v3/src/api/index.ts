@@ -9,3 +9,17 @@ export { classesApi } from './classes'
 export { usersApi } from './users'
 export { leaderboardApi } from './leaderboard'
 export { groupsApi } from './groups'
+export type {
+  CreateGroupTaskRequest,
+  TeacherScoreRequest,
+  StudentScoreItem,
+  StudentScoresSubmit,
+  Group,
+  GroupTask,
+  TaskResultItem,
+  TaskResultData,
+  GroupTaskResult,
+  EvaluationTarget,
+  DissolutionRequest,
+  MyGroup,
+} from './groups'

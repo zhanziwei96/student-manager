@@ -63,11 +63,19 @@ def create_checkin(
     class_name: str, session_id: int, checkin_type: Optional[str] = None,
     device_id: Optional[str] = None, device_info: Optional[str] = None
 ) -> CheckinRecord:
-    """创建签到记录"""
+    """创建签到记录（在同一事务内完成重复检查与插入）"""
     from sqlalchemy.exc import IntegrityError
     from app.models.constants import CheckinTypeConst
     if checkin_type is None:
         checkin_type = CheckinTypeConst.SELF
+
+    # 事务内重复检查，缩小竞态窗口
+    if has_checked_in_session(session, student_id, session_id):
+        raise DuplicateCheckinError("您已在本课堂签到")
+
+    if device_id and is_device_checked_in_session(session, device_id, session_id):
+        raise DuplicateCheckinError("该设备已签到")
+
     checkin = CheckinRecord(
         session_id=session_id,
         student_id=student_id,

@@ -4,16 +4,17 @@ import { useMyGroupResults } from '@/features/group-collaboration'
 import { JojoRadarChart } from '@/features/group-collaboration/components'
 import { Card, DataContainer, Badge } from '@/components/ui'
 import { Trophy } from 'lucide-vue-next'
+import type { GroupTaskResult } from '@/api'
 
 const { data: results, isPending } = useMyGroupResults()
 
 const resultList = computed(() => {
   if (!results.value) return []
-  return results.value.map((r) => ({
+  return results.value.map((r: GroupTaskResult) => ({
     ...r,
     dimensions: Object.keys(r.final_scores || {}),
     finalValues: Object.values(r.final_scores || {}),
-    groupName: (r as any).group_name || '',
+    groupName: r.group_name || '',
   }))
 })
 

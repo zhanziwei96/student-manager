@@ -55,7 +55,8 @@ def upgrade() -> None:
     sa.Column('checkin_time', sa.DateTime(), nullable=False),
     sa.Column('device_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('device_info', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('session_id', 'student_id', name='idx_unique_session_student')
     )
     with op.batch_alter_table('checkin_records', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_checkin_records_class_name'), ['class_name'], unique=False)
@@ -95,6 +96,7 @@ def upgrade() -> None:
     sa.Column('status', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False),
     sa.Column('source_type', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['schedule_id'], ['course_schedules.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
     with op.batch_alter_table('course_sessions', schema=None) as batch_op:
@@ -113,6 +115,8 @@ def upgrade() -> None:
     sa.Column('reason', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['schedule_id'], ['course_schedules.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['generated_session_id'], ['course_sessions.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
 
@@ -171,6 +175,7 @@ def upgrade() -> None:
     sa.Column('last_login', sa.DateTime(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('version', sa.Integer(), nullable=False),
+    sa.UniqueConstraint('username'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
