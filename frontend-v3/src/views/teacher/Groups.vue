@@ -47,7 +47,7 @@ const savingSettings = ref(false)
 // Sync settings data to local ref
 watch(() => groupSettings.value, (s) => {
   if (s) maxMembers.value = s.max_members_per_group
-})
+}, { immediate: true })
 
 // 自动分配
 const { mutateAsync: autoAssign, isPending: autoAssigning } = useAutoAssign()
