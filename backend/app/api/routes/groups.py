@@ -23,9 +23,14 @@ from app.crud import (
     get_evaluation_assignments, submit_student_scores, get_group,
     get_class_group_settings, get_or_create_class_group_settings,
     update_class_group_settings,
+    clone_group_task,
 )
 
 router = APIRouter(tags=["groups"])
+
+
+class CloneGroupTaskRequest(BaseModel):
+    target_class_name: str = Field(..., min_length=1, max_length=100)
 
 
 class CreateGroupTaskRequest(BaseModel):
@@ -155,6 +160,30 @@ async def api_close_group_task(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: "任务已结束",
         ApiResponseConst.DATA: {"task_id": task_id, "status": "closed"},
+    }
+
+
+@router.post("/teacher/group-tasks/{task_id}/clone", response_model=ApiResponse[dict])
+async def api_clone_group_task(
+    task_id: int,
+    data: CloneGroupTaskRequest,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    task = get_group_task(session, task_id)
+    if not task:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
+    username = user.get("username", "")
+    if task.created_by != username:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权复制此任务")
+    try:
+        new_task = clone_group_task(session, task_id, data.target_class_name, username)
+    except ValueError as e:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: "任务已复制",
+        ApiResponseConst.DATA: {"task_id": new_task.id, "status": new_task.status},
     }
 
 
