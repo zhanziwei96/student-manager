@@ -35,6 +35,38 @@ def create_group_task(
     return task
 
 
+def clone_group_task(
+    session: Session,
+    source_task_id: int,
+    target_class_name: str,
+    created_by: str,
+) -> GroupTask:
+    source = session.get(GroupTask, source_task_id)
+    if not source:
+        raise ValueError("源任务不存在")
+    new_task = GroupTask(
+        class_name=target_class_name,
+        title=f"{source.title}（复制）",
+        description=source.description,
+        status="preparing",
+        created_by=created_by,
+    )
+    session.add(new_task)
+    session.commit()
+    session.refresh(new_task)
+
+    source_dims = get_task_dimensions(session, source_task_id)
+    for dim in source_dims:
+        d = GroupTaskDimension(
+            task_id=new_task.id,
+            name=dim.name,
+            sort_order=dim.sort_order,
+        )
+        session.add(d)
+    session.commit()
+    return new_task
+
+
 def get_group_task(session: Session, task_id: int) -> Optional[GroupTask]:
     return session.get(GroupTask, task_id)
 
