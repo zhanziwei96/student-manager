@@ -8,8 +8,9 @@ import {
   useCreateGroupTask,
   useStartGroupTask,
   useCloseGroupTask,
+  useCloneGroupTask,
 } from '@/features/group-collaboration'
-import { Plus, Play, Square, BarChart2, PenLine } from 'lucide-vue-next'
+import { Plus, Play, Square, BarChart2, PenLine, Copy } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import type { ClassInfo } from '@/api/classes'
 
@@ -102,6 +103,47 @@ async function handleClose(taskId: number) {
   }
 }
 
+// 复制任务
+const showCloneDialog = ref(false)
+const cloneTargetClass = ref('')
+const cloneSourceTask = ref<{ id: number; title: string } | null>(null)
+const cloning = ref(false)
+const { mutateAsync: cloneTask } = useCloneGroupTask()
+
+function openCloneDialog(task: { id: number; title: string }) {
+  cloneSourceTask.value = task
+  cloneTargetClass.value = selectedClass.value
+  showCloneDialog.value = true
+}
+
+watch(showCloneDialog, (open) => {
+  if (!open) {
+    cloneSourceTask.value = null
+    cloneTargetClass.value = ''
+  }
+})
+
+async function handleClone() {
+  if (!cloneSourceTask.value || !cloneTargetClass.value) {
+    toastError('请选择目标班级')
+    return
+  }
+  try {
+    cloning.value = true
+    await cloneTask({
+      taskId: cloneSourceTask.value.id,
+      targetClassName: cloneTargetClass.value,
+    })
+    toastSuccess('任务复制成功')
+    showCloneDialog.value = false
+    cloneSourceTask.value = null
+  } catch (err) {
+    toastError(getErrorMessage(err) || '复制失败')
+  } finally {
+    cloning.value = false
+  }
+}
+
 const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'info' | 'success' }> = {
   preparing: { label: '准备中', variant: 'secondary' },
   evaluating: { label: '互评中', variant: 'info' },
@@ -153,6 +195,14 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
             </Badge>
           </div>
           <div class="mt-4 flex flex-col sm:flex-row gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              @click="openCloneDialog(task)"
+            >
+              <Copy class="h-3.5 w-3.5 mr-1" />
+              复制
+            </Button>
             <Button
               v-if="task.status === 'preparing'"
               size="sm"
@@ -260,6 +310,49 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
             @click="handleCreate"
           >
             确认创建
+          </Button>
+        </div>
+      </template>
+    </Dialog>
+
+    <Dialog
+      v-model:open="showCloneDialog"
+      title="复制任务"
+    >
+      <div class="space-y-3">
+        <div>
+          <p class="text-sm text-[#737373]">
+            源任务
+          </p>
+          <p class="text-sm text-black font-medium">
+            {{ cloneSourceTask?.title || '' }}
+          </p>
+        </div>
+        <div>
+          <p class="text-sm text-[#737373] mb-1">
+            目标班级
+          </p>
+          <Select
+            v-model="cloneTargetClass"
+            :options="classOptions"
+            placeholder="选择班级"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex w-full gap-2 sm:justify-end">
+          <Button
+            variant="outline"
+            @click="showCloneDialog = false"
+          >
+            取消
+          </Button>
+          <Button
+            variant="cta"
+            :loading="cloning"
+            @click="handleClone"
+          >
+            确认复制
           </Button>
         </div>
       </template>

@@ -17,6 +17,7 @@ vi.mock('@/features/group-collaboration', () => ({
   useCreateGroupTask: () => ({ mutateAsync: vi.fn(), isPending: ref(false) }),
   useStartGroupTask: () => ({ mutateAsync: vi.fn() }),
   useCloseGroupTask: () => ({ mutateAsync: vi.fn() }),
+  useCloneGroupTask: () => ({ mutateAsync: vi.fn() }),
 }))
 
 const stubs = {
