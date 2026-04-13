@@ -64,6 +64,7 @@ def clone_group_task(
         )
         session.add(d)
     session.commit()
+    session.refresh(new_task)
     return new_task
 
 
