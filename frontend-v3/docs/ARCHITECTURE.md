@@ -2,8 +2,8 @@
 
 ---
 
-**文档版本**: v2.0.0  
-**最后更新**: 2026-04-03  
+**文档版本**: v2.0.1  
+**最后更新**: 2026-04-13  
 **适用版本**: v3.0.0+  
 **状态**: ✅ 已同步代码
 
@@ -39,7 +39,7 @@ ClassHub 前端采用 Vue 3 + TypeScript 技术栈，遵循 Feature-based 架构
 | Pinia | 3.0+ | 状态管理 |
 | TanStack Query | 5.0+ | 服务端状态 |
 | Vue Router | 4.0+ | 路由管理 |
-| Vitest | 3.0+ | 单元测试 |
+| Vitest | 4.0+ | 单元测试 |
 
 ---
 
@@ -600,6 +600,18 @@ const { data, isLoading } = useQuery({
 - 初始版本
 - 定义 Feature-based 架构
 - 提供迁移建议
+
+---
+
+## 相关文档
+
+| 文档 | 说明 |
+|------|------|
+| [设计系统](../DESIGN_SYSTEM.md) | 前端视觉设计规范（色彩、字体、组件） |
+| [架构图](../../docs/ARCHITECTURE_DIAGRAMS.md) | 系统架构图、ER图、前端状态管理图 |
+| [后端架构](../../backend/README.md) | FastAPI + SQLModel 后端架构 |
+| [CLAUDE.md](../../CLAUDE.md) | 前端开发约束与规范 |
+| [.agents/TEST_GUIDE.md](../../.agents/TEST_GUIDE.md) | 完整测试指南 |
 
 ---
 

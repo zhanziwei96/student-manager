@@ -2,8 +2,8 @@
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-05  
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13  
 **适用版本**: v3.0.0+  
 **API 前缀**: `/api/v1`  
 **状态**: ✅ 已同步代码
@@ -21,7 +21,8 @@
 5. [课堂管理](#课堂管理)
 6. [统计数据](#统计数据)
 7. [课程表](#课程表)
-8. [错误处理](#错误处理)
+8. [系统管理](#系统管理)
+9. [错误处理](#错误处理)
 
 ---
 
@@ -438,6 +439,32 @@ curl http://localhost:8000/api/v1/students/2024001/scores \
 
 ---
 
+### 获取班级列表
+
+**接口**: `GET /api/v1/classes`
+
+#### cURL 示例
+
+```bash
+curl http://localhost:8000/api/v1/classes \
+  -b cookies.txt
+```
+
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "data": [
+    { "name": "软件1班", "student_count": 50 },
+    { "name": "软件2班", "student_count": 48 }
+  ],
+  "message": "获取成功"
+}
+```
+
+---
+
 ## 签到系统
 
 ### 学生签到
@@ -733,6 +760,42 @@ curl -X POST http://localhost:8000/api/v1/class-session/end \
   -b cookies.txt
 ```
 
+#### Python 示例
+
+```python
+# 开始上课
+response = session.post(
+    "http://localhost:8000/api/v1/class-session/start",
+    json={"class_name": "软件1班"}
+)
+print(response.json())
+
+# 结束上课
+response = session.post("http://localhost:8000/api/v1/class-session/end")
+print(response.json())
+```
+
+#### TypeScript 示例
+
+```typescript
+const startClass = async (className: string) => {
+  const response = await ofetch('/api/v1/class-session/start', {
+    method: 'POST',
+    body: { class_name: className },
+    credentials: 'include'
+  })
+  return response.data
+}
+
+const endClass = async () => {
+  const response = await ofetch('/api/v1/class-session/end', {
+    method: 'POST',
+    credentials: 'include'
+  })
+  return response.data
+}
+```
+
 ---
 
 ## 统计数据
@@ -814,6 +877,50 @@ curl "http://localhost:8000/api/v1/score/logs?limit=10" \
 
 ---
 
+## 系统管理
+
+### 获取审计日志 (管理员)
+
+**接口**: `GET /api/v1/audit/logs`
+
+**查询参数**:
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| user_id | number | 否 | 用户ID筛选 |
+| action | string | 否 | 操作类型筛选 |
+| limit | number | 否 | 返回条数 (默认50) |
+
+#### cURL 示例
+
+```bash
+curl "http://localhost:8000/api/v1/audit/logs?limit=10" \
+  -b cookies.txt
+```
+
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "action": "UPDATE_SCORE",
+      "resource_type": "student",
+      "resource_id": "2024001",
+      "details": "分数从 70 更新到 80",
+      "ip_address": "127.0.0.1",
+      "created_at": "2026-04-05T10:30:00"
+    }
+  ],
+  "message": "获取成功"
+}
+```
+
+---
+
 ## 课程表
 
 ### 获取课程表
@@ -867,6 +974,57 @@ curl -X POST http://localhost:8000/api/v1/schedules \
     "end_time": "09:40",
     "classroom": "A101"
   }'
+```
+
+---
+
+### 导入课程表 (管理员)
+
+**接口**: `POST /api/v1/schedules/import`
+
+**Content-Type**: `multipart/form-data`
+
+#### cURL 示例
+
+```bash
+curl -X POST http://localhost:8000/api/v1/schedules/import \
+  -b cookies.txt \
+  -F "file=@schedules.xlsx"
+```
+
+---
+
+### 获取今日课表
+
+**接口**: `GET /api/v1/schedules/today`
+
+#### cURL 示例
+
+```bash
+curl http://localhost:8000/api/v1/schedules/today \
+  -b cookies.txt
+```
+
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "course_name": "计算机应用基础",
+      "class_name": "软件1班",
+      "teacher_name": "张老师",
+      "day_of_week": 1,
+      "start_time": "08:00",
+      "end_time": "09:40",
+      "classroom": "A101",
+      "session_status": "active"
+    }
+  ],
+  "message": "获取成功"
+}
 ```
 
 ---
@@ -943,5 +1101,5 @@ const apiCall = async () => {
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-05
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13

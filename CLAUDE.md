@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+---
+
+**文档版本**: v2.0  
+**最后更新**: 2026-04-13  
+**适用版本**: v3.0.0+  
+**状态**: ✅ 已同步代码
+
+---
+
 ## ⚠️ 执行前强制检查清单
 
 **每次执行操作前，我必须显式勾选以下清单。如果缺少勾选，请打断我要求重新确认。**
@@ -14,6 +23,14 @@
 - [ ] **服务重启**: 按完整流程（停止→等待3秒→检查残留→启动→等待5秒→验证）
   - 禁止快速连续执行停止+启动命令
 
+### 前端操作
+- [ ] **修改 Vue/TS 文件后**: 已评估是否需要创建或修改测试，并已运行前端测试验证
+- [ ] **Tailwind CSS v4**: 自定义 `@theme` 时保留 `--spacing: 0.25rem` 基础单位，或使用 `@theme inline`
+- [ ] **API 响应处理**: 禁止直接访问 `res.xxx`，必须访问 `res.data.xxx`
+- [ ] **TanStack Query / 缓存一致性**: 修改 queryKey 后同步检查所有 `invalidateQueries` 调用，保证跨文件一致
+- [ ] **类型一致性**: JWT `sub`（字符串）与 API `id`（数字）比较前已统一转换（`Number()` / `String()`）
+- [ ] **异步刷新顺序**: mutation 后需要刷新数据时，`await refetch()` 完成后再显示成功提示
+
 ### Read 工具强制预检（每次调用前必须执行）
 - [ ] **参数检查**: 在 commentary 中显式输出一行确认（如：`Read preflight: limit=200, offset=1. OK.`）
   - `limit` 必须是正整数（> 0），禁止传负数
@@ -25,8 +42,9 @@
 - [ ] **curl 命令**: 已添加 `--max-time 10` 或 `--connect-timeout 5` 超时
 - [ ] **未经同意**: 不擅自修改功能或简化需求
 - [ ] **禁止回退**: 碰到问题不回退组件版本，先尝试修复或报告
+- [ ] **跨文件修改一致性**: 涉及多个文件的修改时，已搜索并确认所有相关引用（queryKey、常量、接口调用）同步更新
 
-**完整约束详见**: `.agents/CHECKLIST.md` 和 `.agents/ERRORS.md`
+**完整约束详见**: [`.agents/CHECKLIST.md`](./.agents/CHECKLIST.md) 和 [`.agents/ERRORS.md`](./.agents/ERRORS.md)
 
 ---
 
@@ -140,79 +158,29 @@ tests/
 
 ## 关键约束
 
-### 绝对禁止（ Universal Prohibitions）
+详细的前后端开发约束、通用禁令、测试约束和历史纠错记录，参见：
+- [`.agents/ERRORS.md`](./.agents/ERRORS.md) — 执行约束清单和历史纠错记录
+- [`.agents/CHECKLIST.md`](./.agents/CHECKLIST.md) — 执行前详细检查清单
 
-| # | 禁令 | 违反后果 |
-|---|------|----------|
-| 1 | ❌ 不要在未检查服务状态的情况下重启服务 | 重复部署，端口冲突 |
-| 2 | ❌ 不要快速连续执行停止+启动命令 | 残留进程导致启动失败 |
-| 3 | ❌ 不要假设数据库/服务路径 | 操作错误的文件 |
-| 4 | ❌ 不要在未验证的情况下认为操作成功 | 隐藏错误 |
-| 5 | ❌ **禁止在碰到问题后回退组件版本** | 掩盖问题，重复犯错 |
-| 6 | ❌ **禁止在非虚拟环境的 python 环境下运行 python 命令** | 模块找不到，环境混乱 |
-| 7 | ❌ **禁止修改后端代码后不检查/更新对应测试** | 测试失效，覆盖率下降 |
-| 8 | ❌ **禁止修改 Vue/TS 文件后不创建或修改测试** | 前端类型变更无测试覆盖 |
-| 9 | ❌ **禁止未经用户明确同意擅自修改功能或简化需求** | 违背用户意图，破坏信任 |
-| 10 | ❌ **禁止在未阅读完所有相关代码的情况下直接修复整改** | 破坏项目结构一致性 |
+以下仅列出最常用、最简短的速查项：
 
-### 后端开发约束
+### 后端速查
+- **API 响应常量**：使用 `ApiResponseConst.SUCCESS` / `DATA` / `MESSAGE`
+- **环境变量格式**：使用双下划线，如 `DATABASE__PATH`
+- **密码验证新接口**：`verify_password()` / `hash_password()`
+- **JWT 时区**：`datetime.now(ZoneInfo("Asia/Shanghai"))`
+- **限流状态码**：返回 `429`，禁止 `503`
 
-#### API 响应常量
-**禁止硬编码响应字段名**，必须使用常量：
-```python
-from app.models.constants import ApiResponseConst, MessageConst
+### 前端速查
+- **API 响应处理**：禁止 `res.user.role`，必须 `res.data.role`
+- **Tailwind v4**：自定义 `@theme` 时保留 `--spacing: 0.25rem` 或使用 `@theme inline`
+- **TanStack Query 缓存一致性**：修改 `queryKey` 时必须同步检查所有 `invalidateQueries`
+- **类型一致性**：JWT `sub`（字符串）与 API `id`（数字）比较前统一转换
+- **异步刷新顺序**：`await mutate(); await refetch(); showSuccess()`
 
-# ✅ 正确
-return {
-    ApiResponseConst.SUCCESS: True,
-    ApiResponseConst.MESSAGE: MessageConst.USER_CREATED,
-    ApiResponseConst.DATA: user.model_dump()
-}
-
-# ❌ 错误
-# return {"success": True, "message": "用户创建成功"}
-```
-
-#### 环境变量格式
-使用**双下划线**访问嵌套配置：
-```bash
-# ✅ 正确
-DATABASE__PATH=./data/class_system.db
-SECURITY__SECRET_KEY=your-secret
-
-# ❌ 错误 - 单下划线会被忽略
-# DATABASE_PATH=xxx
-```
-
-### 前端开发约束
-
-#### API 响应处理
-后端返回格式: `{success: true, data: {...}, message: "..."}`
-**禁止直接访问 `res.xxx`**，必须访问 `res.data`：
-```typescript
-// ❌ 错误
-res.user.role
-
-// ✅ 正确
-res.data.role
-```
-
-### 测试执行约束
-
-#### 运行路径
-```bash
-# ✅ 正确 - 在项目根目录运行
-pytest tests/ -v
-
-# ❌ 错误 - 不要 cd 到 tests 目录
-```
-
-#### 修改后流程
-修改或新增功能后，**必须**询问用户是否需要运行测试。
-
-**详细约束清单和执行流程参见**：
-- `.agents/ERRORS.md` - 完整约束清单和纠错记录
-- `.agents/CHECKLIST.md` - 执行前详细检查清单
+### 测试速查
+- **运行路径**：始终在项目根目录运行 `pytest tests/ -v`
+- **修改后**：必须询问用户是否需要运行测试
 
 ## 配置说明
 
@@ -238,7 +206,7 @@ pytest tests/ -v
 | `CLAUDE.md` | 本文件 - 快速参考和关键约束 |
 | `CONTRIBUTING.md` | 贡献者指南（如何参与项目） |
 | `.agents/CHECKLIST.md` | 执行前详细检查清单（服务重启完整流程） |
-| `.agents/ERRORS.md` | 完整约束清单和历史纠错记录 |
+| `.agents/ERRORS.md` | 执行约束清单和历史纠错记录 |
 
 ### 部署与配置
 | 文档 | 说明 |

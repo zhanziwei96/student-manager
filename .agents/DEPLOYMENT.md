@@ -17,10 +17,10 @@
 
 ```bash
 # 检查后端是否已运行
-curl -s http://localhost:8000/api/v1/health && echo "后端运行中 ✅"
+curl -s --max-time 5 http://localhost:8000/api/v1/health && echo "后端运行中 ✅"
 
 # 检查前端是否已运行
-curl -s http://localhost:5173 > /dev/null && echo "前端运行中 ✅"
+curl -s --max-time 5 http://localhost:5173 > /dev/null && echo "前端运行中 ✅"
 
 # 如果都正常返回，环境已就绪，无需重新部署
 ```
@@ -39,8 +39,11 @@ conda activate student-manage
 # 安装依赖
 pip install -r requirements.txt
 
-# 启动（生产环境）
+# 启动（生产环境 / 正式部署）
 ENV=production python main.py
+
+# 或开发环境（热重载，推荐日常开发使用）
+ENV=development uvicorn main:app --reload --port 8000
 ```
 
 ### 2.2 前端 (frontend-v3)
@@ -66,12 +69,17 @@ sleep 3  # 必须等待！
 ps aux | grep "python.*main.py" | grep -v grep
 
 # 3. 启动新服务
+# 生产环境启动
 cd /home/yufeng/student-manager/backend
 conda run -n student-manage ENV=production python main.py &
+
+# 如需开发环境热重载，请改用：
+# conda run -n student-manage ENV=development uvicorn main:app --reload --port 8000 &
+
 sleep 5
 
 # 4. 验证启动
-curl -s http://localhost:8000/api/v1/health  # 必须验证！
+curl -s --max-time 5 http://localhost:8000/api/v1/health  # 必须验证！
 ```
 
 ### 前端重启
@@ -113,10 +121,10 @@ make logs
 
 ```bash
 # 1. 健康检查
-curl http://localhost:8000/api/v1/health
+curl -s --max-time 5 http://localhost:8000/api/v1/health
 
 # 2. 登录测试
-curl -X POST http://localhost:8000/api/v1/login \
+curl -s --max-time 5 -X POST http://localhost:8000/api/v1/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123","role":"admin"}'
 
@@ -163,10 +171,13 @@ source /home/yufeng/miniconda3/bin/activate student-manage
 | API 文档 | http://localhost:8000/docs | Swagger |
 | 数据库 | backend/app/data/class_system.db | SQLite |
 
-**注意**: 
+**环境说明**:
+- `ENV=production`：生产模式，无热重载，性能优先（适用于正式部署）
+- `ENV=development`：开发模式，支持热重载，日志更详细（适用于日常开发）
 - 后端服务不依赖 Redis，限流使用内存存储
 - 前端使用 Vite，默认端口 5173
 - 前端代码位于 `frontend-v3/` 目录
+- 完整环境变量说明见 [CONFIG_GUIDE.md](./CONFIG_GUIDE.md)
 
 ## 8. 架构约束（2026-03-27更新）
 
@@ -225,5 +236,5 @@ docker-compose logs -f
 
 详细配置见 [CONFIG_GUIDE.md](./CONFIG_GUIDE.md)
 
-**文档版本**: v2.0  
-**最后更新**: 2026-03-27（新增服务重启强制流程和架构约束）
+**文档版本**: v2.1  
+**最后更新**: 2026-04-13（补充开发/生产环境说明，统一 curl 超时参数）

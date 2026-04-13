@@ -2,10 +2,10 @@
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-05  
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13  
 **适用版本**: v3.0.0+  
-**状态**: ✅ 已同步代码
+**状态**: 已同步代码
 
 ---
 
@@ -29,6 +29,7 @@ student-manager/
 │   ├── FAQ.md                         # 常见问题解答
 │   ├── OPTIMIZATION_PLAN.md           # 项目优化方案
 │   ├── REQUIREMENTS.md                # 需求规格说明书
+│   ├── DEVELOPMENT_STANDARDS.md       # 开发规范整合文档
 │   └── GLOSSARY.md                    # 术语表
 │
 ├── .agents/                           # 开发规范文档
@@ -64,7 +65,7 @@ student-manager/
 首次接触项目，按以下顺序阅读：
 
 1. **[README.md](../README.md)** - 了解项目概况和快速开始
-2. **[GETTING_STARTED.md](./GETTING_STARTED.md)** - 详细的开发环境搭建
+2. **[GETTING_STARTED.md](../GETTING_STARTED.md)** - 详细的开发环境搭建
 3. **[docs/FAQ.md](./FAQ.md)** - 常见问题解答
 4. **[.agents/DEPLOYMENT.md](../.agents/DEPLOYMENT.md)** - 部署指南
 
@@ -100,8 +101,9 @@ student-manager/
 
 1. **[CONTRIBUTING.md](../CONTRIBUTING.md)** - 贡献者指南
 2. **[CLAUDE.md](../CLAUDE.md)** - 开发规范
-3. **[.agents/CHECKLIST.md](../.agents/CHECKLIST.md)** - 执行前检查清单
-4. **[docs/DOCUMENTATION_GUIDE.md](./DOCUMENTATION_GUIDE.md)** - 文档维护规范
+3. **[docs/DEVELOPMENT_STANDARDS.md](./DEVELOPMENT_STANDARDS.md)** - 完整开发规范
+4. **[.agents/CHECKLIST.md](../.agents/CHECKLIST.md)** - 执行前检查清单
+5. **[docs/DOCUMENTATION_GUIDE.md](./DOCUMENTATION_GUIDE.md)** - 文档维护规范
 
 ---
 
@@ -112,7 +114,7 @@ student-manager/
 | 文档 | 说明 | 必读指数 |
 |------|------|----------|
 | [README.md](../README.md) | 项目主文档，快速开始 | ⭐⭐⭐⭐⭐ |
-| [GETTING_STARTED.md](./GETTING_STARTED.md) | 开发者快速开始指南 | ⭐⭐⭐⭐⭐ |
+| [GETTING_STARTED.md](../GETTING_STARTED.md) | 开发者快速开始指南 | ⭐⭐⭐⭐⭐ |
 | [.agents/DEPLOYMENT.md](../.agents/DEPLOYMENT.md) | 部署指南 | ⭐⭐⭐⭐ |
 | [docs/FAQ.md](./FAQ.md) | 常见问题解答 | ⭐⭐⭐⭐ |
 
@@ -130,6 +132,7 @@ student-manager/
 | 文档 | 说明 | 必读指数 |
 |------|------|----------|
 | [CLAUDE.md](../CLAUDE.md) | AI助手开发指南、关键约束 | ⭐⭐⭐⭐⭐ |
+| [docs/DEVELOPMENT_STANDARDS.md](./DEVELOPMENT_STANDARDS.md) | 完整开发规范（CLAUDE.md 扩展版） | ⭐⭐⭐⭐⭐ |
 | [.agents/ERRORS.md](../.agents/ERRORS.md) | 约束清单和纠错记录 | ⭐⭐⭐⭐⭐ |
 | [.agents/CHECKLIST.md](../.agents/CHECKLIST.md) | 执行前检查清单 | ⭐⭐⭐⭐⭐ |
 | [.agents/CONFIG_GUIDE.md](../.agents/CONFIG_GUIDE.md) | 配置管理指南 | ⭐⭐⭐⭐ |
@@ -175,12 +178,10 @@ student-manager/
 
 | 文档 | 最后更新 | 状态 |
 |------|----------|------|
-| README.md | 2026-04-03 | ✅ 已同步代码 |
 | CLAUDE.md | 2026-04-03 | ✅ 已同步代码 |
 | backend/README.md | 2026-04-03 | ✅ 已同步代码 |
 | frontend-v3/DESIGN_SYSTEM.md | 2026-04-03 | ✅ 已同步代码 |
 | frontend-v3/docs/ARCHITECTURE.md | 2026-04-03 | ✅ 已同步代码 |
-| docs/FAQ.md | 2026-04-03 | ✅ 已同步代码 |
 | docs/API_CHANGELOG.md | 2026-04-03 | ✅ 已同步代码 |
 | docs/ARCHITECTURE_DIAGRAMS.md | 2026-04-03 | ✅ 已同步代码 |
 | docs/DEPRECATIONS.md | 2026-04-03 | ✅ 已同步代码 |
@@ -195,16 +196,24 @@ student-manager/
 | tests/README.md | 2026-04-03 | ✅ 已同步代码 |
 | migrations/README.md | 2026-04-04 | ✅ 已同步代码 |
 
-### 本次新增/完善文档 🆕
+### 本次更新文档 🆕
+
+| 文档 | 说明 | 最后更新 | 状态 |
+|------|------|----------|------|
+| README.md | 项目主文档 | 2026-04-13 | 🆕 更新 |
+| GETTING_STARTED.md | 开发者快速开始指南 | 2026-04-13 | 🆕 更新 |
+| docs/DOCUMENTATION_MAP.md | 本文档 - 文档导航地图 | 2026-04-13 | 🆕 更新 |
+| docs/DEVELOPMENT_STANDARDS.md | 完整开发规范 | 2026-04-13 | 🆕 新增 |
+| docs/FAQ.md | 常见问题解答 | 2026-04-13 | 🆕 更新 |
+| docs/GLOSSARY.md | 术语表 | 2026-04-13 | 🆕 更新 |
+
+### 历史新增/完善文档
 
 | 文档 | 说明 | 状态 |
 |------|------|------|
-| docs/DOCUMENTATION_MAP.md | 本文档 - 文档导航地图 | 🆕 新增 |
-| GETTING_STARTED.md | 开发者快速开始指南 | 🆕 新增 |
-| CONTRIBUTING.md | 贡献者指南 | 🆕 新增 |
-| CHANGELOG.md | 项目更新日志 | 🆕 新增 |
-| docs/API_EXAMPLES.md | API使用示例集合 | 🆕 新增 |
-| docs/GLOSSARY.md | 术语表 | 🆕 新增 |
+| CONTRIBUTING.md | 贡献者指南 | ✅ 已同步代码 |
+| CHANGELOG.md | 项目更新日志 | ✅ 已同步代码 |
+| docs/API_EXAMPLES.md | API使用示例集合 | ✅ 已同步代码 |
 
 ---
 
@@ -262,5 +271,5 @@ pnpm test:run                        # 前端测试
 
 ---
 
-**最后检查**: 2026-04-05  
+**最后检查**: 2026-04-13  
 **下次检查建议**: 每月一次或发布新版本时

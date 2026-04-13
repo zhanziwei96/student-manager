@@ -2,8 +2,8 @@
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-05  
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13  
 **适用版本**: v3.0.0+  
 **状态**: ✅ 已同步代码
 
@@ -348,6 +348,7 @@ Closes #456
 - 防范 XSS 攻击（输出转义）
 - 防范 CSRF 攻击（使用 Token）
 - 文件上传安全检查
+- 密码验证使用新接口：`verify_password()` / `hash_password()`（禁止旧接口 `verify_password_hash()`）
 
 ## 社区规范
 
@@ -372,6 +373,8 @@ Closes #456
 2. [backend/README.md](./backend/README.md) - 后端架构
 3. [frontend-v3/docs/ARCHITECTURE.md](./frontend-v3/docs/ARCHITECTURE.md) - 前端架构
 4. [docs/API_CHANGELOG.md](./docs/API_CHANGELOG.md) - API 变更记录
+5. [docs/DOCUMENTATION_GUIDE.md](./docs/DOCUMENTATION_GUIDE.md) - 文档维护指南
+6. [.agents/TEST_GUIDE.md](./.agents/TEST_GUIDE.md) - 完整测试指南
 
 ### 常用命令
 
@@ -407,5 +410,5 @@ cd frontend-v3 && pnpm lint
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-05
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13

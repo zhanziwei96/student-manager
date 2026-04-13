@@ -2,17 +2,17 @@
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-05  
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13  
 **适用版本**: v3.0.0+  
 **预计阅读时间**: 15分钟  
-**状态**: ✅ 已同步代码
+**状态**: 已同步代码
 
 ---
 
 ## 概述
 
-本指南帮助新开发者快速搭建 ClassHub 开发环境，从克隆代码到运行第一个功能。
+本指南帮助新开发者快速搭建 ClassHub 开发环境，从克隆代码到运行第一个功能。若只想了解项目概况，请先阅读 [README.md](./README.md)。
 
 ## 环境要求
 
@@ -154,7 +154,7 @@ RATE_LIMIT__CHECKIN_MAX_REQUESTS=10
 
 ```bash
 # 数据库会在首次启动时自动创建
-# 如需手动初始化，执行迁移脚本
+# 如需手动初始化，执行迁移脚本（在项目根目录运行）
 sqlite3 backend/app/data/class_system.db < migrations/migrate_v1_to_v2.sql
 ```
 
@@ -405,8 +405,8 @@ pnpm install
 #### 4. 数据库连接错误
 
 ```bash
-# 检查数据库路径
-python -c "from app.core.config import get_settings; print(get_settings().get_database_path())"
+# 检查数据库路径（在项目根目录运行）
+python -c "from backend.app.core.config import get_settings; print(get_settings().get_database_path())"
 
 # 检查数据库文件是否存在
 ls -la backend/app/data/class_system.db
@@ -481,5 +481,5 @@ python -m pdb main.py
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-05
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13

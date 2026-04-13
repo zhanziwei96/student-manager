@@ -2,10 +2,10 @@
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-03  
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13  
 **适用版本**: v3.0.0+  
-**状态**: ✅ 已同步代码
+**状态**: 已同步代码
 
 ---
 
@@ -487,7 +487,7 @@ grep "ERROR" backend/logs/app.log
 | 教师 | zhanziwei | zha123 | 示例教师账号 |
 | 学生 | 学号 | 学号 | 学号作为账号和密码 |
 
-**注意**: 首次登录后请立即修改默认密码。
+**注意**: 首次登录后请立即修改默认密码。教师账号遵循"姓名拼音首字母+123"的规则。
 
 ---
 
@@ -495,11 +495,14 @@ grep "ERROR" backend/logs/app.log
 
 如果以上解答无法解决您的问题：
 
-1. 查看详细文档: `README.md`, `.agents/ERRORS.md`
-2. 检查后端日志: `backend/logs/app.log`
-3. 运行测试确认环境: `pytest tests/integration/test_smoke.py -v`
+1. 查看 [README.md](../README.md) 了解项目概况
+2. 查看 [GETTING_STARTED.md](../GETTING_STARTED.md) 获取详细环境搭建和故障排查
+3. 查看 [docs/DOCUMENTATION_MAP.md](./DOCUMENTATION_MAP.md) 浏览完整文档导航
+4. 查看 `.agents/ERRORS.md` 了解约束清单和纠错记录
+5. 检查后端日志: `backend/logs/app.log`
+6. 运行测试确认环境: `pytest tests/integration/test_smoke.py -v`
 
 ---
 
-**文档版本**: v1.0
-**最后更新**: 2026-04-03
+**文档版本**: v1.1
+**最后更新**: 2026-04-13

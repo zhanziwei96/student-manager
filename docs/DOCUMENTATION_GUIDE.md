@@ -2,8 +2,8 @@
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-04-03  
+**文档版本**: v1.1  
+**最后更新**: 2026-04-13  
 **适用版本**: v3.0.0+  
 **状态**: ✅ 已同步代码
 
@@ -130,9 +130,11 @@ python scripts/check-docs.py
 |------|------|
 | `docs/` | 项目级文档（架构、需求、API变更等） |
 | `.agents/` | 开发规范、操作指南、检查清单 |
-| `backend/docs/` | 后端专属文档 |
-| `frontend-v3/docs/` | 前端专属文档 |
+| `backend/` | 后端专属文档（如 `backend/README.md`） |
+| `frontend-v3/` | 前端专属文档（如 `frontend-v3/docs/`、`frontend-v3/DESIGN_SYSTEM.md`） |
+| `migrations/` | 数据库迁移指南（`migrations/README.md`） |
 | `tests/` | 测试相关文档 |
+| 项目根目录 | 全局文档（`README.md`、`CLAUDE.md`、`REMAINING_ISSUES.md`） |
 
 ---
 
@@ -143,9 +145,10 @@ python scripts/check-docs.py
 - [ ] 内部链接有效
 - [ ] `README.md` 文档地图包含所有重要文档
 - [ ] `CLAUDE.md` 文档索引已更新
+- [ ] `REMAINING_ISSUES.md` 已同步更新（如适用）
 - [ ] 检查脚本通过
 
 ---
 
-**最后检查**: 2026-04-03  
+**最后检查**: 2026-04-13  
 **下次检查建议**: 每月一次或发布新版本时
