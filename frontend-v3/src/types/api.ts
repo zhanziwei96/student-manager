@@ -92,7 +92,7 @@ export interface ChangePasswordRequest {
  * 注意: 保持与后端字段一致，修改时需同步更新
  */
 export interface Student {
-  id: number                    // 内部ID
+  id?: number                   // 内部ID（后端可能返回 null 或不存在此字段）
   student_id: string            // 学号（业务主键）
   name: string                  // 姓名
   class_name: string            // 班级

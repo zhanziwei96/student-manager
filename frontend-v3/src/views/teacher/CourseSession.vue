@@ -237,13 +237,14 @@ const studentListWithCheckin = computed(() => {
     checkinTimeMap.set(c.student_id, c.checkin_time)
   })
 
-  return classStudents.value.map(s => ({
-    id: String(s.id),
+  const result = classStudents.value.map(s => ({
+    id: s.student_id,
     student_id: s.student_id,
     name: s.name,
     checkedIn: checkedInStudentIds.value.has(s.student_id),
     checkinTime: checkinTimeMap.get(s.student_id)
   }))
+  return result
 })
 
 // 统计

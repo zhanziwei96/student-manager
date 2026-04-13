@@ -19,7 +19,7 @@ def get_student(session: Session, student_id: str) -> Optional[Student]:
 
 def get_students(session: Session, class_name: Optional[str] = None) -> List[Student]:
     """获取学生列表"""
-    query = select(Student)
+    query = select(Student).order_by(Student.student_id)
     if class_name:
         query = query.where(Student.class_name == class_name)
     return session.exec(query).all()
@@ -27,7 +27,7 @@ def get_students(session: Session, class_name: Optional[str] = None) -> List[Stu
 
 def get_students_by_class(session: Session, class_name: str) -> List[Student]:
     """根据班级获取学生"""
-    query = select(Student).where(Student.class_name == class_name)
+    query = select(Student).where(Student.class_name == class_name).order_by(Student.student_id)
     return session.exec(query).all()
 
 
@@ -51,7 +51,7 @@ def get_students_by_classes(session: Session, class_names: List[str]) -> List[St
         return []
     
     # 使用 IN 查询一次性获取所有班级学生
-    query = select(Student).where(Student.class_name.in_(class_names))
+    query = select(Student).where(Student.class_name.in_(class_names)).order_by(Student.student_id)
     return session.exec(query).all()
 
 

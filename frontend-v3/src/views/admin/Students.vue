@@ -151,7 +151,7 @@ const handleAddStudent = async () => {
       <div class="lg:hidden space-y-3">
         <Card
           v-for="student in filteredStudents"
-          :key="student.id"
+          :key="student.student_id"
           class="relative overflow-hidden p-4"
           :class="'bg-white border-[#e5e5e5]'"
         >
@@ -219,7 +219,7 @@ const handleAddStudent = async () => {
             <tbody>
               <tr
                 v-for="student in filteredStudents"
-                :key="student.id"
+                :key="student.student_id"
                 class="border-b border-[#e5e5e5] transition-colors hover:bg-[#f5f5f5]"
               >
                 <td class="px-4 py-3 text-sm text-[#a3a3a3]">

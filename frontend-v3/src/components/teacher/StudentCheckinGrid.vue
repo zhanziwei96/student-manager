@@ -83,6 +83,8 @@ const isStudentCheckingIn = (studentId: string): boolean => {
 
 // 处理快速签到
 const handleQuickCheckIn = (student: Student) => {
+  // DEBUG: 验证点击时传入的 student 是否正确
+  console.log('[DEBUG] handleQuickCheckIn clicked:', { id: student.id, student_id: student.student_id, name: student.name, checkedIn: student.checkedIn })
   if (!student.checkedIn && !isStudentCheckingIn(student.student_id)) {
     emit('quickCheckIn', student.student_id)
   }
@@ -194,7 +196,7 @@ const getAvatarColor = (studentId: string): string => {
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           <div
             v-for="student in notCheckedInStudents"
-            :key="student.id"
+            :key="student.student_id"
             class="group relative rounded-xl border border-orange-500/20 bg-white p-4 transition-all duration-200 cursor-pointer hover:border-orange-500/40"
             :class="{ 'opacity-60 cursor-not-allowed pointer-events-none': isStudentCheckingIn(student.student_id) }"
             @click="handleQuickCheckIn(student)"
@@ -257,7 +259,7 @@ const getAvatarColor = (studentId: string): string => {
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           <div
             v-for="student in checkedInStudents"
-            :key="student.id"
+            :key="student.student_id"
             class="relative rounded-xl border border-green-500/20 bg-white p-4 transition-all duration-200"
           >
             <!-- 状态指示器 -->

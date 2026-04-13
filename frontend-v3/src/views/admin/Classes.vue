@@ -174,7 +174,7 @@ const getScoreColor = (score: number) => {
         <div class="lg:hidden space-y-2">
           <div
             v-for="student in classStudents"
-            :key="student.id"
+            :key="student.student_id"
             class="flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[white] p-3"
           >
             <div class="flex items-center gap-3">
@@ -219,7 +219,7 @@ const getScoreColor = (score: number) => {
           <tbody class="divide-y divide-[#e5e5e5]">
             <tr
               v-for="student in classStudents"
-              :key="student.id"
+              :key="student.student_id"
               class="text-[#737373] hover:bg-[#f5f5f5] transition-colors"
             >
               <td class="px-4 py-3 font-mono text-xs">
