@@ -136,3 +136,41 @@ def test_student_groups_returns_max_members_and_is_full(student_client: TestClie
     assert "is_full" in group
     # 默认上限为 5，学生创建组后只有 1 人，不应满
     assert group["is_full"] is False
+
+
+def test_teacher_clone_own_task(teacher_client: TestClient):
+    # 先创建源任务
+    resp = teacher_client.post("/api/v1/teacher/group-tasks", json={
+        "class_name": "一班",
+        "title": "克隆源任务",
+        "description": "源描述",
+        "dimensions": ["创意", "表达"],
+    })
+    assert resp.status_code == 200
+    source_task_id = resp.json()["data"]["task_id"]
+
+    # 复制到二班
+    resp = teacher_client.post(f"/api/v1/teacher/group-tasks/{source_task_id}/clone", json={
+        "target_class_name": "二班",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert "task_id" in data["data"]
+    assert data["data"]["status"] == "preparing"
+
+    # 验证新任务出现在二班列表中，且标题带（复制）后缀
+    resp = teacher_client.get("/api/v1/teacher/group-tasks?class_name=二班")
+    assert resp.status_code == 200
+    tasks = resp.json()["data"]
+    cloned = next((t for t in tasks if t["id"] == data["data"]["task_id"]), None)
+    assert cloned is not None
+    assert cloned["title"] == "克隆源任务（复制）"
+
+
+def test_teacher_clone_nonexistent_task(teacher_client: TestClient):
+    resp = teacher_client.post("/api/v1/teacher/group-tasks/99999/clone", json={
+        "target_class_name": "二班",
+    })
+    assert resp.status_code == 404
+    assert resp.json()["success"] is False

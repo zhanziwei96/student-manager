@@ -55,7 +55,7 @@ from app.crud.group_task import (
     create_group_task, get_group_task, get_group_tasks_by_class,
     get_task_dimensions, start_group_task, close_group_task,
     get_evaluation_assignments, submit_teacher_score,
-    submit_student_scores, get_task_results,
+    submit_student_scores, get_task_results, clone_group_task,
 )
 
 __all__ = [
@@ -99,5 +99,5 @@ __all__ = [
     "create_group_task", "get_group_task", "get_group_tasks_by_class",
     "get_task_dimensions", "start_group_task", "close_group_task",
     "get_evaluation_assignments", "submit_teacher_score",
-    "submit_student_scores", "get_task_results",
+    "submit_student_scores", "get_task_results", "clone_group_task",
 ]
