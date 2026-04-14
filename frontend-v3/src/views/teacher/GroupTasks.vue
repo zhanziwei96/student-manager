@@ -227,7 +227,7 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
               {{ statusMap[task.status]?.label || task.status }}
             </Badge>
           </div>
-          <div class="mt-4 flex flex-col sm:flex-row gap-2">
+          <div class="mt-4 flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"
