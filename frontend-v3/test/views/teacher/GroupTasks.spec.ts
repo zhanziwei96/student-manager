@@ -26,6 +26,7 @@ vi.mock('@/features/group-collaboration', () => ({
   useStartGroupTask: () => ({ mutateAsync: vi.fn() }),
   useCloseGroupTask: () => ({ mutateAsync: vi.fn() }),
   useCloneGroupTask: () => ({ mutateAsync: vi.fn() }),
+  useDeleteGroupTask: () => ({ mutateAsync: vi.fn() }),
 }))
 
 const stubs = {
@@ -55,7 +56,7 @@ describe('GroupTasks', () => {
     expect(wrapper.text()).toContain('合作项目')
   })
 
-  it('renders clone button when tasks exist', () => {
+  it('renders clone and delete buttons when tasks exist', () => {
     teacherGroupTasksMock.data.value = [
       { id: 1, title: '小组项目A', status: 'preparing', class_name: '计算机1班' },
     ]
@@ -68,5 +69,37 @@ describe('GroupTasks', () => {
     })
     expect(wrapper.text()).toContain('小组项目A')
     expect(wrapper.text()).toContain('复制')
+    expect(wrapper.text()).toContain('删除')
+  })
+
+  it('shows delete button for closed task', () => {
+    teacherGroupTasksMock.data.value = [
+      { id: 2, title: '小组项目B', status: 'closed', class_name: '计算机1班' },
+    ]
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = mount(GroupTasks, {
+      global: {
+        plugins: [[VueQueryPlugin, { queryClient }]],
+        stubs,
+      },
+    })
+    expect(wrapper.text()).toContain('删除')
+  })
+
+  it('does not show delete button for evaluating task', () => {
+    teacherGroupTasksMock.data.value = [
+      { id: 3, title: '小组项目C', status: 'evaluating', class_name: '计算机1班' },
+    ]
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = mount(GroupTasks, {
+      global: {
+        plugins: [[VueQueryPlugin, { queryClient }]],
+        stubs,
+      },
+    })
+    // Dialog 中带有"确认删除"，应只检查任务卡片内是否没有删除按钮
+    const cards = wrapper.findAll('.card')
+    expect(cards.length).toBeGreaterThan(0)
+    expect(cards[0].text()).not.toContain('删除')
   })
 })

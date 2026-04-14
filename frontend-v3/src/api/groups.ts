@@ -104,6 +104,8 @@ export const groupsApi = {
     post(`/teacher/group-tasks/${taskId}/close`, {}),
   cloneTask: (taskId: number, targetClassName: string): Promise<{ task_id: number; status: string }> =>
     post(`/teacher/group-tasks/${taskId}/clone`, { target_class_name: targetClassName }),
+  deleteTask: (taskId: number): Promise<unknown> =>
+    del(`/teacher/group-tasks/${taskId}`),
   getTaskResults: (taskId: number): Promise<TaskResultData> =>
     get(`/teacher/group-tasks/${taskId}/results`),
   submitTeacherScore: (taskId: number, data: TeacherScoreRequest): Promise<unknown> =>

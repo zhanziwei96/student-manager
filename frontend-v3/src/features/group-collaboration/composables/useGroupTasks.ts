@@ -52,6 +52,16 @@ export function useCloneGroupTask() {
   })
 }
 
+export function useDeleteGroupTask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taskId }: { taskId: number }) => groupsApi.deleteTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-tasks'] })
+    },
+  })
+}
+
 export function useTaskResults(taskId: number) {
   return useQuery({
     queryKey: ['group-task-results', taskId],

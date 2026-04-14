@@ -9,8 +9,9 @@ import {
   useStartGroupTask,
   useCloseGroupTask,
   useCloneGroupTask,
+  useDeleteGroupTask,
 } from '@/features/group-collaboration'
-import { Plus, Play, Square, BarChart2, PenLine, Copy } from 'lucide-vue-next'
+import { Plus, Play, Square, BarChart2, PenLine, Copy, Trash2 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import type { ClassInfo } from '@/api/classes'
 
@@ -100,6 +101,38 @@ async function handleClose(taskId: number) {
     toastSuccess('任务已结束')
   } catch (err) {
     toastError(getErrorMessage(err) || '结束失败')
+  }
+}
+
+// 删除任务
+const showDeleteDialog = ref(false)
+const deleteSourceTask = ref<{ id: number; title: string } | null>(null)
+const deleting = ref(false)
+const { mutateAsync: deleteTask } = useDeleteGroupTask()
+
+function openDeleteDialog(task: { id: number; title: string }) {
+  deleteSourceTask.value = task
+  showDeleteDialog.value = true
+}
+
+watch(showDeleteDialog, (open) => {
+  if (!open) {
+    deleteSourceTask.value = null
+  }
+})
+
+async function handleDelete() {
+  if (!deleteSourceTask.value) return
+  try {
+    deleting.value = true
+    await deleteTask({ taskId: deleteSourceTask.value.id })
+    toastSuccess('任务已删除')
+    showDeleteDialog.value = false
+    deleteSourceTask.value = null
+  } catch (err) {
+    toastError(getErrorMessage(err) || '删除失败')
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -202,6 +235,15 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
             >
               <Copy class="h-3.5 w-3.5 mr-1" />
               复制
+            </Button>
+            <Button
+              v-if="task.status !== 'evaluating'"
+              size="sm"
+              variant="outline"
+              @click="openDeleteDialog(task)"
+            >
+              <Trash2 class="h-3.5 w-3.5 mr-1" />
+              删除
             </Button>
             <Button
               v-if="task.status === 'preparing'"
@@ -353,6 +395,35 @@ const statusMap: Record<string, { label: string; variant: 'default' | 'secondary
             @click="handleClone"
           >
             确认复制
+          </Button>
+        </div>
+      </template>
+    </Dialog>
+
+    <Dialog
+      v-model:open="showDeleteDialog"
+      title="删除任务"
+    >
+      <p class="text-sm text-[#737373]">
+        确认删除任务 <span class="font-medium text-black">{{ deleteSourceTask?.title || '' }}</span>？
+      </p>
+      <p class="text-sm text-red-500 mt-2">
+        删除后不可恢复，请谨慎操作。
+      </p>
+      <template #footer>
+        <div class="flex w-full gap-2 sm:justify-end">
+          <Button
+            variant="outline"
+            @click="showDeleteDialog = false"
+          >
+            取消
+          </Button>
+          <Button
+            variant="destructive"
+            :loading="deleting"
+            @click="handleDelete"
+          >
+            确认删除
           </Button>
         </div>
       </template>
