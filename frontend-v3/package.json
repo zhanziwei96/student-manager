@@ -14,6 +14,7 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@fingerprintjs/fingerprintjs": "^5.2.0",
     "@tanstack/vue-query": "^5.69.0",
     "@vueuse/core": "^13.0.0",
     "class-variance-authority": "^0.7.1",

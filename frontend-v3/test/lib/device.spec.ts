@@ -1,17 +1,27 @@
 /**
- * 设备指纹工具测试
+ * 设备指纹工具测试 - FingerprintJS 版本
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { getDeviceFingerprint, getDeviceInfo, clearDeviceId } from '@/lib/device'
+
+// Mock FingerprintJS
+// 注意：vi.mock 工厂函数会被提升到顶部，不能引用外部变量
+vi.mock('@fingerprintjs/fingerprintjs', () => ({
+  default: {
+    load: vi.fn().mockResolvedValue({
+      get: vi.fn().mockResolvedValue({ visitorId: 'mock-fp-visitor-id-12345' }),
+    }),
+  },
+}))
 
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
-  removeItem: vi.fn()
+  removeItem: vi.fn(),
 }
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
+  value: localStorageMock,
 })
 
 describe('Device Fingerprint', () => {
@@ -20,44 +30,26 @@ describe('Device Fingerprint', () => {
     localStorageMock.getItem.mockReturnValue(null)
   })
 
-  it('should generate device fingerprint', async () => {
+  it('should generate device fingerprint via FingerprintJS', async () => {
     const fingerprint = await getDeviceFingerprint()
-    
-    // 验证指纹是32位十六进制字符串
-    expect(fingerprint).toMatch(/^[a-f0-9]{32}$/)
-    // 验证指纹被保存到localStorage
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('checkin_device_id', fingerprint)
+
+    expect(fingerprint).toBe('mock-fp-visitor-id-12345')
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('checkin_device_id', 'mock-fp-visitor-id-12345')
   })
 
   it('should return cached device id if exists', async () => {
-    const cachedId = 'abc123def456'
+    const cachedId = 'cached-device-id'
     localStorageMock.getItem.mockReturnValue(cachedId)
-    
-    const fingerprint = await getDeviceFingerprint()
-    
-    // 验证返回缓存的ID
-    expect(fingerprint).toBe(cachedId)
-    // 验证没有生成新指纹
-    expect(localStorageMock.setItem).not.toHaveBeenCalled()
-  })
 
-  it('should return consistent fingerprint for same device', async () => {
-    // 生成两次指纹
-    const fp1 = await getDeviceFingerprint()
-    
-    // 清除缓存，模拟重新生成
-    localStorageMock.getItem.mockReturnValue(null)
-    
-    const fp2 = await getDeviceFingerprint()
-    
-    // 两次生成的指纹应该相同（同一设备特征）
-    expect(fp1).toBe(fp2)
+    const fingerprint = await getDeviceFingerprint()
+
+    expect(fingerprint).toBe(cachedId)
+    expect(localStorageMock.setItem).not.toHaveBeenCalled()
   })
 
   it('should get device info object', () => {
     const info = getDeviceInfo()
-    
-    // 验证设备信息包含必要字段
+
     expect(info).toHaveProperty('userAgent')
     expect(info).toHaveProperty('platform')
     expect(info).toHaveProperty('language')
