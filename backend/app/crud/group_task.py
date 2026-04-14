@@ -1,6 +1,6 @@
 """小组任务与评分 CRUD"""
 from typing import List, Optional, Dict, Any
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 from app.core.timezone import get_now
 from app.models.group import (
     GroupTask, GroupTaskDimension, EvaluationAssignment,
@@ -242,6 +242,32 @@ def submit_student_scores(
         records.append(rec)
     session.commit()
     return records
+
+
+def delete_group_task(session: Session, task_id: int) -> None:
+    """删除小组任务及其关联数据（dimensions、assignments、scores）"""
+    task = session.get(GroupTask, task_id)
+    if not task:
+        raise ValueError("任务不存在")
+
+    # 1. 删除评分记录
+    session.execute(
+        delete(GroupEvaluationScore).where(GroupEvaluationScore.task_id == task_id)
+    )
+
+    # 2. 删除互评指派
+    session.execute(
+        delete(EvaluationAssignment).where(EvaluationAssignment.task_id == task_id)
+    )
+
+    # 3. 删除评分维度
+    session.execute(
+        delete(GroupTaskDimension).where(GroupTaskDimension.task_id == task_id)
+    )
+
+    # 4. 删除任务本身
+    session.delete(task)
+    session.commit()
 
 
 def get_task_results(session: Session, task_id: int) -> Dict[int, Dict[str, Any]]:

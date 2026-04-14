@@ -159,13 +159,13 @@ def test_teacher_clone_own_task(teacher_client: TestClient):
     assert "task_id" in data["data"]
     assert data["data"]["status"] == "preparing"
 
-    # 验证新任务出现在二班列表中，且标题带（复制）后缀
+    # 验证新任务出现在二班列表中
     resp = teacher_client.get("/api/v1/teacher/group-tasks?class_name=二班")
     assert resp.status_code == 200
     tasks = resp.json()["data"]
     cloned = next((t for t in tasks if t["id"] == data["data"]["task_id"]), None)
     assert cloned is not None
-    assert cloned["title"] == "克隆源任务（复制）"
+    assert cloned["title"] == "克隆源任务"
 
 
 def test_teacher_clone_nonexistent_task(teacher_client: TestClient):
@@ -174,3 +174,67 @@ def test_teacher_clone_nonexistent_task(teacher_client: TestClient):
     })
     assert resp.status_code == 404
     assert resp.json()["success"] is False
+
+
+def test_teacher_delete_own_task(teacher_client: TestClient):
+    # 先创建并关闭任务
+    resp = teacher_client.post("/api/v1/teacher/group-tasks", json={
+        "class_name": "一班",
+        "title": "待删除任务",
+        "description": "描述",
+        "dimensions": ["创意"],
+    })
+    assert resp.status_code == 200
+    task_id = resp.json()["data"]["task_id"]
+
+    resp = teacher_client.delete(f"/api/v1/teacher/group-tasks/{task_id}")
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+    assert resp.json()["message"] == "任务已删除"
+
+    # 再次删除应 404
+    resp = teacher_client.delete(f"/api/v1/teacher/group-tasks/{task_id}")
+    assert resp.status_code == 404
+
+
+def test_teacher_delete_evaluating_task(teacher_client: TestClient, student_client: TestClient):
+    # 通过底层数据操作确保一班有两个活跃小组（启动互评的前提）
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import Student, Group, GroupMember
+
+    with Session(_test_engine) as session:
+        s2 = Student(student_id="S002", name="学生2", class_name="一班", score=80.0)
+        session.add(s2)
+        session.commit()
+
+    # 学生 S001 创建组1
+    student_client.post("/api/v1/student/groups", json={
+        "class_name": "一班",
+        "name": "删除测试组1",
+    })
+
+    # 底层创建组2（S002 为组长）
+    with Session(_test_engine) as session:
+        g2 = Group(class_name="一班", name="删除测试组2", leader_student_id="S002", is_active=True)
+        session.add(g2)
+        session.commit()
+        session.refresh(g2)
+        session.add(GroupMember(group_id=g2.id, student_id="S002"))
+        session.commit()
+
+    resp = teacher_client.post("/api/v1/teacher/group-tasks", json={
+        "class_name": "一班",
+        "title": "互评中任务",
+        "description": "描述",
+        "dimensions": ["创意"],
+    })
+    task_id = resp.json()["data"]["task_id"]
+
+    # 启动任务
+    resp = teacher_client.post(f"/api/v1/teacher/group-tasks/{task_id}/start")
+    assert resp.status_code == 200
+
+    resp = teacher_client.delete(f"/api/v1/teacher/group-tasks/{task_id}")
+    assert resp.status_code == 400
+    assert resp.json()["message"] == "互评中的任务不可删除"

@@ -24,6 +24,7 @@ from app.crud import (
     get_class_group_settings, get_or_create_class_group_settings,
     update_class_group_settings,
     clone_group_task,
+    delete_group_task,
 )
 
 router = APIRouter(tags=["groups"])
@@ -184,6 +185,31 @@ async def api_clone_group_task(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: "任务已复制",
         ApiResponseConst.DATA: {"task_id": new_task.id, "status": new_task.status},
+    }
+
+
+@router.delete("/teacher/group-tasks/{task_id}", response_model=ApiResponse[dict])
+async def api_delete_group_task(
+    task_id: int,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    task = get_group_task(session, task_id)
+    if not task:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
+    username = user.get("username", "")
+    if task.created_by != username:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权删除此任务")
+    if task.status == "evaluating":
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="互评中的任务不可删除")
+    try:
+        delete_group_task(session, task_id)
+    except ValueError as e:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: "任务已删除",
+        ApiResponseConst.DATA: {"task_id": task_id},
     }
 
 

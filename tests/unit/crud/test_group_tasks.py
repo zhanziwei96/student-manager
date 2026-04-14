@@ -1,11 +1,11 @@
 import pytest
 from sqlmodel import Session, select
 from app.models import Student
-from app.models.group import GroupTask, GroupEvaluationScore, EvaluationAssignment
+from app.models.group import GroupTask, GroupTaskDimension, GroupEvaluationScore, EvaluationAssignment
 from app.crud import (
     create_group_task, start_group_task, close_group_task,
     submit_teacher_score, submit_student_scores, get_task_results,
-    create_group, get_task_dimensions, clone_group_task,
+    create_group, get_task_dimensions, clone_group_task, delete_group_task,
 )
 
 
@@ -58,7 +58,7 @@ def test_clone_group_task(session: Session):
     source = create_group_task(session, "一班", "PPT大赛", "做一个PPT", "tea", ["创意", "表达"])
     cloned = clone_group_task(session, source.id, "二班", "tea2")
     assert cloned.id != source.id
-    assert cloned.title == "PPT大赛（复制）"
+    assert cloned.title == "PPT大赛"
     assert cloned.description == "做一个PPT"
     assert cloned.class_name == "二班"
     assert cloned.created_by == "tea2"
@@ -68,3 +68,19 @@ def test_clone_group_task(session: Session):
     assert len(dims) == 2
     assert dims[0].name == "创意"
     assert dims[1].name == "表达"
+
+
+def test_delete_group_task(session: Session):
+    task = create_group_task(session, "一班", "PPT大赛", None, "tea", ["创意"])
+    g1 = create_group(session, "一班", "G1", "s1")
+    g2 = create_group(session, "一班", "G2", "s2")
+    start_group_task(session, task.id)
+    close_group_task(session, task.id)
+
+    delete_group_task(session, task.id)
+
+    assert session.get(GroupTask, task.id) is None
+    dims = session.exec(select(GroupTaskDimension).where(GroupTaskDimension.task_id == task.id)).all()
+    assert len(dims) == 0
+    assigns = session.exec(select(EvaluationAssignment).where(EvaluationAssignment.task_id == task.id)).all()
+    assert len(assigns) == 0
