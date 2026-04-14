@@ -143,8 +143,8 @@ async def do_checkin(
             device_id=data.device_id,
             device_info=data.device_info
         )
-    except DuplicateCheckinError:
-        raise HTTPException(status_code=HttpStatus.CONFLICT, detail='您已在本课堂签到')
+    except DuplicateCheckinError as e:
+        raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
 
     return {
         ApiResponseConst.SUCCESS: True,
