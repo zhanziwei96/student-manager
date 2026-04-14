@@ -46,7 +46,7 @@ def clone_group_task(
         raise ValueError("源任务不存在")
     new_task = GroupTask(
         class_name=target_class_name,
-        title=f"{source.title}（复制）",
+        title=source.title,
         description=source.description,
         status="preparing",
         created_by=created_by,
