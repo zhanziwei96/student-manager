@@ -4,11 +4,16 @@ import { get } from '@/lib/api'
 
 const REFRESH_INTERVAL = 15000 // 15秒
 
+interface VerificationCodeData {
+  code: string
+  expires_in: number
+}
+
 export function useVerificationCode(sessionId: number) {
   const expiresIn = ref(15)
   let countdownTimer: ReturnType<typeof setInterval> | null = null
 
-  const { data, refetch, isLoading, error } = useQuery<{ code: string; expires_in: number }>({
+  const { data, refetch, isLoading, error } = useQuery<VerificationCodeData>({
     queryKey: ['verification-code', sessionId],
     queryFn: async () => {
       return await get(`/course-sessions/${sessionId}/verification-code`)
@@ -31,7 +36,7 @@ export function useVerificationCode(sessionId: number) {
 
   const code = computed(() => {
     if (!data.value) return ''
-    return data.value.code as string
+    return data.value.code
   })
 
   const progressPercent = computed(() => (expiresIn.value / 15) * 100)
