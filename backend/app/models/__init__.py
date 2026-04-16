@@ -4,6 +4,7 @@
 from app.models.student import Student, StudentCreate, StudentUpdate, StudentResponse
 from app.models.user import User, UserCreate, UserUpdate, UserResponse
 from app.models.checkin import CheckinRecord, ScoreLog
+from app.models.device_bind import DeviceBind, DeviceBindCreate
 from app.models.audit import AuditLog, SecurityAlert
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
 from app.models.course_session import CourseSession, ScheduleAdjustment, CourseSessionResponse
@@ -27,6 +28,8 @@ __all__ = [
     "UserRole", "UserRoleConst", "UserStatus", "CheckinType",
     # Checkin
     "CheckinRecord", "ScoreLog",
+    # DeviceBind
+    "DeviceBind", "DeviceBindCreate",
     # Audit
     "AuditLog", "SecurityAlert",
     # Course Session
