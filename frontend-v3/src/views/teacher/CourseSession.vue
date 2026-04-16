@@ -34,6 +34,7 @@ import type { CourseSession } from '@/types'
 // 子组件
 import StudentCheckinGrid from '@/components/teacher/StudentCheckinGrid.vue'
 import CheckinStats from '@/components/teacher/CheckinStats.vue'
+import QRCodeDisplay from '@/components/teacher/QRCodeDisplay.vue'
 
 // ===== 卡片主题辅助函数 - 统一使用 Indigo 主题 =====
 
@@ -848,6 +849,9 @@ const getSourceTypeBadge = (sourceType: string) => {
           </Button>
         </div>
       </Card>
+
+      <!-- QR Code Display -->
+      <QRCodeDisplay :session-id="selectedSession.id" class="mb-5" />
 
       <!-- Check-in form - Indigo 主题 -->
       <Card class="relative overflow-hidden p-4 md:p-6 mb-5 bg-white border-[#e5e5e5]">

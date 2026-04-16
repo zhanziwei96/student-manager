@@ -145,18 +145,19 @@ describe('Student Checkin with GPS', () => {
           Button: MockButton,
           Badge: MockBadge,
           DataContainer: MockDataContainer,
+          QRScanner: { template: '<div class="mock-qr-scanner">扫码签到</div>' },
           Toast: { template: '<div class="mock-toast" />' }
         }
       }
     })
   }
 
-  it('shows checkin button when session is active and not checked in', async () => {
+  it('shows qr scanner when session is active and not checked in', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 验证显示立即签到按钮
-    expect(wrapper.text()).toContain('立即签到')
+    // 验证显示扫码签到组件
+    expect(wrapper.text()).toContain('扫码签到')
   })
 
   it('displays student info correctly', async () => {
@@ -210,6 +211,7 @@ describe('Student Checkin Error Handling (P1-2)', () => {
           Button: MockButton,
           Badge: MockBadge,
           DataContainer: MockDataContainer,
+          QRScanner: { template: '<div class="mock-qr-scanner">扫码签到</div>' },
           Toast: { template: '<div class="mock-toast" />' }
         },
         provide: {

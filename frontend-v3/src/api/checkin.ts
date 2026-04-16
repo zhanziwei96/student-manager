@@ -15,6 +15,11 @@ export interface CheckinRequest {
   student_name: string
   device_id?: string
   device_info?: string
+  qr_payload?: {
+    session_code: string
+    timestamp: number
+    signature: string
+  }
 }
 
 export interface CourseSessionStatus {

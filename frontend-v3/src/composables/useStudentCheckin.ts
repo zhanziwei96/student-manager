@@ -57,7 +57,7 @@ export function useStudentSelfCheckin() {
   const { data: studentProfile } = useStudentProfile()
 
   const { mutateAsync, isPending, error, isSuccess } = useMutation({
-    mutationFn: async (): Promise<CheckinRecord> => {
+    mutationFn: async (qrPayload: { session_code: string; timestamp: number; signature: string }): Promise<CheckinRecord> => {
       if (!studentProfile.value) {
         throw new Error('未找到学生信息')
       }
@@ -72,6 +72,7 @@ export function useStudentSelfCheckin() {
         student_name: studentProfile.value.name,
         device_id: deviceId,
         device_info: deviceInfo,
+        qr_payload: qrPayload,
       })
     },
     onSuccess: () => {

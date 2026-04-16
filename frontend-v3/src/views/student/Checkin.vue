@@ -3,6 +3,7 @@ import { ref, computed, onUnmounted, watch } from 'vue'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge, DataContainer } from '@/components/ui'
+import QRScanner from '@/components/student/QRScanner.vue'
 import { useToast } from '@/composables/useToast'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
 
@@ -69,19 +70,18 @@ watch(friendlyErrorMessage, (msg) => {
   }
 }, { flush: 'post' })
 
-const handleCheckin = async () => {
-  if (isCheckingIn.value) return
+const handleQRScan = async (qrData: string) => {
   try {
-    await doCheckin()
+    const qrPayload = JSON.parse(qrData)
+    await doCheckin(qrPayload)
     showSuccess.value = true
     successMessage.value = '签到成功！'
     toastTimeoutId = setTimeout(() => {
       showSuccess.value = false
       toastTimeoutId = null
     }, 3000)
-  } catch (err: unknown) {
-    // 错误已由 mutation 的 error 状态暴露给 UI，并通过 watch 弹出 Toast
-    // 捕获是为了防止未处理的 Promise 拒绝
+  } catch (err: any) {
+    showErrorToast(err.message || '签到失败，请重试')
   }
 }
 
@@ -228,21 +228,15 @@ const formatTime = (time: string) => {
           </Badge>
         </div>
 
-        <!-- Checkin Button - 背景区域 -->
+        <!-- Checkin QR Scanner - 背景区域 -->
         <div
           v-if="hasActiveSession && !sessionError"
           class="mt-4 md:mt-6 p-4 rounded-xl border border-green-500/20"
         >
-          <Button
+          <QRScanner
             v-if="canCheckin"
-            size="lg"
-            class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm border-0"
-            :loading="isCheckingIn"
-            @click="handleCheckin"
-          >
-            <CheckCircle class="mr-2 h-5 w-5 md:h-4 md:w-4" />
-            立即签到
-          </Button>
+            @success="handleQRScan"
+          />
 
           <div
             v-else-if="showCheckedInStatus && sessionCheckin"
