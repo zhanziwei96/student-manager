@@ -1,4 +1,4 @@
-import { get, post, put } from '@/lib/api'
+import { get, post, put, del } from '@/lib/api'
 
 export interface CreateGroupTaskRequest {
   class_name: string
