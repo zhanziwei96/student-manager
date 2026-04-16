@@ -8,7 +8,7 @@ export function useVerificationCode(sessionId: number) {
   const expiresIn = ref(15)
   let countdownTimer: ReturnType<typeof setInterval> | null = null
 
-  const { data, refetch, isLoading, error } = useQuery({
+  const { data, refetch, isLoading, error } = useQuery<{ code: string; expires_in: number }>({
     queryKey: ['verification-code', sessionId],
     queryFn: async () => {
       return await get(`/course-sessions/${sessionId}/verification-code`)
