@@ -32,6 +32,8 @@ class CheckinRecord(SQLModel, table=True):
     checkin_time: datetime = Field(default_factory=get_now, description="签到时间")
     device_id: Optional[str] = Field(default=None, description="设备指纹ID", index=True)
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
+    qr_signature: str | None = Field(default=None, description="二维码签名")
+    device_bound: bool = Field(default=True, description="是否绑定设备")
 
 
 class ScoreLog(SQLModel, table=True):
