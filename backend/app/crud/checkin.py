@@ -74,8 +74,8 @@ def create_checkin(
     if has_checked_in_session(session, student_id, session_id):
         raise DuplicateCheckinError("您已在本课堂签到")
 
-    if device_id and is_device_checked_in_session(session, device_id, session_id):
-        raise DuplicateCheckinError("该设备已签到")
+    # 注：设备级代签防护已迁移到 DeviceBind 表（按学生维度隔离）
+    # 不再使用全局设备检查，避免学生合法更换设备时被误拦截
 
     checkin = CheckinRecord(
         session_id=session_id,

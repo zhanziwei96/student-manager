@@ -109,10 +109,10 @@ watch(() => route.path, () => {
   >
     <aside
       v-if="open"
-      class="fixed left-0 top-0 z-50 h-screen w-[280px] bg-white border-r border-[#e5e5e5] lg:hidden"
+      class="fixed left-0 top-0 z-50 h-screen w-[280px] bg-white border-r border-[#e5e5e5] lg:hidden flex flex-col"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between h-16 px-4 border-b border-[#e5e5e5]">
+      <div class="flex items-center justify-between h-16 px-4 border-b border-[#e5e5e5] flex-shrink-0">
         <div class="flex items-center gap-2">
           <GraduationCap class="h-6 w-6 text-black" />
           <span class="text-lg font-medium text-black">智慧课堂</span>
@@ -126,7 +126,7 @@ watch(() => route.path, () => {
       </div>
 
       <!-- User info -->
-      <div class="p-4 border-b border-[#e5e5e5]">
+      <div class="p-4 border-b border-[#e5e5e5] flex-shrink-0">
         <div class="flex items-center gap-3">
           <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#fafafa]">
             <User class="h-6 w-6 text-[#737373]" />
@@ -142,37 +142,40 @@ watch(() => route.path, () => {
         </div>
       </div>
 
-      <!-- Navigation -->
-      <nav class="p-2 space-y-1">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.path"
-          :to="item.path"
-          :class="[
-            'flex items-center gap-4 rounded-full px-4 py-3.5 text-base font-medium',
-            isActive(item.path)
-              ? 'bg-[#e5e5e5] text-black'
-              : 'text-[#737373] hover:bg-[#fafafa] hover:text-black'
-          ]"
-        >
-          <component :is="item.icon" class="h-6 w-6" />
-          {{ item.name }}
-        </RouterLink>
-      </nav>
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto min-h-0">
+        <!-- Navigation -->
+        <nav class="p-2 space-y-1">
+          <RouterLink
+            v-for="item in navItems"
+            :key="item.path"
+            :to="item.path"
+            :class="[
+              'flex items-center gap-4 rounded-full px-4 py-3.5 text-base font-medium',
+              isActive(item.path)
+                ? 'bg-[#e5e5e5] text-black'
+                : 'text-[#737373] hover:bg-[#fafafa] hover:text-black'
+            ]"
+          >
+            <component :is="item.icon" class="h-6 w-6" />
+            {{ item.name }}
+          </RouterLink>
+        </nav>
 
-      <!-- Change password -->
-      <div class="px-2 pt-2 border-t border-[#e5e5e5] mx-2">
-        <button
-          class="flex w-full items-center gap-4 rounded-full px-4 py-3.5 text-base font-medium text-[#737373] hover:bg-[#fafafa] hover:text-black"
-          @click="handleChangePassword"
-        >
-          <KeyRound class="h-6 w-6" />
-          修改密码
-        </button>
+        <!-- Change password -->
+        <div class="px-2 pt-2 border-t border-[#e5e5e5] mx-2 mt-2">
+          <button
+            class="flex w-full items-center gap-4 rounded-full px-4 py-3.5 text-base font-medium text-[#737373] hover:bg-[#fafafa] hover:text-black"
+            @click="handleChangePassword"
+          >
+            <KeyRound class="h-6 w-6" />
+            修改密码
+          </button>
+        </div>
       </div>
 
       <!-- Bottom actions -->
-      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-[#e5e5e5]">
+      <div class="p-4 border-t border-[#e5e5e5] flex-shrink-0">
         <Button
           variant="ghost"
           class="w-full justify-start gap-3 text-[#a3a3a3] hover:text-black h-12"

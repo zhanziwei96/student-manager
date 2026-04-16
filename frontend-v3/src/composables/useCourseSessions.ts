@@ -113,9 +113,11 @@ export function useStudentCheckIn(sessionId?: number | Ref<number | undefined>) 
   const queryClient = useQueryClient()
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (studentCode: string): Promise<CheckinRecord> => {
+      const id = sessionId ? unref(sessionId) : undefined
       return await checkinApi.checkin({
         student_id: studentCode,
         student_name: '',
+        session_id: id,
       })
     },
     onSuccess: () => {

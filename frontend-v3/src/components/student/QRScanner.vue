@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Scan, Camera, X, AlertCircle } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { Scan, Camera, X, AlertCircle, Image } from 'lucide-vue-next'
 import Button from '@/components/ui/Button.vue'
 import { useQRScanner } from '@/composables/useQRScanner'
 
@@ -7,9 +8,24 @@ const emit = defineEmits<{
   (e: 'success', decodedText: string): void
 }>()
 
-const { isScanning, error, startScan, stopScan, SCANNER_ELEMENT_ID } = useQRScanner((decodedText) => {
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const { isScanning, error, isCameraSupported, startScan, stopScan, scanFile, SCANNER_ELEMENT_ID } = useQRScanner((decodedText) => {
   emit('success', decodedText)
 })
+
+const handleFileChange = async (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    await scanFile(file)
+    target.value = ''
+  }
+}
+
+const triggerFileInput = () => {
+  fileInputRef.value?.click()
+}
 </script>
 
 <template>
@@ -23,9 +39,13 @@ const { isScanning, error, startScan, stopScan, SCANNER_ELEMENT_ID } = useQRScan
         <h3 class="text-lg font-semibold text-[#171717]">扫码签到</h3>
         <p class="text-sm text-[#737373]">请允许浏览器使用相机权限</p>
       </div>
-      <Button variant="cta" class="w-full max-w-xs" @click="startScan">
+      <Button v-if="isCameraSupported" variant="cta" class="w-full max-w-xs" @click="startScan">
         <Camera class="h-4 w-4" />
         打开相机
+      </Button>
+      <Button v-else variant="cta" class="w-full max-w-xs" @click="triggerFileInput">
+        <Image class="h-4 w-4" />
+        拍照签到
       </Button>
     </template>
 
@@ -62,10 +82,26 @@ const { isScanning, error, startScan, stopScan, SCANNER_ELEMENT_ID } = useQRScan
         </div>
         <p class="text-sm text-[#737373]">{{ error }}</p>
       </div>
-      <Button variant="cta" class="w-full max-w-xs" @click="startScan">
+      <Button v-if="isCameraSupported" variant="cta" class="w-full max-w-xs" @click="startScan">
         <Camera class="h-4 w-4" />
         重试
       </Button>
+      <Button v-else variant="cta" class="w-full max-w-xs" @click="triggerFileInput">
+        <Image class="h-4 w-4" />
+        重新拍照
+      </Button>
     </template>
+
+    <!-- 隐藏的拍照 input -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      class="hidden"
+      @change="handleFileChange"
+    />
+    <!-- 用于 scanFile 的临时占位元素 -->
+    <div id="qr-file-reader-dummy" class="hidden" />
   </div>
 </template>

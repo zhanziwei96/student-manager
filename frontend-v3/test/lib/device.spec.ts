@@ -39,7 +39,11 @@ describe('Device Fingerprint', () => {
 
   it('should return cached device id if exists', async () => {
     const cachedId = 'cached-device-id'
-    localStorageMock.getItem.mockReturnValue(cachedId)
+    localStorageMock.getItem.mockImplementation((key: string) => {
+      if (key === 'checkin_device_id') return cachedId
+      if (key === 'checkin_device_id_updated_at') return String(Date.now())
+      return null
+    })
 
     const fingerprint = await getEnhancedDeviceFingerprint()
 
@@ -64,5 +68,6 @@ describe('Device Fingerprint', () => {
     clearDeviceId()
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('checkin_device_id')
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('checkin_device_salt')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('checkin_device_id_updated_at')
   })
 })

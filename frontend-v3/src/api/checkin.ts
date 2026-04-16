@@ -1,5 +1,5 @@
 import { get, post } from '@/lib/api'
-import type { CheckinRecord } from '@/types'
+import type { CheckinRecord, CheckinRequest, CourseSessionStatus } from '@/types'
 
 export interface CheckinStats {
   active: boolean
@@ -8,27 +8,6 @@ export interface CheckinStats {
   checked_in: number
   not_checked_in: number
   rate: number
-}
-
-export interface CheckinRequest {
-  student_id: string
-  student_name: string
-  device_id?: string
-  device_info?: string
-  qr_payload?: {
-    session_code: string
-    timestamp: number
-    signature: string
-  }
-}
-
-export interface CourseSessionStatus {
-  id?: number
-  session_code?: string
-  active: boolean
-  class_name?: string
-  teacher_name?: string
-  start_time?: string
 }
 
 export interface ActiveCourseSession {

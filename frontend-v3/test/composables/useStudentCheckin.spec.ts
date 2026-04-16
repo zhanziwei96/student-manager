@@ -197,7 +197,7 @@ describe('useStudentSelfCheckin', () => {
   it('当学生信息存在时应成功执行签到', async () => {
     const { result, unmount } = withSetup(() => useStudentSelfCheckin())
 
-    const checkinResult = await result.mutateAsync()
+    const checkinResult = await result.mutateAsync('abc123')
 
     expect(checkinApi.checkin).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -205,6 +205,7 @@ describe('useStudentSelfCheckin', () => {
         student_name: '张三',
         device_id: 'device123',
         device_info: expect.any(String),
+        verification_code: 'ABC123',
       })
     )
     expect(checkinResult).toEqual(mockCheckinRecord)

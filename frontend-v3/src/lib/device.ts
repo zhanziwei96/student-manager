@@ -6,6 +6,8 @@ import FingerprintJS from '@fingerprintjs/fingerprintjs'
 
 const STORAGE_KEY = 'checkin_device_id'
 const SALT_KEY = 'checkin_device_salt'
+const UPDATED_AT_KEY = 'checkin_device_id_updated_at'
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7天
 
 function getFromMultipleStorage(key: string): string | null {
   try {
@@ -145,14 +147,23 @@ async function hashComponents(components: string[]): Promise<string> {
   return Math.abs(h).toString(16).padStart(64, '0')
 }
 
+function isCacheValid(updatedAt: string | null): boolean {
+  if (!updatedAt) return false
+  const ts = parseInt(updatedAt, 10)
+  return !isNaN(ts) && Date.now() - ts < CACHE_TTL_MS
+}
+
 /**
  * 生成增强版设备指纹
  * 结合 FingerprintJS + Canvas + WebGL + 持久化盐值，通过 SHA-256 哈希生成唯一标识
  */
-export async function getEnhancedDeviceFingerprint(): Promise<string> {
-  // 1. 检查多存储点缓存
-  const cachedId = getFromMultipleStorage(STORAGE_KEY)
-  if (cachedId) return cachedId
+export async function getEnhancedDeviceFingerprint(forceRefresh = false): Promise<string> {
+  // 1. 检查多存储点缓存（带 TTL，避免碰撞问题永远无法自愈）
+  if (!forceRefresh) {
+    const cachedId = getFromMultipleStorage(STORAGE_KEY)
+    const updatedAt = getFromMultipleStorage(UPDATED_AT_KEY)
+    if (cachedId && isCacheValid(updatedAt)) return cachedId
+  }
 
   // 2. 获取 FingerprintJS visitorId
   const fp = await FingerprintJS.load()
@@ -168,8 +179,9 @@ export async function getEnhancedDeviceFingerprint(): Promise<string> {
   // 5. 组合 SHA-256 哈希
   const hash = await hashComponents([result.visitorId, canvasFp, webglFp, salt])
 
-  // 6. 多存储点保存
+  // 6. 多存储点保存并更新时间戳
   saveToMultipleStorage(STORAGE_KEY, hash)
+  saveToMultipleStorage(UPDATED_AT_KEY, String(Date.now()))
   return hash
 }
 
@@ -199,4 +211,5 @@ export function getDeviceInfo(): object {
 export function clearDeviceId(): void {
   removeFromMultipleStorage(STORAGE_KEY)
   removeFromMultipleStorage(SALT_KEY)
+  removeFromMultipleStorage(UPDATED_AT_KEY)
 }

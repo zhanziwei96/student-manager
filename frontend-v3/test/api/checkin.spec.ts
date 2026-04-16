@@ -1,35 +1,36 @@
 /**
- * 签到API测试
+ * 签到API类型测试
  */
 import { describe, it, expect } from 'vitest'
 import type { CheckinRequest, CourseSessionStatus } from '@/types'
 
 describe('Checkin API Types', () => {
-  it('should validate CheckinRequest with GPS and device info', () => {
+  it('should validate CheckinRequest with verification code and device info', () => {
     const request: CheckinRequest = {
       student_id: 'S001',
       student_name: '张三',
-      lat: 39.90923,
-      lng: 116.397428,
+      verification_code: 'ABC123',
       device_id: 'device123',
       device_info: '{"platform":"test"}'
     }
 
     expect(request.student_id).toBe('S001')
-    expect(request.lat).toBe(39.90923)
-    expect(request.lng).toBe(116.397428)
+    expect(request.student_name).toBe('张三')
+    expect(request.verification_code).toBe('ABC123')
     expect(request.device_id).toBe('device123')
   })
 
-  it('should validate CourseSessionStatus with location', () => {
+  it('should validate CourseSessionStatus', () => {
     const status: CourseSessionStatus = {
+      id: 1,
+      session_code: 'CS101',
       active: true,
-      location_name: '机房312',
-      checkin_radius: 100,
-      require_location: true
+      class_name: '计算机一班',
+      teacher_name: '李老师',
+      start_time: '2024-01-01T08:00:00Z'
     }
 
-    expect(status.location_name).toBe('机房312')
-    expect(status.checkin_radius).toBe(100)
+    expect(status.active).toBe(true)
+    expect(status.class_name).toBe('计算机一班')
   })
 })

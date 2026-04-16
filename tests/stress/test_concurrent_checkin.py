@@ -82,15 +82,17 @@ def setup_course_session(client, teacher_cookies):
 
 
 def test_single_checkin(client, setup_course_session):
-    """测试单用户签到 - 基线测试"""
+    """测试单用户签到 - 基线测试（教师手动签到路径）"""
     student_id = TEST_SINGLE
+    session_id = setup_course_session
 
     start = time.time()
     resp = client.post("/checkin", json={
         "student_id": student_id,
         "student_name": f"学生{student_id}",
         "device_id": f"device_{student_id}",
-        "device_info": "{}"
+        "device_info": "{}",
+        "session_id": session_id
     })
     elapsed = time.time() - start
 
@@ -103,6 +105,7 @@ def test_single_checkin(client, setup_course_session):
 def test_sequential_checkins(client, setup_course_session):
     """测试顺序签到 - 10个学生依次签到"""
     times = []
+    session_id = setup_course_session
 
     for student_id in TEST_SEQUENTIAL:
         start = time.time()
@@ -110,7 +113,8 @@ def test_sequential_checkins(client, setup_course_session):
             "student_id": student_id,
             "student_name": f"学生{student_id}",
             "device_id": f"device_{student_id}",
-            "device_info": "{}"
+            "device_info": "{}",
+            "session_id": session_id
         })
         elapsed = time.time() - start
         times.append(elapsed)
@@ -126,6 +130,7 @@ def test_sequential_checkins(client, setup_course_session):
 def test_concurrent_checkins_thread(client, setup_course_session):
     """测试并发签到 - 使用线程池模拟20学生同时签到"""
     test_students = TEST_CONCURRENT_THREAD
+    session_id = setup_course_session
     results = {"success": 0, "failed": 0, "rate_limited": 0, "times": []}
 
     def do_checkin(student_id):
@@ -135,7 +140,8 @@ def test_concurrent_checkins_thread(client, setup_course_session):
                 "student_id": student_id,
                 "student_name": f"学生{student_id}",
                 "device_id": f"device_{student_id}",
-                "device_info": "{}"
+                "device_info": "{}",
+                "session_id": session_id
             })
             elapsed = time.time() - start
 
@@ -185,6 +191,7 @@ def test_concurrent_checkins_thread(client, setup_course_session):
 async def test_concurrent_checkins_async(setup_course_session, teacher_cookies):
     """测试异步并发签到 - 使用 asyncio 模拟20学生同时签到"""
     test_students = TEST_CONCURRENT_ASYNC
+    session_id = setup_course_session
     results = {"success": 0, "failed": 0, "rate_limited": 0, "times": []}
 
     async def do_checkin(student_id):
@@ -195,7 +202,8 @@ async def test_concurrent_checkins_async(setup_course_session, teacher_cookies):
                     "student_id": student_id,
                     "student_name": f"学生{student_id}",
                     "device_id": f"device_{student_id}",
-                    "device_info": "{}"
+                    "device_info": "{}",
+                    "session_id": session_id
                 })
                 elapsed = time.time() - start
 

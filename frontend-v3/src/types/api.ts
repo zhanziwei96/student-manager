@@ -164,7 +164,11 @@ export interface DashboardData {
 
 // 签到类型
 export interface CheckinRequest {
-  student_code: string
+  student_id: string
+  student_name: string
+  device_id?: string
+  device_info?: string
+  verification_code?: string
   session_id?: number
 }
 
@@ -177,6 +181,16 @@ export interface CheckinRecord {
   checkin_time: string
   checkin_type?: string
   device_id?: string
+  device_info?: string
+}
+
+export interface CourseSessionStatus {
+  id?: number
+  session_code?: string
+  active: boolean
+  class_name?: string
+  teacher_name?: string
+  start_time?: string
 }
 
 /**

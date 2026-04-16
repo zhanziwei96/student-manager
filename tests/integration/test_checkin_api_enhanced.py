@@ -36,18 +36,18 @@ class TestCheckinAPIEnhanced:
         })
         assert login_response.status_code == 200
 
-        # 获取二维码（教师已登录，但 client fixture 未登录教师，这里直接构造二维码 payload）
-        from app.core.qr_signature import generate_qr_payload
+        # 获取验证码（教师已登录，但 client fixture 未登录教师，直接构造）
+        from app.core.qr_signature import generate_verification_code
         from app.crud.course_session import get_active_course_session_by_class_name
         from sqlmodel import Session
         with Session(test_engine) as session:
             cs = get_active_course_session_by_class_name(session, "一班")
-            qr = generate_qr_payload(cs.session_code)
+            code = generate_verification_code(cs.session_code)["code"]
 
         response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
-            "qr_payload": qr
+            "verification_code": code
         })
 
         # 签到成功返回 200
@@ -67,16 +67,12 @@ class TestCheckinAPIEnhanced:
         response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
-            "qr_payload": {
-                "session_code": "FAKE",
-                "timestamp": 1234567890,
-                "signature": "bad"
-            }
+            "verification_code": "BAD000"
         })
 
         assert response.status_code == 400
         data = response.json()
-        assert "二维码" in data["message"] or "无效" in data["message"] or "过期" in data["message"]
+        assert "验证码" in data["message"] or "无效" in data["message"] or "过期" in data["message"] or "上课" in data["message"]
 
     def test_get_checkin_list(self, teacher_client, test_engine):
         """测试获取签到记录列表"""
@@ -99,12 +95,12 @@ class TestCheckinAPIEnhanced:
             "password": "student123",
             "role": "student"
         })
-        from app.core.qr_signature import generate_qr_payload
-        qr = generate_qr_payload(cs.session_code)
+        from app.core.qr_signature import generate_verification_code
+        code = generate_verification_code(cs.session_code)["code"]
         client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
-            "qr_payload": qr
+            "verification_code": code
         })
 
         # 教师获取该 session 签到列表
@@ -171,8 +167,8 @@ class TestCheckinAPIEnhanced:
             "role": "student"
         })
 
-        from app.core.qr_signature import generate_qr_payload
-        qr = generate_qr_payload(cs.session_code)
+        from app.core.qr_signature import generate_verification_code
+        code = generate_verification_code(cs.session_code)["code"]
 
         # 学生签到（带设备信息）
         response = client.post("/api/v1/checkin", json={
@@ -180,7 +176,7 @@ class TestCheckinAPIEnhanced:
             "student_name": "学生1",
             "device_id": "device001",
             "device_info": "{\"browser\": \"test\"}",
-            "qr_payload": qr
+            "verification_code": code
         })
 
         assert response.status_code == 200
@@ -198,14 +194,14 @@ class TestCheckinAPIEnhanced:
             "role": "student"
         })
 
-        from app.core.qr_signature import generate_qr_payload
-        qr = generate_qr_payload(cs.session_code)
+        from app.core.qr_signature import generate_verification_code
+        code = generate_verification_code(cs.session_code)["code"]
 
         # 第一个学生用设备签到
         response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
             "device_id": "shared_device",
-            "qr_payload": qr
+            "verification_code": code
         })
         assert response.status_code == 200

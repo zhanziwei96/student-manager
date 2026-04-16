@@ -1,5 +1,5 @@
 """
-二维码签到 API 集成测试
+动态验证码签到 API 集成测试
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 
 class TestQRCheckinAPI:
-    """二维码签到接口测试"""
+    """动态验证码签到接口测试"""
 
     def _start_class_directly(self, test_engine, class_name, course_name=None, teacher_id=1, teacher_name="张老师"):
         """直接通过 CRUD 创建活跃课堂用于测试"""
@@ -72,28 +72,28 @@ class TestQRCheckinAPI:
         assert response.status_code == 200
         return client, student
 
-    def test_get_qr_payload_success(self, client, test_engine):
-        """教师成功获取二维码 payload"""
+    def test_get_verification_code_success(self, client, test_engine):
+        """教师成功获取动态验证码"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
 
-        response = client.get(f"/api/v1/course-sessions/{cs.id}/qr-payload")
+        response = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert "session_code" in data["data"]
-        assert "timestamp" in data["data"]
-        assert "signature" in data["data"]
+        assert "code" in data["data"]
+        assert len(data["data"]["code"]) == 6
+        assert "expires_in" in data["data"]
 
-    def test_get_qr_payload_not_found(self, client, test_engine):
-        """获取不存在的课堂二维码返回 404"""
+    def test_get_verification_code_not_found(self, client, test_engine):
+        """获取不存在的课堂验证码返回 404"""
         self._get_teacher_token(client, test_engine)
 
-        response = client.get("/api/v1/course-sessions/99999/qr-payload")
+        response = client.get("/api/v1/course-sessions/99999/verification-code")
         assert response.status_code == 404
 
-    def test_get_qr_payload_forbidden(self, client, test_engine):
-        """非创建教师获取二维码返回 403"""
+    def test_get_verification_code_forbidden(self, client, test_engine):
+        """非创建教师获取验证码返回 403"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
 
@@ -119,26 +119,26 @@ class TestQRCheckinAPI:
             "role": "teacher"
         })
 
-        response = client.get(f"/api/v1/course-sessions/{cs.id}/qr-payload")
+        response = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
         assert response.status_code == 403
 
-    def test_checkin_with_valid_qr(self, client, test_engine):
-        """使用有效二维码签到成功"""
+    def test_checkin_with_valid_code(self, client, test_engine):
+        """使用有效验证码签到成功"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
         self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
 
-        # 重新登录教师，确保调用 /qr-payload 是教师身份
+        # 重新登录教师，确保调用 /verification-code 是教师身份
         client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
         })
 
-        # 获取二维码
-        qr_resp = client.get(f"/api/v1/course-sessions/{cs.id}/qr-payload")
-        assert qr_resp.status_code == 200
-        qr = qr_resp.json()["data"]
+        # 获取验证码
+        code_resp = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
+        assert code_resp.status_code == 200
+        code = code_resp.json()["data"]["code"]
 
         # 登录学生
         client.post("/api/v1/login", json={
@@ -152,19 +152,15 @@ class TestQRCheckinAPI:
             "student_name": "学生1",
             "device_id": "device001",
             "device_info": '{"browser": "test"}',
-            "qr_payload": {
-                "session_code": qr["session_code"],
-                "timestamp": qr["timestamp"],
-                "signature": qr["signature"]
-            }
+            "verification_code": code
         })
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["data"]["student_id"] == "S001"
 
-    def test_checkin_with_invalid_qr_signature(self, client, test_engine):
-        """使用无效二维码签名签到失败"""
+    def test_checkin_with_invalid_code(self, client, test_engine):
+        """使用无效验证码签到失败"""
         self._get_teacher_token(client, test_engine)
         self._start_class_directly(test_engine, "一班", teacher_id=1)
         self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
@@ -172,55 +168,27 @@ class TestQRCheckinAPI:
         response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
             "student_name": "学生1",
-            "qr_payload": {
-                "session_code": "INVALID",
-                "timestamp": 1234567890,
-                "signature": "bad_signature"
-            }
+            "verification_code": "BAD000"
         })
         assert response.status_code == 400
         data = response.json()
-        assert "二维码" in data["message"] or "无效" in data["message"] or "过期" in data["message"]
+        assert "验证码" in data["message"] or "无效" in data["message"] or "过期" in data["message"]
 
-    def test_checkin_with_expired_qr(self, client, test_engine):
-        """使用过期的二维码签到失败"""
+    def test_checkin_duplicate_with_code(self, client, test_engine):
+        """同一学生重复验证码签到失败"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
         self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
 
-        import time
-        from app.core.qr_signature import generate_qr_signature
-        expired_timestamp = int(time.time()) - 3600
-        expired_signature = generate_qr_signature(cs.session_code, expired_timestamp)
-
-        response = client.post("/api/v1/checkin", json={
-            "student_id": "S001",
-            "student_name": "学生1",
-            "qr_payload": {
-                "session_code": cs.session_code,
-                "timestamp": expired_timestamp,
-                "signature": expired_signature
-            }
-        })
-        assert response.status_code == 400
-        data = response.json()
-        assert "过期" in data["message"] or "二维码" in data["message"] or "无效" in data["message"]
-
-    def test_checkin_duplicate_with_qr(self, client, test_engine):
-        """同一学生重复二维码签到失败"""
-        self._get_teacher_token(client, test_engine)
-        cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
-        self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
-
-        # 教师登录获取二维码
+        # 教师登录获取验证码
         client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
         })
-        qr_resp = client.get(f"/api/v1/course-sessions/{cs.id}/qr-payload")
-        assert qr_resp.status_code == 200
-        qr = qr_resp.json()["data"]
+        code_resp = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
+        assert code_resp.status_code == 200
+        code = code_resp.json()["data"]["code"]
 
         # 学生登录签到
         client.post("/api/v1/login", json={
@@ -232,11 +200,7 @@ class TestQRCheckinAPI:
             "student_id": "S001",
             "student_name": "学生1",
             "device_id": "device001",
-            "qr_payload": {
-                "session_code": qr["session_code"],
-                "timestamp": qr["timestamp"],
-                "signature": qr["signature"]
-            }
+            "verification_code": code
         }
 
         first = client.post("/api/v1/checkin", json=payload)
@@ -252,15 +216,15 @@ class TestQRCheckinAPI:
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
         self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
 
-        # 教师登录获取二维码
+        # 教师登录获取验证码
         client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
         })
-        qr_resp = client.get(f"/api/v1/course-sessions/{cs.id}/qr-payload")
-        assert qr_resp.status_code == 200
-        qr = qr_resp.json()["data"]
+        code_resp = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
+        assert code_resp.status_code == 200
+        code = code_resp.json()["data"]["code"]
 
         # 学生登录签到
         client.post("/api/v1/login", json={
@@ -273,11 +237,7 @@ class TestQRCheckinAPI:
             "student_id": "S001",
             "student_name": "学生1",
             "device_id": "device_old",
-            "qr_payload": {
-                "session_code": qr["session_code"],
-                "timestamp": qr["timestamp"],
-                "signature": qr["signature"]
-            }
+            "verification_code": code
         })
         assert response.status_code == 200
 
@@ -287,15 +247,15 @@ class TestQRCheckinAPI:
             assert bind is not None
             assert bind.device_id == "device_old"
 
-        # 再次获取新二维码（时间戳会变化）
+        # 再次获取新验证码
         client.post("/api/v1/login", json={
             "username": "teacher1",
             "password": "teacher123",
             "role": "teacher"
         })
-        qr_resp2 = client.get(f"/api/v1/course-sessions/{cs.id}/qr-payload")
-        assert qr_resp2.status_code == 200
-        qr2 = qr_resp2.json()["data"]
+        code_resp2 = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
+        assert code_resp2.status_code == 200
+        code2 = code_resp2.json()["data"]["code"]
 
         # 学生登录，用新设备签到，绑定应更新
         client.post("/api/v1/login", json={
@@ -307,15 +267,9 @@ class TestQRCheckinAPI:
             "student_id": "S001",
             "student_name": "学生1",
             "device_id": "device_new",
-            "qr_payload": {
-                "session_code": qr2["session_code"],
-                "timestamp": qr2["timestamp"],
-                "signature": qr2["signature"]
-            }
+            "verification_code": code2
         })
         # 学生已经签到过，应返回 409；但设备绑定应已更新
-        # 注意：需求说"如果已绑定且设备不同，更新绑定"，但重复签到会抛 DuplicateCheckinError
-        # 所以这里行为是 409，但绑定已更新
         assert response2.status_code == 409
 
         with Session(test_engine) as session:

@@ -21,10 +21,9 @@ from app.crud.course_session import (
     get_course_session,
 )
 from app.crud.checkin import DuplicateCheckinError
-from app.crud.device_bind import create_device_bind, get_device_bind, update_device_bind
-from app.models.device_bind import DeviceBindCreate
+from app.crud.device_bind import upsert_device_bind
 from app.core.jwt import get_current_user
-from app.core.qr_signature import verify_qr_signature
+from app.core.qr_signature import verify_verification_code
 from app.models.constants import (
     ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse
@@ -34,18 +33,13 @@ from app.models import CourseSession
 router = APIRouter(tags=["checkin"])
 
 
-class QRPayload(BaseModel):
-    session_code: str
-    timestamp: int
-    signature: str
-
-
 class CheckinRequest(BaseModel):
     student_id: str = Field(..., description="学号")
     student_name: str = Field(..., description="姓名")
     device_id: Optional[str] = Field(default=None, description="设备指纹ID")
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
-    qr_payload: Optional[QRPayload] = Field(default=None, description="二维码载荷")
+    verification_code: Optional[str] = Field(default=None, description="动态验证码")
+    session_id: Optional[int] = Field(default=None, description="课堂会话ID（教师手动签到时必填）")
 
 
 class CheckinData(BaseModel):
@@ -122,7 +116,7 @@ async def do_checkin(
     db_session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """学生签到"""
+    """签到（支持学生扫码和教师手动两种模式）"""
     # 限流检查（基于学号）
     allowed = await check_rate_limit(request, data.student_id, key_prefix="checkin", limiter_attr="checkin_limiter")
     if not allowed:
@@ -131,58 +125,85 @@ async def do_checkin(
             detail='请求过于频繁，请稍后再试'
         )
 
-    # 1. 验证二维码 payload
-    if not data.qr_payload:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少二维码信息')
-
-    # 2. 验证二维码签名和时效
-    qr = data.qr_payload
-    if not verify_qr_signature(qr.session_code, qr.timestamp, qr.signature):
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='二维码无效或已过期')
-
-    # 3. 验证课堂活跃（通过 session_code 查找课堂）
-    from app.crud.course_session import get_course_session_by_session_code
-    cs = get_course_session_by_session_code(db_session, qr.session_code)
-    if not cs or cs.status != "active":
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
-
-    # 验证学生
     from app.crud import get_student
     student = get_student(db_session, data.student_id)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
 
-    # 4. 设备绑定检查
-    device_bound = False
-    if data.device_id:
-        existing_bind = get_device_bind(db_session, cs.id, data.student_id)
-        if existing_bind:
-            if existing_bind.device_id != data.device_id:
-                update_device_bind(db_session, cs.id, data.student_id, data.device_id)
-            device_bound = True
-        else:
-            create_device_bind(
-                db_session,
-                DeviceBindCreate(session_id=cs.id, student_id=data.student_id, device_id=data.device_id)
-            )
+    user_role = user.get("role", "")
+    is_teacher_or_admin = user_role in ("admin", "teacher")
+
+    if data.verification_code:
+        # === 学生验证码签到路径 ===
+        # 先通过 session_id 查找课堂（学生端已知 session_id）
+        from app.crud.course_session import get_course_session_by_session_code
+        # 由于验证码本身不携带 session_code，我们需要先找到该学生班级的活跃课堂
+        # 实际场景中学生端已经通过 /course-sessions/class/{class_name} 获取了 session_code
+        # 这里复用该接口返回的 session_code 来验证
+        cs = get_active_course_session_by_class_name(db_session, student.class_name)
+        if not cs or cs.status != "active":
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
+
+        if not verify_verification_code(cs.session_code, data.verification_code):
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='验证码无效或已过期')
+
+        # 验证 JWT 身份：只能为自己签到
+        if not is_teacher_or_admin:
+            if str(user.get("sub")) != data.student_id:
+                raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='只能为自己签到')
+
+        # 验证班级匹配
+        if student.class_name != cs.class_name:
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='你不是该课堂的学生')
+
+        # 设备绑定检查（在同一事务内完成，防止并发竞态）
+        device_bound = False
+        if data.device_id:
+            upsert_device_bind(db_session, cs.id, data.student_id, data.device_id)
             device_bound = True
 
-    # 创建签到记录 - 在同一事务内完成重复检查与插入
-    # 这样即使学生后续转班，历史签到仍显示正确的班级
-    try:
-        checkin = create_checkin(
-            db_session,
-            data.student_id,
-            data.student_name or student.name,
-            cs.class_name,  # 使用课堂班级快照
-            cs.id,
-            device_id=data.device_id,
-            device_info=data.device_info,
-            qr_signature=qr.signature,
-            device_bound=device_bound
-        )
-    except DuplicateCheckinError as e:
-        raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
+        try:
+            checkin = create_checkin(
+                db_session,
+                data.student_id,
+                data.student_name or student.name,
+                cs.class_name,
+                cs.id,
+                device_id=data.device_id,
+                device_info=data.device_info,
+                qr_signature=data.verification_code,
+                device_bound=device_bound,
+            )
+        except DuplicateCheckinError as e:
+            raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
+
+    elif is_teacher_or_admin and data.session_id:
+        # === 教师手动签到路径 ===
+        cs = get_course_session(db_session, data.session_id)
+        if not cs:
+            raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='课堂不存在')
+        if cs.status != "active":
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='课堂未在进行中')
+        # 验证教师是否有权操作该课堂
+        if cs.teacher_id != int(user.get("sub", 0)) and user_role != "admin":
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权为该课堂签到')
+        # 验证学生属于该课堂班级
+        if student.class_name != cs.class_name:
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='该学生不属于此课堂班级')
+
+        try:
+            checkin = create_checkin(
+                db_session,
+                data.student_id,
+                data.student_name or student.name,
+                cs.class_name,
+                cs.id,
+            )
+        except DuplicateCheckinError as e:
+            raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
+
+    else:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少验证码或教师权限')
 
     return {
         ApiResponseConst.SUCCESS: True,

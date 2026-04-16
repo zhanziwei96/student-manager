@@ -2,10 +2,9 @@
 import { ref, computed, onUnmounted, watch } from 'vue'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
-import { Card, Button, Badge, DataContainer } from '@/components/ui'
-import QRScanner from '@/components/student/QRScanner.vue'
+import { Card, Button, Badge, DataContainer, Input } from '@/components/ui'
 import { useToast } from '@/composables/useToast'
-import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck } from 'lucide-vue-next'
+import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck, Keyboard } from 'lucide-vue-next'
 
 
 
@@ -16,6 +15,7 @@ const { hasCheckedIn, sessionCheckin, isPending: isLoadingCheckinStatus } = useH
 
 const { error: showErrorToast } = useToast()
 
+const verificationCode = ref('')
 const showSuccess = ref(false)
 const successMessage = ref('')
 
@@ -70,10 +70,20 @@ watch(friendlyErrorMessage, (msg) => {
   }
 }, { flush: 'post' })
 
-const handleQRScan = async (qrData: string) => {
+const handleCheckin = async () => {
+  const code = verificationCode.value.trim().toUpperCase()
+  if (!code) {
+    showErrorToast('请输入验证码')
+    return
+  }
+  if (code.length !== 6) {
+    showErrorToast('验证码为6位字符')
+    return
+  }
+
   try {
-    const qrPayload = JSON.parse(qrData)
-    await doCheckin(qrPayload)
+    await doCheckin(code)
+    verificationCode.value = ''
     showSuccess.value = true
     successMessage.value = '签到成功！'
     toastTimeoutId = setTimeout(() => {
@@ -228,15 +238,41 @@ const formatTime = (time: string) => {
           </Badge>
         </div>
 
-        <!-- Checkin QR Scanner - 背景区域 -->
+        <!-- Checkin Verification Code - 背景区域 -->
         <div
           v-if="hasActiveSession && !sessionError"
           class="mt-4 md:mt-6 p-4 rounded-xl border border-green-500/20"
         >
-          <QRScanner
-            v-if="canCheckin"
-            @success="handleQRScan"
-          />
+          <div
+            v-if="canCheckin && !isCheckingIn"
+            class="flex flex-col items-center gap-4"
+          >
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[#e0e7ff]">
+              <Keyboard class="h-7 w-7 text-[#6366f1]" />
+            </div>
+            <h3 class="text-base font-medium text-[#171717]">输入验证码签到</h3>
+            <Input
+              v-model="verificationCode"
+              placeholder="请输入6位验证码"
+              maxlength="6"
+              class="w-full max-w-[200px] text-center text-xl tracking-[0.15em] uppercase"
+              @keyup.enter="handleCheckin"
+            />
+            <Button variant="cta" class="w-full max-w-[200px]" @click="handleCheckin">
+              <CheckCircle class="h-4 w-4" />
+              确认签到
+            </Button>
+          </div>
+
+          <div
+            v-if="isCheckingIn"
+            class="flex flex-col items-center justify-center gap-3 py-8"
+          >
+            <Loader2 class="h-8 w-8 animate-spin text-primary" />
+            <p class="text-sm text-[#737373]">
+              正在签到，请稍候...
+            </p>
+          </div>
 
           <div
             v-else-if="showCheckedInStatus && sessionCheckin"

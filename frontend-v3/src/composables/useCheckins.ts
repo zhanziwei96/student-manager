@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/vue-query'
-import { toValue, type Ref } from 'vue'
+import { computed, toValue, type Ref } from 'vue'
 import { checkinApi } from '@/api/checkin'
 
 /**
@@ -7,7 +7,7 @@ import { checkinApi } from '@/api/checkin'
  */
 export function useSessionCheckinStats(sessionId?: number | Ref<number | undefined>) {
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['checkin-stats', toValue(sessionId)],
+    queryKey: computed(() => ['checkin-stats', toValue(sessionId)]),
     queryFn: async () => {
       const id = toValue(sessionId)
       return await checkinApi.getStats(id)
@@ -35,7 +35,7 @@ export function useSessionCheckinStats(sessionId?: number | Ref<number | undefin
  */
 export function useSessionCheckins(sessionId?: number | Ref<number | undefined>) {
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['session-checkins', toValue(sessionId)],
+    queryKey: computed(() => ['session-checkins', toValue(sessionId)]),
     queryFn: async () => {
       const id = toValue(sessionId)
       if (id === undefined) return []

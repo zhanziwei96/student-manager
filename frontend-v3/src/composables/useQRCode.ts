@@ -1,30 +1,40 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
-import { api } from '@/lib/api'
+import { get } from '@/lib/api'
 
-const REFRESH_INTERVAL = 10000 // 10秒
+const REFRESH_INTERVAL = 15000 // 15秒
 
-export function useQRCode(sessionId: number) {
-  const expiresIn = ref(10)
+export function useVerificationCode(sessionId: number) {
+  const expiresIn = ref(15)
   let countdownTimer: ReturnType<typeof setInterval> | null = null
 
   const { data, refetch, isLoading, error } = useQuery({
-    queryKey: ['qr-payload', sessionId],
+    queryKey: ['verification-code', sessionId],
     queryFn: async () => {
-      const res = await api.get(`/course-sessions/${sessionId}/qr-payload`)
-      expiresIn.value = 10
-      return res.data.data
+      return await get(`/course-sessions/${sessionId}/verification-code`)
     },
     refetchInterval: REFRESH_INTERVAL,
-    staleTime: REFRESH_INTERVAL,
+    staleTime: REFRESH_INTERVAL - 1000,
   })
 
-  const qrContent = computed(() => {
+  // 数据刷新时同步重置倒计时，避免 queryFn 副作用
+  watch(data, () => {
+    expiresIn.value = data.value?.expires_in ?? 15
+  }, { immediate: true })
+
+  // 倒计时到 0 时立即触发刷新，避免卡在 0s 等待轮询间隔
+  watch(expiresIn, (val) => {
+    if (val <= 0) {
+      refetch()
+    }
+  })
+
+  const code = computed(() => {
     if (!data.value) return ''
-    return JSON.stringify(data.value)
+    return data.value.code as string
   })
 
-  const progressPercent = computed(() => (expiresIn.value / 10) * 100)
+  const progressPercent = computed(() => (expiresIn.value / 15) * 100)
 
   const startCountdown = () => {
     if (countdownTimer) clearInterval(countdownTimer)
@@ -40,5 +50,5 @@ export function useQRCode(sessionId: number) {
     if (countdownTimer) clearInterval(countdownTimer)
   })
 
-  return { qrContent, expiresIn, progressPercent, isLoading, error, refetch }
+  return { code, expiresIn, progressPercent, isLoading, error, refetch }
 }

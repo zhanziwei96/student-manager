@@ -18,7 +18,7 @@ from app.crud.course_session import (
     get_teacher_course_sessions,
     get_course_session,
 )
-from app.core.qr_signature import generate_qr_payload
+from app.core.qr_signature import generate_verification_code
 from app.crud.schedule_adjustment import get_adjustment
 from sqlalchemy.exc import IntegrityError
 
@@ -233,47 +233,18 @@ def finish_course_session(
     }
 
 
-@router.get("/course-sessions/class/{class_name}", response_model=ApiResponse[dict])
-async def get_course_session_for_class(
-    class_name: str,
-    request: Request,
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
-):
-    """获取指定班级的活跃课程会话（学生端使用）"""
-    cs = get_active_course_session_by_class_name(session, class_name)
-    if cs and cs.status == "active":
-        return {
-            ApiResponseConst.SUCCESS: True,
-            ApiResponseConst.DATA: {
-                "id": cs.id,
-                "session_code": cs.session_code,
-                "active": True,
-                "course_name": cs.course_name,
-                "class_name": cs.class_name,
-                "teacher_name": cs.teacher_name,
-                "start_time": cs.start_time,
-            }
-        }
-
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: {"active": False}
-    }
-
-
-@router.get("/course-sessions/{session_id}/qr-payload")
-async def get_qr_payload(
+@router.get("/course-sessions/{session_id}/verification-code", response_model=ApiResponse[dict])
+async def get_verification_code(
     session_id: int,
     db: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    session = get_course_session(db, session_id)
-    if not session:
+    course_session = get_course_session(db, session_id)
+    if not course_session:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课堂不存在")
-    if session.teacher_id != int(user.get("sub", 0)):
+    if course_session.teacher_id != int(user.get("sub", 0)):
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权访问该课堂")
-    payload = generate_qr_payload(session.session_code)
+    payload = generate_verification_code(course_session.session_code)
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: payload}
 
 
