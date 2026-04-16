@@ -83,7 +83,7 @@ vi.mock('@/composables/useToast', () => ({
 
 // Mock device fingerprint
 vi.mock('@/lib/device', () => ({
-  getDeviceFingerprint: vi.fn().mockResolvedValue('device123'),
+  getEnhancedDeviceFingerprint: vi.fn().mockResolvedValue('device123'),
   getDeviceInfo: vi.fn().mockReturnValue({ userAgent: 'test' })
 }))
 

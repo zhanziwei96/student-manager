@@ -2,7 +2,7 @@
  * 设备指纹工具测试 - FingerprintJS 版本
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getDeviceFingerprint, getDeviceInfo, clearDeviceId } from '@/lib/device'
+import { getEnhancedDeviceFingerprint, getDeviceInfo, clearDeviceId } from '@/lib/device'
 
 // Mock FingerprintJS
 // 注意：vi.mock 工厂函数会被提升到顶部，不能引用外部变量
@@ -31,17 +31,17 @@ describe('Device Fingerprint', () => {
   })
 
   it('should generate device fingerprint via FingerprintJS', async () => {
-    const fingerprint = await getDeviceFingerprint()
+    const fingerprint = await getEnhancedDeviceFingerprint()
 
-    expect(fingerprint).toBe('mock-fp-visitor-id-12345')
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('checkin_device_id', 'mock-fp-visitor-id-12345')
+    expect(fingerprint).toHaveLength(64)
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('checkin_device_id', fingerprint)
   })
 
   it('should return cached device id if exists', async () => {
     const cachedId = 'cached-device-id'
     localStorageMock.getItem.mockReturnValue(cachedId)
 
-    const fingerprint = await getDeviceFingerprint()
+    const fingerprint = await getEnhancedDeviceFingerprint()
 
     expect(fingerprint).toBe(cachedId)
     expect(localStorageMock.setItem).not.toHaveBeenCalled()
@@ -55,11 +55,14 @@ describe('Device Fingerprint', () => {
     expect(info).toHaveProperty('language')
     expect(info).toHaveProperty('screen')
     expect(info).toHaveProperty('hardwareConcurrency')
+    expect(info).toHaveProperty('deviceMemory')
+    expect(info).toHaveProperty('maxTouchPoints')
     expect(info).toHaveProperty('timezoneOffset')
   })
 
-  it('should clear device id', () => {
+  it('should clear device id and salt', () => {
     clearDeviceId()
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('checkin_device_id')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('checkin_device_salt')
   })
 })

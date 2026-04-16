@@ -3,7 +3,7 @@ import { computed, type Ref, ref } from 'vue'
 import { checkinApi } from '@/api/checkin'
 import { useStudentProfile } from './useStudentProfile'
 import { useSessionCheckins } from './useCheckins'
-import { getDeviceFingerprint, getDeviceInfo } from '@/lib/device'
+import { getEnhancedDeviceFingerprint, getDeviceInfo } from '@/lib/device'
 import type { CheckinRecord } from '@/types'
 
 /**
@@ -63,7 +63,7 @@ export function useStudentSelfCheckin() {
       }
 
       // 获取设备指纹
-      const deviceId = await getDeviceFingerprint()
+      const deviceId = await getEnhancedDeviceFingerprint()
       const deviceInfo = JSON.stringify(getDeviceInfo())
 
       // FE-003: 直接获取数据，错误自动抛出
