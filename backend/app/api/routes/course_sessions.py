@@ -16,7 +16,9 @@ from app.crud.course_session import (
     get_active_course_session_by_class_name,
     start_course_session,
     get_teacher_course_sessions,
+    get_course_session,
 )
+from app.core.qr_signature import generate_qr_payload
 from app.crud.schedule_adjustment import get_adjustment
 from sqlalchemy.exc import IntegrityError
 
@@ -258,6 +260,21 @@ async def get_course_session_for_class(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {"active": False}
     }
+
+
+@router.get("/course-sessions/{session_id}/qr-payload")
+async def get_qr_payload(
+    session_id: int,
+    db: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    session = get_course_session(db, session_id)
+    if not session:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课堂不存在")
+    if session.teacher_id != int(user.get("sub", 0)):
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权访问该课堂")
+    payload = generate_qr_payload(session.session_code)
+    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: payload}
 
 
 def _get_current_week_number() -> int:

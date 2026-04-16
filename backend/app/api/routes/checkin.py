@@ -18,9 +18,13 @@ from app.crud.checkin import (
 from app.crud.course_session import (
     get_active_course_session_by_class_name,
     get_teacher_active_course_sessions,
+    get_course_session,
 )
 from app.crud.checkin import DuplicateCheckinError
+from app.crud.device_bind import create_device_bind, get_device_bind, update_device_bind
+from app.models.device_bind import DeviceBindCreate
 from app.core.jwt import get_current_user
+from app.core.qr_signature import verify_qr_signature
 from app.models.constants import (
     ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse
@@ -30,11 +34,18 @@ from app.models import CourseSession
 router = APIRouter(tags=["checkin"])
 
 
+class QRPayload(BaseModel):
+    session_code: str
+    timestamp: int
+    signature: str
+
+
 class CheckinRequest(BaseModel):
     student_id: str = Field(..., description="学号")
     student_name: str = Field(..., description="姓名")
     device_id: Optional[str] = Field(default=None, description="设备指纹ID")
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
+    qr_payload: Optional[QRPayload] = Field(default=None, description="二维码载荷")
 
 
 class CheckinData(BaseModel):
@@ -120,16 +131,41 @@ async def do_checkin(
             detail='请求过于频繁，请稍后再试'
         )
 
+    # 1. 验证二维码 payload
+    if not data.qr_payload:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少二维码信息')
+
+    # 2. 验证二维码签名和时效
+    qr = data.qr_payload
+    if not verify_qr_signature(qr.session_code, qr.timestamp, qr.signature):
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='二维码无效或已过期')
+
+    # 3. 验证课堂活跃（通过 session_code 查找课堂）
+    from app.crud.course_session import get_course_session_by_session_code
+    cs = get_course_session_by_session_code(db_session, qr.session_code)
+    if not cs or cs.status != "active":
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
+
     # 验证学生
     from app.crud import get_student
     student = get_student(db_session, data.student_id)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
 
-    # 检查学生所在班级是否有活跃课堂
-    cs = get_active_course_session_by_class_name(db_session, student.class_name)
-    if not cs or cs.status != "active":
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
+    # 4. 设备绑定检查
+    device_bound = False
+    if data.device_id:
+        existing_bind = get_device_bind(db_session, cs.id, data.student_id)
+        if existing_bind:
+            if existing_bind.device_id != data.device_id:
+                update_device_bind(db_session, cs.id, data.student_id, data.device_id)
+            device_bound = True
+        else:
+            create_device_bind(
+                db_session,
+                DeviceBindCreate(session_id=cs.id, student_id=data.student_id, device_id=data.device_id)
+            )
+            device_bound = True
 
     # 创建签到记录 - 在同一事务内完成重复检查与插入
     # 这样即使学生后续转班，历史签到仍显示正确的班级
@@ -141,7 +177,9 @@ async def do_checkin(
             cs.class_name,  # 使用课堂班级快照
             cs.id,
             device_id=data.device_id,
-            device_info=data.device_info
+            device_info=data.device_info,
+            qr_signature=qr.signature,
+            device_bound=device_bound
         )
     except DuplicateCheckinError as e:
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))

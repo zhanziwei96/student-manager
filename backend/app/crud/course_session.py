@@ -16,6 +16,12 @@ def get_course_session(session: Session, session_id: int) -> Optional[CourseSess
     return session.get(CourseSession, session_id)
 
 
+def get_course_session_by_session_code(session: Session, session_code: str) -> Optional[CourseSession]:
+    """根据 session_code 获取课程会话"""
+    query = select(CourseSession).where(CourseSession.session_code == session_code)
+    return session.exec(query).first()
+
+
 def get_active_course_session_by_class_name(session: Session, class_name: str) -> Optional[CourseSession]:
     """根据班级名称获取活跃课程会话"""
     query = select(CourseSession).where(

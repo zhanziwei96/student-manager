@@ -61,7 +61,8 @@ class DuplicateCheckinError(Exception):
 def create_checkin(
     session: Session, student_id: str, student_name: str,
     class_name: str, session_id: int, checkin_type: Optional[str] = None,
-    device_id: Optional[str] = None, device_info: Optional[str] = None
+    device_id: Optional[str] = None, device_info: Optional[str] = None,
+    qr_signature: Optional[str] = None, device_bound: bool = False
 ) -> CheckinRecord:
     """创建签到记录（在同一事务内完成重复检查与插入）"""
     from sqlalchemy.exc import IntegrityError
@@ -83,7 +84,9 @@ def create_checkin(
         class_name=class_name,
         checkin_type=checkin_type,
         device_id=device_id,
-        device_info=device_info
+        device_info=device_info,
+        qr_signature=qr_signature,
+        device_bound=device_bound
     )
     session.add(checkin)
     try:

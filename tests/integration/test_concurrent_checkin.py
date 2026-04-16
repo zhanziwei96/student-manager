@@ -87,6 +87,9 @@ class TestConcurrentCheckin:
 
         from main import app
 
+        from app.core.qr_signature import generate_qr_payload
+        qr = generate_qr_payload(cs.session_code)
+
         async def do_checkin():
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app),
@@ -95,7 +98,8 @@ class TestConcurrentCheckin:
             ) as ac:
                 return await ac.post("/api/v1/checkin", json={
                     "student_id": "S001",
-                    "student_name": "学生S001"
+                    "student_name": "学生S001",
+                    "qr_payload": qr
                 })
 
         # 并发发送 5 个签到请求
@@ -147,6 +151,9 @@ class TestConcurrentCheckin:
 
         cs = self._start_class(test_engine)
 
+        from app.core.qr_signature import generate_qr_payload
+        qr = generate_qr_payload(cs.session_code)
+
         async def login_and_checkin(student_id):
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app),
@@ -162,7 +169,8 @@ class TestConcurrentCheckin:
                 cookies = login_resp.cookies
                 return await ac.post("/api/v1/checkin", json={
                     "student_id": student_id,
-                    "student_name": f"学生{student_id}"
+                    "student_name": f"学生{student_id}",
+                    "qr_payload": qr
                 }, cookies=cookies)
 
         tasks = [login_and_checkin(f"S{i:03d}") for i in range(1, 6)]
