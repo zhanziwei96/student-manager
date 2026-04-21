@@ -14,6 +14,7 @@ from app.models.group import (
     GroupEvaluationScore, GroupDissolutionRequest,
     ClassGroupSettings,
 )
+from app.models.question import Question, Answer, QuestionResponse, AnswerResponse
 from app.models.constants import (
     UserRole, UserRoleConst, UserStatus, CheckinType,
     ApiResponse, ApiSuccessResponse, ApiListResponse, ApiErrorResponse,
@@ -42,4 +43,6 @@ __all__ = [
     "GroupEvaluationScore", "GroupDissolutionRequest", "ClassGroupSettings",
     # API Response Models
     "ApiResponse", "ApiSuccessResponse", "ApiListResponse", "ApiErrorResponse",
+    # Question & Answer
+    "Question", "Answer", "QuestionResponse", "AnswerResponse",
 ]

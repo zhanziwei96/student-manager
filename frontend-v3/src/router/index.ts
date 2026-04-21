@@ -90,6 +90,7 @@ const routes = [
       { path: 'group-tasks/:id/results', name: 'TeacherGroupTaskResults', component: () => import('@/views/teacher/GroupTaskResults.vue') },
       { path: 'group-tasks/:id/score', name: 'TeacherGroupTaskScore', component: () => import('@/views/teacher/GroupTaskScore.vue') },
       { path: 'groups', name: 'TeacherGroups', component: () => import('@/views/teacher/Groups.vue') },
+      { path: 'questions', name: 'TeacherQuestions', component: () => import('@/views/teacher/TeacherQuestion.vue') },
     ],
   },
   {
@@ -115,6 +116,7 @@ const routes = [
       { path: 'my-group', name: 'StudentMyGroup', component: () => import('@/views/student/MyGroup.vue') },
       { path: 'group-evaluations', name: 'StudentGroupEvaluations', component: () => import('@/views/student/GroupEvaluations.vue') },
       { path: 'group-results', name: 'StudentGroupResults', component: () => import('@/views/student/GroupResults.vue') },
+      { path: 'questions', name: 'StudentQuestions', component: () => import('@/views/student/StudentQuestion.vue') },
     ],
   },
   {

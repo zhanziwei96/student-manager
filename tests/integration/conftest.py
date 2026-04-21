@@ -36,6 +36,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 from main import app
 from app.models import User, Student, UserRoleConst
+from app.models.question import Question, Answer  # noqa: F401
 from app.core.security import generate_password_hash
 
 
@@ -47,6 +48,8 @@ def _clear_all_data():
         tables = [
             "score_logs",
             "checkin_records",
+            "answers",
+            "questions",
             "group_evaluation_scores",
             "group_membership_requests",
             "group_dissolution_requests",

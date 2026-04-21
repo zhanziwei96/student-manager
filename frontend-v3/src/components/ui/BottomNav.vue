@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores'
-import { LayoutDashboard, Users, CheckCircle, BookOpen, GraduationCap } from 'lucide-vue-next'
+import { LayoutDashboard, Users, CheckCircle, BookOpen, GraduationCap, MessageCircle } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -17,7 +17,8 @@ const teacherItems = [
   { name: '签到', path: '/teacher/session', icon: CheckCircle },
   { name: '课表', path: '/teacher/schedules', icon: BookOpen },
   { name: '合作', path: '/teacher/group-tasks', icon: Users },
-  { name: '小组', path: '/teacher/groups', icon: GraduationCap }
+  { name: '小组', path: '/teacher/groups', icon: GraduationCap },
+  { name: '问答', path: '/teacher/questions', icon: MessageCircle }
 ]
 
 // Student navigation items
@@ -26,7 +27,8 @@ const studentItems = [
   { name: '签到', path: '/student/checkin', icon: CheckCircle },
   { name: '小组', path: '/student/my-group', icon: Users },
   { name: '互评', path: '/student/group-evaluations', icon: CheckCircle },
-  { name: '成绩', path: '/student/group-results', icon: GraduationCap }
+  { name: '成绩', path: '/student/group-results', icon: GraduationCap },
+  { name: '问答', path: '/student/questions', icon: MessageCircle }
 ]
 
 const navItems = computed(() => {
