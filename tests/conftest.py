@@ -29,6 +29,7 @@ def engine():
     )
     # 创建所有表
     from app.models import Student, User, CheckinRecord, CourseSession, ScoreLog, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
+    from app.models.question import Question, Answer  # noqa: F401
     SQLModel.metadata.create_all(test_engine)
     try:
         yield test_engine

@@ -11,6 +11,7 @@ from app.api.routes.leaderboard import router as leaderboard_router
 from app.api.routes.course_sessions import router as course_sessions_router
 from app.api.routes.schedule_adjustments import router as schedule_adjustments_router
 from app.api.routes.groups import router as groups_router
+from app.api.routes.questions import router as questions_router
 
 __all__ = [
     "login_router",
@@ -23,4 +24,5 @@ __all__ = [
     "course_sessions_router",
     "schedule_adjustments_router",
     "groups_router",
+    "questions_router",
 ]

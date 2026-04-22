@@ -58,6 +58,12 @@ from app.crud.group_task import (
     submit_student_scores, get_task_results, clone_group_task,
     delete_group_task,
 )
+from app.crud.question import (
+    create_question, get_question, get_questions_by_teacher,
+    get_questions_by_class, close_question, count_answers,
+    create_answer, get_answer, get_answers_by_question,
+    update_answer, star_answer, delete_answer,
+)
 
 __all__ = [
     # Student
@@ -102,4 +108,9 @@ __all__ = [
     "get_evaluation_assignments", "submit_teacher_score",
     "submit_student_scores", "get_task_results", "clone_group_task",
     "delete_group_task",
+    # Question
+    "create_question", "get_question", "get_questions_by_teacher",
+    "get_questions_by_class", "close_question", "count_answers",
+    "create_answer", "get_answer", "get_answers_by_question",
+    "update_answer", "star_answer", "delete_answer",
 ]
