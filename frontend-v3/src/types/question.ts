@@ -30,6 +30,7 @@ export interface Answer {
   is_starred: boolean
   parent_id?: number
   created_at: string
+  is_own: boolean
 }
 
 /** 创建问题请求 */

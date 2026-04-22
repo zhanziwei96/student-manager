@@ -21,7 +21,10 @@ function formatDate(iso: string): string {
 </script>
 
 <template>
-  <div class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+  <div
+    class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+    @click="emit('view', question.id)"
+  >
     <div class="flex justify-between items-start mb-2">
       <div class="flex items-center gap-2">
         <span
@@ -56,14 +59,14 @@ function formatDate(iso: string): string {
       <div v-if="showActions" class="flex gap-2">
         <button
           class="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-          @click="emit('view', question.id)"
+          @click.stop="emit('view', question.id)"
         >
           查看回答
         </button>
         <button
           v-if="question.status === 'active'"
           class="px-3 py-1 text-sm bg-gray-50 text-gray-600 rounded hover:bg-gray-100"
-          @click="emit('close', question.id)"
+          @click.stop="emit('close', question.id)"
         >
           结束
         </button>

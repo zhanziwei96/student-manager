@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import { useTeacherQuestions } from '@/features/question/composables/useTeacherQuestions'
 import { useAnswers } from '@/features/question/composables/useAnswers'
 import QuestionCard from '@/features/question/components/QuestionCard.vue'
 import AnswerList from '@/features/question/components/AnswerList.vue'
 import AnswerInput from '@/features/question/components/AnswerInput.vue'
 import type { Question } from '@/types/question'
-
-const authStore = useAuthStore()
-const currentUserId = computed(() => String(authStore.user?.id || ''))
 
 const statusFilter = ref('')
 const selectedQuestion = ref<Question | null>(null)
@@ -164,7 +160,7 @@ function formatDate(iso: string): string {
           <AnswerList
             v-else
             :answers="answers || []"
-            :current-user-id="currentUserId"
+            
             :is-teacher="true"
             @reply="replyTarget = $event"
             @star="handleStar"

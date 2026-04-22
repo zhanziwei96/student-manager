@@ -68,6 +68,7 @@ class AnswerItem(BaseModel):
     is_starred: bool
     parent_id: Optional[int]
     created_at: str
+    is_own: bool = False
 
 
 # ============== 教师端路由 ==============
@@ -224,10 +225,10 @@ async def student_get_answers(
     answers = get_answers_by_question(session, question_id)
     result = []
     for a in answers:
-        # 获取回答者姓名：先尝试 User 表，再尝试 Student 表
+        # 获取回答者姓名：先尝试 Student 表（学号），再尝试 User 表（数字ID）
+        student_obj = get_student(session, a.student_id)
         user_obj = get_user(session, int(a.student_id)) if a.student_id.isdigit() else None
-        student_obj = get_student(session, a.student_id) if not a.student_id.isdigit() else None
-        name = (user_obj.name if user_obj else None) or (student_obj.name if student_obj else None)
+        name = (student_obj.name if student_obj else None) or (user_obj.name if user_obj else None)
 
         show_name = is_teacher or not a.is_anonymous or a.student_id == current_user_sub
         result.append(AnswerItem(
@@ -240,6 +241,7 @@ async def student_get_answers(
             is_starred=a.is_starred,
             parent_id=a.parent_id,
             created_at=a.created_at.isoformat(),
+            is_own=a.student_id == current_user_sub,
         ).model_dump())
     return {"success": True, "data": result}
 
