@@ -67,7 +67,7 @@ function isReply(answer: Answer): boolean {
             v-if="answer.is_anonymous"
             class="text-sm font-medium text-purple-500"
           >
-            匿名同学
+            匿名
           </span>
           <span v-else class="text-sm font-medium text-black">
             {{ answer.student_name || '未知' }}
