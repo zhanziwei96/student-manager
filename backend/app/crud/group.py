@@ -57,7 +57,7 @@ def create_group(session: Session, class_name: str, name: str, leader_student_id
 
 
 def _remove_student_from_class_groups(session: Session, student_id: str, class_name: str) -> None:
-    """将学生从某班所有活跃小组中移除"""
+    """将学生从某班所有活跃小组中移除；若小组无人则自动解散"""
     groups = get_groups_by_class(session, class_name)
     for group in groups:
         members = session.exec(
@@ -66,8 +66,17 @@ def _remove_student_from_class_groups(session: Session, student_id: str, class_n
                 GroupMember.student_id == student_id,
             )
         ).all()
+        if not members:
+            continue
         for m in members:
             session.delete(m)
+        # 检查小组是否还有其他成员
+        remaining = session.exec(
+            select(GroupMember).where(GroupMember.group_id == group.id)
+        ).all()
+        if not remaining:
+            group.is_active = False
+            session.add(group)
     session.commit()
 
 
