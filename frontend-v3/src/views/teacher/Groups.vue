@@ -8,9 +8,11 @@ import {
   useClassGroupSettings,
   useUpdateClassGroupSettings,
 } from '@/features/group-collaboration'
-import { Users, Shuffle, Crown } from 'lucide-vue-next'
+import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import type { ClassInfo } from '@/api/classes'
+import type { GroupDetail } from '@/types/api'
+import type { Group } from '@/api/groups'
 import { groupsApi } from '@/api'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 
@@ -105,6 +107,86 @@ async function handleTransfer() {
   }
 }
 
+// 展开/收起小组成员
+const expandedGroupId = ref<number | null>(null)
+const groupDetail = ref<GroupDetail | null>(null)
+const loadingDetail = ref(false)
+
+async function toggleGroup(groupId: number) {
+  if (expandedGroupId.value === groupId) {
+    expandedGroupId.value = null
+    groupDetail.value = null
+  } else {
+    expandedGroupId.value = groupId
+    loadingDetail.value = true
+    try {
+      groupDetail.value = await groupsApi.getGroupDetail(groupId)
+    } catch (err) {
+      toastError(getErrorMessage(err) || '获取小组详情失败')
+    } finally {
+      loadingDetail.value = false
+    }
+  }
+}
+
+// 踢出成员
+const removingMember = ref<{ groupId: number; studentId: string } | null>(null)
+
+async function handleRemoveMember(groupId: number, studentId: string) {
+  removingMember.value = { groupId, studentId }
+  try {
+    await groupsApi.removeMember(groupId, studentId)
+    toastSuccess('成员已踢出')
+    await queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
+    if (expandedGroupId.value === groupId) {
+      // 刷新后检查小组是否仍存在（踢出最后一名成员后小组会自动解散）
+      const updatedGroups = queryClient.getQueryData<Group[]>(['teacher-groups', selectedClass.value])
+      const stillExists = updatedGroups?.some((g: Group) => g.id === groupId)
+      if (stillExists) {
+        groupDetail.value = await groupsApi.getGroupDetail(groupId)
+      } else {
+        expandedGroupId.value = null
+        groupDetail.value = null
+      }
+    }
+  } catch (err) {
+    toastError(getErrorMessage(err) || '踢出失败')
+  } finally {
+    removingMember.value = null
+  }
+}
+
+// 解散小组
+const showDissolveDialog = ref(false)
+const dissolvingGroupId = ref<number | null>(null)
+const dissolvingGroupName = ref('')
+const dissolving = ref(false)
+
+function confirmDissolve(groupId: number, groupName: string) {
+  dissolvingGroupId.value = groupId
+  dissolvingGroupName.value = groupName
+  showDissolveDialog.value = true
+}
+
+async function handleDissolve() {
+  if (!dissolvingGroupId.value) return
+  try {
+    dissolving.value = true
+    await groupsApi.dissolveGroup(dissolvingGroupId.value)
+    toastSuccess('小组已解散')
+    showDissolveDialog.value = false
+    if (expandedGroupId.value === dissolvingGroupId.value) {
+      expandedGroupId.value = null
+      groupDetail.value = null
+    }
+    queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
+  } catch (err) {
+    toastError(getErrorMessage(err) || '解散失败')
+  } finally {
+    dissolving.value = false
+  }
+}
+
 // 解散申请
 const { data: dissolutions, isPending: loadingDissolutions } = useQuery({
   queryKey: ['dissolution-requests'],
@@ -196,7 +278,11 @@ async function handleRejectDissolution(reqId: number) {
             :key="g.id"
             class="rounded-xl border border-[#e5e5e5] bg-white p-4"
           >
-            <div class="flex items-start justify-between">
+            <!-- 卡片头部：点击展开/收起 -->
+            <div
+              class="flex items-start justify-between cursor-pointer"
+              @click="toggleGroup(g.id)"
+            >
               <div>
                 <h4 class="font-medium text-black">
                   {{ g.name }}
@@ -206,19 +292,68 @@ async function handleRejectDissolution(reqId: number) {
                   {{ g.member_count || (g.members ? g.members.length : 0) }} 人
                 </div>
               </div>
-              <Badge variant="secondary">
-                <Crown class="h-3 w-3 mr-1" />
-                {{ g.leader_name || g.leader_student_id }}
-              </Badge>
+              <div class="flex items-center gap-2">
+                <Badge variant="secondary">
+                  <Crown class="h-3 w-3 mr-1" />
+                  {{ g.leader_name || g.leader_student_id }}
+                </Badge>
+                <component
+                  :is="expandedGroupId === g.id ? ChevronUp : ChevronDown"
+                  class="h-4 w-4 text-[#737373]"
+                />
+              </div>
             </div>
+
+            <!-- 操作按钮 -->
             <div class="mt-3 flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                @click="openTransfer(g.id)"
+                @click.stop="openTransfer(g.id)"
               >
                 转让组长
               </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                @click.stop="confirmDissolve(g.id, g.name)"
+              >
+                <Trash2 class="h-3.5 w-3.5 mr-1" />
+                解散小组
+              </Button>
+            </div>
+
+            <!-- 成员列表（展开时显示） -->
+            <div v-if="expandedGroupId === g.id" class="mt-3 border-t border-[#e5e5e5] pt-3">
+              <div v-if="loadingDetail" class="text-sm text-[#737373] py-2">
+                加载中...
+              </div>
+              <div v-else-if="groupDetail && groupDetail.id === g.id" class="space-y-2">
+                <div
+                  v-for="member in groupDetail.members"
+                  :key="member.student_id"
+                  class="flex items-center justify-between py-1.5"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-black">{{ member.student_name }}</span>
+                    <span
+                      v-if="member.student_id === g.leader_student_id"
+                      class="text-xs text-[#6366f1]"
+                    >
+                      (组长)
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    :loading="removingMember?.groupId === g.id && removingMember?.studentId === member.student_id"
+                    @click.stop="handleRemoveMember(g.id, member.student_id)"
+                  >
+                    <UserMinus class="h-3.5 w-3.5 mr-1" />
+                    踢出
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -301,6 +436,33 @@ async function handleRejectDissolution(reqId: number) {
             @click="handleTransfer"
           >
             确认转让
+          </Button>
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- 解散确认对话框 -->
+    <Dialog
+      v-model:open="showDissolveDialog"
+      title="解散小组"
+    >
+      <p class="text-sm text-[#737373]">
+        确定要解散小组「{{ dissolvingGroupName }}」吗？此操作不可撤销。
+      </p>
+      <template #footer>
+        <div class="flex w-full gap-2 sm:justify-end">
+          <Button
+            variant="outline"
+            @click="showDissolveDialog = false"
+          >
+            取消
+          </Button>
+          <Button
+            variant="destructive"
+            :loading="dissolving"
+            @click="handleDissolve"
+          >
+            确认解散
           </Button>
         </div>
       </template>

@@ -25,6 +25,7 @@ from app.crud import (
     update_class_group_settings,
     clone_group_task,
     delete_group_task,
+    get_group_with_members, remove_group_member, dissolve_group,
 )
 
 router = APIRouter(tags=["groups"])
@@ -102,6 +103,7 @@ async def api_teacher_group_tasks(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """获取班级合作任务列表"""
     tasks = get_group_tasks_by_class(session, class_name)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -118,6 +120,7 @@ async def api_create_group_task(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """创建合作任务"""
     username = user.get("username", "")
     task = create_group_task(
         session, data.class_name, data.title, data.description, username, data.dimensions
@@ -134,6 +137,7 @@ async def api_start_group_task(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """启动合作任务"""
     task = get_group_task(session, task_id)
     if not task:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
@@ -154,6 +158,7 @@ async def api_close_group_task(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """关闭合作任务"""
     task = close_group_task(session, task_id)
     if not task:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="任务不存在或状态错误")
@@ -171,6 +176,7 @@ async def api_clone_group_task(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """复制合作任务到其他班级"""
     task = get_group_task(session, task_id)
     if not task:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
@@ -194,6 +200,7 @@ async def api_delete_group_task(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """删除合作任务"""
     task = get_group_task(session, task_id)
     if not task:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
@@ -219,6 +226,7 @@ async def api_get_task_results(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """获取合作任务评分结果"""
     task = get_group_task(session, task_id)
     if not task:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
@@ -241,6 +249,7 @@ async def api_submit_teacher_score(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """教师提交评分"""
     # C3: 校验任务必须在 evaluating 状态才允许评分
     task = get_group_task(session, task_id)
     if not task:
@@ -263,6 +272,7 @@ async def api_teacher_groups(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """获取班级小组列表"""
     from app.models import Student
     from sqlmodel import col, select as sql_select
     groups = get_groups_by_class(session, class_name)
@@ -293,6 +303,7 @@ async def api_auto_assign(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """自动分配未组队学生"""
     settings = get_or_create_class_group_settings(session, data.class_name)
     group_size = data.group_size if data.group_size is not None else settings.max_members_per_group
     new_groups = auto_assign_unassigned_students(session, data.class_name, group_size)
@@ -308,6 +319,7 @@ async def api_get_class_group_settings(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """获取班级小组设置"""
     settings = get_class_group_settings(session, class_name)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -324,6 +336,7 @@ async def api_update_class_group_settings(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """更新班级小组人数上限"""
     # 校验：新上限 >= 该班所有小组中当前最大成员数
     groups = get_groups_by_class(session, data.class_name)
     max_current = 0
@@ -353,6 +366,7 @@ async def api_transfer_leader(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """转让小组组长"""
     group = transfer_group_leader(session, group_id, data.new_leader_id)
     if not group:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="转让失败")
@@ -362,11 +376,64 @@ async def api_transfer_leader(
     }
 
 
+@router.get("/teacher/groups/{group_id}", response_model=ApiResponse[dict])
+async def api_get_group_detail(
+    group_id: int,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    """获取小组详情，包含成员列表"""
+    group_data = get_group_with_members(session, group_id)
+    if not group_data:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: group_data,
+    }
+
+
+@router.delete("/teacher/groups/{group_id}/members/{student_id}", response_model=ApiResponse[dict])
+async def api_remove_member(
+    group_id: int,
+    student_id: str,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    """踢出小组成员"""
+    success = remove_group_member(session, group_id, student_id)
+    if not success:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="踢出失败，成员可能不存在")
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: "成员已踢出",
+    }
+
+
+@router.delete("/teacher/groups/{group_id}", response_model=ApiResponse[dict])
+async def api_dissolve_group(
+    group_id: int,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    """解散小组"""
+    try:
+        success = dissolve_group(session, group_id)
+        if not success:
+            raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
+    except ValueError as e:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: "小组已解散",
+    }
+
+
 @router.get("/teacher/group-dissolution-requests", response_model=ApiResponse[list])
 async def api_dissolution_requests(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """获取待处理的解散申请"""
     reqs = get_pending_dissolution_requests(session)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -389,6 +456,7 @@ async def api_approve_dissolution(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """批准解散申请"""
     username = user.get("username", "")
     group = approve_dissolution_request(session, req_id, username)
     if not group:
@@ -405,6 +473,7 @@ async def api_reject_dissolution(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
+    """拒绝解散申请"""
     username = user.get("username", "")
     req = reject_dissolution_request(session, req_id, username)
     if not req:
@@ -425,6 +494,7 @@ async def api_student_create_group(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """学生创建小组"""
     from app.models.constants import UserRoleConst
     role = user.get("role", "")
     if role != UserRoleConst.STUDENT:
@@ -448,6 +518,7 @@ async def api_student_groups(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """获取班级可加入小组列表"""
     groups = get_groups_by_class(session, class_name)
     settings = get_class_group_settings(session, class_name)
     max_m = settings.max_members_per_group if settings else None
@@ -472,6 +543,7 @@ async def api_create_join_request(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """提交入组申请"""
     student_id = user.get("sub", "")
     group = get_group(session, group_id)
     if not group or not group.is_active:
@@ -509,6 +581,7 @@ async def api_approve_join_request(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """组长批准入组申请"""
     student_id = user.get("sub", "")
     req = session.get(GroupMembershipRequest, req_id)
     if not req:
@@ -539,6 +612,7 @@ async def api_reject_join_request(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """组长拒绝入组申请"""
     student_id = user.get("sub", "")
     req = session.get(GroupMembershipRequest, req_id)
     if not req:
@@ -558,6 +632,7 @@ async def api_create_dissolution(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """组长提交解散申请"""
     student_id = user.get("sub", "")
     group = session.exec(
         select(Group).join(GroupMember, GroupMember.group_id == Group.id)
@@ -590,6 +665,7 @@ async def api_student_tasks(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """获取学生班级的合作任务列表"""
     from app.models import Student
     student_id = user.get("sub", "")
     stu = session.get(Student, student_id)
@@ -611,6 +687,7 @@ async def api_student_evaluations(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """获取学生互评任务列表"""
     student_id = user.get("sub", "")
     task = get_group_task(session, task_id)
     if not task:
@@ -657,6 +734,7 @@ async def api_submit_student_scores(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """学生提交互评分数"""
     # C3: 校验任务必须在 evaluating 状态才允许评分
     task = get_group_task(session, task_id)
     if not task:
@@ -674,6 +752,7 @@ async def api_student_my_group_results(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """获取学生小组的任务成绩"""
     student_id = user.get("sub", "")
     from app.models import Student
     stu = session.get(Student, student_id)
@@ -708,6 +787,7 @@ async def api_student_my_group(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
+    """获取学生当前小组信息"""
     student_id = user.get("sub", "")
     from app.models import Student
     stu = session.get(Student, student_id)

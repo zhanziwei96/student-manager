@@ -10,12 +10,14 @@ from app.models.group import (
 
 
 def get_group(session: Session, group_id: int) -> Optional[Group]:
+    """根据 ID 获取小组"""
     return session.get(Group, group_id)
 
 
 def get_groups_by_class(session: Session, class_name: str) -> List[Group]:
+    """获取某班所有活跃小组"""
     return session.exec(
-        select(Group).where(Group.class_name == class_name, Group.is_active.is_(True))
+        select(Group).where(Group.class_name == class_name, Group.is_active.is_(True)).order_by(Group.id)
     ).all()
 
 
@@ -34,12 +36,14 @@ def get_student_active_group(session: Session, student_id: str, class_name: str)
 
 
 def get_group_members(session: Session, group_id: int) -> List[GroupMember]:
+    """获取小组所有成员"""
     return session.exec(
         select(GroupMember).where(GroupMember.group_id == group_id)
     ).all()
 
 
 def create_group(session: Session, class_name: str, name: str, leader_student_id: str) -> Group:
+    """创建小组，组长自动加入"""
     group = Group(
         class_name=class_name,
         name=name,
@@ -81,6 +85,7 @@ def _remove_student_from_class_groups(session: Session, student_id: str, class_n
 
 
 def create_membership_request(session: Session, group_id: int, student_id: str) -> GroupMembershipRequest:
+    """创建入组申请"""
     req = GroupMembershipRequest(group_id=group_id, student_id=student_id, status="pending")
     session.add(req)
     session.commit()
@@ -89,6 +94,7 @@ def create_membership_request(session: Session, group_id: int, student_id: str) 
 
 
 def get_pending_membership_requests(session: Session, group_id: int) -> List[GroupMembershipRequest]:
+    """获取小组待处理的入组申请"""
     return session.exec(
         select(GroupMembershipRequest)
         .where(
@@ -99,6 +105,7 @@ def get_pending_membership_requests(session: Session, group_id: int) -> List[Gro
 
 
 def approve_membership_request(session: Session, request_id: int) -> Optional[GroupMember]:
+    """批准入组申请，先退出旧组再加入新组"""
     req = session.get(GroupMembershipRequest, request_id)
     if not req or req.status != "pending":
         return None
@@ -118,6 +125,7 @@ def approve_membership_request(session: Session, request_id: int) -> Optional[Gr
 
 
 def reject_membership_request(session: Session, request_id: int) -> Optional[GroupMembershipRequest]:
+    """拒绝入组申请"""
     req = session.get(GroupMembershipRequest, request_id)
     if not req or req.status != "pending":
         return None
@@ -129,6 +137,7 @@ def reject_membership_request(session: Session, request_id: int) -> Optional[Gro
 
 
 def create_dissolution_request(session: Session, group_id: int, reason: str) -> GroupDissolutionRequest:
+    """创建解散小组申请"""
     req = GroupDissolutionRequest(group_id=group_id, reason=reason, status="pending")
     session.add(req)
     session.commit()
@@ -137,12 +146,14 @@ def create_dissolution_request(session: Session, group_id: int, reason: str) -> 
 
 
 def get_pending_dissolution_requests(session: Session) -> List[GroupDissolutionRequest]:
+    """获取所有待处理的解散申请"""
     return session.exec(
         select(GroupDissolutionRequest).where(GroupDissolutionRequest.status == "pending")
     ).all()
 
 
 def approve_dissolution_request(session: Session, request_id: int, teacher_username: str) -> Optional[Group]:
+    """批准解散申请"""
     req = session.get(GroupDissolutionRequest, request_id)
     if not req or req.status != "pending":
         return None
@@ -160,6 +171,7 @@ def approve_dissolution_request(session: Session, request_id: int, teacher_usern
 
 
 def reject_dissolution_request(session: Session, request_id: int, teacher_username: str) -> Optional[GroupDissolutionRequest]:
+    """拒绝解散申请"""
     req = session.get(GroupDissolutionRequest, request_id)
     if not req or req.status != "pending":
         return None
@@ -172,6 +184,7 @@ def reject_dissolution_request(session: Session, request_id: int, teacher_userna
 
 
 def transfer_group_leader(session: Session, group_id: int, new_leader_id: str) -> Optional[Group]:
+    """转让组长"""
     group = session.get(Group, group_id)
     if not group or not group.is_active:
         return None
@@ -230,10 +243,12 @@ def auto_assign_unassigned_students(session: Session, class_name: str, group_siz
 
 
 def get_class_group_settings(session: Session, class_name: str) -> Optional[ClassGroupSettings]:
+    """获取班级小组设置"""
     return session.get(ClassGroupSettings, class_name)
 
 
 def get_or_create_class_group_settings(session: Session, class_name: str) -> ClassGroupSettings:
+    """获取或创建班级小组设置"""
     settings = session.get(ClassGroupSettings, class_name)
     if not settings:
         settings = ClassGroupSettings(class_name=class_name)
@@ -244,6 +259,7 @@ def get_or_create_class_group_settings(session: Session, class_name: str) -> Cla
 
 
 def update_class_group_settings(session: Session, class_name: str, max_members: int) -> ClassGroupSettings:
+    """更新班级小组人数上限"""
     settings = get_or_create_class_group_settings(session, class_name)
     settings.max_members_per_group = max_members
     settings.updated_at = get_now()
@@ -251,3 +267,102 @@ def update_class_group_settings(session: Session, class_name: str, max_members: 
     session.commit()
     session.refresh(settings)
     return settings
+
+
+def get_group_with_members(session: Session, group_id: int) -> Optional[dict]:
+    """获取小组详情，包含成员列表和学生姓名"""
+    from app.models import Student
+    from sqlmodel import col
+
+    group = session.get(Group, group_id)
+    if not group:
+        return None
+
+    members = session.exec(
+        select(GroupMember).where(GroupMember.group_id == group_id)
+    ).all()
+
+    # 批量查询学生姓名，避免 N+1
+    student_ids = {m.student_id for m in members}
+    students = session.exec(
+        select(Student).where(col(Student.student_id).in_(student_ids))
+    ).all() if student_ids else []
+    student_map = {s.student_id: s.name for s in students}
+
+    member_list = [
+        {
+            "student_id": m.student_id,
+            "student_name": student_map.get(m.student_id, "未知"),
+            "joined_at": m.joined_at,
+        }
+        for m in members
+    ]
+
+    return {
+        "id": group.id,
+        "class_name": group.class_name,
+        "name": group.name,
+        "leader_student_id": group.leader_student_id,
+        "is_active": group.is_active,
+        "created_at": group.created_at,
+        "members": member_list,
+    }
+
+
+def remove_group_member(session: Session, group_id: int, student_id: str) -> bool:
+    """踢出小组成员；若踢出的是组长则自动转让"""
+    group = session.get(Group, group_id)
+    if not group or not group.is_active:
+        return False
+
+    member = session.exec(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.student_id == student_id,
+        )
+    ).first()
+    if not member:
+        return False
+
+    # 若踢出的是组长，自动转让
+    if group.leader_student_id == student_id:
+        other_members = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.student_id != student_id,
+            )
+        ).all()
+        if other_members:
+            group.leader_student_id = other_members[0].student_id
+            session.add(group)
+        else:
+            # 无其他成员，解散小组
+            group.is_active = False
+            session.add(group)
+
+    session.delete(member)
+    session.commit()
+    return True
+
+
+def dissolve_group(session: Session, group_id: int) -> bool:
+    """解散小组（标记为非活跃）；互评阶段不可解散"""
+    from app.models.group import GroupTask
+
+    group = session.get(Group, group_id)
+    if not group or not group.is_active:
+        return False
+
+    evaluating_task = session.exec(
+        select(GroupTask).where(
+            GroupTask.class_name == group.class_name,
+            GroupTask.status == "evaluating",
+        )
+    ).first()
+    if evaluating_task:
+        raise ValueError("班级正在互评阶段，不可解散小组")
+
+    group.is_active = False
+    session.add(group)
+    session.commit()
+    return True

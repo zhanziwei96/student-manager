@@ -311,3 +311,21 @@ export interface TodayScheduleItem {
     new_classroom?: string
   }
 }
+
+// 小组成员详情
+export interface GroupMember {
+  student_id: string
+  student_name: string
+  joined_at: string
+}
+
+// 小组详情（含成员列表）
+export interface GroupDetail {
+  id: number
+  class_name: string
+  name: string
+  leader_student_id: string
+  is_active: boolean
+  created_at: string
+  members: GroupMember[]
+}

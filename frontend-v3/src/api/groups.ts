@@ -1,4 +1,5 @@
 import { get, post, put, del } from '@/lib/api'
+import type { GroupDetail } from '@/types/api'
 
 export interface CreateGroupTaskRequest {
   class_name: string
@@ -120,6 +121,12 @@ export const groupsApi = {
     put('/teacher/class-group-settings', data),
   transferLeader: (groupId: number, newLeaderId: string): Promise<{ leader_student_id: string }> =>
     post(`/teacher/groups/${groupId}/transfer-leader`, { new_leader_id: newLeaderId }),
+  getGroupDetail: (groupId: number): Promise<GroupDetail> =>
+    get(`/teacher/groups/${groupId}`),
+  removeMember: (groupId: number, studentId: string): Promise<unknown> =>
+    del(`/teacher/groups/${groupId}/members/${studentId}`),
+  dissolveGroup: (groupId: number): Promise<unknown> =>
+    del(`/teacher/groups/${groupId}`),
   getDissolutionRequests: (): Promise<DissolutionRequest[]> =>
     get('/teacher/group-dissolution-requests'),
   approveDissolution: (reqId: number): Promise<unknown> =>

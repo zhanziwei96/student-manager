@@ -50,6 +50,7 @@ from app.crud.group import (
     auto_assign_unassigned_students,
     get_class_group_settings, get_or_create_class_group_settings,
     update_class_group_settings,
+    get_group_with_members, remove_group_member, dissolve_group,
 )
 from app.crud.group_task import (
     create_group_task, get_group_task, get_group_tasks_by_class,
@@ -102,6 +103,7 @@ __all__ = [
     "auto_assign_unassigned_students",
     "get_class_group_settings", "get_or_create_class_group_settings",
     "update_class_group_settings",
+    "get_group_with_members", "remove_group_member", "dissolve_group",
     # GroupTask
     "create_group_task", "get_group_task", "get_group_tasks_by_class",
     "get_task_dimensions", "start_group_task", "close_group_task",
