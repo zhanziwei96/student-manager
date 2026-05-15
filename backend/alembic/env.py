@@ -29,6 +29,7 @@ from app.models.group import (
     GroupEvaluationScore, GroupDissolutionRequest,
     ClassGroupSettings,
 )
+from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim
 
 # Alembic 配置对象
 config = context.config
