@@ -54,6 +54,10 @@ const routes = [
       { path: 'group-tasks', name: 'AdminGroupTasks', component: () => import('@/views/teacher/GroupTasks.vue') },
       { path: 'group-tasks/:id/results', name: 'AdminGroupTaskResults', component: () => import('@/views/teacher/GroupTaskResults.vue') },
       { path: 'groups', name: 'AdminGroups', component: () => import('@/views/teacher/Groups.vue') },
+      { path: 'lost-found', name: 'AdminLostFound', component: () => import('@/views/teacher/LostFound.vue') },
+      { path: 'lost-found/create', name: 'AdminLostFoundCreate', component: () => import('@/views/teacher/LostFoundForm.vue') },
+      { path: 'lost-found/:id', name: 'AdminLostFoundDetail', component: () => import('@/views/teacher/LostFoundDetail.vue') },
+      { path: 'lost-found/:id/edit', name: 'AdminLostFoundEdit', component: () => import('@/views/teacher/LostFoundForm.vue') },
     ],
   },
   {
@@ -91,6 +95,10 @@ const routes = [
       { path: 'group-tasks/:id/score', name: 'TeacherGroupTaskScore', component: () => import('@/views/teacher/GroupTaskScore.vue') },
       { path: 'groups', name: 'TeacherGroups', component: () => import('@/views/teacher/Groups.vue') },
       { path: 'questions', name: 'TeacherQuestions', component: () => import('@/views/teacher/TeacherQuestion.vue') },
+      { path: 'lost-found', name: 'TeacherLostFound', component: () => import('@/views/teacher/LostFound.vue') },
+      { path: 'lost-found/create', name: 'TeacherLostFoundCreate', component: () => import('@/views/teacher/LostFoundForm.vue') },
+      { path: 'lost-found/:id', name: 'TeacherLostFoundDetail', component: () => import('@/views/teacher/LostFoundDetail.vue') },
+      { path: 'lost-found/:id/edit', name: 'TeacherLostFoundEdit', component: () => import('@/views/teacher/LostFoundForm.vue') },
     ],
   },
   {
@@ -117,6 +125,8 @@ const routes = [
       { path: 'group-evaluations', name: 'StudentGroupEvaluations', component: () => import('@/views/student/GroupEvaluations.vue') },
       { path: 'group-results', name: 'StudentGroupResults', component: () => import('@/views/student/GroupResults.vue') },
       { path: 'questions', name: 'StudentQuestions', component: () => import('@/views/student/StudentQuestion.vue') },
+      { path: 'lost-found', name: 'StudentLostFound', component: () => import('@/views/student/LostFound.vue') },
+      { path: 'lost-found/:id', name: 'StudentLostFoundDetail', component: () => import('@/views/student/LostFoundDetail.vue') },
     ],
   },
   {

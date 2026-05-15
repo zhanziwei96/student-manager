@@ -54,6 +54,25 @@ export function useCreateLostFoundItem() {
 }
 
 /**
+ * 更新失物招领
+ */
+export function useUpdateLostFoundItem() {
+  const queryClient = useQueryClient()
+  const { success, error: showError } = useToast()
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: { title?: string; description?: string; location?: string; file?: File } }) =>
+      await lostFoundApi.updateLostFoundItem(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teacher-lost-found'] })
+      queryClient.invalidateQueries({ queryKey: ['teacher-lost-found-detail'] })
+      success('更新成功')
+    },
+    onError: () => showError('更新失败'),
+  })
+}
+
+/**
  * 删除失物招领
  */
 export function useDeleteLostFoundItem() {
