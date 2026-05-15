@@ -12,6 +12,7 @@ from app.api.routes.course_sessions import router as course_sessions_router
 from app.api.routes.schedule_adjustments import router as schedule_adjustments_router
 from app.api.routes.groups import router as groups_router
 from app.api.routes.questions import router as questions_router
+from app.api.routes.lost_found import router as lost_found_router
 
 __all__ = [
     "login_router",
@@ -25,4 +26,5 @@ __all__ = [
     "schedule_adjustments_router",
     "groups_router",
     "questions_router",
+    "lost_found_router",
 ]
