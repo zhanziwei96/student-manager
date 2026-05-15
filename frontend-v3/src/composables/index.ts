@@ -16,3 +16,11 @@ export { useAuthQuery } from './useAuth'
 export { useSchedules, useTodaySchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from './useSchedules'
 export * from './useCourseSessions'
 export { useCreateScheduleAdjustment } from './useScheduleAdjustments'
+// 失物招领
+export {
+  useTeacherLostFoundItems, useTeacherLostFoundDetail,
+  useCreateLostFoundItem, useDeleteLostFoundItem,
+  useConfirmClaim, useRejectClaim,
+  useStudentLostFoundItems, useStudentLostFoundDetail,
+  useCreateLostFoundComment, useClaimLostFoundItem,
+} from './useLostFound'
