@@ -23,3 +23,4 @@ export type {
   DissolutionRequest,
   MyGroup,
 } from './groups'
+export * as lostFoundApi from './lostFound'
