@@ -15,6 +15,10 @@ from app.models.group import (
     ClassGroupSettings,
 )
 from app.models.question import Question, Answer, QuestionResponse, AnswerResponse
+from app.models.lost_found import (
+    LostFoundItem, LostFoundComment, LostFoundClaim,
+    LostFoundItemResponse, LostFoundCommentResponse, LostFoundClaimResponse,
+)
 from app.models.constants import (
     UserRole, UserRoleConst, UserStatus, CheckinType,
     ApiResponse, ApiSuccessResponse, ApiListResponse, ApiErrorResponse,
@@ -45,4 +49,7 @@ __all__ = [
     "ApiResponse", "ApiSuccessResponse", "ApiListResponse", "ApiErrorResponse",
     # Question & Answer
     "Question", "Answer", "QuestionResponse", "AnswerResponse",
+    # Lost & Found
+    "LostFoundItem", "LostFoundComment", "LostFoundClaim",
+    "LostFoundItemResponse", "LostFoundCommentResponse", "LostFoundClaimResponse",
 ]
