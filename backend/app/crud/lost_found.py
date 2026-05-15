@@ -321,10 +321,15 @@ def reject_claim(
     claim.status = "rejected"
     session.add(claim)
 
-    # 检查是否还有其他待处理认领
-    remaining_pending = count_claims_by_status(session, item_id, "pending")
-    # remaining_pending 包含当前这条（还没 commit），所以减 1
-    if remaining_pending - 1 == 0:
+    # 检查是否还有其他待处理认领（排除当前认领）
+    other_pending = session.exec(
+        select(func.count()).select_from(LostFoundClaim).where(
+            LostFoundClaim.item_id == item_id,
+            LostFoundClaim.id != claim_id,
+            LostFoundClaim.status == "pending",
+        )
+    ).one()
+    if other_pending == 0:
         item = session.get(LostFoundItem, item_id)
         if item:
             item.status = "open"
