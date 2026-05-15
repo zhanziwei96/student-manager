@@ -16,7 +16,7 @@ class LostFoundItem(SQLModel, table=True):
     description: str = Field(..., description="详细描述")
     location: Optional[str] = Field(default=None, max_length=200, description="丢失/拾获地点")
     image_url: Optional[str] = Field(default=None, max_length=500, description="图片存储路径")
-    status: str = Field(default="open", description="状态: open/claiming/closed")
+    status: str = Field(default="open", max_length=20, description="状态: open|claiming|closed")
     publisher_id: int = Field(..., foreign_key="users.id", description="发布教师ID", index=True)
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
     updated_at: datetime = Field(default_factory=get_now, description="更新时间")
@@ -42,7 +42,7 @@ class LostFoundClaim(SQLModel, table=True):
     student_id: int = Field(..., foreign_key="users.id", description="认领学生ID", index=True)
     contact: str = Field(..., max_length=200, description="联系方式")
     message: Optional[str] = Field(default=None, description="认领说明")
-    status: str = Field(default="pending", description="状态: pending/confirmed/rejected")
+    status: str = Field(default="pending", max_length=20, description="状态: pending|confirmed|rejected")
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
 
 
