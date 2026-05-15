@@ -46,6 +46,9 @@ def _clear_all_data():
     with Session(_test_engine) as session:
         # 按照外键依赖顺序删除
         tables = [
+            "lost_found_claims",
+            "lost_found_comments",
+            "lost_found_items",
             "score_logs",
             "checkin_records",
             "answers",
