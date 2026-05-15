@@ -65,6 +65,14 @@ from app.crud.question import (
     create_answer, get_answer, get_answers_by_question,
     update_answer, star_answer, delete_answer,
 )
+from app.crud.lost_found import (
+    create_lost_found_item, get_lost_found_item, get_lost_found_items,
+    update_lost_found_item, delete_lost_found_item, count_claims_by_status,
+    create_comment, get_comments_by_item,
+    create_claim, get_claims_by_item, get_claim, get_student_claim,
+    confirm_claim, reject_claim,
+    DuplicateClaimError, ItemNotClaimableError,
+)
 
 __all__ = [
     # Student
@@ -115,4 +123,11 @@ __all__ = [
     "get_questions_by_class", "close_question", "count_answers",
     "create_answer", "get_answer", "get_answers_by_question",
     "update_answer", "star_answer", "delete_answer",
+    # LostFound
+    "create_lost_found_item", "get_lost_found_item", "get_lost_found_items",
+    "update_lost_found_item", "delete_lost_found_item", "count_claims_by_status",
+    "create_comment", "get_comments_by_item",
+    "create_claim", "get_claims_by_item", "get_claim", "get_student_claim",
+    "confirm_claim", "reject_claim",
+    "DuplicateClaimError", "ItemNotClaimableError",
 ]
