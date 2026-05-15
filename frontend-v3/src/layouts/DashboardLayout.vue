@@ -15,6 +15,7 @@ import {
   BookOpen,
   Menu,
   MessageCircle,
+  Search,
 } from 'lucide-vue-next'
 import { KeyRound } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
@@ -52,7 +53,8 @@ const navItems = computed(() => {
       { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
       { name: '合作项目', path: '/teacher/group-tasks', icon: Users },
       { name: '小组管理', path: '/teacher/groups', icon: GraduationCap },
-      { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle }
+      { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle },
+      { name: '失物招领', path: '/teacher/lost-found', icon: Search }
     )
   } else if (authStore.isStudent) {
     items.push(
@@ -61,7 +63,8 @@ const navItems = computed(() => {
       { name: '我的小组', path: '/student/my-group', icon: Users },
       { name: '组间互评', path: '/student/group-evaluations', icon: CheckCircle },
       { name: '成绩单', path: '/student/group-results', icon: GraduationCap },
-      { name: '课堂问答', path: '/student/questions', icon: MessageCircle }
+      { name: '课堂问答', path: '/student/questions', icon: MessageCircle },
+      { name: '失物招领', path: '/student/lost-found', icon: Search }
     )
   }
 
