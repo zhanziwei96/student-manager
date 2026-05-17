@@ -311,3 +311,53 @@ def test_create_group_during_evaluation(student_client):
     data = resp.json()
     assert data["success"] is True
     assert "group_id" in data["data"]
+
+
+def test_leave_group_during_evaluation(student_client):
+    """测试互评阶段已有小组学生不能退出小组"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import GroupTask, Group, GroupMember, Student
+
+    # Create a student record and group for S001
+    with Session(_test_engine) as session:
+        # Ensure student exists
+        student = session.get(Student, "S001")
+        if not student:
+            student = Student(student_id="S001", name="测试学生", class_name="一班")
+            session.add(student)
+            session.commit()
+
+        # Create group with S001 as member
+        group = Group(
+            class_name="一班",
+            name="测试小组",
+            leader_student_id="S001",
+            is_active=True,
+        )
+        session.add(group)
+        session.commit()
+        session.refresh(group)
+        group_id = group.id
+
+        member = GroupMember(group_id=group_id, student_id="S001")
+        session.add(member)
+        session.commit()
+
+    # Create evaluating GroupTask
+    with Session(_test_engine) as session:
+        task = GroupTask(
+            class_name="一班",
+            title="互评任务",
+            description="测试",
+            status="evaluating",
+            created_by="teacher1",
+        )
+        session.add(task)
+        session.commit()
+
+    # Try to leave group during evaluation
+    resp = student_client.post("/api/v1/student/groups/leave")
+    assert resp.status_code == 400
+    data = resp.json()
+    assert "班级正在互评阶段" in data["message"]

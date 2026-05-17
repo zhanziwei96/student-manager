@@ -666,6 +666,44 @@ async def api_create_dissolution(
     }
 
 
+@router.post("/student/groups/leave", response_model=ApiResponse)
+async def api_leave_group(
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user),
+):
+    """学生退出小组"""
+    student_id = user.get("sub", "")
+    # Find the student's active group
+    group = session.exec(
+        select(Group).join(GroupMember, GroupMember.group_id == Group.id)
+        .where(
+            GroupMember.student_id == student_id,
+            Group.is_active.is_(True),
+        )
+    ).first()
+    if not group:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="未在任何小组中")
+
+    # Check if class is in evaluation phase
+    evaluating_task = session.exec(
+        select(GroupTask).where(
+            GroupTask.class_name == group.class_name,
+            GroupTask.status == "evaluating",
+        )
+    ).first()
+    if evaluating_task:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级正在互评阶段，不可退出小组")
+
+    # Remove student from all groups in this class
+    from app.crud.group import _remove_student_from_class_groups
+    _remove_student_from_class_groups(session, student_id, group.class_name)
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: "已退出小组",
+    }
+
+
 @router.get("/student/group-tasks", response_model=ApiResponse[list])
 async def api_student_tasks(
     session: Session = Depends(get_session),
