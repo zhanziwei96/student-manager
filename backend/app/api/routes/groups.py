@@ -683,6 +683,8 @@ async def api_leave_group(
     ).first()
     if not group:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="未在任何小组中")
+    if group.leader_student_id == student_id:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="组长不可退出，请先转让组长或申请解散")
 
     # Check if class is in evaluation phase
     evaluating_task = session.exec(

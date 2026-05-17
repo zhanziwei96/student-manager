@@ -332,7 +332,7 @@ def test_leave_group_during_evaluation(student_client):
         group = Group(
             class_name="一班",
             name="测试小组",
-            leader_student_id="S001",
+            leader_student_id="S099",
             is_active=True,
         )
         session.add(group)
