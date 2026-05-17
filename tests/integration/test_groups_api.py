@@ -240,6 +240,50 @@ def test_teacher_delete_evaluating_task(teacher_client: TestClient, student_clie
     assert resp.json()["message"] == "互评中的任务不可删除"
 
 
+def test_join_group_during_evaluation(student_client):
+    """测试互评阶段未分配学生可以加入小组"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import GroupTask, Group, GroupMember
+
+    # 先创建一个小组（由其他学生创建）
+    with Session(_test_engine) as session:
+        group = Group(
+            class_name="一班",
+            name="测试小组",
+            leader_student_id="S002",
+            is_active=True,
+        )
+        session.add(group)
+        session.commit()
+        session.refresh(group)
+        group_id = group.id
+
+        # 添加组长为成员
+        member = GroupMember(group_id=group_id, student_id="S002")
+        session.add(member)
+        session.commit()
+
+    # 创建 evaluating 状态的 GroupTask
+    with Session(_test_engine) as session:
+        task = GroupTask(
+            class_name="一班",
+            title="互评任务",
+            description="测试",
+            status="evaluating",
+            created_by="teacher1",
+        )
+        session.add(task)
+        session.commit()
+
+    # 学生 S001 未在任何小组中，尝试加入小组
+    resp = student_client.post(f"/api/v1/student/groups/{group_id}/join-requests")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert "request_id" in data["data"]
+
+
 def test_create_group_during_evaluation(student_client):
     """测试互评阶段未分配学生可以创建小组"""
     from sqlmodel import Session

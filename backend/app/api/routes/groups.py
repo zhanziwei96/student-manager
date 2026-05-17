@@ -554,8 +554,8 @@ async def api_create_join_request(
     group = get_group(session, group_id)
     if not group or not group.is_active:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
-    # C2: 组队锁定 — evaluating 状态下禁止申请加入
-    _check_class_not_evaluating(session, group.class_name)
+    # C2: 组队锁定 — evaluating 状态下禁止申请加入（未分配小组的学生除外）
+    _check_class_not_evaluating(session, group.class_name, student_id)
     # 检查小组是否已满
     settings = get_class_group_settings(session, group.class_name)
     if settings:
