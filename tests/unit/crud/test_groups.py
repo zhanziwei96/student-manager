@@ -1,14 +1,36 @@
 import pytest
 from sqlmodel import Session
 from app.models import Student
-from app.models.group import Group, GroupMember, GroupMembershipRequest, GroupDissolutionRequest
+from app.models.group import Group, GroupMember, GroupMembershipRequest, GroupDissolutionRequest, GroupTask
 from app.crud import (
     create_group, get_student_active_group, get_group_members,
     create_membership_request, approve_membership_request, reject_membership_request,
     create_dissolution_request, approve_dissolution_request,
     auto_assign_unassigned_students, transfer_group_leader,
     get_or_create_class_group_settings, update_class_group_settings,
+    create_group_task, start_group_task,
 )
+
+
+@pytest.fixture
+def evaluating_task(session: Session):
+    """创建一个处于 evaluating 状态的合作任务"""
+    task = create_group_task(session, "互评班", "PPT大赛", None, "tea", ["创意"])
+    g1 = create_group(session, "互评班", "G1", "assigned_stu")
+    g2 = create_group(session, "互评班", "G2", "assigned_stu2")
+    started = start_group_task(session, task.id)
+    assert started.status == "evaluating"
+    return started
+
+
+@pytest.fixture
+def unassigned_student(session: Session):
+    """创建一个未分配小组的学生"""
+    student = Student(student_id="unassigned_001", name="未组队学生", class_name="互评班")
+    session.add(student)
+    session.commit()
+    session.refresh(student)
+    return student
 
 
 def test_create_group_and_leader_auto_joined(session: Session):
@@ -81,3 +103,11 @@ def test_update_class_group_settings(session: Session):
     get_or_create_class_group_settings(session, "一班")
     updated = update_class_group_settings(session, "一班", 8)
     assert updated.max_members_per_group == 8
+
+
+def test_check_class_not_evaluating_allows_unassigned_student(session, evaluating_task, unassigned_student):
+    """测试未分配小组学生在互评阶段可以创建和加入小组"""
+    from app.api.routes.groups import _check_class_not_evaluating
+
+    # 不应抛出异常
+    _check_class_not_evaluating(session, evaluating_task.class_name, unassigned_student.student_id)

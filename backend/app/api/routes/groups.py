@@ -81,8 +81,8 @@ class DissolutionRequestCreate(BaseModel):
     reason: str = Field(..., min_length=1)
 
 
-def _check_class_not_evaluating(session: Session, class_name: str) -> None:
-    """检查班级是否处于互评阶段，若是则拒绝组队操作"""
+def _check_class_not_evaluating(session: Session, class_name: str, student_id: str = None) -> None:
+    """检查班级是否处于互评阶段，若是则拒绝组队操作（允许未分配小组的学生创建和加入小组）"""
     evaluating_task = session.exec(
         select(GroupTask).where(
             GroupTask.class_name == class_name,
@@ -90,6 +90,13 @@ def _check_class_not_evaluating(session: Session, class_name: str) -> None:
         )
     ).first()
     if evaluating_task:
+        # 如果提供了学生ID，检查该学生是否已有小组
+        if student_id:
+            existing_group = get_student_active_group(session, student_id, class_name)
+            if not existing_group:
+                # 未分配小组的学生，允许创建和加入小组
+                return
+        # 已有小组的学生或未提供学生ID，禁止操作
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级正在互评阶段，不可变更小组")
 
 
