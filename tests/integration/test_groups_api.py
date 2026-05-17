@@ -197,6 +197,57 @@ def test_teacher_delete_own_task(teacher_client: TestClient):
     assert resp.status_code == 404
 
 
+def test_group_operation_during_evaluation_flow(student_client: TestClient):
+    """测试互评阶段小组操作完整流程"""
+    from sqlmodel import Session, select
+    from tests.integration.conftest import _test_engine
+    from app.models import GroupTask
+
+    # 创建互评阶段的 GroupTask
+    with Session(_test_engine) as session:
+        task = GroupTask(
+            class_name="一班",
+            title="互评任务",
+            description="测试",
+            status="evaluating",
+            created_by="teacher1",
+        )
+        session.add(task)
+        session.commit()
+
+    # 1. 未分组学生可以创建小组
+    resp = student_client.post("/api/v1/student/groups", json={
+        "class_name": "一班",
+        "name": "新小组",
+    })
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+    assert resp.json()["data"]["name"] == "新小组"
+
+    # 2. 已分组学生（组长）不能退出
+    resp = student_client.post("/api/v1/student/groups/leave")
+    assert resp.status_code == 400
+
+    # 3. 已分组学生不能在互评阶段申请解散
+    resp = student_client.post("/api/v1/student/groups/dissolution-requests", json={
+        "reason": "测试解散",
+    })
+    assert resp.status_code == 400
+    assert "班级正在互评阶段" in resp.json()["message"]
+
+    # 清理：删除互评任务，避免影响其他测试
+    with Session(_test_engine) as session:
+        task = session.exec(
+            select(GroupTask).where(
+                GroupTask.class_name == "一班",
+                GroupTask.status == "evaluating",
+            )
+        ).first()
+        if task:
+            session.delete(task)
+            session.commit()
+
+
 def test_teacher_delete_evaluating_task(teacher_client: TestClient, student_client: TestClient):
     # 通过底层数据操作确保一班有两个活跃小组（启动互评的前提）
     from sqlmodel import Session
