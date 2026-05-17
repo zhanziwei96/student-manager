@@ -1,5 +1,5 @@
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.models import Student
 from app.models.group import Group, GroupMember, GroupMembershipRequest, GroupDissolutionRequest, GroupTask
 from app.crud import (
@@ -15,6 +15,10 @@ from app.crud import (
 @pytest.fixture
 def evaluating_task(session: Session):
     """创建一个处于 evaluating 状态的合作任务"""
+    # 先创建学生记录，再创建小组，避免 GroupMember 引用不存在的 Student
+    for sid, name in [("assigned_stu", "已组队学生"), ("assigned_stu2", "已组队学生2")]:
+        session.add(Student(student_id=sid, name=name, class_name="互评班"))
+    session.commit()
     task = create_group_task(session, "互评班", "PPT大赛", None, "tea", ["创意"])
     g1 = create_group(session, "互评班", "G1", "assigned_stu")
     g2 = create_group(session, "互评班", "G2", "assigned_stu2")
@@ -35,11 +39,11 @@ def unassigned_student(session: Session):
 
 @pytest.fixture
 def assigned_student(session: Session, evaluating_task):
-    """创建一个已有小组的学生（在 evaluating_task 的班级中）"""
-    student = Student(student_id="assigned_stu", name="已组队学生", class_name="互评班")
-    session.add(student)
-    session.commit()
-    session.refresh(student)
+    """返回已有小组的学生（在 evaluating_task 创建时已写入 DB）"""
+    student = session.exec(
+        select(Student).where(Student.student_id == "assigned_stu")
+    ).first()
+    assert student is not None, "assigned_stu 应在 evaluating_task fixture 中已创建"
     return student
 
 
@@ -131,3 +135,20 @@ def test_check_class_not_evaluating_blocks_assigned_student(session, evaluating_
     with pytest.raises(Exception) as exc_info:
         _check_class_not_evaluating(session, evaluating_task.class_name, assigned_student.student_id)
     assert "班级正在互评阶段，不可变更小组" in str(exc_info.value.detail)
+
+
+def test_check_class_not_evaluating_blocks_without_student_id(session, evaluating_task):
+    """测试不提供学生ID时，互评阶段禁止操作"""
+    from app.api.routes.groups import _check_class_not_evaluating
+
+    with pytest.raises(Exception) as exc_info:
+        _check_class_not_evaluating(session, evaluating_task.class_name)
+    assert "班级正在互评阶段，不可变更小组" in str(exc_info.value.detail)
+
+
+def test_check_class_not_evaluating_allows_when_no_evaluation(session):
+    """测试非互评阶段，所有操作都允许"""
+    from app.api.routes.groups import _check_class_not_evaluating
+
+    # 不应抛出异常
+    _check_class_not_evaluating(session, "普通班")
