@@ -238,3 +238,32 @@ def test_teacher_delete_evaluating_task(teacher_client: TestClient, student_clie
     resp = teacher_client.delete(f"/api/v1/teacher/group-tasks/{task_id}")
     assert resp.status_code == 400
     assert resp.json()["message"] == "互评中的任务不可删除"
+
+
+def test_create_group_during_evaluation(student_client):
+    """测试互评阶段未分配学生可以创建小组"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import GroupTask
+
+    # 先创建一个 evaluating 状态的 GroupTask
+    with Session(_test_engine) as session:
+        task = GroupTask(
+            class_name="一班",
+            title="互评任务",
+            description="测试",
+            status="evaluating",
+            created_by="teacher1",
+        )
+        session.add(task)
+        session.commit()
+
+    # 学生 S001 未在任何小组中，尝试创建小组
+    resp = student_client.post("/api/v1/student/groups", json={
+        "class_name": "一班",
+        "name": "新小组",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert "group_id" in data["data"]

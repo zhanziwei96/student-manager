@@ -506,9 +506,8 @@ async def api_student_create_group(
     role = user.get("role", "")
     if role != UserRoleConst.STUDENT:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="仅限学生")
-    # C2: 组队锁定 — evaluating 状态下禁止创建小组
-    _check_class_not_evaluating(session, data.class_name)
     student_id = user.get("sub", "")
+    _check_class_not_evaluating(session, data.class_name, student_id)
     existing = get_student_active_group(session, student_id, data.class_name)
     if existing:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已在一个小组中")
