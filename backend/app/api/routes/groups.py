@@ -651,14 +651,14 @@ async def api_create_dissolution(
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="未在活跃小组中")
     if group.leader_student_id != student_id:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="仅组长可申请")
-    task = session.exec(
+    evaluating_task = session.exec(
         select(GroupTask).where(
             GroupTask.class_name == group.class_name,
-            GroupTask.status.in_(["evaluating", "closed"]),
+            GroupTask.status == "evaluating",
         )
     ).first()
-    if task:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="该小组已参与进行中的任务，无法解散")
+    if evaluating_task:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级正在互评阶段，不可解散小组")
     req = create_dissolution_request(session, group.id, data.reason)
     return {
         ApiResponseConst.SUCCESS: True,
