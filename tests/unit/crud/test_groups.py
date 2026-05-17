@@ -33,6 +33,16 @@ def unassigned_student(session: Session):
     return student
 
 
+@pytest.fixture
+def assigned_student(session: Session, evaluating_task):
+    """创建一个已有小组的学生（在 evaluating_task 的班级中）"""
+    student = Student(student_id="assigned_stu", name="已组队学生", class_name="互评班")
+    session.add(student)
+    session.commit()
+    session.refresh(student)
+    return student
+
+
 def test_create_group_and_leader_auto_joined(session: Session):
     group = create_group(session, "一班", "先锋组", "stu_001")
     assert group.name == "先锋组"
@@ -111,3 +121,13 @@ def test_check_class_not_evaluating_allows_unassigned_student(session, evaluatin
 
     # 不应抛出异常
     _check_class_not_evaluating(session, evaluating_task.class_name, unassigned_student.student_id)
+
+
+def test_check_class_not_evaluating_blocks_assigned_student(session, evaluating_task, assigned_student):
+    """测试已有小组学生在互评阶段不能进行操作"""
+    from app.api.routes.groups import _check_class_not_evaluating
+
+    # 应该抛出 HTTPException
+    with pytest.raises(Exception) as exc_info:
+        _check_class_not_evaluating(session, evaluating_task.class_name, assigned_student.student_id)
+    assert "班级正在互评阶段，不可变更小组" in str(exc_info.value.detail)
