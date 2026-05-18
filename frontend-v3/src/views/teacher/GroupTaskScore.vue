@@ -39,10 +39,16 @@ watch(groups, (list) => {
 
 const scores = ref<Record<string, number>>({})
 
+const selectedGroupResult = computed(() => {
+  if (!data.value?.results || !selectedGroupId.value) return null
+  return data.value.results[selectedGroupId.value]
+})
+
 watch([selectedGroupId, dimensions], () => {
   scores.value = {}
+  const existing = selectedGroupResult.value?.teacher_scores || {}
   dimensions.value.forEach((d) => {
-    scores.value[d.id] = 0
+    scores.value[d.id] = existing[d.name] ?? 0
   })
 }, { immediate: true })
 
@@ -140,7 +146,7 @@ async function handleSubmit() {
               :loading="submitting"
               @click="handleSubmit"
             >
-              提交评分
+              {{ selectedGroupResult?.teacher_scores && Object.keys(selectedGroupResult.teacher_scores).length > 0 ? '修改评分' : '提交评分' }}
             </Button>
           </div>
         </div>
