@@ -71,7 +71,7 @@ export interface GroupTaskResult {
 export interface EvaluationTarget {
   target_group_id: number
   target_group_name: string
-  dimensions: { id: number; name: string; scored: boolean }[]
+  dimensions: { id: number; name: string; scored: boolean; score: number | null }[]
   all_scored: boolean
 }
 

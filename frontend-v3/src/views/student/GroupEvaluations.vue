@@ -44,7 +44,7 @@ watch(
     list.forEach((target) => {
       next[target.target_group_id] = {}
       target.dimensions.forEach((d) => {
-        next[target.target_group_id][d.id] = 0
+        next[target.target_group_id][d.id] = d.score ?? 0
       })
     })
     localScores.value = next
@@ -116,7 +116,7 @@ async function handleSubmit(targetGroupId: number) {
             </div>
             <Badge v-if="target.all_scored" variant="success">
               <CheckCircle2 class="h-3.5 w-3.5 mr-1" />
-              已完成
+              已评分
             </Badge>
             <Badge v-else variant="secondary">
               <Circle class="h-3.5 w-3.5 mr-1" />
@@ -141,8 +141,7 @@ async function handleSubmit(targetGroupId: number) {
                 type="number"
                 min="0"
                 max="100"
-                :disabled="dim.scored"
-                class="w-full sm:w-24 rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black text-right focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 disabled:bg-[#fafafa] disabled:text-[#a3a3a3]"
+                class="w-full sm:w-24 rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black text-right focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
               >
             </div>
           </div>
@@ -151,10 +150,9 @@ async function handleSubmit(targetGroupId: number) {
             <Button
               variant="cta"
               :loading="submitting"
-              :disabled="target.all_scored"
               @click="handleSubmit(target.target_group_id)"
             >
-              提交评分
+              {{ target.all_scored ? '修改评分' : '提交评分' }}
             </Button>
           </div>
         </Card>

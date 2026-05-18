@@ -709,7 +709,7 @@ async def api_student_evaluations(
             GroupEvaluationScore.evaluator_id == student_id,
         )
     ).all()
-    scored_set = {(s.target_group_id, s.dimension_id) for s in all_my_scores}
+    score_map = {(s.target_group_id, s.dimension_id): s.score for s in all_my_scores}
     result = []
     for assign in assignments:
         target = get_group(session, assign.target_group_id)
@@ -717,11 +717,16 @@ async def api_student_evaluations(
             "target_group_id": assign.target_group_id,
             "target_group_name": target.name if target else "",
             "dimensions": [
-                {"id": d.id, "name": d.name, "scored": (assign.target_group_id, d.id) in scored_set}
+                {
+                    "id": d.id,
+                    "name": d.name,
+                    "scored": (assign.target_group_id, d.id) in score_map,
+                    "score": score_map.get((assign.target_group_id, d.id)),
+                }
                 for d in dimensions
             ],
             "all_scored": all(
-                (assign.target_group_id, d.id) in scored_set for d in dimensions
+                (assign.target_group_id, d.id) in score_map for d in dimensions
             ),
         })
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
