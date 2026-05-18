@@ -172,6 +172,7 @@ def submit_teacher_score(
     ).first()
     if old:
         session.delete(old)
+        session.flush()
     rec = GroupEvaluationScore(
         task_id=task_id,
         target_group_id=target_group_id,
@@ -230,6 +231,7 @@ def submit_student_scores(
         ).first()
         if old:
             session.delete(old)
+            session.flush()
         rec = GroupEvaluationScore(
             task_id=task_id,
             target_group_id=target_group_id,
