@@ -72,12 +72,13 @@ const dimensions = computed(() =>
           </div>
 
           <!-- 雷达图 -->
-          <JojoRadarChart
-            :dimensions="dimensions"
-            :final-scores="dimensions.map((d: string) => item.finalScores[d] ?? 0)"
-            :group-name="item.groupName"
-            class="mb-4 h-64 sm:h-80 lg:h-96"
-          />
+          <div class="mb-4 w-48 sm:w-56 lg:w-64 mx-auto">
+            <JojoRadarChart
+              :dimensions="dimensions"
+              :final-scores="dimensions.map((d: string) => item.finalScores[d] ?? 0)"
+              :group-name="item.groupName"
+            />
+          </div>
 
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
