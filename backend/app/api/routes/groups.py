@@ -595,8 +595,6 @@ async def api_approve_join_request(
     group = get_group(session, req.group_id)
     if not group or group.leader_student_id != student_id:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权审批")
-    # C2: 组队锁定 — evaluating 状态下禁止批准入组
-    _check_class_not_evaluating(session, group.class_name)
     # 检查小组是否已满
     settings = get_class_group_settings(session, group.class_name)
     if settings:
