@@ -236,12 +236,10 @@ def create_app() -> FastAPI:
     # 全局异常处理
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        """全局异常处理"""
+        """全局异常处理 - 生产环境隐藏内部错误详情"""
         logger.error(f"全局异常: {exc}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={'success': False, 'message': f'服务器错误: {str(exc)}'}
-        )
+        from app.core.exceptions import generic_exception_handler
+        return await generic_exception_handler(request, exc)
     
     return app
 
