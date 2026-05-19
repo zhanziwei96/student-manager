@@ -200,14 +200,18 @@ def _generate_safe_filename(original_filename: str, use_uuid: bool = True) -> st
 def _ensure_upload_directory(directory: str) -> Path:
     """
     确保上传目录存在
-    
+
     Args:
         directory: 上传目录路径
-        
+
     Returns:
         Path: 上传目录的Path对象
     """
     upload_dir = Path(directory)
+    # 如果是相对路径，基于 backend 目录解析
+    if not upload_dir.is_absolute():
+        backend_dir = Path(__file__).parent.parent.parent
+        upload_dir = backend_dir / upload_dir
     upload_dir.mkdir(parents=True, exist_ok=True)
     return upload_dir
 

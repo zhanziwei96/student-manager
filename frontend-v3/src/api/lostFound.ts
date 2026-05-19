@@ -25,7 +25,7 @@ export async function createLostFoundItem(data: {
   formData.append('title', data.title)
   formData.append('description', data.description)
   if (data.location) formData.append('location', data.location)
-  if (data.file) formData.append('file', data.file)
+  if (data.file) formData.append('image', data.file)
   return post('/teacher/lost-found', formData)
 }
 
@@ -47,7 +47,7 @@ export async function updateLostFoundItem(id: number, data: {
   if (data.title) formData.append('title', data.title)
   if (data.description) formData.append('description', data.description)
   if (data.location) formData.append('location', data.location)
-  if (data.file) formData.append('file', data.file)
+  if (data.file) formData.append('image', data.file)
   return put(`/teacher/lost-found/${id}`, formData)
 }
 

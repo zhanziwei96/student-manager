@@ -192,6 +192,11 @@ def create_app() -> FastAPI:
     app.include_router(questions_router, prefix=API_V1_PREFIX)
     app.include_router(lost_found_router, prefix=API_V1_PREFIX)
 
+    # 挂载上传文件目录
+    uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+    os.makedirs(uploads_dir, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+
     # 静态文件服务（生产环境）
     if os.path.exists(STATIC_DIR):
         app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
