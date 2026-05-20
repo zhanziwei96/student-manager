@@ -105,35 +105,44 @@ function goToCreate() {
           <div
             v-for="item in items"
             :key="item.id"
-            class="rounded-xl border border-[#e5e5e5] bg-white p-4 cursor-pointer transition-colors hover:bg-[#fafafa]"
+            class="rounded-xl border border-[#e5e5e5] bg-white overflow-hidden cursor-pointer transition-colors hover:bg-[#fafafa]"
             @click="goToDetail(item.id)"
           >
-            <div class="flex items-start justify-between gap-2 mb-2">
-              <h3 class="font-medium text-black truncate flex-1">
-                {{ item.title }}
-              </h3>
-              <Badge :variant="getStatusBadge(item.status).variant">
-                {{ getStatusBadge(item.status).label }}
-              </Badge>
-            </div>
+            <!-- 图片 -->
+            <img
+              v-if="item.image_url"
+              :src="item.image_url"
+              :alt="item.title"
+              class="w-full max-h-48 object-contain bg-[#f5f5f5]"
+            >
+            <div class="p-4">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <h3 class="font-medium text-black truncate flex-1">
+                  {{ item.title }}
+                </h3>
+                <Badge :variant="getStatusBadge(item.status).variant">
+                  {{ getStatusBadge(item.status).label }}
+                </Badge>
+              </div>
 
-            <p class="text-sm text-[#737373] mb-3 line-clamp-2">
-              {{ truncate(item.description, 80) }}
-            </p>
+              <p class="text-sm text-[#737373] mb-3 line-clamp-2">
+                {{ truncate(item.description, 80) }}
+              </p>
 
-            <div class="flex items-center gap-4 text-xs text-[#a3a3a3]">
-              <span v-if="item.location" class="flex items-center gap-1">
-                <MapPin class="h-3 w-3" />
-                {{ item.location }}
-              </span>
-              <span>{{ formatDate(item.created_at) }}</span>
-            </div>
+              <div class="flex items-center gap-4 text-xs text-[#a3a3a3]">
+                <span v-if="item.location" class="flex items-center gap-1">
+                  <MapPin class="h-3 w-3" />
+                  {{ item.location }}
+                </span>
+                <span>{{ formatDate(item.created_at) }}</span>
+              </div>
 
-            <div class="mt-3 pt-3 border-t border-[#e5e5e5] flex items-center gap-3 text-xs text-[#737373]">
-              <span>认领 {{ item.total_claims }} 条</span>
-              <span v-if="item.pending_count > 0" class="text-[#f97316]">
-                待处理 {{ item.pending_count }}
-              </span>
+              <div class="mt-3 pt-3 border-t border-[#e5e5e5] flex items-center gap-3 text-xs text-[#737373]">
+                <span>认领 {{ item.total_claims }} 条</span>
+                <span v-if="item.pending_count > 0" class="text-[#f97316]">
+                  待处理 {{ item.pending_count }}
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -25,7 +25,10 @@ const file = ref<File | null>(null)
 const imagePreview = ref('')
 
 // 编辑模式：加载现有数据
-const { data: existingItem, isPending: loadingItem } = useTeacherLostFoundDetail(() => editId.value)
+const { data: existingItem, isPending: loadingItem } = useTeacherLostFoundDetail(
+  () => editId.value,
+  () => isEditMode.value && editId.value > 0
+)
 
 watch(
   () => existingItem.value,
@@ -42,8 +45,62 @@ watch(
   { immediate: true },
 )
 
+// 图片压缩函数
+function compressImage(file: File, maxWidth = 1920, quality = 0.8): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          let { width, height } = img
+          
+          // 如果图片宽度超过最大宽度，按比例缩放
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+          
+          canvas.width = width
+          canvas.height = height
+          
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            resolve(file)
+            return
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                })
+                resolve(compressedFile)
+              } else {
+                resolve(file)
+              }
+            },
+            'image/jpeg',
+            quality
+          )
+        } catch {
+          resolve(file)
+        }
+      }
+      img.onerror = () => resolve(file)
+      img.src = e.target?.result as string
+    }
+    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
+}
+
 // 图片选择
-function handleFileSelect(e: Event) {
+async function handleFileSelect(e: Event) {
   const input = e.target as HTMLInputElement
   const selected = input.files?.[0]
   if (!selected) return
@@ -53,13 +110,20 @@ function handleFileSelect(e: Event) {
     return
   }
 
-  if (selected.size > 5 * 1024 * 1024) {
-    toastError('图片大小不能超过 5MB')
+  if (selected.size > 10 * 1024 * 1024) {
+    toastError('图片大小不能超过 10MB')
     return
   }
 
-  file.value = selected
-  imagePreview.value = URL.createObjectURL(selected)
+  // 压缩图片
+  try {
+    const compressed = await compressImage(selected)
+    file.value = compressed
+    imagePreview.value = URL.createObjectURL(compressed)
+  } catch {
+    file.value = selected
+    imagePreview.value = URL.createObjectURL(selected)
+  }
 }
 
 function removeImage() {
@@ -178,7 +242,7 @@ function goBack() {
               >
                 <Upload class="h-8 w-8 text-[#a3a3a3] mb-2" />
                 <span class="text-sm text-[#737373]">点击上传图片</span>
-                <span class="text-xs text-[#a3a3a3] mt-1">支持 JPG、PNG，最大 5MB</span>
+                <span class="text-xs text-[#a3a3a3] mt-1">支持 JPG、PNG，最大 10MB（自动压缩）</span>
                 <input type="file" accept="image/*" class="hidden" @change="handleFileSelect">
               </label>
             </div>
@@ -249,7 +313,7 @@ function goBack() {
           >
             <Upload class="h-8 w-8 text-[#a3a3a3] mb-2" />
             <span class="text-sm text-[#737373]">点击上传图片</span>
-            <span class="text-xs text-[#a3a3a3] mt-1">支持 JPG、PNG，最大 5MB</span>
+            <span class="text-xs text-[#a3a3a3] mt-1">支持 JPG、PNG，最大 10MB（自动压缩）</span>
             <input type="file" accept="image/*" class="hidden" @change="handleFileSelect">
           </label>
         </div>

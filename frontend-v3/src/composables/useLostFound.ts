@@ -25,11 +25,12 @@ export function useTeacherLostFoundItems(params?: () => LostFoundQueryParams) {
 /**
  * 教师端失物招领详情
  */
-export function useTeacherLostFoundDetail(id: () => number) {
+export function useTeacherLostFoundDetail(id: () => number, enabled?: () => boolean) {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['teacher-lost-found-detail', id()],
     queryFn: async () => await lostFoundApi.getTeacherLostFoundDetail(id()),
     staleTime: 1000 * 60 * 2,
+    enabled: enabled ? enabled() : true,
   })
 
   return { data, isPending, error, refetch }

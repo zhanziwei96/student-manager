@@ -28,6 +28,9 @@ settings = get_settings()
 
 # 静态文件目录
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "../frontend/dist")
+# Docker 环境中前端文件在 /var/www/html
+if not os.path.exists(STATIC_DIR):
+    STATIC_DIR = "/var/www/html"
 
 
 class CacheControlMiddleware(BaseHTTPMiddleware):
@@ -192,10 +195,9 @@ def create_app() -> FastAPI:
     app.include_router(questions_router, prefix=API_V1_PREFIX)
     app.include_router(lost_found_router, prefix=API_V1_PREFIX)
 
-    # 挂载上传文件目录
+    # 挂载上传文件目录（必须在 catch-all 路由之前）
     uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
     # 静态文件服务（生产环境）
     if os.path.exists(STATIC_DIR):
@@ -211,11 +213,25 @@ def create_app() -> FastAPI:
         
         @app.get("/{path:path}", include_in_schema=False)
         async def catch_all(request: Request, path: str):
-            """前端路由处理"""
+            """前端路由处理（仅开发环境使用，生产环境由 nginx 处理）"""
+            # API 路径
             if path.startswith("api/"):
                 return JSONResponse(
                     status_code=404,
                     content={'success': False, 'message': 'API接口不存在'}
+                )
+            
+            # uploads 路径 - 由 StaticFiles Mount 处理
+            # （Starlette APIRoute 优先级高于 Mount，所以这里需要特殊处理）
+            if path.startswith("uploads/"):
+                import mimetypes
+                file_path = os.path.join(uploads_dir, path[len("uploads/"):])
+                if os.path.isfile(file_path):
+                    mime_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+                    return FileResponse(file_path, media_type=mime_type)
+                return JSONResponse(
+                    status_code=404,
+                    content={'success': False, 'message': '文件不存在'}
                 )
             
             file_path = os.path.join(STATIC_DIR, path)

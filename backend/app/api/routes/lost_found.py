@@ -98,7 +98,7 @@ async def teacher_create_item(
         location=location,
         image_url=image_url,
     )
-    return {"success": True, "data": {"item_id": item.id}}
+    return {"success": True, "data": {"id": item.id}}
 
 
 @router.get("/teacher/lost-found")
