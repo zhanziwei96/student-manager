@@ -316,7 +316,13 @@ def get_task_results(session: Session, task_id: int) -> Dict[int, Dict[str, Any]
                     GroupEvaluationScore.dimension_id == dim.id,
                 )
             ).all()
-            peer_score = sum(r.score for r in peer_rows) / len(peer_rows) if peer_rows else 0.0
+            # 如果没有学生评分（新小组），使用老师评分作为组间评分
+            if peer_rows:
+                peer_score = sum(r.score for r in peer_rows) / len(peer_rows)
+            elif t_rec:
+                peer_score = float(t_rec.score)
+            else:
+                peer_score = 0.0
 
             final_score = teacher_score * 0.6 + peer_score * 0.4
             results[group.id]["teacher_scores"][dim.name] = teacher_score
