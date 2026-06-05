@@ -274,6 +274,7 @@ def delete_group_task(session: Session, task_id: int) -> None:
 
 def get_task_results(session: Session, task_id: int) -> Dict[int, Dict[str, Any]]:
     """返回各小组的任务成绩：{group_id: {teacher_scores, peer_scores, final_scores, task_final}}"""
+    task = session.get(GroupTask, task_id)
     dimensions = get_task_dimensions(session, task_id)
     dim_ids = [d.id for d in dimensions]
     groups = session.exec(
@@ -284,6 +285,19 @@ def get_task_results(session: Session, task_id: int) -> Dict[int, Dict[str, Any]
             EvaluationAssignment.task_id == task_id,
         ).distinct()
     ).all()
+
+    # 补充：任务启动后新创建的活跃小组（无互评指派，但可接受教师评分）
+    if task:
+        assigned_ids = {g.id for g in groups}
+        extra_groups = session.exec(
+            select(Group).where(
+                Group.class_name == task.class_name,
+                Group.is_active.is_(True),
+            )
+        ).all()
+        for g in extra_groups:
+            if g.id not in assigned_ids:
+                groups.append(g)
 
     results = {}
     for group in groups:
