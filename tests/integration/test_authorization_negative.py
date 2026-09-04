@@ -224,3 +224,78 @@ def test_teacher_without_classes_sees_empty_checkin_list(client, teacher_without
     resp = teacher_without_classes_client.get("/api/v1/checkins")
     assert resp.status_code == 200
     assert resp.json()["data"] == []
+
+
+# ========== 失物招领越权负向测试（Task 12） ==========
+
+@pytest.fixture
+def teacher2_user(test_engine):
+    """创建第二个教师账号（不共享物品所有权）"""
+    from app.core.security import generate_password_hash
+    from app.models import User, UserRoleConst
+
+    with Session(test_engine) as session:
+        password_hash, salt = generate_password_hash("teacher123")
+        user = User(
+            username="teacher2",
+            name="教师2",
+            password_hash=password_hash,
+            salt=salt,
+            role=UserRoleConst.TEACHER,
+            assigned_classes='["一班", "二班"]',
+            is_active=True,
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
+
+
+@pytest.fixture
+def teacher2_client(test_engine, teacher2_user):
+    """第二个教师（teacher2）的已登录客户端，独立实例避免 cookie 冲突"""
+    from fastapi.testclient import TestClient
+    from main import app
+    from app.core.db import get_session
+
+    def get_session_override():
+        with Session(test_engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app, cookies={}) as c:
+        response = c.post("/api/v1/login", json={
+            "username": "teacher2",
+            "password": "teacher123",
+            "role": "teacher",
+        })
+        assert response.status_code == 200, f"Teacher2 login failed: {response.json()}"
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def teacher2_item_id(teacher2_client):
+    """教师2 发布的失物招领物品 id（对他人的越权测试目标）"""
+    resp = teacher2_client.post("/api/v1/teacher/lost-found", data={
+        "title": "教师2的物品",
+        "description": "属于教师2的物品",
+        "location": "教室",
+    })
+    assert resp.status_code == 200, f"Teacher2 create item failed: {resp.json()}"
+    return resp.json()["data"]["item_id"]
+
+
+def test_teacher_cannot_delete_others_lost_found_item(teacher_client, teacher2_client, teacher2_item_id):
+    """教师不能删除他人发布的物品"""
+    resp = teacher_client.delete(f"/api/v1/teacher/lost-found/{teacher2_item_id}")
+    assert resp.status_code == 403
+
+
+def test_teacher_cannot_update_others_lost_found_item(teacher_client, teacher2_client, teacher2_item_id):
+    """教师不能编辑他人发布的物品"""
+    resp = teacher_client.put(
+        f"/api/v1/teacher/lost-found/{teacher2_item_id}",
+        data={"title": "篡改"},
+    )
+    assert resp.status_code == 403

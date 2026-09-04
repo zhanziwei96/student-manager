@@ -225,6 +225,10 @@ async def teacher_update_item(
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
 
+    # P0 修复：教师只能操作自己发布的物品（admin 不受限）
+    if user.get("role") != "admin" and item.publisher_id != int(user.get("sub", 0)):
+        raise HTTPException(status_code=403, detail="无权操作他人发布的物品")
+
     image_url = None
     if image:
         image_url = await _save_image(image)
@@ -252,6 +256,10 @@ async def teacher_delete_item(
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
 
+    # P0 修复：教师只能操作自己发布的物品（admin 不受限）
+    if user.get("role") != "admin" and item.publisher_id != int(user.get("sub", 0)):
+        raise HTTPException(status_code=403, detail="无权操作他人发布的物品")
+
     delete_lost_found_item(session, item_id)
     return {"success": True}
 
@@ -268,6 +276,10 @@ async def teacher_confirm_claim(
     item = get_lost_found_item(session, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
+
+    # P0 修复：教师只能操作自己发布的物品（admin 不受限）
+    if user.get("role") != "admin" and item.publisher_id != int(user.get("sub", 0)):
+        raise HTTPException(status_code=403, detail="无权操作他人发布的物品")
 
     claim = confirm_claim(session, item_id, claim_id)
     if not claim:
@@ -288,6 +300,10 @@ async def teacher_reject_claim(
     item = get_lost_found_item(session, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
+
+    # P0 修复：教师只能操作自己发布的物品（admin 不受限）
+    if user.get("role") != "admin" and item.publisher_id != int(user.get("sub", 0)):
+        raise HTTPException(status_code=403, detail="无权操作他人发布的物品")
 
     claim = reject_claim(session, item_id, claim_id)
     if not claim:
