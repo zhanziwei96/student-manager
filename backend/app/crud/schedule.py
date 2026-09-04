@@ -216,14 +216,15 @@ def import_schedules(
                 select(User).where(User.name == teacher_name)
             ).first()
             
-            # 查重检查
+            # 查重检查（仅当前学期内查重，允许新学期导入与上学期相同的课程）
             existing = session.exec(
                 select(CourseSchedule).where(
                     CourseSchedule.course_name == course_name,
                     CourseSchedule.class_name == class_name,
                     CourseSchedule.teacher_name == teacher_name,
                     CourseSchedule.day_of_week == day_of_week,
-                    CourseSchedule.start_time == start_time
+                    CourseSchedule.start_time == start_time,
+                    CourseSchedule.semester == get_current_term(),
                 )
             ).first()
             

@@ -279,3 +279,37 @@ def test_get_schedules_default_week_uses_current(teacher_client, create_test_sch
     assert item is not None
     assert "week_number" in item
     assert "session_status" in item
+
+
+def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine):
+    """上学期同课程/教师/时段不应阻止新学期导入"""
+    from app.models import CourseSchedule
+    from sqlmodel import Session
+
+    # 先手工造一条上学期的同键课表
+    with Session(test_engine) as session:
+        session.add(CourseSchedule(
+            course_name="高等数学", class_name="1班", teacher_name="张老师",
+            day_of_week=1, start_time="08:00", end_time="09:40",
+            week_start=1, week_end=20, semester="2025-2026-2",
+        ))
+        session.commit()
+
+    # 新学期导入同键课表（应成功而非"课程已存在"）
+    import io
+
+    csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间,开始周,结束周
+高等数学,1班,张老师,1,08:00,09:40,1,20"""
+
+    file = io.BytesIO(csv_content.encode('utf-8'))
+
+    response = admin_client.post(
+        "/api/v1/schedules/import",
+        files={"file": ("schedules.csv", file, "text/csv")}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["imported"] == 1
+    assert data["data"]["errors"] == []
