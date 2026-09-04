@@ -60,11 +60,12 @@ password_hash = hash_password("user_password")
 is_valid = verify_password("user_password", stored_hash)
 ```
 
-### 数据库变更
+### 数据库变更（历史记录，SQLite 时代）
 
-**执行迁移脚本**:
+**执行迁移脚本**（旧文档保留，现数据库为 PostgreSQL，alembic 管理迁移）:
 ```bash
-sqlite3 backend/app/data/class_system.db < migrations/remove_salt_field.sql
+# 历史命令（已不再适用）：
+# sqlite3 backend/app/data/class_system.db < migrations/remove_salt_field.sql
 ```
 
 **变更内容**:

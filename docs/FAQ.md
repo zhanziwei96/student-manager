@@ -178,16 +178,24 @@ cp backend/app/data/class_system.db backup/class_system_$(date +%Y%m%d).db
 
 ### Q9: 如何查看数据库表结构？
 
+数据库使用 PostgreSQL（开发=本地安装，生产=Docker 容器）：
+
 ```bash
+# 本地开发库（backend/.env 的 DATABASE__URL）
+psql postgresql://yufeng:yufeng@localhost:5432/classhub
+
+# 生产环境（Docker 容器）
+docker exec -it classhub-postgres psql -U classhub -d classhub
+
 # 查看所有表
-sqlite3 backend/app/data/class_system.db ".tables"
+\dt
 
 # 查看表结构
-sqlite3 backend/app/data/class_system.db ".schema users"
-sqlite3 backend/app/data/class_system.db ".schema students"
+\d users
+\d students
 
 # 查看数据量
-sqlite3 backend/app/data/class_system.db "SELECT COUNT(*) FROM students;"
+SELECT COUNT(*) FROM students;
 ```
 
 ---

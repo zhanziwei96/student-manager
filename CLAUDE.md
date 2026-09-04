@@ -146,7 +146,7 @@ pnpm test                           # 交互式测试模式
 
 - **Python**: 3.11+，使用 Conda 环境 `student-manage`
 - **Node.js**: 20+，使用 pnpm 8+
-- **数据库**: SQLite，位于 `backend/app/data/class_system.db`
+- **数据库**: PostgreSQL 15（开发=本地安装，生产=Docker 容器）
 
 运行 Python 命令前必须激活 Conda 环境：
 ```bash

@@ -169,7 +169,7 @@ source /home/yufeng/miniconda3/bin/activate student-manage
 | 后端 | http://localhost:8000 | API 服务 |
 | 前端 | http://localhost:5173 | 用户界面 (frontend-v3) |
 | API 文档 | http://localhost:8000/docs | Swagger |
-| 数据库 | backend/app/data/class_system.db | SQLite |
+| 数据库 | PostgreSQL（开发=本地安装，生产=Docker 容器 `classhub-postgres`） | PostgreSQL 15 |
 
 **环境说明**:
 - `ENV=production`：生产模式，无热重载，性能优先（适用于正式部署）

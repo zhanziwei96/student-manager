@@ -205,7 +205,7 @@ Representational State Transfer。一种 API 设计风格，使用 HTTP 方法�
 SQLModel 是 SQLAlchemy 和 Pydantic 的结合，提供 ORM 和数据验证功能。
 
 ### SQLite
-轻量级关系型数据库。ClassHub 使用 SQLite 存储数据。
+轻量级关系型数据库。ClassHub 曾使用 SQLite（第一学期），现已迁移至 PostgreSQL 15（2026 年）。
 
 ### SSR (Server-Side Rendering)
 服务端渲染。Vue 3 支持的服务端渲染技术。

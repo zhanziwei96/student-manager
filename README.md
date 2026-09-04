@@ -21,7 +21,7 @@
 | 前端 | 后端 |
 |------|------|
 | Vue 3.5 + TypeScript 5 | FastAPI + Python 3.11+ |
-| Tailwind CSS v4 | SQLite |
+| Tailwind CSS v4 | PostgreSQL 15 |
 | Pinia 3 | JWT (python-jose) |
 | TanStack Query | Pydantic |
 | Vite 6 | SQLModel |

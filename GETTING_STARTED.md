@@ -22,7 +22,7 @@
 | Conda | 最新 | `conda --version` |
 | Node.js | 20+ | `node --version` |
 | pnpm | 8+ | `pnpm --version` |
-| SQLite | 3.35+ | `sqlite3 --version` |
+| PostgreSQL | 15+ | `psql --version` |
 | Git | 任意 | `git --version` |
 
 ## 5分钟快速开始
@@ -153,9 +153,11 @@ RATE_LIMIT__CHECKIN_MAX_REQUESTS=10
 #### 3. 数据库初始化
 
 ```bash
-# 数据库会在首次启动时自动创建
-# 如需手动初始化，执行迁移脚本（在项目根目录运行）
-sqlite3 backend/app/data/class_system.db < migrations/migrate_v1_to_v2.sql
+# 数据库使用 PostgreSQL（开发=本地安装，生产=Docker 容器）
+# 在 backend/.env 中配置 DATABASE__URL，如：
+#   DATABASE__URL=postgresql://yufeng:yufeng@localhost:5432/classhub
+# 应用启动时自动创建表结构（SQLModel metadata.create_all）
+# 如需手动应用迁移：cd backend && alembic upgrade head
 ```
 
 #### 4. 启动后端服务
@@ -227,7 +229,7 @@ student-manager/
 │   │   ├── core/              # 核心配置
 │   │   ├── crud/              # 数据库操作
 │   │   └── models/            # 数据模型
-│   ├── data/                  # SQLite 数据库
+│   ├── data/                  # （历史残留，PostgreSQL 时代不再使用）
 │   ├── main.py                # 应用入口
 │   └── requirements.txt       # Python依赖
 │
@@ -330,9 +332,11 @@ pytest tests/integration -v         # 仅集成测试
 # 生成覆盖率报告
 pytest tests/ --cov=app --cov-report=html
 
-# 数据库操作
-sqlite3 backend/app/data/class_system.db ".tables"
-sqlite3 backend/app/data/class_system.db ".schema users"
+# 数据库操作（PostgreSQL）
+psql postgresql://yufeng:yufeng@localhost:5432/classhub -c "\dt"
+psql postgresql://yufeng:yufeng@localhost:5432/classhub -c "\d users"
+# 或用 docker exec（生产环境）
+docker exec -it classhub-postgres psql -U classhub -d classhub
 ```
 
 ### 前端命令

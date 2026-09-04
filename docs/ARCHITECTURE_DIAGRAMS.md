@@ -33,7 +33,7 @@ graph TB
     end
 
     subgraph Data["数据层"]
-        SQLite[("SQLite<br/>class_system.db")]
+        PostgreSQL[("PostgreSQL 15<br/>classhub")]
         Memory["内存缓存<br/>(限流/会话)"]
     end
 
@@ -47,7 +47,7 @@ graph TB
     API --> Auth
     Auth --> CRUD
     CRUD --> Events
-    CRUD --> SQLite
+    CRUD --> PostgreSQL
     API --> Memory
 ```
 

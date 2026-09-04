@@ -1,10 +1,14 @@
 # 数据库迁移指南
 
+## ⚠️ 重要说明
+
+本文档记录的是 **SQLite 时代**（2026 年 4 月前）的历史迁移脚本。当前数据库为 **PostgreSQL 15**，迁移由 **Alembic** 管理（`backend/alembic/versions/`）。本文档仅作历史参考，新环境请使用 alembic。
+
 ## 概述
 
-本项目从旧的数据库结构（`class_system.db`）迁移到新的 DDD 架构数据库结构。
+本项目从旧的数据库结构（`class_system.db`）迁移到新的 DDD 架构数据库结构（SQLite），后于 2026 年迁移至 PostgreSQL。
 
-**最后更新**: 2026-03-27
+**最后更新**: 2026-03-27（SQLite 时代）
 
 ---
 

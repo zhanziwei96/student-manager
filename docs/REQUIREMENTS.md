@@ -315,7 +315,7 @@ StudentScore: 学生各项成绩
 | 后端框架 | FastAPI | 0.135+ |
 | 编程语言 | Python | 3.11+ |
 | ORM | SQLModel | 0.0.37+ |
-| 数据库 | SQLite | 3.35+ |
+| 数据库 | PostgreSQL | 15+ |
 | 包管理 | pnpm | 8+ |
 | 环境管理 | Conda | 最新 |
 

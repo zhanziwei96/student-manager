@@ -243,7 +243,7 @@ pnpm test:run                        # 前端测试
 | 环境变量 | `backend/.env` | 应用配置 |
 | 后端依赖 | `backend/requirements.txt` | Python依赖 |
 | 前端依赖 | `frontend-v3/package.json` | Node依赖 |
-| 数据库 | `backend/app/data/class_system.db` | SQLite数据库 |
+| 数据库 | PostgreSQL（开发=本地，生产=Docker 容器 `classhub-postgres`） | PostgreSQL 15 |
 
 ### 服务地址
 

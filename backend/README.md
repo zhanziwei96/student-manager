@@ -52,7 +52,7 @@
 - **框架**: FastAPI 0.135+
 - **ASGI服务器**: Uvicorn
 - **ORM**: SQLModel 0.0.37 (SQLAlchemy + Pydantic)
-- **数据库**: SQLite3
+- **数据库**: PostgreSQL 15
 - **认证**: JWT + HttpOnly Cookie（python-jose）
 - **密码哈希**: bcrypt（SEC-003已修复）
 - **配置**: Pydantic Settings
@@ -99,8 +99,7 @@ backend/
 │       ├── checkin.py          # 签到模型
 │       ├── audit.py            # 审计模型
 │       └── constants.py        # 常量定义
-├── data/                        # 数据目录
-│   └── class_system.db         # SQLite 数据库
+├── data/                        # （历史残留目录，PostgreSQL 时代不再使用）
 ├── main.py                      # 应用入口
 └── requirements.txt             # 依赖
 ```
