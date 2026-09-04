@@ -2081,12 +2081,14 @@ Expected: PASS（130+ 用例全绿）
 
 ```bash
 # 学期配置（第二学期引入）
-TERM__LABEL=2026-2027-1
-TERM__START_DATE=2026-09-07
-TERM__TOTAL_WEEKS=20
+# 注意：因 pydantic-settings 与 shell 通用变量 TERM 冲突（上游 issue #137），
+# 嵌套 env 键为 TERM_CFG__*（config.py 中 validation_alias="term_cfg"）
+TERM_CFG__LABEL=2026-2027-1
+TERM_CFG__START_DATE=2026-09-07
+TERM_CFG__TOTAL_WEEKS=20
 ```
 
-`backend/.env` 与 `backend/.env.production` 追加同样三行。
+`backend/.env` 追加同样三行（`.env.production` 若存在同理）。
 
 - [ ] **Step 4: 服务重启验证（CLAUDE.md 完整流程）**
 
