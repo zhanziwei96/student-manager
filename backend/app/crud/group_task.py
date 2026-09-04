@@ -1,6 +1,7 @@
 """小组任务与评分 CRUD"""
 from typing import List, Optional, Dict, Any
 from sqlmodel import Session, select, delete
+from app.core.term import get_current_term
 from app.core.timezone import get_now
 from app.models.group import (
     GroupTask, GroupTaskDimension, EvaluationAssignment,
@@ -74,7 +75,10 @@ def get_group_task(session: Session, task_id: int) -> Optional[GroupTask]:
 
 def get_group_tasks_by_class(session: Session, class_name: str) -> List[GroupTask]:
     return session.exec(
-        select(GroupTask).where(GroupTask.class_name == class_name).order_by(GroupTask.created_at.desc())
+        select(GroupTask).where(
+            GroupTask.class_name == class_name,
+            GroupTask.semester == get_current_term(),
+        ).order_by(GroupTask.created_at.desc())
     ).all()
 
 
@@ -91,7 +95,11 @@ def start_group_task(session: Session, task_id: int) -> Optional[GroupTask]:
     if not task or task.status != "preparing":
         return None
     groups = session.exec(
-        select(Group).where(Group.class_name == task.class_name, Group.is_active.is_(True))
+        select(Group).where(
+            Group.class_name == task.class_name,
+            Group.is_active.is_(True),
+            Group.semester == get_current_term(),
+        )
     ).all()
     if len(groups) < 2:
         raise ValueError("班级小组数量不足，无法启动互评")
@@ -283,6 +291,7 @@ def get_task_results(session: Session, task_id: int) -> Dict[int, Dict[str, Any]
             EvaluationAssignment.target_group_id == Group.id,
         ).where(
             EvaluationAssignment.task_id == task_id,
+            Group.semester == get_current_term(),
         ).distinct()
     ).all()
 
@@ -293,6 +302,7 @@ def get_task_results(session: Session, task_id: int) -> Dict[int, Dict[str, Any]
             select(Group).where(
                 Group.class_name == task.class_name,
                 Group.is_active.is_(True),
+                Group.semester == get_current_term(),
             )
         ).all()
         for g in extra_groups:

@@ -6,6 +6,7 @@ from typing import List, Optional
 import uuid
 from zoneinfo import ZoneInfo
 from sqlmodel import Session, select
+from app.core.term import get_current_term
 from app.models import CourseSession
 
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
@@ -23,28 +24,31 @@ def get_course_session_by_session_code(session: Session, session_code: str) -> O
 
 
 def get_active_course_session_by_class_name(session: Session, class_name: str) -> Optional[CourseSession]:
-    """根据班级名称获取活跃课程会话"""
+    """根据班级名称获取当前学期活跃课程会话"""
     query = select(CourseSession).where(
         CourseSession.class_name == class_name,
-        CourseSession.status == "active"
+        CourseSession.status == "active",
+        CourseSession.semester == get_current_term(),
     )
     return session.exec(query).first()
 
 
 def get_teacher_active_course_sessions(session: Session, teacher_id: int) -> List[CourseSession]:
-    """获取教师所有活跃课程会话（不包含 scheduled）"""
+    """获取教师当前学期所有活跃课程会话（不包含 scheduled）"""
     query = select(CourseSession).where(
         CourseSession.teacher_id == teacher_id,
-        CourseSession.status == "active"  # 只返回 active，不包含 scheduled
+        CourseSession.status == "active",  # 只返回 active，不包含 scheduled
+        CourseSession.semester == get_current_term(),
     )
     return list(session.exec(query).all())
 
 
 def get_teacher_scheduled_course_sessions(session: Session, teacher_id: int) -> List[CourseSession]:
-    """获取教师所有已安排但未开始的课程"""
+    """获取教师当前学期所有已安排但未开始的课程"""
     query = select(CourseSession).where(
         CourseSession.teacher_id == teacher_id,
-        CourseSession.status == "scheduled"
+        CourseSession.status == "scheduled",
+        CourseSession.semester == get_current_term(),
     )
     return list(session.exec(query).all())
 
@@ -123,8 +127,11 @@ def end_course_session(
 def get_teacher_course_sessions(
     session: Session, teacher_id: int, status: Optional[str] = None
 ) -> List[CourseSession]:
-    """获取教师的课程会话列表（支持按状态筛选）"""
-    query = select(CourseSession).where(CourseSession.teacher_id == teacher_id)
+    """获取教师当前学期的课程会话列表（支持按状态筛选）"""
+    query = select(CourseSession).where(
+        CourseSession.teacher_id == teacher_id,
+        CourseSession.semester == get_current_term(),
+    )
     if status:
         query = query.where(CourseSession.status == status)
     return list(session.exec(query.order_by(CourseSession.start_time.desc())).all())

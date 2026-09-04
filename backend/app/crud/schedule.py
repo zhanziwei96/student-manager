@@ -6,6 +6,7 @@
 """
 from typing import List, Optional
 from sqlmodel import Session, select
+from app.core.term import get_current_term
 from app.models import CourseSchedule, User
 
 
@@ -21,8 +22,8 @@ def get_schedules(
     teacher_id: Optional[int] = None
 ) -> List[CourseSchedule]:
     """获取课表列表"""
-    query = select(CourseSchedule)
-    
+    query = select(CourseSchedule).where(CourseSchedule.semester == get_current_term())
+
     if class_name:
         query = query.where(CourseSchedule.class_name == class_name)
     if day_of_week:

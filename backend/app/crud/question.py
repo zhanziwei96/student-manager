@@ -4,6 +4,7 @@
 from typing import List, Optional
 from sqlmodel import Session, select, func
 from app.models.question import Question, Answer
+from app.core.term import get_current_term
 from app.core.timezone import get_now
 
 
@@ -39,8 +40,11 @@ def get_questions_by_teacher(
     class_name: Optional[str] = None,
     status: Optional[str] = None,
 ) -> List[Question]:
-    """获取老师的问题列表"""
-    query = select(Question).where(Question.teacher_id == teacher_id)
+    """获取老师当前学期的问题列表"""
+    query = select(Question).where(
+        Question.teacher_id == teacher_id,
+        Question.semester == get_current_term(),
+    )
     if class_name:
         query = query.where(Question.class_name == class_name)
     if status:
@@ -54,9 +58,10 @@ def get_questions_by_class(
     class_name: str,
     status: Optional[str] = "active",
 ) -> List[Question]:
-    """获取班级的问题列表（含所有班级可见的问题）"""
+    """获取班级当前学期的问题列表（含所有班级可见的问题）"""
     query = select(Question).where(
-        (Question.class_name == class_name) | (Question.class_name.is_(None))
+        ((Question.class_name == class_name) | (Question.class_name.is_(None))),
+        Question.semester == get_current_term(),
     )
     if status:
         query = query.where(Question.status == status)
