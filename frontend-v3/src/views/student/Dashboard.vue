@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores'
 import { useStudentProfile } from '@/composables/useStudentProfile'
-import { useStudents, useStudentScoreLogs } from '@/composables'
+import { useLeaderboard } from '@/composables/useLeaderboard'
+import { useStudentScoreLogs } from '@/composables'
 import { Card } from '@/components/ui'
 import { Star, TrendingUp, Users, Award, Loader2, AlertCircle, Trophy } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
@@ -10,17 +11,17 @@ import { useRouter } from 'vue-router'
 const authStore = useAuthStore()
 const router = useRouter()
 const { data: currentStudent, isPending, error } = useStudentProfile()
-const { data: allStudents } = useStudents()
+// 排名改用排行榜接口（学生可访问），不再拉取全量学生名单
+const { myRank } = useLeaderboard({ scope: 'class', limit: 50 })
 
 // 获取分数历史记录
 const studentId = computed(() => currentStudent.value?.student_id || '')
 const { data: scoreLogs, isPending: logsLoading } = useStudentScoreLogs(studentId, { limit: 0 })
 
+// 只显示名次，不显示排行榜返回的分数
 const rank = computed(() => {
-  if (!allStudents.value || !currentStudent.value) return '-'
-  const sorted = [...allStudents.value].sort((a, b) => b.score - a.score)
-  const index = sorted.findIndex(s => s.id === currentStudent.value!.id)
-  return index >= 0 ? `第 ${index + 1} 名` : '-'
+  const r = myRank.value?.rank
+  return r ? `第 ${r} 名` : '-'
 })
 
 // 格式化日期
