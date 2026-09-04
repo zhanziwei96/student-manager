@@ -299,3 +299,19 @@ def test_teacher_cannot_update_others_lost_found_item(teacher_client, teacher2_c
         data={"title": "篡改"},
     )
     assert resp.status_code == 403
+
+
+def test_teacher_cannot_confirm_others_lost_found_claim(teacher_client, teacher2_client, teacher2_item_id):
+    """教师不能确认他人发布物品的认领（任取 claim_id：所有权校验先于认领校验）"""
+    resp = teacher_client.put(
+        f"/api/v1/teacher/lost-found/{teacher2_item_id}/claims/1/confirm"
+    )
+    assert resp.status_code == 403
+
+
+def test_teacher_cannot_reject_others_lost_found_claim(teacher_client, teacher2_client, teacher2_item_id):
+    """教师不能拒绝他人发布物品的认领"""
+    resp = teacher_client.put(
+        f"/api/v1/teacher/lost-found/{teacher2_item_id}/claims/1/reject"
+    )
+    assert resp.status_code == 403

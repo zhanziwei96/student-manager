@@ -129,3 +129,22 @@ def test_dissolve_group_still_blocked_by_current_term_evaluating_task(session: S
 
     with pytest.raises(ValueError, match="不可解散小组"):
         dissolve_group(session, group.id)
+
+
+def test_global_question_or_group_respects_semester_filter(session: Session):
+    """OR 组（class_name == X 或 IS NULL）与学期过滤为 AND 组合：
+    上学期数据（含全局问题）不得经 OR 组泄漏到当前学期结果"""
+    # 全局可见问题：class_name 为空（semester 缺省即当前学期）
+    cur_global = Question(teacher_id=1, class_name=None, content="当前学期全局问题")
+    # 上学期：一条全局问题 + 一条本班问题（均只差 semester，与当前学期行唯一区别）
+    old_global = Question(teacher_id=1, class_name=None, content="上学期全局问题",
+                          semester="2025-2026-2")
+    old_class_q = Question(teacher_id=1, class_name="1班", content="上学期班级问题",
+                           semester="2025-2026-2")
+    session.add_all([cur_global, old_global, old_class_q])
+    session.commit()
+
+    questions = get_questions_by_class(session, "1班")
+    assert len(questions) == 1
+    assert questions[0].class_name is None
+    assert questions[0].content == "当前学期全局问题"

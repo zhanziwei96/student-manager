@@ -9,6 +9,7 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user
+# 周次计算收敛至 core/term.py 单一真源
 from app.core.term import get_current_week_number as _get_current_week_number
 from app.models import CourseSession, CourseSchedule
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse, ApiSuccessResponse

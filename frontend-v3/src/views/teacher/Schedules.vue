@@ -209,7 +209,7 @@ const weekDays = [
 // 总课程数
 const totalSchedules = computed(() => schedules.value.length)
 
-// 当前周次：优先后端下发的 current_week（0=未开学），学期接口不可用时本地兜底计算
+// 当前周次：优先后端下发的 current_week（0=未开学）；学期接口不可用时兜底返回 1（旧兼容语义）
 const currentWeek = computed(() => {
   if (termInfo.value) return termInfo.value.current_week
   return getCurrentWeek()

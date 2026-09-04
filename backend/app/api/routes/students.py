@@ -228,10 +228,18 @@ async def add_student(
         data.class_name or "未分班"
     )
     
+    # 白名单字段，防止泄漏 password_hash/version（与 get_student_info 一致）
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.STUDENT_CREATED,
-        ApiResponseConst.DATA: student.model_dump()
+        ApiResponseConst.DATA: {
+            'student_id': student.student_id,
+            'name': student.name,
+            'class_name': student.class_name,
+            'score': student.score,
+            'is_account_enabled': student.is_account_enabled,
+            'created_at': student.created_at,
+        }
     }
 
 
