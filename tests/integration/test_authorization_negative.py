@@ -5,6 +5,8 @@
 - 学生不可改分/加学生/看他人详情与他人分数
 - 教师不可查看非负责班级学生详情
 - 学生详情响应不得泄露 password_hash
+- 学生不可查看学生列表/导入学生
+- 学生列表响应不得泄露 password_hash
 """
 import pytest
 from sqlmodel import Session
@@ -88,3 +90,35 @@ def test_student_cannot_read_other_student_scores(student_client, other_student_
     """学生不能查看他人分数历史"""
     resp = student_client.get(f"/api/v1/students/{other_student_id}/scores")
     assert resp.status_code == 403
+
+
+def test_student_cannot_list_students(student_client, student_user):
+    """学生不能查看学生列表"""
+    resp = student_client.get("/api/v1/students")
+    assert resp.status_code == 403
+
+
+def test_student_list_has_no_password_hash(admin_client, student_user):
+    """学生列表响应不含 password_hash（遍历返回的学生对象断言）"""
+    resp = admin_client.get("/api/v1/students")
+    assert resp.status_code == 200
+    students = resp.json()["data"]
+    assert any(s["student_id"] == "S001" for s in students), "列表应包含 S001 学生"
+    for student in students:
+        assert "password_hash" not in student
+
+
+def test_student_cannot_import_students(student_client):
+    """学生不能导入学生"""
+    resp = student_client.post(
+        "/api/v1/students/import",
+        files={"file": ("students.xlsx", b"fake-content", "application/octet-stream")},
+    )
+    assert resp.status_code == 403
+
+
+def test_teacher_can_view_assigned_class_student_detail(teacher_client, student_user):
+    """教师可以查看负责班级学生的详情（正向控制，防止权限收紧误伤）"""
+    resp = teacher_client.get("/api/v1/students/S001")
+    assert resp.status_code == 200
+    assert resp.json()["data"]["student_id"] == "S001"

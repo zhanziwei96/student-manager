@@ -105,12 +105,12 @@ async def get_students_list(
     request: Request,
     class_name: Optional[str] = Query(None, description="班级名称"),
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_admin_or_teacher)
 ):
-    """获取学生列表（管理员看所有，教师看负责班级）"""
+    """获取学生列表（管理员看所有，教师看负责班级；学生不可访问）"""
     # REVIEW-P1: 权限检查统一在 API 层处理，CRUD 层保持纯粹
     from app.models import User
-    
+
     is_admin = user.get("is_admin", False)
     
     if is_admin:
@@ -149,12 +149,19 @@ async def get_students_list(
         checkins = []
     checked_in_students = set(c.student_id for c in checkins)
     
-    # 构建带签到状态的学生列表
+    # 构建带签到状态的学生列表（白名单字段，防止泄露 password_hash/version/last_login）
     students_with_checkin = []
     for student in students:
-        student_dict = student.model_dump()
         # 只有在当前课堂签到才算已签到
-        student_dict['checkin_status'] = 'checked_in' if student.student_id in checked_in_students else 'not_checked_in'
+        student_dict = {
+            'student_id': student.student_id,
+            'name': student.name,
+            'class_name': student.class_name,
+            'score': student.score,
+            'is_account_enabled': student.is_account_enabled,
+            'created_at': student.created_at,
+            'checkin_status': 'checked_in' if student.student_id in checked_in_students else 'not_checked_in',
+        }
         students_with_checkin.append(student_dict)
     
     return {
@@ -329,9 +336,9 @@ async def import_students(
     request: Request,
     file: UploadFile = File(..., description="Excel文件 (.xlsx/.xls)"),
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user_id: str = Depends(require_admin)
 ):
-    """导入学生（Excel）- SEC-001: 安全文件上传"""
+    """导入学生（Excel，仅管理员）- SEC-001: 安全文件上传"""
     from app.core.upload import save_upload_file_securely, cleanup_file
     from app.core.logging import logger
     
@@ -357,7 +364,7 @@ async def import_students(
         # 这里应该调用导入服务解析Excel并导入学生数据
         # 目前仅演示安全上传功能
         
-        logger.info(f"学生导入文件已接收: {original_filename} (上传者: {user.get('username')})")
+        logger.info(f"学生导入文件已接收: {original_filename} (上传者: {user_id})")
         
         return {
             ApiResponseConst.SUCCESS: True,
