@@ -2,6 +2,7 @@
 应用配置 - 支持多环境和嵌套配置
 """
 import os
+from datetime import date
 from pathlib import Path
 from typing import Optional, List
 from functools import lru_cache
@@ -174,6 +175,15 @@ class UploadSettings(BaseSettings):
     use_uuid_filename: bool = Field(default=True, description="使用UUID重命名文件")
 
 
+class TermSettings(BaseSettings):
+    """学期配置 - 第二学期引入（semester 软归档 + 周次统一基准）"""
+    model_config = SettingsConfigDict(env_prefix="TERM_")
+
+    label: str = Field(default="2026-2027-1", description="当前学期标识（学年+学期号：1=秋季 2=春季）")
+    start_date: date = Field(default=date(2026, 9, 7), description="学期开始日期（第1周周一）")
+    total_weeks: int = Field(default=20, description="学期总周数")
+
+
 class Settings(BaseSettings):
     """应用主配置类"""
     model_config = SettingsConfigDict(
@@ -192,6 +202,13 @@ class Settings(BaseSettings):
     pagination: PaginationSettings = Field(default_factory=PaginationSettings)
     score: ScoreSettings = Field(default_factory=ScoreSettings)
     upload: UploadSettings = Field(default_factory=UploadSettings)
+    # 学期配置（嵌套模式下 env 键为 TERM_CFG__*，如 TERM_CFG__LABEL）
+    # 注意：必须用 validation_alias="term_cfg" 而非自然名 "term"——pydantic-settings
+    # 按 case-insensitive 匹配，会把 shell 通用环境变量 TERM（终端类型）误匹配到
+    # 嵌套字段 term，导致 Settings() 构造崩溃（上游 pydantic-settings issue #137）。
+    # TermSettings 的 env_prefix="TERM_" 仅在单独构造 TermSettings() 时生效。
+    # 因 alias 的存在，Settings 的 init 关键字为 term_cfg 而非 term。
+    term: TermSettings = Field(default_factory=TermSettings, validation_alias="term_cfg")
 
     @property
     def is_development(self) -> bool:

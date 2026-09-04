@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from '@/composables/useSchedules'
 import { useClasses, useToast } from '@/composables'
+import { useTermInfo } from '@/composables/useTermInfo'
 import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer, MobilePicker } from '@/components/ui'
 import ScheduleAdjustmentDialog from '@/components/teacher/ScheduleAdjustmentDialog.vue'
@@ -76,6 +77,9 @@ const selectedWeek = ref<number | undefined>(undefined)
 // 获取数据
 const { data: classes } = useClasses()
 
+// 当前学期信息（总周数、当前周等周次基准由后端下发）
+const { data: termInfo } = useTermInfo()
+
 // 查询参数 - 使用 ref 存储筛选条件
 const queryParams = computed(() => ({
   class_name: selectedClass.value || undefined,
@@ -85,12 +89,15 @@ const queryParams = computed(() => ({
   teacher_id: isAdmin.value ? undefined : currentUser.value?.id
 }))
 
-// 周次选项（1-20周）
-const weekOptions = Array.from({ length: 20 }, (_, i) => i + 1)
+// 周次选项：总周数来自后端学期接口，接口不可用时兜底 20 周
+const totalWeeks = computed(() => termInfo.value?.total_weeks ?? 20)
+const weekOptions = computed(() =>
+  Array.from({ length: totalWeeks.value }, (_, i) => i + 1),
+)
 
 // 为 MobilePicker 准备的周次选项
 const weekPickerOptions = computed(() => {
-  return weekOptions.map(week => ({
+  return weekOptions.value.map(week => ({
     value: week,
     label: `第${week}周`,
     subtitle: week === currentWeek.value ? '本周' : undefined
@@ -172,7 +179,7 @@ const openAdjustmentDialog = (schedule: typeof schedules.value[0]) => {
     start_time: schedule.start_time,
     end_time: schedule.end_time,
   }
-  adjustmentWeek.value = selectedWeek.value || currentWeek.value
+  adjustmentWeek.value = selectedWeek.value || currentWeek.value || 1
   showAdjustmentDialog.value = true
 }
 
@@ -202,8 +209,11 @@ const weekDays = [
 // 总课程数
 const totalSchedules = computed(() => schedules.value.length)
 
-// 当前周次
-const currentWeek = computed(() => getCurrentWeek())
+// 当前周次：优先后端下发的 current_week（0=未开学）；学期接口不可用时兜底返回 1（旧兼容语义）
+const currentWeek = computed(() => {
+  if (termInfo.value) return termInfo.value.current_week
+  return getCurrentWeek()
+})
 
 // 本周课程数（基于选中的周次或当前周）
 const thisWeekSchedules = computed(() => {
@@ -479,7 +489,7 @@ const handleBatchDelete = async () => {
           </div>
           <div class="min-w-0">
             <p class="text-sm text-[#737373] truncate">
-              本周课程（第{{ currentWeek }}周）
+              本周课程<span v-if="currentWeek > 0">（第{{ currentWeek }}周）</span><span v-else>（未开学）</span>
             </p>
             <p class="text-2xl font-medium text-black">
               {{ thisWeekSchedules }}
@@ -591,7 +601,7 @@ const handleBatchDelete = async () => {
         </div>
         <!-- 快速跳转本周 -->
         <Button
-          v-if="selectedWeek !== currentWeek"
+          v-if="currentWeek > 0 && selectedWeek !== currentWeek"
           variant="outline"
           size="sm"
           class="w-full sm:w-auto min-h-[44px] sm:min-h-[36px]"

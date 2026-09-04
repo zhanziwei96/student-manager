@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user, require_teacher
+from app.core.term import get_current_term
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse
 from app.models.group import GroupMember, GroupMembershipRequest, GroupTask, Group, GroupEvaluationScore
 from app.crud import (
@@ -87,6 +88,7 @@ def _check_class_not_evaluating(session: Session, class_name: str, student_id: s
         select(GroupTask).where(
             GroupTask.class_name == class_name,
             GroupTask.status == "evaluating",
+            GroupTask.semester == get_current_term(),
         )
     ).first()
     if evaluating_task:
@@ -653,6 +655,7 @@ async def api_create_dissolution(
         select(GroupTask).where(
             GroupTask.class_name == group.class_name,
             GroupTask.status == "evaluating",
+            GroupTask.semester == get_current_term(),
         )
     ).first()
     if evaluating_task:
@@ -689,6 +692,7 @@ async def api_leave_group(
         select(GroupTask).where(
             GroupTask.class_name == group.class_name,
             GroupTask.status == "evaluating",
+            GroupTask.semester == get_current_term(),
         )
     ).first()
     if evaluating_task:

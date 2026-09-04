@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import time
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Index
+from app.core.term import get_current_term
 
 
 class CourseScheduleBase(SQLModel):
@@ -32,6 +33,12 @@ class CourseSchedule(CourseScheduleBase, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     created_at: Optional[str] = Field(default=None, description="创建时间")
     updated_at: Optional[str] = Field(default=None, description="更新时间")
 

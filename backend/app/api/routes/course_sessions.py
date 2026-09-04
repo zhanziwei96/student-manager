@@ -9,6 +9,8 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user
+# 周次计算收敛至 core/term.py 单一真源
+from app.core.term import get_current_week_number as _get_current_week_number
 from app.models import CourseSession, CourseSchedule
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse, ApiSuccessResponse
 from app.crud.course_session import (
@@ -246,16 +248,3 @@ async def get_verification_code(
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权访问该课堂")
     payload = generate_verification_code(course_session.session_code)
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: payload}
-
-
-def _get_current_week_number() -> int:
-    """获取当前教学周次（与前端 getCurrentWeek 保持一致）"""
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    now = datetime.now(ZoneInfo("Asia/Shanghai"))
-    semester_start = datetime(now.year, 2, 1, tzinfo=ZoneInfo("Asia/Shanghai"))
-    if now < semester_start:
-        semester_start = datetime(now.year - 1, 2, 1, tzinfo=ZoneInfo("Asia/Shanghai"))
-    delta = now - semester_start
-    week = delta.days // 7 + 1
-    return max(1, week)

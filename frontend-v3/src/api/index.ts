@@ -8,6 +8,8 @@ export { statsApi } from './stats'
 export { classesApi } from './classes'
 export { usersApi } from './users'
 export { leaderboardApi } from './leaderboard'
+export { termApi } from './term'
+export type { TermInfo } from './term'
 export { groupsApi } from './groups'
 export type {
   CreateGroupTaskRequest,

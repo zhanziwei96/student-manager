@@ -85,8 +85,8 @@ class TestCheckinAPIEnhanced:
         assert data["success"] is True
         assert isinstance(data["data"], list)
 
-    def test_get_session_checkins(self, client, test_engine, student_user):
-        """测试按 session 获取签到列表"""
+    def test_get_session_checkins(self, client, teacher_client, test_engine, student_user):
+        """测试按 session 获取签到列表（教师有权限，学生无权限）"""
         cs = self._start_class_directly(test_engine, "一班")
 
         # 学生登录并签到
@@ -103,8 +103,12 @@ class TestCheckinAPIEnhanced:
             "verification_code": code
         })
 
-        # 教师获取该 session 签到列表
-        response = client.get(f"/api/v1/checkins/session/{cs.id}")
+        # 学生无权限读取该 session 签到列表
+        student_resp = client.get(f"/api/v1/checkins/session/{cs.id}")
+        assert student_resp.status_code == 403
+
+        # 负责该班的教师获取该 session 签到列表
+        response = teacher_client.get(f"/api/v1/checkins/session/{cs.id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -125,12 +129,11 @@ class TestCheckinAPIEnhanced:
         # 统计信息
         assert "active" in data["data"]
 
-    def test_get_active_class_sessions(self, client, test_engine, sample_students):
-        """测试获取所有活跃课堂"""
+    def test_get_active_class_sessions(self, teacher_client, test_engine, sample_students):
+        """测试获取所有活跃课堂（需登录，教师可访问）"""
         self._start_class_directly(test_engine, "一班")
 
-        # 不需要登录，公开接口
-        response = client.get("/api/v1/course-sessions/active")
+        response = teacher_client.get("/api/v1/course-sessions/active")
 
         assert response.status_code == 200
         data = response.json()

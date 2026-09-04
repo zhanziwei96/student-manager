@@ -61,35 +61,28 @@ export function formatTime(date: string | Date): string {
 }
 
 /**
- * 获取当前周次（基于基准日期）
- * 基准设定：2026-03-30 是第4周的周一
- * 根据当前日期与基准日期的差值计算周次
+ * 获取当前周次（基于学期开始日期）
+ * 第二学期改造：基准日期由后端 GET /api/term/current 下发，
+ * 不再硬编码；开学前返回 0（UI 显示"未开学"）。
+ *
+ * @param termStartDate 学期开始日期（第 1 周周一，ISO 字符串）
+ * @param totalWeeks 学期总周数
+ * @returns 当前周次：0=未开学，1..totalWeeks=学期中
  */
-export function getCurrentWeek(): number {
+export function getCurrentWeek(
+  termStartDate?: string | null,
+  totalWeeks = 20,
+): number {
+  // 无学期基准时返回 1（向后兼容，避免全站误显示）
+  if (!termStartDate) return 1
+
+  const start = new Date(termStartDate)
   const now = new Date()
-  
-  // 基准设定: 2026-03-30 是第4周的周一
-  const referenceDate = new Date('2026-03-30') // 第4周周一
-  const referenceWeek = 4
-  
-  // 获取当前日期所在周的周一
-  const currentDay = now.getDay() // 0=周日, 1=周一, ...
-  const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1
-  const currentMonday = new Date(now)
-  currentMonday.setDate(now.getDate() - daysSinceMonday)
-  currentMonday.setHours(0, 0, 0, 0)
-  
-  // 获取基准日期的周一（已经是周一）
-  const baseMonday = new Date(referenceDate)
-  baseMonday.setHours(0, 0, 0, 0)
-  
-  // 计算两个周一之间的周数差
+
+  // 开学前返回 0
+  if (now < start) return 0
+
   const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  const weekDiff = Math.floor((baseMonday.getTime() - currentMonday.getTime()) / msPerWeek)
-  
-  // 计算当前周次
-  const currentWeek = referenceWeek - weekDiff
-  
-  // 限制在 1-20 周范围内
-  return Math.max(1, Math.min(20, currentWeek))
+  const diff = Math.floor((now.getTime() - start.getTime()) / msPerWeek)
+  return Math.min(diff + 1, totalWeeks)
 }

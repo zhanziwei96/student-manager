@@ -6,6 +6,7 @@
 """
 from typing import List, Optional
 from sqlmodel import Session, select
+from app.core.term import get_current_term
 from app.models import CourseSchedule, User
 
 
@@ -21,8 +22,8 @@ def get_schedules(
     teacher_id: Optional[int] = None
 ) -> List[CourseSchedule]:
     """获取课表列表"""
-    query = select(CourseSchedule)
-    
+    query = select(CourseSchedule).where(CourseSchedule.semester == get_current_term())
+
     if class_name:
         query = query.where(CourseSchedule.class_name == class_name)
     if day_of_week:
@@ -215,14 +216,15 @@ def import_schedules(
                 select(User).where(User.name == teacher_name)
             ).first()
             
-            # 查重检查
+            # 查重检查（仅当前学期内查重，允许新学期导入与上学期相同的课程）
             existing = session.exec(
                 select(CourseSchedule).where(
                     CourseSchedule.course_name == course_name,
                     CourseSchedule.class_name == class_name,
                     CourseSchedule.teacher_name == teacher_name,
                     CourseSchedule.day_of_week == day_of_week,
-                    CourseSchedule.start_time == start_time
+                    CourseSchedule.start_time == start_time,
+                    CourseSchedule.semester == get_current_term(),
                 )
             ).first()
             

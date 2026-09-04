@@ -2,7 +2,7 @@
 课表管理 API
 """
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
 from sqlmodel import Session, select
 from sqlalchemy import update
@@ -28,34 +28,15 @@ from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse
 )
+# 周次计算收敛至 core/term.py 单一真源（以 _ 前缀别名导入，避免与本地函数名混淆）
+from app.core.term import (
+    get_current_term as _get_current_term,
+    get_current_week_number as _get_current_week_number,
+    get_week_number_for_date as _get_week_number_for_date,
+)
 
 router = APIRouter(tags=["schedules"])
 
-
-def _get_current_week_number():
-    """计算当前教学周次"""
-    now = datetime.now()
-    semester_start = datetime(now.year, 2, 1)
-    if now < semester_start:
-        semester_start = datetime(now.year - 1, 2, 1)
-    week = (now - semester_start).days // 7 + 1
-    return max(1, week)
-
-def _get_week_number_for_date(target_date: date) -> int:
-    """计算指定日期所在的教学周次（与前端 getCurrentWeek 保持一致）"""
-    from datetime import timedelta
-    # 基准设定: 2026-03-30 是第4周的周一
-    reference_date = date(2026, 3, 30)
-    reference_week = 4
-
-    # 获取 target_date 所在周的周一
-    current_day = target_date.isoweekday()  # 1=周一, 7=周日
-    days_since_monday = current_day - 1
-    current_monday = target_date - timedelta(days=days_since_monday)
-
-    delta = current_monday - reference_date
-    week = reference_week + delta.days // 7
-    return max(1, week)
 
 def _enrich_schedule_with_week_data(
     session: Session, schedule: CourseSchedule, week_number: int
@@ -155,13 +136,13 @@ async def get_schedules(
     class_name: Optional[str] = Query(None, description="按班级筛选"),
     teacher_id: Optional[int] = Query(None, description="按教师筛选"),
     day_of_week: Optional[int] = Query(None, description="按星期筛选(1-7)"),
-    week_number: Optional[int] = Query(None, description="指定周次(1-20)，不传则使用当前周"),
+    week_number: Optional[int] = Query(None, description="指定周次，不传则使用当前周"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
     """获取课表列表（包含调课/课堂状态）"""
-    query = select(CourseSchedule)
-    
+    query = select(CourseSchedule).where(CourseSchedule.semester == _get_current_term())
+
     # 教师只能查看自己的课表（除非有admin角色）
     if user.get("role") == "teacher":
         query = query.where(CourseSchedule.teacher_id == int(user.get("sub", 0)))
@@ -326,7 +307,10 @@ async def get_today_schedules(
     today = datetime.now().isoweekday()
     current_week = _get_current_week_number()
 
-    query = select(CourseSchedule).where(CourseSchedule.day_of_week == today)
+    query = select(CourseSchedule).where(
+        CourseSchedule.day_of_week == today,
+        CourseSchedule.semester == _get_current_term(),
+    )
 
     # 教师只能查看自己的课表
     if user.get("role") == "teacher":

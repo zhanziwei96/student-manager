@@ -2,6 +2,7 @@
 from typing import List, Optional
 import random
 from sqlmodel import Session, select
+from app.core.term import get_current_term
 from app.core.timezone import get_now
 from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
@@ -15,14 +16,18 @@ def get_group(session: Session, group_id: int) -> Optional[Group]:
 
 
 def get_groups_by_class(session: Session, class_name: str) -> List[Group]:
-    """获取某班所有活跃小组"""
+    """获取某班当前学期所有活跃小组"""
     return session.exec(
-        select(Group).where(Group.class_name == class_name, Group.is_active.is_(True)).order_by(Group.id)
+        select(Group).where(
+            Group.class_name == class_name,
+            Group.is_active.is_(True),
+            Group.semester == get_current_term(),
+        ).order_by(Group.id)
     ).all()
 
 
 def get_student_active_group(session: Session, student_id: str, class_name: str) -> Optional[Group]:
-    """获取学生在某班的活跃小组"""
+    """获取学生在某班当前学期的活跃小组"""
     statement = (
         select(Group)
         .join(GroupMember, GroupMember.group_id == Group.id)
@@ -30,6 +35,7 @@ def get_student_active_group(session: Session, student_id: str, class_name: str)
             GroupMember.student_id == student_id,
             Group.class_name == class_name,
             Group.is_active.is_(True),
+            Group.semester == get_current_term(),
         )
     )
     return session.exec(statement).first()
@@ -356,6 +362,7 @@ def dissolve_group(session: Session, group_id: int) -> bool:
     evaluating_task = session.exec(
         select(GroupTask).where(
             GroupTask.class_name == group.class_name,
+            GroupTask.semester == get_current_term(),
             GroupTask.status == "evaluating",
         )
     ).first()

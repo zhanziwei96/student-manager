@@ -20,7 +20,7 @@ export async function createLostFoundItem(data: {
   description: string
   location?: string
   file?: File
-}): Promise<{ id: number }> {
+}): Promise<{ item_id: number }> {
   const formData = new FormData()
   formData.append('title', data.title)
   formData.append('description', data.description)

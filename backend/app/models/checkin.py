@@ -7,6 +7,7 @@ from sqlmodel import SQLModel, Field, UniqueConstraint
 from sqlalchemy import Index, desc
 from app.models.constants import CheckinTypeConst
 from app.core.timezone import get_now
+from app.core.term import get_current_term
 
 
 class CheckinRecord(SQLModel, table=True):
@@ -19,6 +20,12 @@ class CheckinRecord(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     session_id: Optional[int] = Field(
         default=None,
         foreign_key="course_sessions.id",
@@ -44,6 +51,12 @@ class ScoreLog(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     student_id: str = Field(..., description="学号")
     old_score: Optional[float] = Field(default=None, description="旧分数")
     new_score: Optional[float] = Field(default=None, description="新分数")

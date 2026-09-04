@@ -6,6 +6,7 @@ from typing import Optional
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Field
 from app.core.timezone import get_now
+from app.core.term import get_current_term
 
 
 class Group(SQLModel, table=True):
@@ -13,6 +14,12 @@ class Group(SQLModel, table=True):
     __tablename__ = "groups"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     class_name: str = Field(..., description="班级名称", max_length=100, index=True)
     name: str = Field(..., description="小组名称", max_length=100)
     leader_student_id: str = Field(..., description="组长学号", max_length=50, index=True)
@@ -47,6 +54,12 @@ class GroupTask(SQLModel, table=True):
     __tablename__ = "group_tasks"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     class_name: str = Field(..., description="班级名称", max_length=100, index=True)
     title: str = Field(..., description="任务标题", max_length=200)
     description: Optional[str] = Field(default=None, description="任务描述")
@@ -86,6 +99,12 @@ class GroupEvaluationScore(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     task_id: int = Field(..., foreign_key="group_tasks.id", description="任务ID", index=True)
     target_group_id: int = Field(..., foreign_key="groups.id", description="被评分小组ID", index=True)
     evaluator_type: str = Field(..., description="评分方类型: teacher|student", max_length=20)

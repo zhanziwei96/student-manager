@@ -5,6 +5,7 @@ from datetime import datetime, date
 from typing import List, Optional
 from sqlmodel import Session, select, func
 from app.models import CheckinRecord, ScoreLog
+from app.core.term import get_current_term
 from app.core.timezone import get_now
 
 
@@ -14,9 +15,21 @@ def get_checkins_by_session_id(session: Session, session_id: int) -> List[Checki
     return list(session.exec(query).all())
 
 
-def get_all_checkins(session: Session, limit: int = 200) -> List[CheckinRecord]:
-    """获取签到记录列表（按时间倒序，用于 admin 签到管理）"""
-    query = select(CheckinRecord).order_by(CheckinRecord.checkin_time.desc()).limit(limit)
+def get_all_checkins(
+    session: Session,
+    limit: int = 200,
+    class_names: Optional[List[str]] = None,
+) -> List[CheckinRecord]:
+    """获取当前学期签到记录列表（按时间倒序，用于 admin 签到管理；可选按班级过滤）"""
+    query = (
+        select(CheckinRecord)
+        .where(CheckinRecord.semester == get_current_term())
+    )
+    # 注意：用 is not None 而非 truthiness——空列表应过滤掉全部（fail-closed），
+    # 而不是跳过过滤（否则无班级教师会看到全量记录）
+    if class_names is not None:
+        query = query.where(CheckinRecord.class_name.in_(class_names))
+    query = query.order_by(CheckinRecord.checkin_time.desc()).limit(limit)
     return list(session.exec(query).all())
 
 
@@ -31,7 +44,10 @@ def get_today_checkins(
     else:
         query_start = datetime.combine(date.today(), time.min).replace(tzinfo=get_now().tzinfo)
 
-    query = select(CheckinRecord).where(CheckinRecord.checkin_time >= query_start)
+    query = select(CheckinRecord).where(
+        CheckinRecord.checkin_time >= query_start,
+        CheckinRecord.semester == get_current_term(),
+    )
     if class_name:
         query = query.where(CheckinRecord.class_name == class_name)
     return list(session.exec(query).all())
@@ -44,7 +60,8 @@ def count_today_checkins(session: Session, class_name: Optional[str] = None) -> 
     today_start = datetime.combine(date.today(), time.min)
 
     query = select(func.count()).select_from(CheckinRecord).where(
-        CheckinRecord.checkin_time >= today_start
+        CheckinRecord.checkin_time >= today_start,
+        CheckinRecord.semester == get_current_term(),
     )
     if class_name:
         query = query.where(CheckinRecord.class_name == class_name)
@@ -138,8 +155,15 @@ def count_checkins_by_session_id(session: Session, session_id: int) -> int:
 
 
 def get_student_score_logs(session: Session, student_id: str, limit: Optional[int] = None) -> List[ScoreLog]:
-    """获取学生分数日志"""
-    query = select(ScoreLog).where(ScoreLog.student_id == student_id).order_by(ScoreLog.created_at.desc())
+    """获取学生当前学期分数日志"""
+    query = (
+        select(ScoreLog)
+        .where(
+            ScoreLog.student_id == student_id,
+            ScoreLog.semester == get_current_term(),
+        )
+        .order_by(ScoreLog.created_at.desc())
+    )
     if limit is None:
         from app.core.config import get_settings
         limit = get_settings().pagination.score_log_default_limit

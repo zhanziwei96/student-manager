@@ -37,10 +37,10 @@ class TestConcurrentRaceConditions:
         # 验证 CourseSession 表结构
         table = CourseSession.__table__
 
-        # 检查 uix_active_class_name 索引是否存在
+        # 检查 uix_active_class_semester 索引是否存在
         index_names = [idx.name for idx in table.indexes]
-        assert 'uix_active_class_name' in index_names, \
-            "缺少 uix_active_class_name 唯一索引，无法防止并发创建活跃课堂"
+        assert 'uix_active_class_semester' in index_names, \
+            "缺少 uix_active_class_semester 唯一索引，无法防止并发创建活跃课堂"
 
     def test_create_multiple_active_sessions_blocked(self, test_engine):
         """测试无法为同一班级创建多个活跃课堂"""
