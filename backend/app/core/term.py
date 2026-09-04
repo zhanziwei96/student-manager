@@ -5,10 +5,11 @@
 替代此前散落在 schedules.py / course_sessions.py / 前端 date.ts
 中互相矛盾的硬编码周次实现。
 """
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
 from app.core.config import get_settings
+from app.core.timezone import get_now
 
 
 def get_current_term() -> str:
@@ -42,7 +43,7 @@ def get_current_week_number(
         total_weeks: 周数上限，默认取配置 TERM_CFG__TOTAL_WEEKS
     """
     if today is None:
-        today = datetime.now().date()
+        today = get_now().date()
     if total_weeks is None:
         total_weeks = get_term_total_weeks()
 
