@@ -6,6 +6,7 @@ from typing import Optional
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Index, text, UniqueConstraint
 from app.core.timezone import get_now
+from app.core.term import get_current_term
 
 
 class CourseSessionBase(SQLModel):
@@ -32,10 +33,11 @@ class CourseSession(CourseSessionBase, table=True):
     """课程会话数据库模型"""
     __tablename__ = "course_sessions"
     __table_args__ = (
-        # 同一班级在同一时间只能有一个活跃课堂，防止并发重复创建（P0 并发安全）
+        # 同一班级同一学期在同一时间只能有一个活跃课堂（第二学期：加 semester 维度）
         Index(
-            'uix_active_class_name',
+            'uix_active_class_semester',
             'class_name',
+            'semester',
             unique=True,
             sqlite_where=text('status="active"'),
             postgresql_where=text("status='active'")
@@ -46,6 +48,12 @@ class CourseSession(CourseSessionBase, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     updated_at: datetime = Field(default_factory=get_now, description="更新时间")
 
 
@@ -82,6 +90,12 @@ class ScheduleAdjustment(ScheduleAdjustmentBase, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    semester: Optional[str] = Field(
+        default_factory=get_current_term,
+        description="学期标识（如 2026-2027-1）",
+        max_length=20,
+        index=True
+    )
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
 
 
