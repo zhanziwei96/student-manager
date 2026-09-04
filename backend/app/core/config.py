@@ -15,8 +15,11 @@ def get_env_file_path() -> str:
 
     根据 ENV 环境变量返回对应的环境文件完整路径。
     如果文件不存在，返回默认的 .env 文件路径。
+
+    注意：默认 ENV 为 'development'（本地开发常用 .env）；
+    生产环境必须显式设 ENV=production（.env.production）。
     """
-    env = os.getenv('ENV', 'production').lower()
+    env = os.getenv('ENV', 'development').lower()
     # config.py 在 app/core/，所以需要上溯两级到 backend 目录
     base_dir = Path(__file__).parent.parent.parent
     env_files = {

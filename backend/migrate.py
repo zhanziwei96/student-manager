@@ -20,7 +20,9 @@ os.environ.setdefault('ENV', 'development')
 def run_alembic_command(args):
     """运行 alembic 命令"""
     cmd = ['conda', 'run', '-n', 'student-manage', 'alembic'] + args
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd='/home/yufeng/student-manager/backend')
+    # 使用脚本所在目录（backend/），避免硬编码旧路径
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=backend_dir)
     if result.returncode != 0:
         print(f"错误: {result.stderr}")
         sys.exit(1)
