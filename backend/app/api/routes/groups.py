@@ -655,6 +655,7 @@ async def api_create_dissolution(
         select(GroupTask).where(
             GroupTask.class_name == group.class_name,
             GroupTask.status == "evaluating",
+            GroupTask.semester == get_current_term(),
         )
     ).first()
     if evaluating_task:
@@ -691,6 +692,7 @@ async def api_leave_group(
         select(GroupTask).where(
             GroupTask.class_name == group.class_name,
             GroupTask.status == "evaluating",
+            GroupTask.semester == get_current_term(),
         )
     ).first()
     if evaluating_task:

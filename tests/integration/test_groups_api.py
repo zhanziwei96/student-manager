@@ -464,3 +464,92 @@ def test_dissolve_group_during_evaluation(student_client):
     assert resp.status_code == 400
     data = resp.json()
     assert "班级正在互评阶段" in data["message"]
+
+
+def test_leave_group_not_blocked_by_previous_term_evaluating_task(student_client):
+    """上学期遗留的 evaluating 任务不应卡住本学期学生退组"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import GroupTask, Group, GroupMember
+
+    # 当前学期小组：S001 为成员（组长为 S099）
+    with Session(_test_engine) as session:
+        group = Group(
+            class_name="一班",
+            name="测试小组",
+            leader_student_id="S099",
+            is_active=True,
+        )
+        session.add(group)
+        session.commit()
+        session.refresh(group)
+        group_id = group.id
+
+        member = GroupMember(group_id=group_id, student_id="S001")
+        session.add(member)
+        session.commit()
+
+    # 上学期同班遗留的 evaluating 任务
+    with Session(_test_engine) as session:
+        task = GroupTask(
+            class_name="一班",
+            title="上学期遗留互评任务",
+            description="测试",
+            status="evaluating",
+            semester="2025-2026-2",
+            created_by="teacher1",
+        )
+        session.add(task)
+        session.commit()
+
+    # 上学期任务不应阻止学生退组
+    resp = student_client.post("/api/v1/student/groups/leave")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+
+
+def test_dissolve_group_not_blocked_by_previous_term_evaluating_task(student_client):
+    """上学期遗留的 evaluating 任务不应卡住本学期组长提交解散申请"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import GroupTask, Group, GroupMember
+
+    # 当前学期小组：S001 为组长
+    with Session(_test_engine) as session:
+        group = Group(
+            class_name="一班",
+            name="测试小组",
+            leader_student_id="S001",
+            is_active=True,
+        )
+        session.add(group)
+        session.commit()
+        session.refresh(group)
+        group_id = group.id
+
+        member = GroupMember(group_id=group_id, student_id="S001")
+        session.add(member)
+        session.commit()
+
+    # 上学期同班遗留的 evaluating 任务
+    with Session(_test_engine) as session:
+        task = GroupTask(
+            class_name="一班",
+            title="上学期遗留互评任务",
+            description="测试",
+            status="evaluating",
+            semester="2025-2026-2",
+            created_by="teacher1",
+        )
+        session.add(task)
+        session.commit()
+
+    # 上学期任务不应阻止组长提交解散申请
+    resp = student_client.post("/api/v1/student/groups/dissolution-requests", json={
+        "reason": "测试解散",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert "request_id" in data["data"]
