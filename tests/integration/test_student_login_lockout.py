@@ -130,3 +130,65 @@ class TestStudentLoginLockout:
         assert response.status_code == 403
         data = response.json()
         assert "禁用" in data["message"]
+
+
+class TestStudentManualUnlock:
+    """学生手动解锁机制测试（管理员/教师运维途径）"""
+
+    @pytest.fixture
+    def locked_student_id(self, test_engine):
+        """创建一名已锁定的学生（一班，密码 student123，便于教师班级权限测试）"""
+        from app.core.security import generate_password_hash
+        from app.models import Student
+
+        with Session(test_engine) as session:
+            password_hash, salt = generate_password_hash("student123")
+            student = Student(
+                student_id="SLOCK",
+                name="锁定学生",
+                class_name="一班",
+                score=0.0,
+                password_hash=password_hash,
+                salt=salt,
+                login_fail_count=5,
+                locked_until=datetime.now() + timedelta(minutes=30),
+            )
+            session.add(student)
+            session.commit()
+        return "SLOCK"
+
+    def _login(self, client, password, username="SLOCK"):
+        return client.post("/api/v1/login", json={
+            "username": username,
+            "password": password,
+            "role": "student"
+        })
+
+    def test_admin_can_unlock_student(self, admin_client, locked_student_id):
+        """管理员可手动解锁学生"""
+        resp = admin_client.put(f"/api/v1/students/{locked_student_id}/unlock")
+        assert resp.status_code == 200
+        # 解锁后可正常登录
+        login_resp = self._login(admin_client, "student123")
+        assert login_resp.status_code == 200
+
+    def test_teacher_can_unlock_own_class_student(self, teacher_client, locked_student_id):
+        """教师可解锁自己班的学生"""
+        resp = teacher_client.put(f"/api/v1/students/{locked_student_id}/unlock")
+        assert resp.status_code == 200
+
+    def test_student_cannot_unlock(self, student_client, locked_student_id):
+        """学生不能解锁任何人"""
+        resp = student_client.put(f"/api/v1/students/{locked_student_id}/unlock")
+        assert resp.status_code == 403
+
+    def test_reset_password_also_unlocks(self, admin_client, locked_student_id):
+        """重置密码顺带解锁（与教师侧一致）"""
+        resp = admin_client.put(
+            f"/api/v1/students/{locked_student_id}/reset-password",
+            json={"new_password": "newpass123"}
+        )
+        assert resp.status_code == 200
+        # 解锁后新密码可登录
+        login_resp = self._login(admin_client, "newpass123")
+        assert login_resp.status_code == 200

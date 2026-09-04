@@ -245,12 +245,32 @@ def count_students(session: Session) -> int:
 
 
 def reset_student_password(session: Session, student_id: str, password_hash: str) -> Optional[Student]:
-    """重置学生密码 - SEC-003: 移除 salt 参数"""
+    """重置学生密码 - SEC-003: 移除 salt 参数；顺带解锁（与教师侧 reset_password 一致）"""
     student = get_student(session, student_id)
     if not student:
         return None
     student.password_hash = password_hash
     # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
+    # 重置密码顺带解锁（防止"改了密码还被锁"的困惑）
+    student.locked_until = None
+    student.login_fail_count = 0
+    session.add(student)
+    session.commit()
+    session.refresh(student)
+    return student
+
+
+def unlock_student_account(session: Session, student_id: str) -> Optional[Student]:
+    """手动解锁学生账号（管理员/教师操作）
+
+    Returns:
+        Student: 解锁后的学生对象，不存在返回 None
+    """
+    student = get_student(session, student_id)
+    if not student:
+        return None
+    student.locked_until = None
+    student.login_fail_count = 0
     session.add(student)
     session.commit()
     session.refresh(student)

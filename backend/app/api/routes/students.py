@@ -12,7 +12,8 @@ from app.core.jwt import require_admin, get_current_user
 from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
-    create_student, update_student_score, delete_student, get_all_classes, reset_student_password
+    create_student, update_student_score, delete_student, get_all_classes, reset_student_password,
+    unlock_student_account
 )
 from app.crud.checkin import get_today_checkins
 from app.crud.course_session import get_active_course_session_by_class_name
@@ -447,4 +448,26 @@ async def reset_student_password_api(
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.PASSWORD_RESET
+    }
+
+
+@router.put("/students/{student_id}/unlock", response_model=ApiSuccessResponse)
+async def unlock_student_api(
+    request: Request,
+    student_id: str,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin_or_teacher)
+):
+    """手动解锁学生账号（admin 或负责该班的教师）"""
+    student = get_student(session, student_id)
+    if not student:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
+
+    verify_teacher_class_access(user, student.class_name, session)
+
+    unlock_student_account(session, student_id)
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: "账号已解锁"
     }
