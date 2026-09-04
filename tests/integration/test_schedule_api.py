@@ -313,3 +313,28 @@ def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine
     assert data["success"] is True
     assert data["data"]["imported"] == 1
     assert data["data"]["errors"] == []
+
+
+def test_get_schedules_excludes_previous_term_schedules(admin_client, test_engine):
+    """学期隔离：上学期课表不得混入当前学期课表列表"""
+    from app.models import CourseSchedule
+    from sqlmodel import Session
+
+    # 手工造一条上学期的课表（当前学期数据经 create_test_schedule 验证被列表返回）
+    with Session(test_engine) as session:
+        old = CourseSchedule(
+            course_name="上学期遗留课", class_name="1班", teacher_name="张老师",
+            day_of_week=1, start_time="08:00", end_time="09:40",
+            week_start=1, week_end=20, semester="2025-2026-2",
+        )
+        session.add(old)
+        session.commit()
+        session.refresh(old)
+
+    response = admin_client.get("/api/v1/schedules")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert all(item["id"] != old.id for item in data["data"])
+    assert all(item["course_name"] != "上学期遗留课" for item in data["data"])

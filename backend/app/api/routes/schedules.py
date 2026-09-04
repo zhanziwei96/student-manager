@@ -28,7 +28,9 @@ from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse
 )
+# 周次计算收敛至 core/term.py 单一真源（以 _ 前缀别名导入，避免与本地函数名混淆）
 from app.core.term import (
+    get_current_term as _get_current_term,
     get_current_week_number as _get_current_week_number,
     get_week_number_for_date as _get_week_number_for_date,
 )
@@ -134,13 +136,13 @@ async def get_schedules(
     class_name: Optional[str] = Query(None, description="按班级筛选"),
     teacher_id: Optional[int] = Query(None, description="按教师筛选"),
     day_of_week: Optional[int] = Query(None, description="按星期筛选(1-7)"),
-    week_number: Optional[int] = Query(None, description="指定周次(1-20)，不传则使用当前周"),
+    week_number: Optional[int] = Query(None, description="指定周次，不传则使用当前周"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
     """获取课表列表（包含调课/课堂状态）"""
-    query = select(CourseSchedule)
-    
+    query = select(CourseSchedule).where(CourseSchedule.semester == _get_current_term())
+
     # 教师只能查看自己的课表（除非有admin角色）
     if user.get("role") == "teacher":
         query = query.where(CourseSchedule.teacher_id == int(user.get("sub", 0)))
@@ -305,7 +307,10 @@ async def get_today_schedules(
     today = datetime.now().isoweekday()
     current_week = _get_current_week_number()
 
-    query = select(CourseSchedule).where(CourseSchedule.day_of_week == today)
+    query = select(CourseSchedule).where(
+        CourseSchedule.day_of_week == today,
+        CourseSchedule.semester == _get_current_term(),
+    )
 
     # 教师只能查看自己的课表
     if user.get("role") == "teacher":

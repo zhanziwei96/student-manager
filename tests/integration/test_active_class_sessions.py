@@ -88,3 +88,33 @@ class TestActiveClassSessionsAPI:
         course_names = [s["course_name"] for s in data["data"] if s["course_name"]]
         if course_names:
             assert "高等数学" in course_names or "数据结构" in course_names
+
+    def test_active_sessions_only_current_term(self, student_client, test_engine):
+        """学期隔离：上学期遗留的 active 课堂不得出现在当前学期活跃课堂列表"""
+        from app.models import CourseSession
+        from sqlmodel import Session
+
+        # 上学期遗留的 active 课堂（绕过 CRUD 的当前学期默认值直接造数）
+        with Session(test_engine) as session:
+            session.add(CourseSession(
+                session_code="OLDSESS01",
+                class_name="上学期遗留班",
+                teacher_id=1,
+                teacher_name="张老师",
+                course_name="上学期课程",
+                status="active",
+                semester="2025-2026-2",
+            ))
+            session.commit()
+
+        # 当前学期 active 课堂（CRUD 默认填充当前学期）
+        self._start_class_directly(test_engine, "计算机1班", "高等数学", teacher_id=1)
+
+        response = student_client.get("/api/v1/course-sessions/active")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert len(data["data"]) == 1
+        assert data["data"][0]["class_name"] == "计算机1班"
+        assert data["data"][0]["course_name"] == "高等数学"

@@ -9,6 +9,7 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.rate_limit import check_rate_limit
+from app.core.term import get_current_term
 from app.crud import (
     create_checkin, get_students_by_class
 )
@@ -344,7 +345,10 @@ def get_active_course_sessions(
 ):
     """获取所有活跃课堂列表（需登录，学生签到页使用）"""
     from sqlmodel import select
-    query = select(CourseSession).where(CourseSession.status == "active")
+    query = select(CourseSession).where(
+        CourseSession.status == "active",
+        CourseSession.semester == get_current_term(),
+    )
     active_sessions = session.exec(query).all()
 
     return {
