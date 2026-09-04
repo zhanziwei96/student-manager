@@ -3,7 +3,7 @@
 
 用法:
     cd backend
-    python scripts/semester_rollover.py [--disable-graduates 名单.txt]
+    python scripts/semester_rollover.py [--disable-graduates 名单.txt] [--old-term 2025-2026-2]
 
 流程:
     1. 前置检查（当前学期配置、库内 semester 分布）
@@ -24,12 +24,19 @@ from typing import Optional, Tuple
 # 保证以 backend 为工作目录运行时能 import app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlmodel import Session, select, update
+from sqlmodel import Session, func, select, update
 
 from app.core.config import get_settings
 from app.core.db import engine
 from app.core.term import get_current_term
-from app.models import CourseSession, Group, GroupTask, ScoreLog, Student
+from app.models import (
+    CourseSchedule,
+    CourseSession,
+    Group,
+    GroupTask,
+    ScoreLog,
+    Student,
+)
 
 ARCHIVE_REASON_PREFIX = "[学期归档]"
 
@@ -113,6 +120,51 @@ def _disable_graduates(session: Session, names_file: str) -> int:
     return result.rowcount
 
 
+def _preflight_names_file(names_file: str) -> int:
+    """交互确认前预检毕业名单文件：打开并读行数，读取失败直接退出"""
+    try:
+        with open(names_file, encoding="utf-8") as f:
+            line_count = len([line.strip() for line in f if line.strip()])
+    except (OSError, UnicodeDecodeError) as exc:
+        print(f"[错误] 名单文件读取失败: {names_file}: {exc}")
+        sys.exit(1)
+    return line_count
+
+
+def _previous_term_label(label: str) -> Optional[str]:
+    """由当前学期标识推导上一学期（'2026-2027-1' -> '2025-2026-2'）"""
+    parts = label.split("-")
+    if (
+        len(parts) != 3
+        or not parts[0].isdigit()
+        or not parts[1].isdigit()
+        or parts[2] not in ("1", "2")
+    ):
+        return None
+    start_year, end_year = int(parts[0]), int(parts[1])
+    if end_year != start_year + 1:
+        return None
+    if parts[2] == "2":
+        return f"{start_year}-{end_year}-1"
+    return f"{start_year - 1}-{start_year}-2"
+
+
+def _validate_term_combination(session: Session, old_term: str, new_term: str) -> None:
+    """学期组合前置校验：old != new，且库内存在 old 学期数据（防打错学期号）"""
+    if old_term == new_term:
+        print(f"[错误] 旧学期不能等于当前学期（{old_term}）："
+              "请确认 TERM_CFG__LABEL 已更新为当前学期，或显式传 --old-term")
+        sys.exit(1)
+    schedule_count = session.exec(
+        select(func.count())
+        .select_from(CourseSchedule)
+        .where(CourseSchedule.semester == old_term)
+    ).one()
+    if schedule_count == 0:
+        print(f"[错误] 库中不存在学期 {old_term} 的课表数据，请核对 --old-term")
+        sys.exit(1)
+
+
 def _snapshot_backup(old_term: str) -> None:
     """pg_dump 快照备份（软归档的双保险）"""
     settings = get_settings()
@@ -137,8 +189,22 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = get_settings()
-    old_term = args.old_term or "2025-2026-2"
     new_term = get_current_term()
+    old_term = args.old_term
+    if old_term is None:
+        old_term = _previous_term_label(new_term)
+        if old_term is None:
+            print("[错误] 未传 --old-term 且无法从配置 TERM_CFG__LABEL 推导上一学期，"
+                  "请显式传 --old-term")
+            sys.exit(1)
+        print(f"[提示] 未传 --old-term，按配置推导旧学期: {old_term}")
+
+    # 前置校验（fail-fast：全部在交互确认与任何写操作之前）
+    with Session(engine) as session:
+        _validate_term_combination(session, old_term, new_term)
+    if args.disable_graduates:
+        line_count = _preflight_names_file(args.disable_graduates)
+        print(f"[前置检查] 名单文件可读: {args.disable_graduates}（{line_count} 行）")
 
     print(f"[前置检查] 旧学期={old_term} 新学年={new_term}")
     print(f"[前置检查] 配置 TERM_CFG__START_DATE={settings.term.start_date} "
