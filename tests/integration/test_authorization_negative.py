@@ -169,3 +169,58 @@ def test_active_course_sessions_requires_login(anon_client):
     """未登录不可枚举活跃课堂"""
     resp = anon_client.get("/api/v1/course-sessions/active")
     assert resp.status_code == 401
+
+
+# ========== 教师无负责班级的签到列表 fail-closed ==========
+
+@pytest.fixture
+def teacher_without_classes_client(test_engine):
+    """已登录且无负责班级的教师客户端（assigned_classes 用默认值 '[]'）
+
+    同时造一条"一班"签到记录：若空班级列表被跳过过滤（旧 bug），
+    该记录会泄漏给教师，本用例将失败——用于验证 fail-closed。
+    """
+    from fastapi.testclient import TestClient
+    from main import app
+    from app.core.db import get_session
+    from app.core.security import generate_password_hash
+    from app.models import CheckinRecord, User, UserRoleConst
+
+    with Session(test_engine) as session:
+        password_hash, salt = generate_password_hash("teacher123")
+        teacher = User(
+            username="teacher_noclass",
+            name="无班级教师",
+            password_hash=password_hash,
+            salt=salt,
+            role=UserRoleConst.TEACHER,
+            is_active=True,
+            # 不传 assigned_classes，使用模型默认值 "[]"（未分班）
+        )
+        session.add(teacher)
+        session.add(CheckinRecord(
+            student_id="S001", student_name="学生1", class_name="一班"
+        ))
+        session.commit()
+
+    def get_session_override():
+        with Session(test_engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app, cookies={}) as c:
+        response = c.post("/api/v1/login", json={
+            "username": "teacher_noclass",
+            "password": "teacher123",
+            "role": "teacher",
+        })
+        assert response.status_code == 200, f"Teacher login failed: {response.json()}"
+        yield c
+    app.dependency_overrides.clear()
+
+
+def test_teacher_without_classes_sees_empty_checkin_list(client, teacher_without_classes_client):
+    """无负责班级的教师不应看到任何签到记录（fail-closed）"""
+    resp = teacher_without_classes_client.get("/api/v1/checkins")
+    assert resp.status_code == 200
+    assert resp.json()["data"] == []

@@ -25,7 +25,9 @@ def get_all_checkins(
         select(CheckinRecord)
         .where(CheckinRecord.semester == get_current_term())
     )
-    if class_names:
+    # 注意：用 is not None 而非 truthiness——空列表应过滤掉全部（fail-closed），
+    # 而不是跳过过滤（否则无班级教师会看到全量记录）
+    if class_names is not None:
         query = query.where(CheckinRecord.class_name.in_(class_names))
     query = query.order_by(CheckinRecord.checkin_time.desc()).limit(limit)
     return list(session.exec(query).all())
