@@ -339,7 +339,10 @@ graph LR
 
         subgraph Backend_Container["后端容器"]
             FastAPI["FastAPI<br/>Python 3.11"]
-            SQLite[("SQLite<br/>数据文件")]
+        end
+
+        subgraph PostgreSQL_Container["数据库容器"]
+            PostgreSQL[("PostgreSQL 15<br/>classhub")]
         end
 
         subgraph Frontend_Container["前端容器"]
@@ -352,7 +355,7 @@ graph LR
     Nginx -->|"/api/*"| FastAPI
     Nginx -->|"/"| Frontend_Container
 
-    FastAPI --> SQLite
+    FastAPI --> PostgreSQL
 ```
 
 ---
