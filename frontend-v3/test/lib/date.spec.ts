@@ -65,19 +65,24 @@ describe('Date Utils', () => {
       vi.useRealTimers()
     })
 
+    // 适配说明：getCurrentWeek 改造为基于学期开始日期（由后端下发，不再硬编码基准）。
+    // 原实现硬编码「2026-03-30 为第 4 周周一」→ 隐含学期起点为 2026-03-09（第 1 周周一），
+    // 故下面传 '2026-03-09' 保持原 4/5/3 断言语义不变。
+    const termStart = '2026-03-09'
+
     it('should return reference week at baseline Monday', () => {
       vi.setSystemTime(new Date('2026-03-30'))
-      expect(getCurrentWeek()).toBe(4)
+      expect(getCurrentWeek(termStart, 20)).toBe(4)
     })
 
     it('should return next week one week after baseline', () => {
       vi.setSystemTime(new Date('2026-04-06'))
-      expect(getCurrentWeek()).toBe(5)
+      expect(getCurrentWeek(termStart, 20)).toBe(5)
     })
 
     it('should return previous week one week before baseline', () => {
       vi.setSystemTime(new Date('2026-03-23'))
-      expect(getCurrentWeek()).toBe(3)
+      expect(getCurrentWeek(termStart, 20)).toBe(3)
     })
 
     it('should return at least week 1', () => {
