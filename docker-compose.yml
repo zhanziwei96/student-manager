@@ -95,6 +95,8 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:-classhub_secret}
       POSTGRES_DB: classhub
       PGHOST: postgres
+      # 备份脚本注释写"每日 02:00"，不设 TZ 时 cron 用 UTC（= 北京 10:00）
+      TZ: Asia/Shanghai
     volumes:
       - ./backups/postgres:/backups
       - ./docker/postgres/backup.sh:/backup.sh:ro

@@ -200,3 +200,4 @@ backend/file:*
 # Ignore all env files across subdirectories
 **/.env*
 !**/.env.example
+!**/.env.production.example
