@@ -30,6 +30,8 @@ class Student(StudentBase, table=True):
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
     last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
     password_hash: Optional[str] = Field(default=None, description="密码哈希 (bcrypt)")
+    login_fail_count: int = Field(default=0, description="登录失败次数")
+    locked_until: Optional[datetime] = Field(default=None, description="锁定截止时间")
     version: int = Field(default=1, description="乐观锁版本号")
     
     def update_score(self, delta: float) -> Tuple[float, float]:

@@ -78,17 +78,37 @@ async def login(
     
     # 学生登录单独处理
     if data.role == UserRoleConst.STUDENT:
-        from app.crud import get_student
+        from app.crud import (
+            get_student, record_student_login_failure, reset_student_login_lock
+        )
 
         student = get_student(session, username)
         if not student:
             raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
-        
+
+        # 检查账号状态（与教师/管理员登录同逻辑）
+        if student.locked_until and student.locked_until > datetime.now():
+            logger.warning(f"登录失败，学生账号已锁定: {username}")
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='账号已被锁定，请稍后再试')
+
+        if not student.is_account_enabled:
+            logger.warning(f"登录失败，学生账号已禁用: {username}")
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='账号已被禁用')
+
         # 验证密码 (SEC-003: 使用新的 verify_password 接口)
         from app.core.security import verify_password
         if not verify_password(password, student.password_hash):
+            is_locked = record_student_login_failure(session, student)
+            if is_locked:
+                logger.warning(f"学生账号因多次失败被锁定: {username}")
+                raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='账号已被锁定，请稍后再试')
+            remaining = settings.security.max_login_failures - student.login_fail_count
+            logger.info(f"学生登录密码错误: {username}, 剩余次数: {remaining}")
             raise HTTPException(status_code=HttpStatus.UNAUTHORIZED, detail='用户名或密码错误')
-        
+
+        # 登录成功：重置失败计数与锁定状态
+        reset_student_login_lock(session, student)
+
         # 生成 JWT Token
         token_data = {
             "sub": str(student.student_id),

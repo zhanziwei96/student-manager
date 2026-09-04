@@ -5,6 +5,7 @@ REVIEW-P1: 权限检查统一在 API 层处理
 - CRUD 层只负责纯粹的数据操作
 - 权限控制、业务逻辑在 API 层实现
 """
+from datetime import datetime
 from typing import List, Optional
 from sqlmodel import Session, select
 from sqlalchemy import event as sa_event
@@ -254,3 +255,64 @@ def reset_student_password(session: Session, student_id: str, password_hash: str
     session.commit()
     session.refresh(student)
     return student
+
+
+def record_student_login_failure(session: Session, student: Student) -> bool:
+    """
+    记录学生登录失败，达到上限时锁定账号 - 与 record_login_failure（user.py）同逻辑
+
+    使用乐观锁确保并发登录失败计数准确。
+    如果检测到版本冲突，自动重试最多3次。
+
+    时区说明：locked_until 使用 naive datetime.now()，与 User 侧保持一致
+    （数据库列为 timestamp without time zone，登录比较也用 naive now）。
+
+    Args:
+        session: 数据库会话
+        student: 学生对象
+
+    Returns:
+        bool: 如果账号已被锁定返回 True，否则返回 False
+    """
+    from datetime import timedelta
+    from sqlalchemy.exc import IntegrityError
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    max_retries = 3
+
+    for attempt in range(max_retries):
+        # 刷新学生对象获取最新版本号
+        session.refresh(student)
+
+        student.login_fail_count += 1
+
+        if student.login_fail_count >= settings.security.max_login_failures:
+            student.locked_until = datetime.now() + timedelta(
+                minutes=settings.security.lockout_duration_minutes
+            )
+
+        # 乐观锁：递增版本号（与 BE-008 修复同模式）
+        student.version += 1
+        session.add(student)
+
+        try:
+            session.commit()
+            return student.locked_until is not None
+        except IntegrityError:
+            session.rollback()
+            if attempt == max_retries - 1:
+                # 最后一次重试失败，返回保守结果（视为锁定）
+                return True
+            # 继续重试
+            continue
+
+    return False
+
+
+def reset_student_login_lock(session: Session, student: Student) -> None:
+    """登录成功后重置学生失败计数与锁定状态"""
+    student.login_fail_count = 0
+    student.locked_until = None
+    session.add(student)
+    session.commit()
