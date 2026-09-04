@@ -362,6 +362,7 @@ def dissolve_group(session: Session, group_id: int) -> bool:
     evaluating_task = session.exec(
         select(GroupTask).where(
             GroupTask.class_name == group.class_name,
+            GroupTask.semester == get_current_term(),
             GroupTask.status == "evaluating",
         )
     ).first()
