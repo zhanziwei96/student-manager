@@ -43,3 +43,11 @@ def test_student_denied(session):
     with pytest.raises(HTTPException) as exc_info:
         verify_teacher_class_access(user, "1班", session)
     assert exc_info.value.status_code == 403
+
+
+def test_teacher_not_found_in_db_denied(session):
+    """教师账号已删除但 token 未过期（fail-closed）"""
+    user = {"sub": "99999", "role": "teacher"}
+    with pytest.raises(HTTPException) as exc_info:
+        verify_teacher_class_access(user, "1班", session)
+    assert exc_info.value.status_code == 403

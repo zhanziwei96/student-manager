@@ -9,6 +9,7 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
 from app.core.jwt import require_admin, get_current_user
+from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password
@@ -169,24 +170,35 @@ async def get_student_info(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取学生信息（学生只能查看自己）"""
+    """获取学生信息（学生只能查看自己；教师限负责班级；响应不含 password_hash）"""
     from app.models import UserRoleConst
-    
-    is_admin = user.get("is_admin", False)
-    role = user.get("role", '')
-    user_id = user.get("sub", '')
-    
-    # 学生只能查看自己的信息
-    if role == UserRoleConst.STUDENT and student_id != user_id:
-        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权查看其他学生信息')
-    
+
     student = get_student(session, student_id)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
-    
+
+    role = user.get("role", '')
+    user_id = user.get("sub", '')
+
+    # 学生只能查看自己的信息
+    if role == UserRoleConst.STUDENT:
+        if student_id != user_id:
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权查看其他学生信息')
+    elif role == UserRoleConst.TEACHER:
+        # 教师只能查看负责班级的学生
+        verify_teacher_class_access(user, student.class_name, session)
+
+    # 白名单字段，防止泄露 password_hash（P0 修复）
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: student.model_dump()
+        ApiResponseConst.DATA: {
+            'student_id': student.student_id,
+            'name': student.name,
+            'class_name': student.class_name,
+            'score': student.score,
+            'is_account_enabled': student.is_account_enabled,
+            'created_at': student.created_at,
+        }
     }
 
 
@@ -195,9 +207,9 @@ async def add_student(
     request: Request,
     data: CreateStudentRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user_id: str = Depends(require_admin)
 ):
-    """添加学生"""
+    """添加学生（仅管理员）"""
     existing = get_student(session, data.student_id)
     if existing:
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='学号已存在')
@@ -222,15 +234,22 @@ async def update_score(
     student_id: str,
     data: UpdateScoreRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_admin_or_teacher)
 ):
-    """更新学生分数"""
+    """更新学生分数（admin 或负责该班的教师）"""
+    # 先取学生班级做权限校验，再执行更新
+    student = get_student(session, student_id)
+    if not student:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
+
+    verify_teacher_class_access(user, student.class_name, session)
+
     username = user.get("username", '')
-    
+
     student = update_student_score(session, student_id, data.score_change, data.reason, username)
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
-    
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.STUDENT_SCORE_UPDATED,
@@ -368,8 +387,20 @@ async def get_student_scores(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取学生分数历史"""
+    """获取学生分数历史（学生限自己；教师限负责班级）"""
+    from app.models import UserRoleConst
     from app.crud import get_student_score_logs
+
+    role = user.get("role", '')
+    if role == UserRoleConst.STUDENT:
+        if student_id != user.get("sub", ''):
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权查看他人分数')
+    elif role == UserRoleConst.TEACHER:
+        student = get_student(session, student_id)
+        if not student:
+            raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
+        verify_teacher_class_access(user, student.class_name, session)
+
     logs = get_student_score_logs(session, student_id, limit)
     
     return {
