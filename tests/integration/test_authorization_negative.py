@@ -122,3 +122,50 @@ def test_teacher_can_view_assigned_class_student_detail(teacher_client, student_
     resp = teacher_client.get("/api/v1/students/S001")
     assert resp.status_code == 200
     assert resp.json()["data"]["student_id"] == "S001"
+
+
+# ========== 签到路由越权负向测试（Task 11） ==========
+
+@pytest.fixture
+def some_session_id(test_engine):
+    """创建活跃课堂会话并返回其 id（签到越权测试数据）"""
+    from app.crud.course_session import start_course_session
+    with Session(test_engine) as session:
+        cs = start_course_session(
+            session=session,
+            class_name="一班",
+            teacher_id=1,
+            teacher_name="张老师",
+            course_name="高等数学",
+        )
+        return cs.id
+
+
+@pytest.fixture
+def anon_client(client):
+    """未登录客户端（无任何身份，等价匿名访问）"""
+    return client
+
+
+def test_student_cannot_list_all_checkins(student_client):
+    """学生不能获取全部签到记录列表"""
+    resp = student_client.get("/api/v1/checkins")
+    assert resp.status_code == 403
+
+
+def test_student_cannot_read_session_checkins(student_client, some_session_id):
+    """学生不能获取指定课堂会话的签到列表"""
+    resp = student_client.get(f"/api/v1/checkins/session/{some_session_id}")
+    assert resp.status_code == 403
+
+
+def test_student_cannot_read_checkin_stats(student_client, some_session_id):
+    """学生不能获取签到统计"""
+    resp = student_client.get("/api/v1/checkins/stats", params={"session_id": some_session_id})
+    assert resp.status_code == 403
+
+
+def test_active_course_sessions_requires_login(anon_client):
+    """未登录不可枚举活跃课堂"""
+    resp = anon_client.get("/api/v1/course-sessions/active")
+    assert resp.status_code == 401

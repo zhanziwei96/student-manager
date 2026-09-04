@@ -29,6 +29,7 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse
 )
 from app.models import CourseSession
+from app.api.deps import verify_teacher_class_access, require_admin_or_teacher
 
 router = APIRouter(tags=["checkin"])
 
@@ -217,10 +218,16 @@ def get_checkin_list(
     request: Request,
     limit: int = Query(200, ge=1, le=1000, description="返回条数限制"),
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_admin_or_teacher)
 ):
-    """获取签到记录列表（按时间倒序，用于 admin 签到管理）"""
-    checkins = get_all_checkins(session, limit=limit)
+    """获取签到记录列表（admin 全量；教师限负责班级）"""
+    class_names = None
+    if user.get("role") != "admin":
+        from app.models import User
+        user_obj = session.get(User, int(user.get("sub", 0)))
+        class_names = user_obj.get_assigned_classes() if user_obj else []
+
+    checkins = get_all_checkins(session, limit=limit, class_names=class_names)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [c.model_dump() for c in checkins]
@@ -232,9 +239,14 @@ def get_session_checkin_list(
     request: Request,
     session_id: int,
     db_session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_admin_or_teacher)
 ):
-    """获取指定课堂会话的签到列表（按 session 维度统计签到）"""
+    """获取指定课堂会话的签到列表（admin 或负责该班的教师）"""
+    cs = get_course_session(db_session, session_id)
+    if not cs:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课堂不存在")
+    verify_teacher_class_access(user, cs.class_name, db_session)
+
     checkins = get_checkins_by_session_id(db_session, session_id)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -247,7 +259,7 @@ def get_checkin_stats(
     request: Request,
     session_id: Optional[int] = Query(None, description="课堂会话ID"),
     db_session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_admin_or_teacher)
 ):
     """获取签到统计（支持按 session_id 精确统计）"""
     from app.crud.course_session import get_course_session
@@ -265,6 +277,7 @@ def get_checkin_stats(
                     'rate': 0
                 }
             }
+        verify_teacher_class_access(user, cs.class_name, db_session)
         students = get_students_by_class(db_session, cs.class_name)
         checkins = get_checkins_by_session_id(db_session, session_id)
         total = len(students)
@@ -326,9 +339,10 @@ def get_checkin_stats(
 @router.get("/course-sessions/active", response_model=ActiveSessionsResponse)
 def get_active_course_sessions(
     request: Request,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
 ):
-    """获取所有活跃课堂列表"""
+    """获取所有活跃课堂列表（需登录，学生签到页使用）"""
     from sqlmodel import select
     query = select(CourseSession).where(CourseSession.status == "active")
     active_sessions = session.exec(query).all()

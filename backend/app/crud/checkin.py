@@ -15,14 +15,19 @@ def get_checkins_by_session_id(session: Session, session_id: int) -> List[Checki
     return list(session.exec(query).all())
 
 
-def get_all_checkins(session: Session, limit: int = 200) -> List[CheckinRecord]:
-    """获取当前学期签到记录列表（按时间倒序，用于 admin 签到管理）"""
+def get_all_checkins(
+    session: Session,
+    limit: int = 200,
+    class_names: Optional[List[str]] = None,
+) -> List[CheckinRecord]:
+    """获取当前学期签到记录列表（按时间倒序，用于 admin 签到管理；可选按班级过滤）"""
     query = (
         select(CheckinRecord)
         .where(CheckinRecord.semester == get_current_term())
-        .order_by(CheckinRecord.checkin_time.desc())
-        .limit(limit)
     )
+    if class_names:
+        query = query.where(CheckinRecord.class_name.in_(class_names))
+    query = query.order_by(CheckinRecord.checkin_time.desc()).limit(limit)
     return list(session.exec(query).all())
 
 
