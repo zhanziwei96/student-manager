@@ -54,10 +54,12 @@ def create_schedule_adjustment(
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权调整此课程")
 
     # 周次范围验证
-    if data.week_number < 1 or data.week_number > 20:
+    from app.core.term import get_term_total_weeks
+    total_weeks = get_term_total_weeks()
+    if data.week_number < 1 or data.week_number > total_weeks:
         raise HTTPException(
             status_code=HttpStatus.BAD_REQUEST,
-            detail="周次必须在 1-20 范围内"
+            detail=f"周次必须在 1-{total_weeks} 范围内"
         )
 
     # 重复检查：同一课表同一周次只能有一条调整记录

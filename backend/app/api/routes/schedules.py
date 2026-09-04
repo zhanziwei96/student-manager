@@ -2,7 +2,7 @@
 课表管理 API
 """
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
 from sqlmodel import Session, select
 from sqlalchemy import update
@@ -28,34 +28,13 @@ from app.models.constants import (
     ApiResponseConst, MessageConst, RoutePrefixConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse
 )
+from app.core.term import (
+    get_current_week_number as _get_current_week_number,
+    get_week_number_for_date as _get_week_number_for_date,
+)
 
 router = APIRouter(tags=["schedules"])
 
-
-def _get_current_week_number():
-    """计算当前教学周次"""
-    now = datetime.now()
-    semester_start = datetime(now.year, 2, 1)
-    if now < semester_start:
-        semester_start = datetime(now.year - 1, 2, 1)
-    week = (now - semester_start).days // 7 + 1
-    return max(1, week)
-
-def _get_week_number_for_date(target_date: date) -> int:
-    """计算指定日期所在的教学周次（与前端 getCurrentWeek 保持一致）"""
-    from datetime import timedelta
-    # 基准设定: 2026-03-30 是第4周的周一
-    reference_date = date(2026, 3, 30)
-    reference_week = 4
-
-    # 获取 target_date 所在周的周一
-    current_day = target_date.isoweekday()  # 1=周一, 7=周日
-    days_since_monday = current_day - 1
-    current_monday = target_date - timedelta(days=days_since_monday)
-
-    delta = current_monday - reference_date
-    week = reference_week + delta.days // 7
-    return max(1, week)
 
 def _enrich_schedule_with_week_data(
     session: Session, schedule: CourseSchedule, week_number: int
