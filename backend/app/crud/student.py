@@ -18,41 +18,61 @@ def get_student(session: Session, student_id: str) -> Optional[Student]:
     return session.get(Student, student_id)
 
 
-def get_students(session: Session, class_name: Optional[str] = None) -> List[Student]:
-    """获取学生列表"""
+def get_students(session: Session, class_name: Optional[str] = None, include_disabled: bool = False) -> List[Student]:
+    """获取学生列表（默认只返回启用学生）
+
+    Args:
+        session: 数据库会话
+        class_name: 班级名称（可选）
+        include_disabled: 是否包含已禁用学生（admin 恢复场景用）
+    """
     query = select(Student).order_by(Student.student_id)
+    if not include_disabled:
+        query = query.where(Student.is_account_enabled.is_(True))
     if class_name:
         query = query.where(Student.class_name == class_name)
     return session.exec(query).all()
 
 
-def get_students_by_class(session: Session, class_name: str) -> List[Student]:
-    """根据班级获取学生"""
+def get_students_by_class(session: Session, class_name: str, include_disabled: bool = False) -> List[Student]:
+    """根据班级获取学生（默认只返回启用学生）
+
+    Args:
+        session: 数据库会话
+        class_name: 班级名称
+        include_disabled: 是否包含已禁用学生（admin 恢复场景用）
+    """
     query = select(Student).where(Student.class_name == class_name).order_by(Student.student_id)
+    if not include_disabled:
+        query = query.where(Student.is_account_enabled.is_(True))
     return session.exec(query).all()
 
 
-def get_students_by_classes(session: Session, class_names: List[str]) -> List[Student]:
+def get_students_by_classes(session: Session, class_names: List[str], include_disabled: bool = False) -> List[Student]:
     """
     根据多个班级获取学生 - 性能优化（REVIEW-P1）
-    
+
     使用 SQL IN 查询替代循环查询，减少数据库往返次数。
     同时使用 SQL DISTINCT 去重，避免 Python 内存去重。
-    
+    默认只返回启用学生。
+
     Args:
         session: 数据库会话
         class_names: 班级名称列表
-        
+        include_disabled: 是否包含已禁用学生（admin 恢复场景用）
+
     Returns:
         学生列表（已去重）
     """
     from sqlalchemy import distinct
-    
+
     if not class_names:
         return []
-    
+
     # 使用 IN 查询一次性获取所有班级学生
     query = select(Student).where(Student.class_name.in_(class_names)).order_by(Student.student_id)
+    if not include_disabled:
+        query = query.where(Student.is_account_enabled.is_(True))
     return session.exec(query).all()
 
 

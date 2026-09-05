@@ -6,8 +6,8 @@
 - 教师可禁用自己负责的班级
 - 教师不能禁用其他班级（403）
 - 学生无权调用（403）
-- 缺少班级名称返回 400
-- 禁用后学生无法登录，且班级从班级列表消失
+- 缺少班级名称返回 422
+- 禁用后学生无法登录，不出现在学生列表，且班级从班级列表消失
 """
 from sqlmodel import Session
 
@@ -47,9 +47,11 @@ class TestDisableStudentsByClass:
         assert data["data"]["class_name"] == "旧班级"
 
         with Session(test_engine) as session:
-            students = get_students_by_class(session, "旧班级")
+            students = get_students_by_class(session, "旧班级", include_disabled=True)
             assert len(students) == 3
             assert all(s.is_account_enabled is False for s in students)
+            # 默认查询不返回已禁用学生
+            assert len(get_students_by_class(session, "旧班级")) == 0
             # 班级列表不再返回该班级
             assert "旧班级" not in get_all_classes(session)
 
@@ -75,7 +77,7 @@ class TestDisableStudentsByClass:
         assert resp.json()["data"]["disabled_count"] == 2
 
         with Session(test_engine) as session:
-            students = get_students_by_class(session, "一班")
+            students = get_students_by_class(session, "一班", include_disabled=True)
             assert all(s.is_account_enabled is False for s in students)
 
     def test_teacher_cannot_disable_other_class(self, teacher_client, test_engine):
@@ -91,7 +93,7 @@ class TestDisableStudentsByClass:
         assert resp.status_code == 403
 
         with Session(test_engine) as session:
-            students = get_students_by_class(session, "三班")
+            students = get_students_by_class(session, "三班", include_disabled=True)
             assert all(s.is_account_enabled is True for s in students)
 
     def test_student_cannot_disable_by_class(self, student_client):
@@ -102,10 +104,15 @@ class TestDisableStudentsByClass:
         )
         assert resp.status_code == 403
 
-    def test_missing_class_name_returns_400(self, admin_client):
-        """缺少班级名称 → 400"""
+    def test_missing_class_name_returns_422(self, admin_client):
+        """缺少班级名称 → 422（Pydantic 校验）"""
         resp = admin_client.post("/api/v1/students/disable-by-class", json={})
-        assert resp.status_code == 400
+        assert resp.status_code == 422
+
+    def test_empty_class_name_returns_422(self, admin_client):
+        """空班级名称 → 422（min_length=1 校验）"""
+        resp = admin_client.post("/api/v1/students/disable-by-class", json={"class_name": ""})
+        assert resp.status_code == 422
 
     def test_disabled_student_cannot_login(self, admin_client, test_engine):
         """禁用后学生无法登录，历史数据保留"""
@@ -141,3 +148,40 @@ class TestDisableStudentsByClass:
         from app.crud import get_student
         with Session(test_engine) as session:
             assert get_student(session, "SB001") is not None
+
+    def test_disabled_students_not_in_list(self, admin_client, test_engine):
+        """禁用后学生不出现在学生列表（GET /students）"""
+        from app.models import Student
+
+        _create_students(test_engine, "混合班", 2, id_prefix="SC")
+
+        # 直接禁用其中 1 个学生
+        with Session(test_engine) as session:
+            student = session.get(Student, "SC001")
+            student.is_account_enabled = False
+            session.add(student)
+            session.commit()
+
+        resp = admin_client.get("/api/v1/students")
+        assert resp.status_code == 200
+        returned_ids = [s["student_id"] for s in resp.json()["data"]]
+        assert "SC001" not in returned_ids
+        assert "SC002" in returned_ids
+
+    def test_disabled_class_not_in_class_filter_options(self, admin_client, test_engine):
+        """禁用某班后，GET /students 不含该班学生 → 前端 classOptions 派生自然不含该班"""
+        _create_students(test_engine, "待禁用班", 2, id_prefix="SD")
+        _create_students(test_engine, "保留班", 2, id_prefix="SE")
+
+        resp = admin_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_name": "待禁用班"}
+        )
+        assert resp.status_code == 200
+
+        resp = admin_client.get("/api/v1/students")
+        assert resp.status_code == 200
+        students = resp.json()["data"]
+        returned_classes = {s["class_name"] for s in students}
+        assert "待禁用班" not in returned_classes
+        assert "保留班" in returned_classes

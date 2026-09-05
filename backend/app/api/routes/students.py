@@ -3,7 +3,7 @@
 """
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, Request, HTTPException, Query, UploadFile, File, Body
+from fastapi import APIRouter, Depends, Request, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 from app.core.db import get_session
@@ -473,10 +473,14 @@ async def unlock_student_api(
     }
 
 
+class DisableByClassRequest(BaseModel):
+    class_name: str = Field(..., min_length=1, description="班级名称")
+
+
 @router.post("/students/disable-by-class", response_model=ApiResponse[dict])
 async def disable_students_by_class_api(
     request: Request,
-    data: dict = Body(...),
+    data: DisableByClassRequest,
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher)
 ):
@@ -484,16 +488,12 @@ async def disable_students_by_class_api(
 
     禁用后学生无法登录，班级从班级列表消失，历史数据保留。
     """
-    class_name = data.get("class_name")
-    if not class_name:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少班级名称')
+    verify_teacher_class_access(user, data.class_name, session)
 
-    verify_teacher_class_access(user, class_name, session)
-
-    count = disable_students_by_class(session, class_name)
+    count = disable_students_by_class(session, data.class_name)
 
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: f"已禁用 {count} 名学生",
-        ApiResponseConst.DATA: {"disabled_count": count, "class_name": class_name}
+        ApiResponseConst.DATA: {"disabled_count": count, "class_name": data.class_name}
     }
