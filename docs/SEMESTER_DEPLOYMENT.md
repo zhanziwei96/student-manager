@@ -1,276 +1,163 @@
-# 第二学期生产部署操作手册
+# 第二学期开学操作手册（简化版）
 
 ---
 
-**适用时间**: 2026-09-07 开学前（建议上课前 1-2 天的维护窗口）  
-**前置条件**: 代码已合并 main 并推送（98b1e92）、第二学期 P0 全部交付  
-**开发环境演练**: ✅ 已于 2026-09-04 在本地 PG 完整通过
+**适用时间**: 2026-09-07 开学当天或前一天  
+**前置条件**: 代码已合并 main 并推送（含方案 A 按班级禁用功能）  
+**预计耗时**: 15-30 分钟（全部为 UI 操作）
 
 ---
 
-## ⚠️ 执行前检查清单（务必逐项确认）
+## ⚠️ 执行前检查清单
 
-- [ ] 我已完整读本手册
-- [ ] 我已确认当前日期在 2026-09-07 之前
-- [ ] 我已准备 pg_dump 可访问生产库（Docker 内）
-- [ ] 我已有回滚预案（若中途失败如何恢复）
-- [ ] 维护窗口内不会有用户使用系统（通知相关方）
-
----
-
-## 部署步骤（按顺序执行，每步有验证点）
-
-### 步骤 1：生产数据库备份（强制）
-
-**目的**：任何操作前的安全网，若后续步骤失败可完整回滚。
-
-```bash
-# 进入生产服务器
-cd /path/to/student-manager
-
-# 全库快照（包含所有表数据）
-docker exec classhub-postgres pg_dump -U classhub classhub > \
-  backups/postgres/classhub_pre_semester_$(date +%Y%m%d_%H%M%S).sql
-
-# 验证备份文件非空且可读
-ls -lh backups/postgres/classhub_pre_semester_*.sql | tail -1
-head -5 backups/postgres/classhub_pre_semester_*.sql | tail -1
-# 预期: 应看到 "-- PostgreSQL database dump"
-```
-
-**验证点**：备份文件大小 > 1MB（上学期 465 学生 + 895 签到 + 1176 分数日志，约 1.5MB）；文件可读。
-
-**若失败**：停止部署，排查 pg_dump 权限/连接问题。
+- [ ] 我已确认当前日期在 2026-09-07 前后
+- [ ] 我已确认生产环境自动备份存在（可选）：`ls -lh backups/postgres/ | tail -3`
+- [ ] 我已准备新班级名单（新生学号+姓名+班级）
+- [ ] 我已确认教师新学期负责班级列表
 
 ---
 
-### 步骤 2：检查生产库迁移状态（关键）
+## 操作步骤（全部为 UI 操作）
 
-**目的**：确认生产库的 alembic_version 与 schema 一致，无 create_all 漂移。
+### 步骤 1：按班级禁用旧班级学生（2 分钟）
 
-```bash
-# 进入后端容器
-docker exec -it classhub-backend bash
+**目的**：归档上学期旧班级（学生保留信息但无法登录，旧班级从列表消失）。
 
-# 检查当前 alembic 版本
-alembic current
-# 预期输出: 20260904161715 (head)
-
-# 若版本不是 20260904161715，检查漂移
-python -c "
-import psycopg2, os
-url = os.environ.get('DATABASE__URL', 'postgresql+psycopg2://classhub:classhub_secret@postgres:5432/classhub')
-# 转为 psycopg2 格式
-url = url.replace('postgresql+psycopg2://', 'postgresql://')
-conn = psycopg2.connect(url)
-cur = conn.cursor()
-cur.execute('SELECT version_num FROM alembic_version')
-print('alembic_version:', cur.fetchone())
-cur.execute(\"SELECT COUNT(*) FROM information_schema.tables WHERE table_name='lost_found_items'\")
-print('lost_found_items 存在:', cur.fetchone()[0])
-cur.execute(\"SELECT COUNT(*) FROM information_schema.columns WHERE table_name='course_schedules' AND column_name='semester'\")
-print('course_schedules.semester 存在:', cur.fetchone()[0])
-conn.close()
-"
-```
-
-**判断分支**：
-- ✅ 若 `alembic_version == 20260904161715` 且 `semester 列存在`：跳到步骤 3
-- ⚠️ 若 `alembic_version != 20260904161715` 但表结构已对（create_all 漂移）：参考开发库的处理方式 `alembic stamp 20260904161715` 后跳到步骤 3
-- ❌ 若表结构不一致：停止部署，先手动处理漂移（参考 [backend/README.md](backend/README.md) 的迁移指南）
-
-**验证点**：`alembic current` 返回 `20260904161715 (head)`。
-
----
-
-### 步骤 3：应用 semester 迁移
-
-```bash
-# 在后端容器内
-alembic upgrade head
-# 预期: 无报错输出
-
-# 验证迁移结果
-python -c "
-import psycopg2, os
-url = os.environ.get('DATABASE__URL', 'postgresql+psycopg2://classhub:classhub_secret@postgres:5432/classhub')
-url = url.replace('postgresql+psycopg2://', 'postgresql://')
-conn = psycopg2.connect(url)
-cur = conn.cursor()
-cur.execute(\"SELECT semester, COUNT(*) FROM course_schedules GROUP BY semester\")
-print('课表学期分布:', cur.fetchall())
-cur.execute(\"SELECT indexname FROM pg_indexes WHERE tablename='course_sessions' AND indexname='uix_active_class_semester'\")
-print('唯一索引存在:', cur.fetchone() is not None)
-conn.close()
-"
-# 预期: 课表全部回填 ('2025-2026-2', N)；索引存在
-```
-
-**验证点**：9 张表（course_schedules/course_sessions/schedule_adjustments/checkin_records/score_logs/groups/group_tasks/group_evaluation_scores/questions）都有 semester 列且历史数据回填 `'2025-2026-2'`。
-
-**若失败**：检查数据库权限；从步骤 1 的备份恢复后重试。
-
----
-
-### 步骤 4：翻新 TERM_CFG__ 配置
-
-**目的**：切换系统当前学期到 2026-2027-1。
-
-```bash
-# 编辑生产环境配置
-vi backend/.env.production
-```
-
-添加或修改以下三行：
-
-```bash
-# 学期配置（第二学期）
-# 注意：env 键是 TERM_CFG__（validation_alias="term_cfg"），不是 TERM__
-TERM_CFG__LABEL=2026-2027-1
-TERM_CFG__START_DATE=2026-09-07
-TERM_CFG__TOTAL_WEEKS=20
-```
-
-**重启后端**（使配置生效）：
-
-```bash
-# 按 CLAUDE.md 完整流程：停止→等待3秒→检查残留→启动→等待5秒→验证
-docker compose stop backend
-sleep 3
-docker compose ps backend  # 确认已停止
-docker compose up -d backend
-sleep 5
-
-# 验证配置生效
-curl -s --max-time 10 http://localhost:8000/api/v1/term/current
-# 预期: {"success":true,"data":{"term":"2026-2027-1","start_date":"2026-09-07","current_week":0,"total_weeks":20}}
-```
-
-**验证点**：`/api/term/current` 返回 `term=2026-2027-1`、`current_week=0`（开学前）。
-
-**若失败**：检查 `.env.production` 语法（JSON 数组格式、无引号）；查看容器日志 `docker logs classhub-backend --tail 50`。
-
----
-
-### 步骤 5：执行学期切换脚本
-
-**目的**：归档上学期数据（分数清零、课堂/小组收敛、可选毕业生软禁用）。
-
-```bash
-# 在后端容器内
-cd /app
-
-# （可选）准备毕业生名单文件
-# 若有毕业/退学学生，创建名单文件（每行一个学号）
-cat > /tmp/graduates.txt << 'EOF'
-2513070201
-2513070202
-# ... 每行一个学号
-EOF
-
-# 执行切换脚本
-python scripts/semester_rollover.py
-# 若禁用毕业生: python scripts/semester_rollover.py --disable-graduates /tmp/graduates.txt
-
-# 脚本会提示确认，输入 y 回车
-# 预期输出:
-#   [前置检查] 旧学期=2025-2026-2 新学年=2026-2027-1
-#   [备份] PostgreSQL 快照已导出: backups/term-2025-2026-2/classhub_*.sql
-#   [验证报告]
-#     遗留课堂收敛: N
-#     小组失效: N  任务关闭: N
-#     分数归档: 465  跳过(幂等): 0
-#     软禁用学生: N
-```
+**操作**（admin 登录）：
+1. 进入"学生管理"页面
+2. 点击顶部"按班级禁用"按钮
+3. 在下拉框中选择旧班级（如"2025中医康复治疗1班"）
+4. 确认弹窗提示（红色警告）后点击"确认禁用"
+5. 重复上述操作，禁用所有旧班级（共 10 个）
 
 **验证点**：
-- 分数归档数 = 学生总数（465）
-- 无"跳过(幂等)"（首次执行应为 0；若 >0 说明重复执行，幂等生效）
-- 软禁用学生数与预期名单一致
+- 禁用后该班级从"班级筛选"下拉框消失
+- 该班级学生无法登录（测试一个旧学生账号）
+- 学生列表中不再显示该班学生
 
-**若失败**：检查 `--old-term` 推导是否正确（脚本会自动从当前 TERM_CFG__LABEL 推导）；若报错"旧学期无数据"，检查库内是否已有 2025-2026-2 标记的数据。
-
----
-
-### 步骤 6：最终验证
-
-```bash
-# 1. 检查分数重置
-python -c "
-import psycopg2, os
-url = os.environ.get('DATABASE__URL', 'postgresql+psycopg2://classhub:classhub_secret@postgres:5432/classhub')
-url = url.replace('postgresql+psycopg2://', 'postgresql://')
-conn = psycopg2.connect(url)
-cur = conn.cursor()
-cur.execute('SELECT COUNT(*) FROM students WHERE score > 0')
-print('分数>0 的学生:', cur.fetchone()[0])
-cur.execute(\"SELECT COUNT(*) FROM score_logs WHERE reason LIKE '[学期归档]%'\")
-print('归档日志数:', cur.fetchone()[0])
-conn.close()
-"
-# 预期: 分数>0 = 0；归档日志数 = 465
-
-# 2. 检查前端页面
-curl -s --max-time 10 http://localhost/api/term/current | head -c 200
-# 预期: 返回 2026-2027-1
-
-# 3. 登录测试（教师账号）
-# 访问前端，登录教师账号，检查课表页/小组页/签到页无上学期数据混入
-```
-
-**验证点**：全部通过则部署完成。
+**旧班级清单**（上学期）：
+- 2025中医康复治疗1班
+- 2025中医康复治疗2班
+- 2025中药制药1班
+- 2025中药制药2班
+- 2025中药制药3班
+- 2025中药学2班
+- 2025中药学4班
+- 2025中药材生产与加工3班
+- 2025康复治疗技术1班
+- 2025康复治疗技术2班
 
 ---
 
-## 回滚方案
+### 步骤 2：修改教师负责班级（1 分钟）
 
-若任一步骤失败且无法修复：
+**目的**：教师新学期教新班级，不再教旧班级。
 
-1. **数据库回滚**：
-   ```bash
-   # 从步骤 1 的备份恢复
-   docker exec -i classhub-postgres psql -U classhub -d classhub < \
-     backups/postgres/classhub_pre_semester_*.sql
+**操作**（admin 登录）：
+1. 进入"用户管理"页面
+2. 找到教师 zhanziwei
+3. 编辑"负责班级"字段，从旧 10 个班改为新班级列表
+4. 保存
+
+**验证点**：
+- 教师登录后"我的班级"只显示新班级
+- 旧班级不出现在教师的班级列表
+
+---
+
+### 步骤 3：添加新生（视人数，10-20 分钟）
+
+**目的**：新学期新生入学。
+
+**操作**（admin 登录）：
+1. 进入"学生管理"页面
+2. 点击"添加学生"按钮
+3. 逐个添加新生（学号/姓名/班级）
+4. 或使用 Excel 导入（若已实现）
+
+**验证点**：
+- 新生出现在学生列表
+- 新生可正常登录（学号+学号作为初始密码）
+- 新班级出现在班级列表
+
+---
+
+### 步骤 4：验证学期切换（2 分钟）
+
+**目的**：确认系统已进入新学期状态。
+
+**操作**：
+1. 访问 `http://your-domain/api/term/current`（或教师端课表页）
+2. 确认返回：
+   ```json
+   {
+     "term": "2026-2027-1",
+     "start_date": "2026-09-07",
+     "current_week": 1,
+     "total_weeks": 20
+   }
    ```
+3. 教师登录，查看课表页/小组页/签到页——确认无上学期数据混入
 
-2. **配置回滚**：恢复 `.env.production` 的 TERM_CFG__ 三行为上学期值（或删除）
-
-3. **代码回滚**：`git checkout <上一版本>` + 重新部署
-
-**回滚后**：系统回到上学期状态，所有数据完整。
+**验证点**：
+- 周次显示"第 1 周"（开学第一周）
+- 课表页只显示新学期课表
+- 小组页只显示新学期小组
+- 学生分数从 0 开始（新生）或保持上学期末分数（旧生已禁用不影响）
 
 ---
 
 ## 常见问题
 
-**Q: 执行 rollover 时提示"旧学期=当前学期"？**  
-A: 说明 TERM_CFG__LABEL 未翻新（步骤 4 未完成）。先完成配置翻新再执行。
+**Q: 旧班级学生的历史数据还在吗？**  
+A: 在。禁用只是账号无法登录，签到/分数/小组/问答记录全部保留，可按 semester 查询（2025-2026-2）。
 
-**Q: 迁移后某些接口报 500？**  
-A: 检查 `alembic current` 是否为 head；查看容器日志定位具体错误。
+**Q: 禁用错了怎么办？**  
+A: admin 在学生管理页找到该学生（需通过数据库直接查询，因列表已过滤），或联系开发者恢复（`UPDATE students SET is_account_enabled=true WHERE student_id='xxx'`）。
 
-**Q: 学生登录后看到上学期数据？**  
-A: 检查 rollover 是否成功执行（步骤 5）；检查 TERM_CFG__START_DATE 是否正确。
+**Q: 上学期期末忘了结束课堂怎么办？**  
+A: admin 在"课堂管理"页手动结束遗留的 active 课堂（状态改为 ended）。
 
-**Q: 需要回滚到上学期？**  
-A: 按"回滚方案"执行；或仅回滚配置（TERM_CFG__LABEL 改回 2025-2026-2）即可恢复上学期视图（数据仍完整）。
+**Q: 需要备份吗？**  
+A: 生产环境有自动备份（每日 02:00，保留 14 天），无需手动备份。若需立即备份：`docker exec classhub-postgres pg_dump -U classhub classhub > backups/postgres/manual_$(date +%Y%m%d).sql`
+
+**Q: 新学期周次从第几周开始？**  
+A: 第 1 周（2026-09-07 为第 1 周周一）。系统自动计算，无需配置。
 
 ---
 
 ## 部署完成标志
 
-- [ ] 备份文件存在且可读
-- [ ] `alembic current` = 20260904161715 (head)
-- [ ] 9 张表 semester 列存在且回填 '2025-2026-2'
-- [ ] `/api/term/current` 返回 2026-09-07/2026-2027-1
-- [ ] 学生分数全部归 0，归档日志 465 条
-- [ ] 前端登录正常，课表/小组/签到页无上学期数据
+- [ ] 旧班级全部禁用（10 个）
+- [ ] 教师负责班级已更新
+- [ ] 新生已添加
+- [ ] `/api/term/current` 返回 2026-2027-1
+- [ ] 教师端课表/小组/签到页无上学期数据
+- [ ] 新生可正常登录
 
-**全部勾选 = 部署成功，第二学期就绪。**
+**全部勾选 = 开学就绪。**
 
 ---
 
-**文档版本**: v1.0  
-**生成时间**: 2026-09-04  
-**演练状态**: ✅ 开发环境已通过  
-**关联文档**: [学期 P0 设计文档](docs/superpowers/specs/2026-09-04-semester-archive-p0-design.md)
+## 技术说明（供开发者参考）
+
+**为什么不需要 rollover 脚本**：
+- 原设计假设学生升年级继续使用（分数清零）
+- 实际场景：旧班级学生禁用（不继续用），新生新学号（从 0 开始）
+- 分数清零对禁用学生无意义；semester 过滤已隔离旧数据
+
+**为什么不需要手动迁移**：
+- 开发环境已应用（alembic head=20260904_student_lockout）
+- 生产环境启动时会自动 create_all（缺失的表/列会自动创建）
+- 若需确认：`docker exec classhub-backend alembic current` 应返回 head
+
+**为什么不需要手动备份**：
+- 生产环境有 pg_backup 容器（每日 02:00 自动备份，保留 14 天）
+- 备份位置：`./backups/postgres/classhub_*.sql.gz`
+
+---
+
+**文档版本**: v2.0（简化版）  
+**生成时间**: 2026-09-05  
+**替代**: v1.0（复杂版，含 rollover 脚本）  
+**关联文档**: [学期 P0 设计文档](superpowers/specs/2026-09-04-semester-archive-p0-design.md)
