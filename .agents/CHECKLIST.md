@@ -57,7 +57,7 @@
   - [ ] **必须等待 3 秒**：`sleep 3`
   - [ ] 检查残留进程：`ps aux | grep "python.*main.py" | grep -v grep`
   - [ ] 如有残留，使用 `pkill -9 -f "python.*main.py"`
-  - [ ] 在正确目录启动：`cd /home/yufeng/student-manager/backend`
+  - [ ] 在正确目录启动：`cd backend`（从项目根目录）
   - [ ] 使用正确命令：`conda run -n student-manage ENV=production python main.py &`
   - [ ] **必须等待 5 秒**：`sleep 5`
   - [ ] **必须验证**：`curl -s --max-time 5 http://localhost:8000/api/v1/health`
@@ -85,7 +85,7 @@
 - [ ] 如需重启：
   - [ ] 执行 `pkill -f "pnpm dev" 2>/dev/null || true`
   - [ ] **必须等待 2 秒**：`sleep 2`
-  - [ ] 在正确目录启动：`cd /home/yufeng/student-manager/frontend-v3`
+  - [ ] 在正确目录启动：`cd frontend-v3`（从项目根目录）
   - [ ] 使用正确命令：`pnpm dev &`
   - [ ] **必须等待 3 秒**：`sleep 3`
   - [ ] **必须验证**：`curl -s --max-time 5 http://localhost:5173 > /dev/null && echo "前端运行中"`

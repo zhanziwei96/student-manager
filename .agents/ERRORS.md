@@ -67,7 +67,7 @@ pkill -f "python main.py" 2>/dev/null || true
 sleep 3  # 必须等待！
 ps aux | grep "python.*main.py" | grep -v grep  # 检查残留
 # 如有残留: pkill -9 -f "python.*main.py"
-cd /home/yufeng/student-manager/backend
+cd backend
 conda run -n student-manage ENV=production python main.py &
 sleep 5
 curl -s http://localhost:8000/api/v1/health  # 必须验证！
@@ -75,7 +75,7 @@ curl -s http://localhost:8000/api/v1/health  # 必须验证！
 # 前端重启
 pkill -f "pnpm dev" 2>/dev/null || true
 sleep 2
-cd /home/yufeng/student-manager/frontend-v3
+cd frontend-v3
 pnpm dev &
 sleep 3
 curl -s http://localhost:5173 > /dev/null && echo "前端运行中"  # 必须验证！

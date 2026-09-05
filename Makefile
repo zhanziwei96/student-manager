@@ -32,22 +32,40 @@ dev:
 	@echo "启动开发环境..."
 	@echo "建议开两个终端分别运行: make dev-backend 和 make dev-frontend"
 
-# 启动后端服务（需要 conda 环境）
+# 启动后端服务（需要 conda 环境，开发模式热重载）
 dev-backend:
-	@echo "启动后端服务..."
-	cd backend && conda run -n student-manage ENV=production python main.py
+	@echo "启动后端服务（开发模式，热重载）..."
+	cd backend && conda run -n student-manage ENV=development python main.py
 
 # 启动前端服务
 dev-frontend:
 	@echo "启动前端服务 (frontend-v3)..."
 	cd frontend-v3 && pnpm dev
 
-# 停止服务（根据进程名查找并停止）
+# 后台启动后端（用于脚本/CI）
+dev-backend-bg:
+	@echo "后台启动后端服务..."
+	cd backend && nohup conda run -n student-manage ENV=development python main.py > logs/dev-backend.log 2>&1 &
+	@sleep 5
+	@curl -s --max-time 5 http://localhost:8000/api/v1/health && echo " ✅ 后端启动成功" || echo " ❌ 后端启动失败"
+
+# 后台启动前端（用于脚本/CI）
+dev-frontend-bg:
+	@echo "后台启动前端服务..."
+	cd frontend-v3 && nohup pnpm dev > ../logs/dev-frontend.log 2>&1 &
+	@sleep 3
+	@curl -s --max-time 5 http://localhost:5173 > /dev/null && echo " ✅ 前端启动成功" || echo " ❌ 前端启动失败"
+
+# 停止服务（根据进程名查找并停止，含残留检查）
 stop:
 	@echo "停止后端服务..."
 	-pkill -f "python main.py" 2>/dev/null || true
+	@sleep 3
+	@ps aux | grep "python.*main.py" | grep -v grep && (echo "发现残留进程，强制结束..." && pkill -9 -f "python.*main.py") || true
 	@echo "停止前端服务..."
 	-pkill -f "vite" 2>/dev/null || pkill -f "pnpm dev" 2>/dev/null || true
+	@sleep 2
+	@ps aux | grep -E "vite|pnpm.*dev" | grep -v grep && (echo "发现残留进程，强制结束..." && pkill -9 -f "vite" && pkill -9 -f "pnpm.*dev") || true
 	@echo "服务已停止"
 
 # 查看日志（使用 tail 查看最新日志）

@@ -140,7 +140,7 @@ ps aux | grep "python.*main.py" | grep -v grep
 pkill -9 -f "python.*main.py"
 
 # 5. 启动服务
-cd /home/yufeng/student-manager/backend
+cd backend
 conda run -n student-manage ENV=production python main.py &
 sleep 5
 

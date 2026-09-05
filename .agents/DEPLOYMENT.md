@@ -70,7 +70,7 @@ ps aux | grep "python.*main.py" | grep -v grep
 
 # 3. 启动新服务
 # 生产环境启动
-cd /home/yufeng/student-manager/backend
+cd backend
 conda run -n student-manage ENV=production python main.py &
 
 # 如需开发环境热重载，请改用：
@@ -90,7 +90,7 @@ pkill -f "pnpm dev" 2>/dev/null || true
 sleep 2
 
 # 2. 启动新服务
-cd /home/yufeng/student-manager/frontend-v3
+cd frontend-v3
 pnpm dev &
 sleep 3
 
@@ -101,7 +101,7 @@ curl -s http://localhost:5173 > /dev/null && echo "前端运行中 ✅"
 ## 4. 一键启动（Makefile）
 
 ```bash
-cd /home/yufeng/student-manager
+cd .
 
 # 检查状态
 make status
