@@ -221,10 +221,33 @@ def delete_student(session: Session, student_id: str) -> bool:
 
 
 def get_all_classes(session: Session) -> List[str]:
-    """获取所有班级列表"""
-    query = select(Student.class_name).distinct()
+    """获取所有班级列表（只包含有启用学生的班级）"""
+    query = select(Student.class_name).where(Student.is_account_enabled.is_(True)).distinct()
     result = session.exec(query).all()
     return [str(row) for row in result if row]
+
+
+def disable_students_by_class(session: Session, class_name: str) -> int:
+    """批量禁用指定班级的所有学生账号（学期归档）
+
+    只更新当前处于启用状态的学生，重复调用返回 0（幂等）。
+    历史数据（签到/分数记录）保留，仅账号无法登录。
+
+    Args:
+        session: 数据库会话
+        class_name: 班级名称
+
+    Returns:
+        int: 本次禁用的学生数量
+    """
+    from sqlalchemy import update
+    result = session.exec(
+        update(Student)
+        .where(Student.class_name == class_name, Student.is_account_enabled.is_(True))
+        .values(is_account_enabled=False)
+    )
+    session.commit()
+    return result.rowcount
 
 
 def count_students(session: Session) -> int:

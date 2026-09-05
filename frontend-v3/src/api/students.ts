@@ -37,6 +37,10 @@ export const studentsApi = {
   resetPassword: (id: number, newPassword: string): Promise<void> =>
     put(`/students/${id}/reset-password`, { new_password: newPassword }),
 
+  /** 按班级批量禁用学生账号（学期归档，admin 或负责该班的教师） */
+  disableByClass: (className: string): Promise<{ disabled_count: number; class_name: string }> =>
+    post('/students/disable-by-class', { class_name: className }),
+
   import: (file: File): Promise<{ imported: number }> => {
     const formData = new FormData()
     formData.append('file', file)

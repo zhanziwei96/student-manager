@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useStudents, useToast } from '@/composables'
 import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, useStudentFilters } from '@/features/students'
-import { DataContainer, Card } from '@/components/ui'
+import { DataContainer, Card, Button, Dialog, Label, Select } from '@/components/ui'
 import type { Student } from '@/types'
+import { studentsApi } from '@/api'
 import { getErrorMessage } from '@/lib/error'
-import { Users, GraduationCap, Search } from 'lucide-vue-next'
+import { Users, GraduationCap, Search, Archive } from 'lucide-vue-next'
 
 /**
  * 教师学生管理页面 - FE-006 重构后
@@ -63,6 +65,40 @@ const defaultReason = ref('')
 // === Toast 状态 (队列模式) ===
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 
+// === 按班级禁用（学期归档，仅限自己负责的班级） ===
+const queryClient = useQueryClient()
+const showDisableDialog = ref(false)
+const disableClassName = ref('')
+const isDisabling = ref(false)
+
+// 可选班级（排除“全部班级”占位项）
+const disableClassOptions = computed(() =>
+  classOptions.value.filter((o) => o.value !== '')
+)
+
+const openDisableDialog = () => {
+  disableClassName.value = ''
+  showDisableDialog.value = true
+}
+
+const handleDisableByClass = async () => {
+  if (!disableClassName.value) return
+
+  try {
+    isDisabling.value = true
+    const result = await studentsApi.disableByClass(disableClassName.value)
+    // 刷新学生列表与班级列表（禁用后班级从列表消失）
+    await queryClient.invalidateQueries({ queryKey: ['students'] })
+    await queryClient.invalidateQueries({ queryKey: ['classes'] })
+    showDisableDialog.value = false
+    showSuccessToast(`已禁用 ${result.disabled_count} 名学生`)
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '按班级禁用失败')
+  } finally {
+    isDisabling.value = false
+  }
+}
+
 // === 快速分数选项 ===
 const quickScoreOptions = [
   { label: '课堂提问', score: 2, icon: 'MessageCircle' },
@@ -105,13 +141,23 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
 <template>
   <div>
     <!-- Header -->
-    <div class="mb-5">
-      <h1 class="text-2xl font-medium text-black">
-        我的学生
-      </h1>
-      <p class="text-[#737373]">
-        查看和管理学生分数
-      </p>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
+      <div>
+        <h1 class="text-2xl font-medium text-black">
+          我的学生
+        </h1>
+        <p class="text-[#737373]">
+          查看和管理学生分数
+        </p>
+      </div>
+      <Button
+        variant="outline"
+        data-testid="disable-by-class-btn"
+        @click="openDisableDialog"
+      >
+        <Archive class="mr-2 h-4 w-4" />
+        按班级禁用
+      </Button>
     </div>
 
     <!-- Stats Cards -->
@@ -186,5 +232,47 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
       :default-reason="defaultReason"
       @submit="handleUpdateScore"
     />
+
+    <!-- 按班级禁用对话框（学期归档） -->
+    <Dialog
+      v-model:open="showDisableDialog"
+      title="按班级禁用"
+      description="禁用后该班级学生无法登录，班级将从列表中消失，历史数据保留"
+    >
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="disableClassName">选择班级</Label>
+          <Select
+            id="disableClassName"
+            v-model="disableClassName"
+            :options="disableClassOptions"
+            placeholder="选择要禁用的班级"
+          />
+        </div>
+        <p
+          v-if="disableClassName"
+          class="text-sm text-[#ef4444]"
+        >
+          将禁用「{{ disableClassName }}」的所有学生账号，确定吗？
+        </p>
+      </div>
+      <template #footer>
+        <Button
+          variant="outline"
+          @click="showDisableDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          variant="destructive"
+          :disabled="!disableClassName"
+          :loading="isDisabling"
+          data-testid="confirm-disable-btn"
+          @click="handleDisableByClass"
+        >
+          确认禁用
+        </Button>
+      </template>
+    </Dialog>
   </div>
 </template>

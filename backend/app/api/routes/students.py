@@ -13,7 +13,7 @@ from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password,
-    unlock_student_account
+    unlock_student_account, disable_students_by_class
 )
 from app.crud.checkin import get_today_checkins
 from app.crud.course_session import get_active_course_session_by_class_name
@@ -470,4 +470,30 @@ async def unlock_student_api(
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: "账号已解锁"
+    }
+
+
+@router.post("/students/disable-by-class", response_model=ApiResponse[dict])
+async def disable_students_by_class_api(
+    request: Request,
+    data: dict = Body(...),
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin_or_teacher)
+):
+    """按班级批量禁用学生账号（学期归档，admin 或负责该班的教师）
+
+    禁用后学生无法登录，班级从班级列表消失，历史数据保留。
+    """
+    class_name = data.get("class_name")
+    if not class_name:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少班级名称')
+
+    verify_teacher_class_access(user, class_name, session)
+
+    count = disable_students_by_class(session, class_name)
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: f"已禁用 {count} 名学生",
+        ApiResponseConst.DATA: {"disabled_count": count, "class_name": class_name}
     }

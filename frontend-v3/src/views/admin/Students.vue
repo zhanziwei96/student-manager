@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useStudents, useStudentCreate, useToast } from '@/composables'
 import { StudentFilters, useStudentFilters } from '@/features/students'
-import { Card, Button, Badge, Dialog, Input, Label, DataContainer } from '@/components/ui'
-import { Plus } from 'lucide-vue-next'
+import { Card, Button, Badge, Dialog, Input, Label, Select, DataContainer } from '@/components/ui'
+import { Plus, Archive } from 'lucide-vue-next'
+import { studentsApi } from '@/api'
 import { getErrorMessage } from '@/lib/error'
 
 /**
@@ -36,6 +38,40 @@ watch(() => students.value, (newData) => {
 
 // === Toast 状态 (队列模式) ===
 const { success: showSuccessToast, error: showErrorToast } = useToast()
+
+// === 按班级禁用（学期归档） ===
+const queryClient = useQueryClient()
+const showDisableDialog = ref(false)
+const disableClassName = ref('')
+const isDisabling = ref(false)
+
+// 可选班级（排除“全部班级”占位项）
+const disableClassOptions = computed(() =>
+  classOptions.value.filter((o) => o.value !== '')
+)
+
+const openDisableDialog = () => {
+  disableClassName.value = ''
+  showDisableDialog.value = true
+}
+
+const handleDisableByClass = async () => {
+  if (!disableClassName.value) return
+
+  try {
+    isDisabling.value = true
+    const result = await studentsApi.disableByClass(disableClassName.value)
+    // 刷新学生列表与班级列表（禁用后班级从列表消失）
+    await queryClient.invalidateQueries({ queryKey: ['students'] })
+    await queryClient.invalidateQueries({ queryKey: ['classes'] })
+    showDisableDialog.value = false
+    showSuccessToast(`已禁用 ${result.disabled_count} 名学生`)
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '按班级禁用失败')
+  } finally {
+    isDisabling.value = false
+  }
+}
 
 // === 添加学生对话框 ===
 const showAddDialog = ref(false)
@@ -123,10 +159,20 @@ const handleAddStudent = async () => {
           管理学生档案和分数
         </p>
       </div>
-      <Button @click="openAddDialog">
-        <Plus class="mr-2 h-4 w-4" />
-        添加学生
-      </Button>
+      <div class="flex gap-2">
+        <Button
+          variant="outline"
+          data-testid="disable-by-class-btn"
+          @click="openDisableDialog"
+        >
+          <Archive class="mr-2 h-4 w-4" />
+          按班级禁用
+        </Button>
+        <Button @click="openAddDialog">
+          <Plus class="mr-2 h-4 w-4" />
+          添加学生
+        </Button>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -313,6 +359,47 @@ const handleAddStudent = async () => {
           @click="handleAddStudent"
         >
           添加
+        </Button>
+      </template>
+    </Dialog>
+    <!-- 按班级禁用对话框（学期归档） -->
+    <Dialog
+      v-model:open="showDisableDialog"
+      title="按班级禁用"
+      description="禁用后该班级学生无法登录，班级将从列表中消失，历史数据保留"
+    >
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="disableClassName">选择班级</Label>
+          <Select
+            id="disableClassName"
+            v-model="disableClassName"
+            :options="disableClassOptions"
+            placeholder="选择要禁用的班级"
+          />
+        </div>
+        <p
+          v-if="disableClassName"
+          class="text-sm text-[#ef4444]"
+        >
+          将禁用「{{ disableClassName }}」的所有学生账号，确定吗？
+        </p>
+      </div>
+      <template #footer>
+        <Button
+          variant="outline"
+          @click="showDisableDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          variant="destructive"
+          :disabled="!disableClassName"
+          :loading="isDisabling"
+          data-testid="confirm-disable-btn"
+          @click="handleDisableByClass"
+        >
+          确认禁用
         </Button>
       </template>
     </Dialog>
