@@ -47,6 +47,11 @@ from app.crud.subject import (
     create_subject,
     update_subject_name,
 )
+from app.crud.student_subject_score import (
+    init_student_subject_scores,
+    transfer_student_to_new_teacher,
+    update_student_subject_score,
+)
 from app.crud.group import (
     get_group, get_groups_by_class, get_student_active_group,
     get_group_members, create_group, create_membership_request,
@@ -114,6 +119,10 @@ __all__ = [
     "get_subjects_by_semester",
     "create_subject",
     "update_subject_name",
+    # StudentSubjectScore
+    "init_student_subject_scores",
+    "transfer_student_to_new_teacher",
+    "update_student_subject_score",
     # Group
     "get_group", "get_groups_by_class", "get_student_active_group",
     "get_group_members", "create_group", "create_membership_request",
