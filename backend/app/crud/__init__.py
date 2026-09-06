@@ -41,6 +41,12 @@ from app.crud.audit import (
     create_security_alert, get_unresolved_alerts, resolve_alert, cleanup_old_audit_logs
 )
 from app.crud.leaderboard import get_leaderboard
+from app.crud.subject import (
+    derive_subjects_and_teachers,
+    get_subjects_by_semester,
+    create_subject,
+    update_subject_name,
+)
 from app.crud.group import (
     get_group, get_groups_by_class, get_student_active_group,
     get_group_members, create_group, create_membership_request,
@@ -103,6 +109,11 @@ __all__ = [
     "has_active_session", "has_ended_session",
     # Leaderboard
     "get_leaderboard",
+    # Subject
+    "derive_subjects_and_teachers",
+    "get_subjects_by_semester",
+    "create_subject",
+    "update_subject_name",
     # Group
     "get_group", "get_groups_by_class", "get_student_active_group",
     "get_group_members", "create_group", "create_membership_request",
