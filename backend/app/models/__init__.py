@@ -23,6 +23,7 @@ from app.models.constants import (
     UserRole, UserRoleConst, UserStatus, CheckinType,
     ApiResponse, ApiSuccessResponse, ApiListResponse, ApiErrorResponse,
 )
+from app.models.subject import Subject, StudentSubjectScore, StudentSubjectScoreLog
 
 __all__ = [
     # Student
@@ -52,4 +53,6 @@ __all__ = [
     # Lost & Found
     "LostFoundItem", "LostFoundComment", "LostFoundClaim",
     "LostFoundItemResponse", "LostFoundCommentResponse", "LostFoundClaimResponse",
+    # Subject
+    "Subject", "StudentSubjectScore", "StudentSubjectScoreLog",
 ]
