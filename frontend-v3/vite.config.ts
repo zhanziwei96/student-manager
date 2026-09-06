@@ -15,8 +15,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
-    strictPort: true,  // 固定 5173，被占用时报错而非自动切换
+    port: 5174,  // 5173 被 Windows 侧 svchost 占用，改用 5174
+    strictPort: true,
     host: '0.0.0.0',
     proxy: {
       '/api': {
