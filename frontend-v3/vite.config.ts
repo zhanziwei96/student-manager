@@ -16,6 +16,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,  // 固定 5173，被占用时报错而非自动切换
     host: '0.0.0.0',
     proxy: {
       '/api': {
