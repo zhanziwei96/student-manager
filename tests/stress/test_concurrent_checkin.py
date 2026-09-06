@@ -45,6 +45,22 @@ def setup_course_session(client, teacher_cookies):
     # 导入cookies
     client.cookies.update(teacher_cookies)
 
+    # 为压测班级造一个启用学生（满足 verify_class_has_active_students 校验）
+    import psycopg2
+    from datetime import datetime
+    from app.core.config import get_settings
+    db_url = get_settings().database.url
+    conn = psycopg2.connect(db_url)
+    cursor = conn.cursor()
+    now = datetime.now()
+    cursor.execute(
+        "INSERT INTO students (student_id, name, class_name, score, is_account_enabled, created_at, version, login_fail_count) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (student_id) DO NOTHING",
+        ("STRESS_TEST_STUDENT", "压测学生", TEST_CLASS, 70.0, True, now, 1, 0)
+    )
+    conn.commit()
+    conn.close()
+
     # 先结束所有活跃会话
     sessions_resp = client.get("/course-sessions")
     if sessions_resp.status_code == 200:
@@ -65,19 +81,17 @@ def setup_course_session(client, teacher_cookies):
     yield session_id
 
     # 清理：删除该会话的所有签到记录，然后结束会话
-    import sqlite3
-    from app.core.config import get_settings
-    db_path = get_settings().get_database_path()
     try:
-        conn = sqlite3.connect(db_path)
+        conn = psycopg2.connect(db_url)
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM checkin_records WHERE session_id = ?", (session_id,))
+        cursor.execute("DELETE FROM checkin_records WHERE session_id = %s", (session_id,))
+        cursor.execute("DELETE FROM students WHERE student_id = %s", ("STRESS_TEST_STUDENT",))
         conn.commit()
         conn.close()
         print(f"\n清理：已删除会话 {session_id} 的 {cursor.rowcount} 条签到记录")
     except Exception as e:
         print(f"\n清理签到记录失败: {e}")
-    
+
     client.post(f"/course-sessions/{session_id}/end")
 
 
