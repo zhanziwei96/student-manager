@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
-import { useStudents, useToast } from '@/composables'
-import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, useStudentFilters } from '@/features/students'
+import { useToast } from '@/composables'
+import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, usePaginatedStudents } from '@/features/students'
 import { DataContainer, Card, Button, Dialog, Label, Checkbox } from '@/components/ui'
 import type { Student } from '@/types'
 import { studentsApi } from '@/api'
 import { getErrorMessage } from '@/lib/error'
-import { Users, GraduationCap, Search, Archive } from 'lucide-vue-next'
+import { Users, GraduationCap, Search, Archive, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 /**
  * 教师学生管理页面 - FE-006 重构后
@@ -16,18 +16,33 @@ import { Users, GraduationCap, Search, Archive } from 'lucide-vue-next'
  * - 使用 features/students 的组件和 composables
  * - 视图层只负责页面布局和状态组合
  * - 业务逻辑下沉到 Feature 层
+ * - 学生列表服务端分页（usePaginatedStudents），搜索时前端过滤
  */
 
-// === 数据获取 ===
-const { data: students, isPending, error, refetch } = useStudents()
+// === 数据获取（服务端分页） ===
+const {
+  page,
+  searchQuery,
+  className,
+  isSearching,
+  classOptions,
+  filteredStudents,
+  total: totalStudents,
+  totalPages,
+  isPending,
+  error,
+  refetch,
+  setSearchQuery,
+  setClassFilter,
+} = usePaginatedStudents()
 
 
-// 统计信息
+// 统计信息（总数来自服务端 total；已签到/平均分基于当前展示列表）
 const stats = computed(() => {
-  const total = filteredStudents.value.length
+  const total = isSearching.value ? filteredStudents.value.length : totalStudents.value
   const checkedIn = filteredStudents.value.filter(s => s.checkin_status === 'checked_in').length
-  const avgScore = total > 0
-    ? Math.round(filteredStudents.value.reduce((sum, s) => sum + s.score, 0) / total)
+  const avgScore = filteredStudents.value.length > 0
+    ? Math.round(filteredStudents.value.reduce((sum, s) => sum + s.score, 0) / filteredStudents.value.length)
     : 0
 
   return [
@@ -39,22 +54,6 @@ const stats = computed(() => {
 
 // === Feature composables ===
 const { updateScore, isUpdating, updatingStudentId } = useStudentScore()
-const {
-  filters,
-  classOptions,
-  filteredStudents,
-  setSearchQuery,
-  setClassFilter,
-  selectFirstClass,
-} = useStudentFilters(students)
-
-
-// 默认选中第一个班级
-watch(() => students.value, (newData) => {
-  if (newData && newData.length > 0) {
-    selectFirstClass()
-  }
-}, { immediate: true })
 
 // === 分数对话框状态 ===
 const selectedStudent = ref<Student | null>(null)
@@ -202,8 +201,8 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
 
     <!-- Filters -->
     <StudentFilters class="mb-5"
-      v-model:search-query="filters.searchQuery"
-      v-model:selected-class="filters.className"
+      v-model:search-query="searchQuery"
+      v-model:selected-class="className"
       :class-options="classOptions"
       @update:search-query="setSearchQuery"
       @update:selected-class="setClassFilter"
@@ -229,6 +228,41 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
           @quick-score="handleQuickScore"
           @open-score-dialog="openScoreDialog"
         />
+      </div>
+
+      <!-- 分页（搜索模式下显示匹配数量） -->
+      <div
+        v-if="isSearching"
+        class="mt-4 text-center text-sm text-[#737373]"
+      >
+        找到 {{ filteredStudents.length }} 名匹配的学生
+      </div>
+      <div
+        v-else-if="totalPages > 1"
+        class="flex items-center justify-center gap-2 mt-4"
+        data-testid="students-pagination"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="page <= 1"
+          data-testid="students-prev-page"
+          @click="page--"
+        >
+          <ChevronLeft class="h-4 w-4" />
+        </Button>
+        <span class="text-sm text-[#737373]">
+          {{ page }} / {{ totalPages }}（共 {{ totalStudents }} 人）
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="page >= totalPages"
+          data-testid="students-next-page"
+          @click="page++"
+        >
+          <ChevronRight class="h-4 w-4" />
+        </Button>
       </div>
     </DataContainer>
 

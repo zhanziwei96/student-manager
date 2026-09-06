@@ -18,39 +18,94 @@ def get_student(session: Session, student_id: str) -> Optional[Student]:
     return session.get(Student, student_id)
 
 
-def get_students(session: Session, class_name: Optional[str] = None, include_disabled: bool = False) -> List[Student]:
-    """获取学生列表（默认只返回启用学生）
+def get_students(
+    session: Session,
+    class_name: Optional[str] = None,
+    include_disabled: bool = False,
+    limit: Optional[int] = None,
+    offset: int = 0,
+) -> List[Student]:
+    """获取学生列表（默认只返回启用学生，支持分页）
 
     Args:
         session: 数据库会话
         class_name: 班级名称（可选）
         include_disabled: 是否包含已禁用学生（admin 恢复场景用）
+        limit: 返回数量限制（None=全部，保持向后兼容）
+        offset: 偏移量（分页用）
     """
     query = select(Student).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if class_name:
         query = query.where(Student.class_name == class_name)
+    if offset:
+        query = query.offset(offset)
+    if limit:
+        query = query.limit(limit)
     return session.exec(query).all()
 
 
-def get_students_by_class(session: Session, class_name: str, include_disabled: bool = False) -> List[Student]:
-    """根据班级获取学生（默认只返回启用学生）
+def count_students_filtered(
+    session: Session,
+    class_name: Optional[str] = None,
+    class_names: Optional[List[str]] = None,
+    include_disabled: bool = False,
+) -> int:
+    """按筛选条件统计学生总数（分页 total 用）
+
+    Args:
+        session: 数据库会话
+        class_name: 单个班级名称（可选）
+        class_names: 多个班级名称（可选，教师全部负责班级场景）
+        include_disabled: 是否包含已禁用学生
+    """
+    from sqlalchemy import func
+    query = select(func.count()).select_from(Student)
+    if not include_disabled:
+        query = query.where(Student.is_account_enabled.is_(True))
+    if class_name:
+        query = query.where(Student.class_name == class_name)
+    elif class_names is not None:
+        query = query.where(Student.class_name.in_(class_names))
+    return session.exec(query).one()
+
+
+def get_students_by_class(
+    session: Session,
+    class_name: str,
+    include_disabled: bool = False,
+    limit: Optional[int] = None,
+    offset: int = 0,
+) -> List[Student]:
+    """根据班级获取学生（默认只返回启用学生，支持分页）
 
     Args:
         session: 数据库会话
         class_name: 班级名称
         include_disabled: 是否包含已禁用学生（admin 恢复场景用）
+        limit: 返回数量限制（None=全部）
+        offset: 偏移量（分页用）
     """
     query = select(Student).where(Student.class_name == class_name).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
+    if offset:
+        query = query.offset(offset)
+    if limit:
+        query = query.limit(limit)
     return session.exec(query).all()
 
 
-def get_students_by_classes(session: Session, class_names: List[str], include_disabled: bool = False) -> List[Student]:
+def get_students_by_classes(
+    session: Session,
+    class_names: List[str],
+    include_disabled: bool = False,
+    limit: Optional[int] = None,
+    offset: int = 0,
+) -> List[Student]:
     """
-    根据多个班级获取学生 - 性能优化（REVIEW-P1）
+    根据多个班级获取学生 - 性能优化（REVIEW-P1），支持分页
 
     使用 SQL IN 查询替代循环查询，减少数据库往返次数。
     同时使用 SQL DISTINCT 去重，避免 Python 内存去重。
@@ -60,6 +115,8 @@ def get_students_by_classes(session: Session, class_names: List[str], include_di
         session: 数据库会话
         class_names: 班级名称列表
         include_disabled: 是否包含已禁用学生（admin 恢复场景用）
+        limit: 返回数量限制（None=全部）
+        offset: 偏移量（分页用）
 
     Returns:
         学生列表（已去重）
@@ -73,6 +130,10 @@ def get_students_by_classes(session: Session, class_names: List[str], include_di
     query = select(Student).where(Student.class_name.in_(class_names)).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
+    if offset:
+        query = query.offset(offset)
+    if limit:
+        query = query.limit(limit)
     return session.exec(query).all()
 
 

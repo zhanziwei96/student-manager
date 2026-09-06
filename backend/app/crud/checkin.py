@@ -154,8 +154,20 @@ def count_checkins_by_session_id(session: Session, session_id: int) -> int:
     return result.one()
 
 
-def get_student_score_logs(session: Session, student_id: str, limit: Optional[int] = None) -> List[ScoreLog]:
-    """获取学生当前学期分数日志"""
+def get_student_score_logs(
+    session: Session,
+    student_id: str,
+    limit: Optional[int] = None,
+    offset: int = 0,
+) -> List[ScoreLog]:
+    """获取学生当前学期分数日志（支持分页）
+
+    Args:
+        session: 数据库会话
+        student_id: 学号
+        limit: 返回数量限制（None=使用配置默认值；0=不限制）
+        offset: 偏移量（分页"加载更多"用）
+    """
     query = (
         select(ScoreLog)
         .where(
@@ -167,6 +179,8 @@ def get_student_score_logs(session: Session, student_id: str, limit: Optional[in
     if limit is None:
         from app.core.config import get_settings
         limit = get_settings().pagination.score_log_default_limit
+    if offset:
+        query = query.offset(offset)
     if limit > 0:
         query = query.limit(limit)
     return list(session.exec(query).all())

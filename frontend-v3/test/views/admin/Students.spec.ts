@@ -14,15 +14,10 @@ const holder = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
   disableByClass: vi.fn(() => Promise.resolve({ disabled_count: 3, class_names: ['一班'] })),
+  paginated: null as unknown as Record<string, unknown>,
 }))
 
 vi.mock('@/composables', () => ({
-  useStudents: () => ({
-    data: ref([]),
-    isPending: ref(false),
-    error: ref(null),
-    refetch: vi.fn(),
-  }),
   useStudentCreate: () => ({
     mutateAsync: vi.fn(),
     isPending: ref(false),
@@ -41,19 +36,32 @@ vi.mock('@/api', () => ({
 
 vi.mock('@/features/students', () => ({
   StudentFilters: { template: '<div />' },
-  useStudentFilters: () => ({
-    filters: ref({ searchQuery: '', className: '' }),
-    classOptions: ref([
-      { value: '', label: '全部班级', count: 5 },
-      { value: '一班', label: '一班 (3人)', count: 3 },
-      { value: '二班', label: '二班 (2人)', count: 2 },
-    ]),
-    filteredStudents: ref([]),
-    setSearchQuery: vi.fn(),
-    setClassFilter: vi.fn(),
-    selectFirstClass: vi.fn(),
-  }),
+  usePaginatedStudents: () => holder.paginated,
 }))
+
+/** 构造 usePaginatedStudents 的 mock 返回值（各用例可覆盖字段） */
+const makePaginated = (overrides: Record<string, unknown> = {}) => ({
+  page: ref(1),
+  pageSize: 50,
+  searchQuery: ref(''),
+  className: ref(''),
+  isSearching: ref(false),
+  classOptions: ref([
+    { value: '', label: '全部班级', count: 0 },
+    { value: '一班', label: '一班', count: 0 },
+    { value: '二班', label: '二班', count: 0 },
+  ]),
+  filteredStudents: ref([]),
+  total: ref(0),
+  totalPages: ref(1),
+  isPending: ref(false),
+  error: ref(null),
+  refetch: vi.fn(),
+  setSearchQuery: vi.fn(),
+  setClassFilter: vi.fn(),
+  selectFirstClass: vi.fn(),
+  ...overrides,
+})
 
 // Mock Dialog 避免 Teleport 问题
 const MockDialog = {
@@ -97,6 +105,7 @@ const openDialog = async (wrapper: ReturnType<typeof createWrapper>) => {
 describe('Admin Students - 按班级禁用（多选）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    holder.paginated = makePaginated()
   })
 
   it('渲染"按班级禁用"按钮', () => {
@@ -115,8 +124,8 @@ describe('Admin Students - 按班级禁用（多选）', () => {
 
     const checkboxes = dialog.findAll('input[type="checkbox"]')
     expect(checkboxes).toHaveLength(2)
-    expect(dialog.text()).toContain('一班 (3人)')
-    expect(dialog.text()).toContain('二班 (2人)')
+    expect(dialog.text()).toContain('一班')
+    expect(dialog.text()).toContain('二班')
     expect(dialog.text()).not.toContain('全部班级')
   })
 
@@ -189,5 +198,86 @@ describe('Admin Students - 按班级禁用（多选）', () => {
 
     expect(holder.error).toHaveBeenCalled()
     expect(wrapper.find('.mock-dialog').exists()).toBe(true)
+  })
+})
+
+describe('Admin Students - 列表分页', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('totalPages > 1 时渲染分页组件并显示总数', () => {
+    holder.paginated = makePaginated({
+      page: ref(1),
+      total: ref(120),
+      totalPages: ref(3),
+    })
+    const wrapper = createWrapper()
+
+    const pagination = wrapper.find('[data-testid="students-pagination"]')
+    expect(pagination.exists()).toBe(true)
+    expect(pagination.text()).toContain('1 / 3')
+    expect(pagination.text()).toContain('共 120 人')
+  })
+
+  it('totalPages <= 1 时不渲染分页组件', () => {
+    holder.paginated = makePaginated({
+      total: ref(30),
+      totalPages: ref(1),
+    })
+    const wrapper = createWrapper()
+
+    expect(wrapper.find('[data-testid="students-pagination"]').exists()).toBe(false)
+  })
+
+  it('点击下一页/上一页切换页码', async () => {
+    const page = ref(1)
+    holder.paginated = makePaginated({
+      page,
+      total: ref(120),
+      totalPages: ref(3),
+    })
+    const wrapper = createWrapper()
+
+    // 第一页时上一页禁用
+    expect(wrapper.find('[data-testid="students-prev-page"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.find('[data-testid="students-next-page"]').trigger('click')
+    expect(page.value).toBe(2)
+
+    await wrapper.find('[data-testid="students-prev-page"]').trigger('click')
+    expect(page.value).toBe(1)
+  })
+
+  it('最后一页时下一页禁用', () => {
+    holder.paginated = makePaginated({
+      page: ref(3),
+      total: ref(120),
+      totalPages: ref(3),
+    })
+    const wrapper = createWrapper()
+
+    expect(wrapper.find('[data-testid="students-next-page"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="students-prev-page"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('搜索模式下不显示分页组件，显示匹配数量', () => {
+    const fakeStudent = (id: string) => ({
+      student_id: id,
+      name: `学生${id}`,
+      class_name: '一班',
+      score: 80,
+      is_account_enabled: true,
+      checkin_status: 'not_checked_in',
+    })
+    holder.paginated = makePaginated({
+      isSearching: ref(true),
+      filteredStudents: ref([fakeStudent('S001'), fakeStudent('S002')]),
+      totalPages: ref(3),
+    })
+    const wrapper = createWrapper()
+
+    expect(wrapper.find('[data-testid="students-pagination"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('找到 2 名匹配的学生')
   })
 })

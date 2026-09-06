@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
-import { useStudents, useStudentCreate, useToast } from '@/composables'
-import { StudentFilters, useStudentFilters } from '@/features/students'
+import { useStudentCreate, useToast } from '@/composables'
+import { StudentFilters, usePaginatedStudents } from '@/features/students'
 import { Card, Button, Badge, Dialog, Input, Label, Checkbox, DataContainer } from '@/components/ui'
-import { Plus, Archive } from 'lucide-vue-next'
+import { Plus, Archive, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { studentsApi } from '@/api'
 import { getErrorMessage } from '@/lib/error'
 
@@ -12,29 +12,27 @@ import { getErrorMessage } from '@/lib/error'
  * 管理员学生管理页面 - FE-006 重构后
  *
  * 使用 Feature-based 架构，使用共享的 StudentFilters 组件
+ * 学生列表服务端分页（usePaginatedStudents），搜索时前端过滤
  */
 
 
-// === 数据获取 ===
-const { data: students, isPending, error, refetch } = useStudents()
-const { mutateAsync: createStudent, isPending: isCreating } = useStudentCreate()
-
-// === Feature composables ===
-const { 
-  filters, 
-  classOptions, 
-  filteredStudents, 
-  setSearchQuery, 
+// === 数据获取（服务端分页） ===
+const {
+  page,
+  searchQuery,
+  className,
+  isSearching,
+  classOptions,
+  filteredStudents,
+  total,
+  totalPages,
+  isPending,
+  error,
+  refetch,
+  setSearchQuery,
   setClassFilter,
-  selectFirstClass,
-} = useStudentFilters(students)
-
-// 默认选中第一个班级
-watch(() => students.value, (newData) => {
-  if (newData && newData.length > 0) {
-    selectFirstClass()
-  }
-}, { immediate: true })
+} = usePaginatedStudents()
+const { mutateAsync: createStudent, isPending: isCreating } = useStudentCreate()
 
 // === Toast 状态 (队列模式) ===
 const { success: showSuccessToast, error: showErrorToast } = useToast()
@@ -186,8 +184,8 @@ const handleAddStudent = async () => {
 
     <!-- Filters -->
     <StudentFilters
-      v-model:search-query="filters.searchQuery"
-      v-model:selected-class="filters.className"
+      v-model:search-query="searchQuery"
+      v-model:selected-class="className"
       :class-options="classOptions"
       class="mb-5"
       @update:search-query="setSearchQuery"
@@ -302,6 +300,41 @@ const handleAddStudent = async () => {
           </table>
         </div>
       </Card>
+
+      <!-- 分页（搜索模式下显示匹配数量） -->
+      <div
+        v-if="isSearching"
+        class="mt-4 text-center text-sm text-[#737373]"
+      >
+        找到 {{ filteredStudents.length }} 名匹配的学生
+      </div>
+      <div
+        v-else-if="totalPages > 1"
+        class="flex items-center justify-center gap-2 mt-4"
+        data-testid="students-pagination"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="page <= 1"
+          data-testid="students-prev-page"
+          @click="page--"
+        >
+          <ChevronLeft class="h-4 w-4" />
+        </Button>
+        <span class="text-sm text-[#737373]">
+          {{ page }} / {{ totalPages }}（共 {{ total }} 人）
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="page >= totalPages"
+          data-testid="students-next-page"
+          @click="page++"
+        >
+          <ChevronRight class="h-4 w-4" />
+        </Button>
+      </div>
     </DataContainer>
 
     <!-- Add Student Dialog -->

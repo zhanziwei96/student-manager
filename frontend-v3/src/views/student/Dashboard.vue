@@ -14,9 +14,9 @@ const { data: currentStudent, isPending, error } = useStudentProfile()
 // 排名改用排行榜接口（学生可访问），不再拉取全量学生名单
 const { myRank } = useLeaderboard({ scope: 'class', limit: 50 })
 
-// 获取分数历史记录
+// 获取分数历史记录（加载更多分页：初始 20 条，点击按钮追加）
 const studentId = computed(() => currentStudent.value?.student_id || '')
-const { data: scoreLogs, isPending: logsLoading } = useStudentScoreLogs(studentId, { limit: 0 })
+const { logs: scoreLogs, isPending: logsLoading, isLoadingMore, hasMore, loadMore } = useStudentScoreLogs(studentId)
 
 // 只显示名次，不显示排行榜返回的分数
 const rank = computed(() => {
@@ -207,51 +207,69 @@ const getCardTextMutedColor = () => 'text-[#737373]'
           </div>
         </div>
 
+        <!-- Score logs list -->
+        <div v-if="scoreLogs.length > 0">
+          <div class="mt-5 space-y-2.5 max-h-96 overflow-y-auto pr-1">
+            <div
+              v-for="(log, index) in scoreLogs"
+              :key="log.id"
+              class="group flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-3.5 transition-colors hover:bg-[#f5f5f5] hover:border-[#d5d5d5]"
+              :style="{ animationDelay: `${index * 50}ms` }"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-8 w-8 items-center justify-center rounded-lg transition-transform"
+                  :class="log.delta >= 0 ? 'bg-emerald-500/25' : 'bg-rose-500/25'"
+                >
+                  <TrendingUp
+                    class="h-4 w-4 transition-colors"
+                    :class="log.delta >= 0 ? 'text-emerald-300' : 'text-rose-300'"
+                  />
+                </div>
+                <div>
+                  <p class="text-sm text-black/90 line-clamp-1">
+                    {{ log.reason || '分数变更' }}
+                  </p>
+                  <p class="text-[11px] text-[#a3a3a3] mt-0.5">
+                    {{ formatDate(log.created_at) }}
+                  </p>
+                </div>
+              </div>
+              <span
+                class="text-sm font-medium tabular-nums"
+                :class="log.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+              >
+                {{ log.delta >= 0 ? '+' : '' }}{{ log.delta }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 加载更多 -->
+          <div
+            v-if="hasMore"
+            class="mt-4 flex justify-center"
+          >
+            <button
+              class="inline-flex items-center gap-1.5 rounded-full bg-[#f5f5f5] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-[#e5e5e5] disabled:opacity-50"
+              :disabled="isLoadingMore"
+              data-testid="load-more-logs"
+              @click="loadMore"
+            >
+              <Loader2
+                v-if="isLoadingMore"
+                class="h-4 w-4 animate-spin"
+              />
+              {{ isLoadingMore ? '加载中...' : '加载更多' }}
+            </button>
+          </div>
+        </div>
+
         <!-- Loading state -->
         <div
-          v-if="logsLoading"
+          v-else-if="logsLoading"
           class="mt-6 flex h-32 items-center justify-center"
         >
           <Loader2 class="h-6 w-6 animate-spin text-primary" />
-        </div>
-
-        <!-- Score logs list -->
-        <div
-          v-else-if="scoreLogs && scoreLogs.length > 0"
-          class="mt-5 space-y-2.5 max-h-96 overflow-y-auto pr-1"
-        >
-          <div
-            v-for="(log, index) in scoreLogs"
-            :key="log.id"
-            class="group flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-3.5 transition-colors hover:bg-[#f5f5f5] hover:border-[#d5d5d5]"
-            :style="{ animationDelay: `${index * 50}ms` }"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-8 w-8 items-center justify-center rounded-lg transition-transform"
-                :class="log.delta >= 0 ? 'bg-emerald-500/25' : 'bg-rose-500/25'"
-              >
-                <TrendingUp
-                  class="h-4 w-4 transition-colors"
-                  :class="log.delta >= 0 ? 'text-emerald-300' : 'text-rose-300'"
-                />
-              </div>
-              <div>
-                <p class="text-sm text-black/90 line-clamp-1">
-                  {{ log.reason || '分数变更' }}
-                </p>
-                <p class="text-[11px] text-[#a3a3a3] mt-0.5">
-                  {{ formatDate(log.created_at) }}
-                </p>
-              </div>
-            </div>
-            <span
-              class="text-sm font-medium tabular-nums"
-              :class="log.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'"
-            >
-              {{ log.delta >= 0 ? '+' : '' }}{{ log.delta }}
-            </span>
-          </div>
         </div>
 
         <!-- Empty state -->

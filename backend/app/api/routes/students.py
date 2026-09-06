@@ -13,7 +13,7 @@ from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes, reset_student_password,
-    unlock_student_account, disable_students_by_class
+    unlock_student_account, disable_students_by_class, count_students_filtered
 )
 from app.crud.checkin import get_today_checkins
 from app.crud.course_session import get_active_course_session_by_class_name
@@ -67,8 +67,8 @@ class ScoreLogResponse(BaseModel):
 
 
 class StudentListResponse(ApiResponse[list[StudentWithCheckin]]):
-    """学生列表响应"""
-    pass
+    """学生列表响应（分页请求时附带 total）"""
+    total: Optional[int] = Field(None, description="符合条件的学生总数（仅分页请求时返回）")
 
 
 class StudentDetailResponse(ApiResponse[dict]):
@@ -105,39 +105,55 @@ class ScoreLogListResponse(ApiResponse[list[ScoreLogResponse]]):
 async def get_students_list(
     request: Request,
     class_name: Optional[str] = Query(None, description="班级名称"),
+    limit: Optional[int] = Query(None, ge=1, le=200, description="每页数量（不传则返回全部，保持向后兼容）"),
+    offset: int = Query(0, ge=0, description="偏移量（分页用）"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher)
 ):
-    """获取学生列表（管理员看所有，教师看负责班级；学生不可访问）"""
+    """获取学生列表（管理员看所有，教师看负责班级；学生不可访问）
+
+    分页说明：传入 limit 时按 limit/offset 分页并在响应中附带 total；
+    不传 limit 时返回全部（旧客户端行为不变）。
+    """
     # REVIEW-P1: 权限检查统一在 API 层处理，CRUD 层保持纯粹
     from app.models import User
 
     is_admin = user.get("is_admin", False)
-    
+    # 仅在分页请求时计算总数（避免全量请求多一次 COUNT 查询）
+    total: Optional[int] = None
+
     if is_admin:
         # 管理员可以查看所有学生
         if class_name:
-            students = get_students_by_class(session, class_name)
+            students = get_students_by_class(session, class_name, limit=limit, offset=offset)
+            if limit is not None:
+                total = count_students_filtered(session, class_name=class_name)
         else:
-            students = get_students(session)
+            students = get_students(session, limit=limit, offset=offset)
+            if limit is not None:
+                total = count_students_filtered(session)
     else:
         # 教师只能查看负责班级的学生
         user_id = user.get("sub")
         if not user_id:
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无效的用户信息")
-        
+
         user_obj = session.get(User, int(user_id))
         assigned_classes = user_obj.get_assigned_classes() if user_obj else []
-        
+
         if class_name:
             # 如果指定了班级，检查权限
             if class_name not in assigned_classes:
                 raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看该班级学生")
-            students = get_students_by_class(session, class_name)
+            students = get_students_by_class(session, class_name, limit=limit, offset=offset)
+            if limit is not None:
+                total = count_students_filtered(session, class_name=class_name)
         else:
             # 获取所有负责班级的学生 - 使用IN查询优化性能（REVIEW-P1）
             # 替代循环查询，减少数据库往返次数
-            students = get_students_by_classes(session, assigned_classes)
+            students = get_students_by_classes(session, assigned_classes, limit=limit, offset=offset)
+            if limit is not None:
+                total = count_students_filtered(session, class_names=assigned_classes)
     
     # 获取当前课堂会话
     cs = get_active_course_session_by_class_name(session, class_name) if class_name else None
@@ -167,7 +183,8 @@ async def get_students_list(
     
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: students_with_checkin
+        ApiResponseConst.DATA: students_with_checkin,
+        "total": total,
     }
 
 
@@ -404,10 +421,11 @@ async def get_student_scores(
     request: Request,
     student_id: str,
     limit: int = Query(None, description="数量限制"),
+    offset: int = Query(0, ge=0, description="偏移量（分页加载更多用）"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取学生分数历史（学生限自己；教师限负责班级）"""
+    """获取学生分数历史（学生限自己；教师限负责班级；支持 limit/offset 分页）"""
     from app.models import UserRoleConst
     from app.crud import get_student_score_logs
 
@@ -421,7 +439,7 @@ async def get_student_scores(
             raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
         verify_teacher_class_access(user, student.class_name, session)
 
-    logs = get_student_score_logs(session, student_id, limit)
+    logs = get_student_score_logs(session, student_id, limit, offset=offset)
     
     return {
         ApiResponseConst.SUCCESS: True,

@@ -4,7 +4,7 @@ CRUD 导出
 from app.crud.student import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes,
-    reset_student_password, count_students, disable_students_by_class,
+    reset_student_password, count_students, count_students_filtered, disable_students_by_class,
     record_student_login_failure, reset_student_login_lock, unlock_student_account
 )
 from app.crud.user import (
@@ -79,7 +79,7 @@ __all__ = [
     # Student
     "get_student", "get_students", "get_students_by_class", "get_students_by_classes",
     "create_student", "update_student_score", "delete_student", "get_all_classes",
-    "reset_student_password", "count_students", "unlock_student_account",
+    "reset_student_password", "count_students", "count_students_filtered", "unlock_student_account",
     "disable_students_by_class",
     # User
     "get_user", "get_user_by_username", "get_users", "create_user",

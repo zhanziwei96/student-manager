@@ -4,7 +4,7 @@
 import pytest
 from sqlmodel import Session
 from app.crud import (
-    get_student, get_students, get_students_by_class,
+    get_student, get_students, get_students_by_class, get_students_by_classes,
     create_student, update_student_score, delete_student, get_all_classes,
     reset_student_password
 )
@@ -160,3 +160,83 @@ class TestStudentCRUD:
         )
         
         assert result is None
+
+
+class TestStudentPagination:
+    """学生列表分页（limit/offset）与总数统计"""
+
+    def test_get_students_with_limit_offset(self, session: Session):
+        """limit/offset 分页返回正确切片"""
+        for i in range(1, 8):
+            create_student(session, f"P{i:03d}", f"学生{i}", "软件1班")
+
+        page1 = get_students(session, limit=3, offset=0)
+        page2 = get_students(session, limit=3, offset=3)
+        page3 = get_students(session, limit=3, offset=6)
+
+        assert [s.student_id for s in page1] == ["P001", "P002", "P003"]
+        assert [s.student_id for s in page2] == ["P004", "P005", "P006"]
+        assert [s.student_id for s in page3] == ["P007"]
+
+    def test_get_students_without_limit_returns_all(self, session: Session):
+        """不传 limit 时返回全部（向后兼容）"""
+        for i in range(1, 6):
+            create_student(session, f"P{i:03d}", f"学生{i}", "软件1班")
+
+        students = get_students(session)
+        assert len(students) == 5
+
+    def test_get_students_pagination_with_class_filter(self, session: Session):
+        """分页与班级筛选同时生效"""
+        for i in range(1, 6):
+            create_student(session, f"P{i:03d}", f"学生{i}", "软件1班")
+        for i in range(6, 9):
+            create_student(session, f"P{i:03d}", f"学生{i}", "软件2班")
+
+        students = get_students(session, class_name="软件2班", limit=2, offset=1)
+        assert [s.student_id for s in students] == ["P007", "P008"]
+
+    def test_get_students_by_class_with_limit_offset(self, session: Session):
+        """get_students_by_class 支持分页"""
+        for i in range(1, 6):
+            create_student(session, f"P{i:03d}", f"学生{i}", "软件1班")
+
+        students = get_students_by_class(session, "软件1班", limit=2, offset=2)
+        assert [s.student_id for s in students] == ["P003", "P004"]
+
+    def test_get_students_by_classes_with_limit_offset(self, session: Session):
+        """get_students_by_classes 支持分页（教师多班级场景）"""
+        create_student(session, "P001", "学生1", "软件1班")
+        create_student(session, "P002", "学生2", "软件2班")
+        create_student(session, "P003", "学生3", "软件1班")
+        create_student(session, "P004", "学生4", "软件3班")
+
+        students = get_students_by_classes(session, ["软件1班", "软件2班"], limit=2, offset=1)
+        assert [s.student_id for s in students] == ["P002", "P003"]
+
+    def test_count_students_filtered(self, session: Session):
+        """count_students_filtered 按条件统计总数"""
+        from app.crud import count_students_filtered
+
+        for i in range(1, 4):
+            create_student(session, f"P{i:03d}", f"学生{i}", "软件1班")
+        for i in range(4, 7):
+            create_student(session, f"P{i:03d}", f"学生{i}", "软件2班")
+
+        assert count_students_filtered(session) == 6
+        assert count_students_filtered(session, class_name="软件1班") == 3
+        assert count_students_filtered(session, class_names=["软件1班", "软件2班"]) == 6
+        assert count_students_filtered(session, class_names=[]) == 0
+
+    def test_count_students_filtered_excludes_disabled(self, session: Session):
+        """count_students_filtered 默认排除已禁用学生"""
+        from app.crud import count_students_filtered
+
+        student = create_student(session, "P001", "学生1", "软件1班")
+        create_student(session, "P002", "学生2", "软件1班")
+        student.is_account_enabled = False
+        session.add(student)
+        session.commit()
+
+        assert count_students_filtered(session) == 1
+        assert count_students_filtered(session, include_disabled=True) == 2

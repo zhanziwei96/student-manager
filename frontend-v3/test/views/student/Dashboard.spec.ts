@@ -31,16 +31,25 @@ vi.mock('@/composables/useStudentProfile', () => ({
 }))
 
 vi.mock('@/composables', () => ({
-  useStudentScoreLogs: () => ({
-    data: ref([]),
-    isPending: ref(false)
-  })
+  useStudentScoreLogs: () => holder.scoreLogs,
 }))
 
 // 排行榜 mock：myRank 由 holder 控制，便于各用例切换有名次/无名次场景
 const holder = vi.hoisted(() => ({
-  myRank: null as null | { rank: number; student_id: string; name: string; score: number }
+  myRank: null as null | { rank: number; student_id: string; name: string; score: number },
+  scoreLogs: null as unknown as Record<string, unknown>,
 }))
+
+/** 构造 useStudentScoreLogs 的 mock 返回值（各用例可覆盖字段） */
+const makeScoreLogs = (overrides: Record<string, unknown> = {}) => ({
+  logs: ref([]),
+  isPending: ref(false),
+  isLoadingMore: ref(false),
+  hasMore: ref(false),
+  error: ref(null),
+  loadMore: vi.fn(),
+  ...overrides,
+})
 
 vi.mock('@/composables/useLeaderboard', async () => {
   const { computed } = await import('vue')
@@ -73,6 +82,7 @@ const createWrapper = () => {
 describe('Student Dashboard', () => {
   beforeEach(() => {
     holder.myRank = { rank: 2, student_id: 'S001', name: '张三', score: 999 }
+    holder.scoreLogs = makeScoreLogs()
   })
 
   it('renders dashboard title', () => {
@@ -141,5 +151,86 @@ describe('Student Dashboard', () => {
     const buttons = wrapper.findAll('button')
     const hasLeaderboardButton = buttons.some(el => el.text().includes('查看排行榜'))
     expect(hasLeaderboardButton).toBe(true)
+  })
+})
+
+describe('Student Dashboard - 分数日志加载更多', () => {
+  const fakeLog = (id: number) => ({
+    id,
+    student_id: 'S001',
+    delta: 2,
+    reason: `加分${id}`,
+    operator: '老师',
+    old_score: 80,
+    new_score: 82,
+    created_at: '2026-09-01T08:00:00',
+  })
+
+  beforeEach(() => {
+    holder.myRank = null
+  })
+
+  it('hasMore 为 true 时显示"加载更多"按钮', async () => {
+    holder.scoreLogs = makeScoreLogs({
+      logs: ref([fakeLog(1)]),
+      hasMore: ref(true),
+    })
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    const btn = wrapper.find('[data-testid="load-more-logs"]')
+    expect(btn.exists()).toBe(true)
+    expect(btn.text()).toContain('加载更多')
+  })
+
+  it('点击"加载更多"调用 loadMore', async () => {
+    const loadMore = vi.fn()
+    holder.scoreLogs = makeScoreLogs({
+      logs: ref([fakeLog(1)]),
+      hasMore: ref(true),
+      loadMore,
+    })
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="load-more-logs"]').trigger('click')
+    expect(loadMore).toHaveBeenCalled()
+  })
+
+  it('hasMore 为 false 时隐藏"加载更多"按钮', async () => {
+    holder.scoreLogs = makeScoreLogs({
+      logs: ref([fakeLog(1)]),
+      hasMore: ref(false),
+    })
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="load-more-logs"]').exists()).toBe(false)
+  })
+
+  it('加载中时按钮禁用并显示加载文案', async () => {
+    holder.scoreLogs = makeScoreLogs({
+      logs: ref([fakeLog(1)]),
+      hasMore: ref(true),
+      isLoadingMore: ref(true),
+    })
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    const btn = wrapper.find('[data-testid="load-more-logs"]')
+    expect(btn.attributes('disabled')).toBeDefined()
+    expect(btn.text()).toContain('加载中')
+  })
+
+  it('无日志时不显示"加载更多"按钮', async () => {
+    holder.scoreLogs = makeScoreLogs({
+      logs: ref([]),
+      hasMore: ref(true),
+    })
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="load-more-logs"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('暂无分数变更记录')
   })
 })

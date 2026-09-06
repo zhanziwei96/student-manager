@@ -18,6 +18,7 @@ export { default as StudentFilters } from './components/StudentFilters.vue'
 // === Composables ===
 export { useStudentScore } from './composables/useStudentScore'
 export { useStudentFilters } from './composables/useStudentFilters'
+export { usePaginatedStudents } from './composables/usePaginatedStudents'
 
 // === 类型 ===
 export type {

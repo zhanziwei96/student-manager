@@ -201,3 +201,141 @@ class TestStudentsAPIEnhanced:
         assert "一班" in class_names
         assert "二班" in class_names
         assert "三班" in class_names
+
+
+class TestStudentsPagination:
+    """学生列表分页（limit/offset/total）集成测试"""
+
+    @staticmethod
+    def _create_students(test_engine, class_name: str, count: int, id_prefix: str):
+        """批量创建测试学生"""
+        from sqlmodel import Session
+        from app.models import Student
+
+        with Session(test_engine) as session:
+            for i in range(1, count + 1):
+                session.add(Student(
+                    student_id=f"{id_prefix}{i:04d}",
+                    name=f"学生{i}",
+                    class_name=class_name,
+                    score=60.0,
+                ))
+            session.commit()
+
+    def test_admin_pagination_pages(self, admin_client, test_engine):
+        """管理员分页：150 个学生分 3 页，第 4 页为空"""
+        self._create_students(test_engine, "分页班", 150, "PG")
+
+        ids = []
+        for offset, expected in ((0, 50), (50, 50), (100, 50), (150, 0)):
+            resp = admin_client.get(f"/api/v1/students?limit=50&offset={offset}")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["success"] is True
+            assert len(data["data"]) == expected
+            assert data["total"] == 150
+            ids.extend(s["student_id"] for s in data["data"])
+
+        # 各页不重复且覆盖全部
+        assert len(set(ids)) == 150
+
+    def test_admin_pagination_with_class_filter(self, admin_client, test_engine):
+        """分页与班级筛选同时生效，total 为筛选后总数"""
+        self._create_students(test_engine, "一班", 30, "CA")
+        self._create_students(test_engine, "二班", 20, "CB")
+
+        resp = admin_client.get("/api/v1/students?class_name=一班&limit=10&offset=25")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["data"]) == 5
+        assert data["total"] == 30
+        assert all(s["class_name"] == "一班" for s in data["data"])
+
+    def test_teacher_pagination(self, teacher_client, test_engine):
+        """教师分页：只看负责班级，total 为负责班级总数"""
+        self._create_students(test_engine, "一班", 30, "TA")
+        self._create_students(test_engine, "三班", 10, "TB")  # 教师不负责三班
+
+        resp = teacher_client.get("/api/v1/students?limit=20&offset=0")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["data"]) == 20
+        # 教师负责一班和二班，只有一班有 30 个学生
+        assert data["total"] == 30
+        assert all(s["class_name"] in ("一班", "二班") for s in data["data"])
+
+    def test_no_limit_returns_all_without_total(self, admin_client, test_engine):
+        """不传 limit 时返回全部且不带 total（向后兼容）"""
+        self._create_students(test_engine, "分页班", 60, "NL")
+
+        resp = admin_client.get("/api/v1/students")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["data"]) == 60
+        assert data["total"] is None
+
+    def test_pagination_invalid_params(self, admin_client, test_engine):
+        """非法分页参数返回 422"""
+        assert admin_client.get("/api/v1/students?limit=0").status_code == 422
+        assert admin_client.get("/api/v1/students?limit=201").status_code == 422
+        assert admin_client.get("/api/v1/students?offset=-1").status_code == 422
+
+
+class TestScoreLogsPagination:
+    """分数日志分页（limit/offset）集成测试"""
+
+    @staticmethod
+    def _create_score_logs(test_engine, student_id: str, count: int):
+        """直接插入分数日志（绕过事件会话隔离问题）"""
+        from sqlmodel import Session
+        from app.models import ScoreLog
+
+        with Session(test_engine) as session:
+            for i in range(count):
+                session.add(ScoreLog(
+                    student_id=student_id,
+                    old_score=80.0 + i,
+                    new_score=81.0 + i,
+                    delta=1.0,
+                    reason=f"加分{i + 1}",
+                    operator="老师",
+                ))
+            session.commit()
+
+    def test_score_logs_pagination(self, student_client, test_engine):
+        """学生查看自己的分数日志：30 条分 2 页（20 + 10）"""
+        self._create_score_logs(test_engine, "S001", 30)
+
+        resp1 = student_client.get("/api/v1/students/S001/scores?limit=20&offset=0")
+        assert resp1.status_code == 200
+        page1 = resp1.json()["data"]
+        assert len(page1) == 20
+
+        resp2 = student_client.get("/api/v1/students/S001/scores?limit=20&offset=20")
+        assert resp2.status_code == 200
+        page2 = resp2.json()["data"]
+        assert len(page2) == 10
+
+        # 两页 id 互不重复且覆盖全部 30 条
+        ids = {log["id"] for log in page1 + page2}
+        assert len(ids) == 30
+
+    def test_score_logs_offset_beyond_total(self, student_client, test_engine):
+        """offset 超出总数时返回空列表"""
+        self._create_score_logs(test_engine, "S001", 5)
+
+        resp = student_client.get("/api/v1/students/S001/scores?limit=20&offset=100")
+        assert resp.status_code == 200
+        assert resp.json()["data"] == []
+
+    def test_score_logs_default_behavior_unchanged(self, student_client, test_engine):
+        """不传分页参数时按默认 limit 返回（向后兼容）"""
+        self._create_score_logs(test_engine, "S001", 10)
+
+        resp = student_client.get("/api/v1/students/S001/scores")
+        assert resp.status_code == 200
+        assert len(resp.json()["data"]) == 10
+
+    def test_score_logs_invalid_offset(self, student_client, test_engine):
+        """非法 offset 返回 422"""
+        assert student_client.get("/api/v1/students/S001/scores?offset=-1").status_code == 422

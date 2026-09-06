@@ -130,3 +130,47 @@ class TestScoreLogCRUD:
 
         logs = get_student_score_logs(session, "S001", limit=3)
         assert len(logs) == 3
+
+    def test_get_student_score_logs_with_offset(self, session: Session):
+        """测试分数日志 offset 分页（加载更多场景）"""
+        # 创建 10 条分数日志
+        for i in range(10):
+            log = ScoreLog(
+                student_id="S002",
+                old_score=80.0 + i,
+                new_score=81.0 + i,
+                delta=1.0,
+                reason=f"加分{i+1}",
+                operator="老师"
+            )
+            session.add(log)
+        session.commit()
+
+        page1 = get_student_score_logs(session, "S002", limit=4, offset=0)
+        page2 = get_student_score_logs(session, "S002", limit=4, offset=4)
+        page3 = get_student_score_logs(session, "S002", limit=4, offset=8)
+
+        assert len(page1) == 4
+        assert len(page2) == 4
+        assert len(page3) == 2
+
+        # 三页 id 互不重复且覆盖全部 10 条
+        ids = {log.id for log in page1 + page2 + page3}
+        assert len(ids) == 10
+
+    def test_get_student_score_logs_offset_without_limit(self, session: Session):
+        """offset 单独使用时仍受默认 limit 约束"""
+        for i in range(5):
+            log = ScoreLog(
+                student_id="S003",
+                old_score=80.0 + i,
+                new_score=81.0 + i,
+                delta=1.0,
+                reason=f"加分{i+1}",
+                operator="老师"
+            )
+            session.add(log)
+        session.commit()
+
+        logs = get_student_score_logs(session, "S003", offset=3)
+        assert len(logs) == 2

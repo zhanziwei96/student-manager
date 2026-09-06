@@ -10,6 +10,8 @@ export interface ApiResponse<T> {
   success: boolean
   data?: T
   message?: string
+  /** 分页请求时后端返回的总数（仅部分列表接口） */
+  total?: number
 }
 
 // 用户角色常量 - FE-002 修复: 避免硬编码字符串

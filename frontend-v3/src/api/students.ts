@@ -1,10 +1,29 @@
-import { get, post, put, del } from '@/lib/api'
+import { get, post, put, del, requestRaw } from '@/lib/api'
 import type {
   Student,
   CreateStudentRequest,
   UpdateScoreRequest,
   ScoreLog,
 } from '@/types'
+
+/** 学生列表分页参数 */
+export interface StudentListParams {
+  class_name?: string
+  limit?: number
+  offset?: number
+}
+
+/** 学生列表分页结果 */
+export interface StudentPage {
+  items: Student[]
+  total: number
+}
+
+/** 分数日志查询参数 */
+export interface ScoreLogParams {
+  limit?: number
+  offset?: number
+}
 
 /**
  * 学生相关 API - FE-003 修复后
@@ -15,6 +34,20 @@ import type {
 export const studentsApi = {
   getAll: (): Promise<Student[]> =>
     get('/students'),
+
+  /**
+   * 分页获取学生列表（服务端分页）
+   *
+   * 不传 limit 时后端返回全部且不带 total（向后兼容），
+   * 此时前端以 items.length 作为 total 回退值。
+   */
+  getPaginated: async (params?: StudentListParams): Promise<StudentPage> => {
+    const res = await requestRaw<Student[]>('/students', {
+      query: (params ?? {}) as Record<string, unknown>,
+    })
+    const items = res.data ?? []
+    return { items, total: res.total ?? items.length }
+  },
 
   getById: (id: number): Promise<Student> =>
     get(`/students/${id}`),
@@ -31,8 +64,8 @@ export const studentsApi = {
   updateScore: (studentId: string, data: UpdateScoreRequest): Promise<Student> =>
     put(`/students/${studentId}/score`, data),
 
-  getScoreLogs: (studentId: string, limit?: number): Promise<ScoreLog[]> =>
-    get(`/students/${studentId}/scores`, limit !== undefined ? { limit } : undefined),
+  getScoreLogs: (studentId: string, params?: ScoreLogParams): Promise<ScoreLog[]> =>
+    get(`/students/${studentId}/scores`, params ? { ...params } : undefined),
 
   resetPassword: (id: number, newPassword: string): Promise<void> =>
     put(`/students/${id}/reset-password`, { new_password: newPassword }),
