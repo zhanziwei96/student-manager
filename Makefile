@@ -85,7 +85,7 @@ status:
 	@curl -s --max-time 3 http://localhost:8000/api/v1/health 2>/dev/null && echo " ✅ 后端运行中" || echo " ❌ 后端未运行"
 	@echo ""
 	@echo "=== 前端状态 (frontend-v3) ==="
-	@curl -s --max-time 3 http://localhost:5173 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"
+	@curl -s --max-time 3 http://localhost:5174 2>/dev/null >/dev/null && echo " ✅ 前端运行中" || echo " ❌ 前端未运行"
 
 # 运行所有测试
 test: test-backend test-frontend
