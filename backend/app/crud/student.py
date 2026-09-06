@@ -331,20 +331,25 @@ def disable_students_by_class(session: Session, class_name: str) -> int:
     return result.rowcount
 
 
-def count_students(session: Session) -> int:
+def count_students(session: Session, include_disabled: bool = False) -> int:
     """使用 SQL COUNT 计算学生总数（性能优化）
-    
+
     相比 get_students() + len()，此函数使用数据库聚合查询，
     不加载完整对象，内存占用更少，执行更快。
-    
+    默认只统计启用学生（禁用学生不计入仪表盘等统计）。
+
     Args:
         session: 数据库会话
-        
+        include_disabled: 是否包含已禁用学生（默认 False）
+
     Returns:
         int: 学生总数
     """
     from sqlalchemy import func
-    result = session.exec(select(func.count()).select_from(Student))
+    query = select(func.count()).select_from(Student)
+    if not include_disabled:
+        query = query.where(Student.is_account_enabled.is_(True))
+    result = session.exec(query)
     return result.one()
 
 
