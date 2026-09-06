@@ -2,10 +2,11 @@
 学生科目分数 CRUD 操作
 
 说明：
-- StudentSubjectScore 模型没有 version 字段，乐观锁改用分数 CAS
-  （UPDATE ... WHERE id = :id AND score = :expected_score），
+- 乐观锁使用 version 字段（UPDATE ... WHERE id = :id AND version = :expected_version），
   语义与 crud/student.py 的 update_student_score 一致：
-  只有读取到的分数未被并发修改时才更新，否则报 409。
+  只有读取到的版本未被并发修改时才更新，否则报 409。
+- 学期中换老师会新建记录（旧记录保留），查询时按 id 倒序取最新记录，
+  保证加分落到新老师的记录上。
 """
 from typing import Optional
 from sqlmodel import Session, select
@@ -100,12 +101,14 @@ def update_student_subject_score(
     from app.core.config import get_settings
 
     # 查当前记录（当前学期）
+    # 注意：学期中换老师会新建记录（旧记录保留），同一 (student_id, subject_id, semester)
+    # 可能存在多条记录，必须按 id 倒序取最新一条，保证加分落到新老师的记录上
     score_record = session.exec(
         select(StudentSubjectScore).where(
             StudentSubjectScore.student_id == student_id,
             StudentSubjectScore.subject_id == subject_id,
             StudentSubjectScore.semester == get_current_term(),
-        )
+        ).order_by(StudentSubjectScore.id.desc())
     ).first()
 
     if not score_record:
@@ -116,20 +119,25 @@ def update_student_subject_score(
     settings = get_settings()
     new_score = max(settings.score.min_score, min(settings.score.max_score, old_score + delta))
 
-    # 乐观锁：模型无 version 字段，使用分数 CAS（UPDATE ... WHERE score = 旧值）
-    # 只有读取到的分数未被并发修改时才更新，否则说明有其他事务已修改
+    # 乐观锁：使用 version 字段（UPDATE ... WHERE id AND version = 期望值）
+    # 相比分数 CAS 可避免 ABA 问题（80→90→80 时 CAS 无法察觉中间修改）
+    # 只有读取到的版本未被并发修改时才更新，否则说明有其他事务已修改
+    expected_version = score_record.version
+    new_version = expected_version + 1
+
     sa_session: SASession = session
     result = sa_session.execute(
         text("""
             UPDATE student_subject_scores
-            SET score = :score, updated_at = :updated_at
-            WHERE id = :id AND score = :expected_score
+            SET score = :score, version = :new_version, updated_at = :updated_at
+            WHERE id = :id AND version = :expected_version
         """),
         {
             "score": new_score,
+            "new_version": new_version,
             "updated_at": get_now(),
             "id": score_record.id,
-            "expected_score": old_score,
+            "expected_version": expected_version,
         }
     )
 

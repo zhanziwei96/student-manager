@@ -82,6 +82,7 @@ def test_update_student_subject_score(session):
     result = update_student_subject_score(session, "TEST001", subject.id, 5.0, "课堂表现", "张老师")
     assert result is not None
     assert result.score == 85.0
+    assert result.version == 2  # 乐观锁版本号自增
 
     # 验证日志
     log = session.query(StudentSubjectScoreLog).filter_by(
@@ -91,3 +92,44 @@ def test_update_student_subject_score(session):
     assert log.old_score == 80.0
     assert log.new_score == 85.0
     assert log.delta == 5.0
+
+
+def test_update_after_transfer_lands_on_new_teacher_record(session):
+    """换老师后加分应落到新老师的记录上（按 id 倒序取最新记录）"""
+    # 造数据：旧老师记录
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    old_score = StudentSubjectScore(
+        student_id="TEST001", subject_id=subject.id, teacher_id=1,
+        score=80.0, semester="2026-2027-1"
+    )
+    session.add(old_score)
+    session.commit()
+
+    # 换老师：新建新老师记录（旧记录保留）
+    transfer_student_to_new_teacher(session, subject.id, 1, 2)
+
+    # 加分
+    result = update_student_subject_score(session, "TEST001", subject.id, 5.0, "课堂表现", "李老师")
+    assert result is not None
+    assert result.score == 85.0
+
+    # 验证：新老师记录被更新，旧老师记录不变
+    new_record = session.query(StudentSubjectScore).filter_by(
+        student_id="TEST001", subject_id=subject.id, teacher_id=2, semester="2026-2027-1"
+    ).first()
+    assert new_record is not None
+    assert new_record.score == 85.0
+    assert new_record.version == 2
+
+    session.expire(old_score)
+    assert old_score.score == 80.0  # 旧老师记录未被修改
+
+    # 验证日志记录的是新老师
+    log = session.query(StudentSubjectScoreLog).filter_by(
+        student_id="TEST001", subject_id=subject.id
+    ).first()
+    assert log is not None
+    assert log.teacher_id == 2

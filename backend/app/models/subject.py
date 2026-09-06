@@ -34,6 +34,7 @@ class StudentSubjectScore(SQLModel, table=True):
     subject_id: int = Field(..., foreign_key="subjects.id", description="科目ID", index=True)
     teacher_id: int = Field(..., foreign_key="users.id", description="教师ID（该学生这个科目的授课教师）", index=True)
     score: float = Field(default=70.0, description="分数", index=True)
+    version: int = Field(default=1, description="乐观锁版本号")
     semester: str = Field(default_factory=get_current_term, description="学期标识", max_length=20, index=True)
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
     updated_at: datetime = Field(default_factory=get_now, description="更新时间")
