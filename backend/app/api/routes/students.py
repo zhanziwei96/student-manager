@@ -474,7 +474,7 @@ async def unlock_student_api(
 
 
 class DisableByClassRequest(BaseModel):
-    class_name: str = Field(..., min_length=1, description="班级名称")
+    class_names: List[str] = Field(..., min_length=1, description="班级名称列表")
 
 
 @router.post("/students/disable-by-class", response_model=ApiResponse[dict])
@@ -486,14 +486,18 @@ async def disable_students_by_class_api(
 ):
     """按班级批量禁用学生账号（学期归档，admin 或负责该班的教师）
 
-    禁用后学生无法登录，班级从班级列表消失，历史数据保留。
+    支持一次传多个班级。禁用后学生无法登录，班级从班级列表消失，历史数据保留。
     """
-    verify_teacher_class_access(user, data.class_name, session)
+    # 先校验所有班级权限，全部通过后再执行禁用（避免部分禁用）
+    for class_name in data.class_names:
+        verify_teacher_class_access(user, class_name, session)
 
-    count = disable_students_by_class(session, data.class_name)
+    total_disabled = 0
+    for class_name in data.class_names:
+        total_disabled += disable_students_by_class(session, class_name)
 
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: f"已禁用 {count} 名学生",
-        ApiResponseConst.DATA: {"disabled_count": count, "class_name": data.class_name}
+        ApiResponseConst.MESSAGE: f"已禁用 {total_disabled} 名学生",
+        ApiResponseConst.DATA: {"disabled_count": total_disabled, "class_names": data.class_names}
     }

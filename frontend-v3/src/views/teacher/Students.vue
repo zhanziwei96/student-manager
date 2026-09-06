@@ -3,7 +3,7 @@ import { ref, watch, computed } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useStudents, useToast } from '@/composables'
 import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, useStudentFilters } from '@/features/students'
-import { DataContainer, Card, Button, Dialog, Label, Select } from '@/components/ui'
+import { DataContainer, Card, Button, Dialog, Label, Checkbox } from '@/components/ui'
 import type { Student } from '@/types'
 import { studentsApi } from '@/api'
 import { getErrorMessage } from '@/lib/error'
@@ -65,10 +65,10 @@ const defaultReason = ref('')
 // === Toast 状态 (队列模式) ===
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 
-// === 按班级禁用（学期归档，仅限自己负责的班级） ===
+// === 按班级禁用（学期归档，仅限自己负责的班级，支持多选） ===
 const queryClient = useQueryClient()
 const showDisableDialog = ref(false)
-const disableClassName = ref('')
+const disableClassNames = ref<string[]>([])
 const isDisabling = ref(false)
 
 // 可选班级（排除“全部班级”占位项）
@@ -77,16 +77,25 @@ const disableClassOptions = computed(() =>
 )
 
 const openDisableDialog = () => {
-  disableClassName.value = ''
+  disableClassNames.value = []
   showDisableDialog.value = true
 }
 
+// 勾选/取消勾选班级
+const toggleDisableClass = (className: string, checked: boolean) => {
+  if (checked) {
+    disableClassNames.value = [...disableClassNames.value, className]
+  } else {
+    disableClassNames.value = disableClassNames.value.filter((c) => c !== className)
+  }
+}
+
 const handleDisableByClass = async () => {
-  if (!disableClassName.value) return
+  if (disableClassNames.value.length === 0) return
 
   try {
     isDisabling.value = true
-    const result = await studentsApi.disableByClass(disableClassName.value)
+    const result = await studentsApi.disableByClass(disableClassNames.value)
     // 刷新学生列表与班级列表（禁用后班级从列表消失）
     await queryClient.invalidateQueries({ queryKey: ['students'] })
     await queryClient.invalidateQueries({ queryKey: ['classes'] })
@@ -233,27 +242,34 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
       @submit="handleUpdateScore"
     />
 
-    <!-- 按班级禁用对话框（学期归档） -->
+    <!-- 按班级禁用对话框（学期归档，支持多选班级） -->
     <Dialog
       v-model:open="showDisableDialog"
       title="按班级禁用"
-      description="禁用后该班级学生无法登录，班级将从列表中消失，历史数据保留"
+      description="禁用后所选班级学生无法登录，班级将从列表中消失，历史数据保留"
     >
       <div class="space-y-4">
         <div class="space-y-2">
-          <Label for="disableClassName">选择班级</Label>
-          <Select
-            id="disableClassName"
-            v-model="disableClassName"
-            :options="disableClassOptions"
-            placeholder="选择要禁用的班级"
-          />
+          <Label>选择班级（可多选）</Label>
+          <div class="max-h-60 space-y-2 overflow-y-auto rounded-md border border-[#e5e5e5] p-3">
+            <div
+              v-for="cls in disableClassOptions"
+              :key="cls.value"
+              class="flex items-center gap-2"
+            >
+              <Checkbox
+                :checked="disableClassNames.includes(String(cls.value))"
+                @update:checked="(checked) => toggleDisableClass(String(cls.value), checked)"
+              />
+              <span class="text-sm">{{ cls.label }}</span>
+            </div>
+          </div>
         </div>
         <p
-          v-if="disableClassName"
+          v-if="disableClassNames.length > 0"
           class="text-sm text-[#ef4444]"
         >
-          将禁用「{{ disableClassName }}」的所有学生账号，确定吗？
+          将禁用 {{ disableClassNames.length }} 个班级的所有学生账号，确定吗？
         </p>
       </div>
       <template #footer>
@@ -265,7 +281,7 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
         </Button>
         <Button
           variant="destructive"
-          :disabled="!disableClassName"
+          :disabled="disableClassNames.length === 0"
           :loading="isDisabling"
           data-testid="confirm-disable-btn"
           @click="handleDisableByClass"

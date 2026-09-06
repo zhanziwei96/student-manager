@@ -2,11 +2,11 @@
 按班级批量禁用学生账号集成测试（学期归档）
 
 覆盖：
-- admin 可禁用任意班级
-- 教师可禁用自己负责的班级
-- 教师不能禁用其他班级（403）
+- admin 可禁用任意班级（支持一次传多个班级）
+- 教师可禁用自己负责的班级（支持一次传多个自己班）
+- 教师不能禁用其他班级或包含他班的组合（403）
 - 学生无权调用（403）
-- 缺少班级名称返回 422
+- 缺少班级列表或空列表返回 422
 - 禁用后学生无法登录，不出现在学生列表，且班级从班级列表消失
 """
 from sqlmodel import Session
@@ -38,13 +38,13 @@ class TestDisableStudentsByClass:
 
         resp = admin_client.post(
             "/api/v1/students/disable-by-class",
-            json={"class_name": "旧班级"}
+            json={"class_names": ["旧班级"]}
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
         assert data["data"]["disabled_count"] == 3
-        assert data["data"]["class_name"] == "旧班级"
+        assert data["data"]["class_names"] == ["旧班级"]
 
         with Session(test_engine) as session:
             students = get_students_by_class(session, "旧班级", include_disabled=True)
@@ -58,7 +58,7 @@ class TestDisableStudentsByClass:
         # 重复禁用返回 0（幂等，不产生错误）
         resp = admin_client.post(
             "/api/v1/students/disable-by-class",
-            json={"class_name": "旧班级"}
+            json={"class_names": ["旧班级"]}
         )
         assert resp.status_code == 200
         assert resp.json()["data"]["disabled_count"] == 0
@@ -71,7 +71,7 @@ class TestDisableStudentsByClass:
 
         resp = teacher_client.post(
             "/api/v1/students/disable-by-class",
-            json={"class_name": "一班"}
+            json={"class_names": ["一班"]}
         )
         assert resp.status_code == 200
         assert resp.json()["data"]["disabled_count"] == 2
@@ -88,7 +88,7 @@ class TestDisableStudentsByClass:
 
         resp = teacher_client.post(
             "/api/v1/students/disable-by-class",
-            json={"class_name": "三班"}
+            json={"class_names": ["三班"]}
         )
         assert resp.status_code == 403
 
@@ -100,18 +100,18 @@ class TestDisableStudentsByClass:
         """学生无权调用 → 403"""
         resp = student_client.post(
             "/api/v1/students/disable-by-class",
-            json={"class_name": "一班"}
+            json={"class_names": ["一班"]}
         )
         assert resp.status_code == 403
 
-    def test_missing_class_name_returns_422(self, admin_client):
-        """缺少班级名称 → 422（Pydantic 校验）"""
+    def test_missing_class_names_returns_422(self, admin_client):
+        """缺少班级列表 → 422（Pydantic 校验）"""
         resp = admin_client.post("/api/v1/students/disable-by-class", json={})
         assert resp.status_code == 422
 
-    def test_empty_class_name_returns_422(self, admin_client):
-        """空班级名称 → 422（min_length=1 校验）"""
-        resp = admin_client.post("/api/v1/students/disable-by-class", json={"class_name": ""})
+    def test_empty_class_names_returns_422(self, admin_client):
+        """空班级列表 → 422（min_length=1 校验）"""
+        resp = admin_client.post("/api/v1/students/disable-by-class", json={"class_names": []})
         assert resp.status_code == 422
 
     def test_disabled_student_cannot_login(self, admin_client, test_engine):
@@ -133,7 +133,7 @@ class TestDisableStudentsByClass:
 
         resp = admin_client.post(
             "/api/v1/students/disable-by-class",
-            json={"class_name": "旧班级"}
+            json={"class_names": ["旧班级"]}
         )
         assert resp.status_code == 200
 
@@ -175,7 +175,7 @@ class TestDisableStudentsByClass:
 
         resp = admin_client.post(
             "/api/v1/students/disable-by-class",
-            json={"class_name": "待禁用班"}
+            json={"class_names": ["待禁用班"]}
         )
         assert resp.status_code == 200
 
@@ -185,3 +185,100 @@ class TestDisableStudentsByClass:
         returned_classes = {s["class_name"] for s in students}
         assert "待禁用班" not in returned_classes
         assert "保留班" in returned_classes
+
+
+class TestDisableMultipleClasses:
+    """批量禁用多个班级（开学归档场景：一次勾选多个旧班级）"""
+
+    def test_admin_can_disable_multiple_classes(self, admin_client, test_engine):
+        """admin 可一次禁用多个班级"""
+        from app.crud import get_all_classes, get_students_by_class
+
+        _create_students(test_engine, "归档一班", 2, id_prefix="BA")
+        _create_students(test_engine, "归档二班", 2, id_prefix="BB")
+        _create_students(test_engine, "保留班级", 1, id_prefix="BC")
+
+        resp = admin_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["归档一班", "归档二班"]}
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert data["data"]["disabled_count"] == 4
+        assert data["data"]["class_names"] == ["归档一班", "归档二班"]
+
+        with Session(test_engine) as session:
+            for cls in ("归档一班", "归档二班"):
+                students = get_students_by_class(session, cls, include_disabled=True)
+                assert len(students) == 2
+                assert all(s.is_account_enabled is False for s in students)
+                assert cls not in get_all_classes(session)
+            # 未选中的班级不受影响
+            kept = get_students_by_class(session, "保留班级")
+            assert len(kept) == 1
+            assert kept[0].is_account_enabled is True
+
+    def test_admin_disable_mixed_disabled_classes_is_idempotent(self, admin_client, test_engine):
+        """批量中包含已禁用的班级：该班返回 0，不影响其他班级"""
+        from app.crud import get_students_by_class
+
+        _create_students(test_engine, "已禁用班", 2, id_prefix="BD")
+        _create_students(test_engine, "待禁用新班", 2, id_prefix="BE")
+
+        # 先禁用一次
+        resp = admin_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["已禁用班"]}
+        )
+        assert resp.status_code == 200
+
+        # 再批量禁用（包含已禁用的班级）
+        resp = admin_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["已禁用班", "待禁用新班"]}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["data"]["disabled_count"] == 2
+
+        with Session(test_engine) as session:
+            students = get_students_by_class(session, "待禁用新班", include_disabled=True)
+            assert all(s.is_account_enabled is False for s in students)
+
+    def test_teacher_can_disable_multiple_own_classes(self, teacher_client, test_engine):
+        """教师可一次禁用多个自己负责的班级（一班、二班）"""
+        from app.crud import get_students_by_class
+
+        _create_students(test_engine, "一班", 2, id_prefix="BF")
+        _create_students(test_engine, "二班", 2, id_prefix="BG")
+
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["一班", "二班"]}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["data"]["disabled_count"] == 4
+
+        with Session(test_engine) as session:
+            for cls in ("一班", "二班"):
+                students = get_students_by_class(session, cls, include_disabled=True)
+                assert all(s.is_account_enabled is False for s in students)
+
+    def test_teacher_cannot_disable_mixed_classes(self, teacher_client, test_engine):
+        """教师不能禁用包含他班的组合 → 403，且所有班级均不受影响"""
+        from app.crud import get_students_by_class
+
+        _create_students(test_engine, "一班", 2, id_prefix="BH")
+        _create_students(test_engine, "三班", 2, id_prefix="BI")
+
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["一班", "三班"]}
+        )
+        assert resp.status_code == 403
+
+        # 权限校验先于任何禁用操作：一班也不应被禁用
+        with Session(test_engine) as session:
+            for cls in ("一班", "三班"):
+                students = get_students_by_class(session, cls, include_disabled=True)
+                assert all(s.is_account_enabled is True for s in students)

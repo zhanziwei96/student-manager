@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * 管理员学生管理页 - 按班级禁用（学期归档）功能测试
+ * 管理员学生管理页 - 按班级禁用（学期归档，多选班级）功能测试
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -13,7 +13,7 @@ import Students from '@/views/admin/Students.vue'
 const holder = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
-  disableByClass: vi.fn(() => Promise.resolve({ disabled_count: 3, class_name: '一班' })),
+  disableByClass: vi.fn(() => Promise.resolve({ disabled_count: 3, class_names: ['一班'] })),
 }))
 
 vi.mock('@/composables', () => ({
@@ -69,18 +69,6 @@ const MockDialog = {
   `,
 }
 
-// Mock Select 为原生 select，便于设置值
-const MockSelect = {
-  name: 'Select',
-  props: ['modelValue', 'options', 'placeholder'],
-  emits: ['update:modelValue'],
-  template: `
-    <select :value="modelValue" @change="$emit('update:modelValue', $event.target.value)">
-      <option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option>
-    </select>
-  `,
-}
-
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -91,7 +79,6 @@ const createWrapper = () => {
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: {
         Dialog: MockDialog,
-        Select: MockSelect,
         Card: { template: '<div><slot /></div>' },
         Badge: { template: '<span><slot /></span>' },
         DataContainer: { template: '<div><slot /></div>' },
@@ -100,7 +87,14 @@ const createWrapper = () => {
   })
 }
 
-describe('Admin Students - 按班级禁用', () => {
+/** 打开按班级禁用弹窗 */
+const openDialog = async (wrapper: ReturnType<typeof createWrapper>) => {
+  await wrapper.find('[data-testid="disable-by-class-btn"]').trigger('click')
+  await flushPromises()
+  return wrapper.find('.mock-dialog')
+}
+
+describe('Admin Students - 按班级禁用（多选）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -112,45 +106,84 @@ describe('Admin Students - 按班级禁用', () => {
     expect(btn.text()).toContain('按班级禁用')
   })
 
-  it('点击按钮打开弹窗并展示班级选项（不含"全部班级"）', async () => {
+  it('点击按钮打开弹窗并展示班级复选框（不含"全部班级"）', async () => {
     const wrapper = createWrapper()
-    await wrapper.find('[data-testid="disable-by-class-btn"]').trigger('click')
-    await flushPromises()
+    const dialog = await openDialog(wrapper)
 
-    const dialog = wrapper.find('.mock-dialog')
     expect(dialog.exists()).toBe(true)
     expect(dialog.find('h3').text()).toBe('按班级禁用')
 
-    const options = dialog.findAll('select option')
-    expect(options).toHaveLength(2)
-    expect(options[0].text()).toContain('一班')
-    expect(options[1].text()).toContain('二班')
+    const checkboxes = dialog.findAll('input[type="checkbox"]')
+    expect(checkboxes).toHaveLength(2)
+    expect(dialog.text()).toContain('一班 (3人)')
+    expect(dialog.text()).toContain('二班 (2人)')
+    expect(dialog.text()).not.toContain('全部班级')
   })
 
-  it('确认后调用 API 并显示成功提示', async () => {
+  it('未勾选任何班级时确认按钮禁用', async () => {
     const wrapper = createWrapper()
-    await wrapper.find('[data-testid="disable-by-class-btn"]').trigger('click')
-    await flushPromises()
+    const dialog = await openDialog(wrapper)
 
-    const dialog = wrapper.find('.mock-dialog')
-    await dialog.find('select').setValue('一班')
+    const confirmBtn = dialog.find('[data-testid="confirm-disable-btn"]')
+    expect(confirmBtn.attributes('disabled')).toBeDefined()
+
+    // 勾选后按钮可用
+    await dialog.findAll('input[type="checkbox"]')[0].setValue(true)
+    expect(dialog.find('[data-testid="confirm-disable-btn"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('勾选单个班级确认后调用 API（参数为数组）并显示成功提示', async () => {
+    const wrapper = createWrapper()
+    const dialog = await openDialog(wrapper)
+
+    await dialog.findAll('input[type="checkbox"]')[0].setValue(true)
     await dialog.find('[data-testid="confirm-disable-btn"]').trigger('click')
     await flushPromises()
 
-    expect(holder.disableByClass).toHaveBeenCalledWith('一班')
+    expect(holder.disableByClass).toHaveBeenCalledWith(['一班'])
     expect(holder.success).toHaveBeenCalledWith('已禁用 3 名学生')
     // 成功后弹窗关闭
     expect(wrapper.find('.mock-dialog').exists()).toBe(false)
   })
 
+  it('勾选多个班级确认后调用 API 传入全部班级', async () => {
+    const wrapper = createWrapper()
+    const dialog = await openDialog(wrapper)
+
+    const checkboxes = dialog.findAll('input[type="checkbox"]')
+    await checkboxes[0].setValue(true)
+    await checkboxes[1].setValue(true)
+
+    // 提示文案显示选中班级数量
+    expect(dialog.text()).toContain('将禁用 2 个班级的所有学生账号')
+
+    await dialog.find('[data-testid="confirm-disable-btn"]').trigger('click')
+    await flushPromises()
+
+    expect(holder.disableByClass).toHaveBeenCalledWith(['一班', '二班'])
+  })
+
+  it('取消勾选后从选中列表移除', async () => {
+    const wrapper = createWrapper()
+    const dialog = await openDialog(wrapper)
+
+    const checkboxes = dialog.findAll('input[type="checkbox"]')
+    await checkboxes[0].setValue(true)
+    await checkboxes[1].setValue(true)
+    await checkboxes[0].setValue(false)
+
+    await dialog.find('[data-testid="confirm-disable-btn"]').trigger('click')
+    await flushPromises()
+
+    expect(holder.disableByClass).toHaveBeenCalledWith(['二班'])
+  })
+
   it('API 失败时显示错误提示且不关闭弹窗', async () => {
     holder.disableByClass.mockRejectedValueOnce(new Error('无权限'))
     const wrapper = createWrapper()
-    await wrapper.find('[data-testid="disable-by-class-btn"]').trigger('click')
-    await flushPromises()
+    const dialog = await openDialog(wrapper)
 
-    const dialog = wrapper.find('.mock-dialog')
-    await dialog.find('select').setValue('一班')
+    await dialog.findAll('input[type="checkbox"]')[0].setValue(true)
     await dialog.find('[data-testid="confirm-disable-btn"]').trigger('click')
     await flushPromises()
 
