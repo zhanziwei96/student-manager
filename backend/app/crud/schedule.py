@@ -7,7 +7,7 @@
 from typing import List, Optional
 from sqlmodel import Session, select
 from app.core.term import get_current_term
-from app.models import CourseSchedule, User
+from app.models import CourseSchedule, User, Student
 
 
 def get_schedule(session: Session, schedule_id: int) -> Optional[CourseSchedule]:
@@ -179,7 +179,14 @@ def import_schedules(
     """
     imported_count = 0
     errors = []
-    
+
+    # 有启用学生的班级集合（学期归档后，禁用/不存在班级不可导入新课表）
+    active_classes = {
+        str(row) for row in session.exec(
+            select(Student.class_name).where(Student.is_account_enabled.is_(True)).distinct()
+        ).all() if row
+    }
+
     for index, record in enumerate(records):
         try:
             # 数据校验
@@ -194,7 +201,12 @@ def import_schedules(
             if not all([course_name, class_name, start_time, end_time]):
                 errors.append(f"第 {index + 2} 行: 存在空值")
                 continue
-            
+
+            # 班级必须存在且有启用学生（归档班级不可创建新课表）
+            if class_name not in active_classes:
+                errors.append(f"第 {index + 2} 行: 班级不存在或所有学生已禁用")
+                continue
+
             # 星期范围校验
             try:
                 day_of_week = int(day_of_week)

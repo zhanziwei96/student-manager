@@ -109,6 +109,14 @@ class TestConcurrentCourseSession:
                 assigned_classes='["一班"]',
                 is_active=True
             ))
+            # 开课校验要求班级有启用学生
+            from app.models import Student
+            session.add(Student(
+                student_id="CCS001",
+                name="学生1",
+                class_name="一班",
+                score=60.0,
+            ))
             session.commit()
 
         login_response = client.post("/api/v1/login", json={

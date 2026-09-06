@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from app.core.db import get_session
 from app.core.jwt import get_current_user
-from app.api.deps import require_admin_or_teacher
+from app.api.deps import require_admin_or_teacher, verify_class_has_active_students
 from app.crud.question import (
     create_question, get_question, get_questions_by_teacher,
     get_questions_by_class, close_question, count_answers,
@@ -81,6 +81,10 @@ async def teacher_create_question(
     user: dict = Depends(require_admin_or_teacher),
 ):
     """老师发布问题"""
+    # 学期归档后，禁用/不存在班级不可提问（class_name 为 None 表示所有班级，跳过校验）
+    if req.class_name:
+        verify_class_has_active_students(req.class_name, session)
+
     teacher_id = int(user["sub"])
     question = create_question(
         session, teacher_id=teacher_id,

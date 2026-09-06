@@ -282,3 +282,95 @@ class TestDisableMultipleClasses:
             for cls in ("一班", "三班"):
                 students = get_students_by_class(session, cls, include_disabled=True)
                 assert all(s.is_account_enabled is True for s in students)
+
+
+class TestDisabledClassContentCreation:
+    """禁用班级后，教师侧不能为该班创建内容（课表/课堂/小组/问答）"""
+
+    def test_teacher_class_list_excludes_disabled_classes(self, teacher_client, test_engine):
+        """教师班级列表不显示所有学生已禁用的班级"""
+        _create_students(test_engine, "一班", 2, id_prefix="DA")
+        _create_students(test_engine, "二班", 2, id_prefix="DB")
+
+        # 禁用二班（教师负责的班级之一）
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["二班"]}
+        )
+        assert resp.status_code == 200
+
+        resp = teacher_client.get("/api/v1/classes")
+        assert resp.status_code == 200
+        returned = {c["name"] for c in resp.json()["data"]}
+        assert "一班" in returned
+        assert "二班" not in returned
+
+    def test_cannot_create_session_for_disabled_class(self, teacher_client, test_engine):
+        """不能为禁用班级创建课堂 → 400"""
+        _create_students(test_engine, "一班", 2, id_prefix="DC")
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["一班"]}
+        )
+        assert resp.status_code == 200
+
+        resp = teacher_client.post("/api/v1/course-sessions/start", json={
+            "class_name": "一班",
+            "course_name": "数学"
+        })
+        assert resp.status_code == 400
+
+    def test_cannot_create_schedule_for_disabled_class(self, admin_client, test_engine):
+        """导入课表时禁用班级的行被拒绝（记入错误列表，不导入）"""
+        import io
+
+        _create_students(test_engine, "归档班", 2, id_prefix="DD")
+        resp = admin_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["归档班"]}
+        )
+        assert resp.status_code == 200
+
+        csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间
+计算机基础,归档班,管理员,1,08:00,09:40"""
+        file = io.BytesIO(csv_content.encode("utf-8"))
+        resp = admin_client.post(
+            "/api/v1/schedules/import",
+            files={"file": ("schedules.csv", file, "text/csv")}
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["imported"] == 0
+        assert any("班级不存在或所有学生已禁用" in e for e in data["errors"])
+
+    def test_cannot_create_group_task_for_disabled_class(self, teacher_client, test_engine):
+        """不能为禁用班级创建合作任务 → 400"""
+        _create_students(test_engine, "一班", 2, id_prefix="DE")
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["一班"]}
+        )
+        assert resp.status_code == 200
+
+        resp = teacher_client.post("/api/v1/teacher/group-tasks", json={
+            "class_name": "一班",
+            "title": "任务",
+            "description": "描述",
+            "dimensions": ["创意"],
+        })
+        assert resp.status_code == 400
+
+    def test_cannot_create_question_for_disabled_class(self, teacher_client, test_engine):
+        """不能为禁用班级提问 → 400"""
+        _create_students(test_engine, "一班", 2, id_prefix="DF")
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["一班"]}
+        )
+        assert resp.status_code == 200
+
+        resp = teacher_client.post("/api/v1/teacher/questions", json={
+            "content": "问题",
+            "class_name": "一班",
+        })
+        assert resp.status_code == 400

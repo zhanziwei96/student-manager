@@ -2,7 +2,8 @@
 API 依赖注入 - JWT 版本
 """
 from typing import Optional
-from sqlmodel import Session
+from sqlmodel import Session, select
+from sqlalchemy import func
 from fastapi import Request
 from app.core.db import get_session
 from app.core.jwt import (
@@ -81,3 +82,29 @@ def verify_teacher_class_access(user: dict, class_name: str, session: Session) -
     assigned = user_obj.get_assigned_classes() if user_obj else []
     if class_name not in assigned:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权操作该班级")
+
+
+def verify_class_has_active_students(class_name: str, session: Session) -> None:
+    """校验班级存在且有启用学生（防止为禁用/不存在班级创建内容）
+
+    Args:
+        class_name: 班级名称
+        session: 数据库会话
+
+    Raises:
+        HTTPException 400: 班级不存在或所有学生已禁用
+    """
+    from app.models import Student
+
+    count = session.exec(
+        select(func.count()).select_from(Student).where(
+            Student.class_name == class_name,
+            Student.is_account_enabled.is_(True)
+        )
+    ).one()
+
+    if count == 0:
+        raise HTTPException(
+            status_code=HttpStatus.BAD_REQUEST,
+            detail="班级不存在或所有学生已禁用"
+        )

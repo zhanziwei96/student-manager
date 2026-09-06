@@ -1,5 +1,21 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
+
+
+@pytest.fixture(autouse=True)
+def seed_class_students(test_engine):
+    """创建合作任务校验要求班级有启用学生：为一班预置 1 个启用学生"""
+    from app.models import Student
+
+    with Session(test_engine) as session:
+        session.add(Student(
+            student_id="GT000",
+            name="种子学生",
+            class_name="一班",
+            score=60.0,
+        ))
+        session.commit()
 
 
 def test_teacher_create_task(teacher_client: TestClient):

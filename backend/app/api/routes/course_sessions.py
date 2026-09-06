@@ -9,6 +9,7 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user
+from app.api.deps import verify_class_has_active_students
 # 周次计算收敛至 core/term.py 单一真源
 from app.core.term import get_current_week_number as _get_current_week_number
 from app.models import CourseSession, CourseSchedule
@@ -98,6 +99,9 @@ def begin_course_session(
     user: dict = Depends(get_current_user)
 ):
     """开始上课"""
+    # 学期归档后，禁用/不存在班级不可开课
+    verify_class_has_active_students(data.class_name, session)
+
     existing = get_active_course_session_by_class_name(session, data.class_name)
     if existing:
         teacher_name = existing.teacher_name or "其他教师"

@@ -112,10 +112,19 @@ def test_get_schedules_unauthorized(client):
     assert data["success"] is False
 
 
-def test_import_schedules_csv(admin_client):
+def test_import_schedules_csv(admin_client, test_engine):
     """测试 CSV 导入课表"""
     import io
-    
+
+    # 导入校验要求班级有启用学生
+    from app.models import Student
+    with Session(test_engine) as session:
+        session.add(Student(
+            student_id="IMP001", name="学生1",
+            class_name="2025康复治疗技术1班", score=60.0,
+        ))
+        session.commit()
+
     # 创建 CSV 内容
     csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间,教室,开始周,结束周
 计算机基础,2025康复治疗技术1班,管理员,1,08:00,09:40,A-101,1,20
@@ -283,8 +292,15 @@ def test_get_schedules_default_week_uses_current(teacher_client, create_test_sch
 
 def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine):
     """上学期同课程/教师/时段不应阻止新学期导入"""
-    from app.models import CourseSchedule
+    from app.models import CourseSchedule, Student
     from sqlmodel import Session
+
+    # 导入校验要求班级有启用学生
+    with Session(test_engine) as session:
+        session.add(Student(
+            student_id="IMP002", name="学生2", class_name="1班", score=60.0,
+        ))
+        session.commit()
 
     # 先手工造一条上学期的同键课表
     with Session(test_engine) as session:

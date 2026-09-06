@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user, require_teacher
+from app.api.deps import verify_class_has_active_students
 from app.core.term import get_current_term
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse
 from app.models.group import GroupMember, GroupMembershipRequest, GroupTask, Group, GroupEvaluationScore
@@ -130,6 +131,9 @@ async def api_create_group_task(
     user: dict = Depends(require_teacher),
 ):
     """创建合作任务"""
+    # 学期归档后，禁用/不存在班级不可创建合作任务
+    verify_class_has_active_students(data.class_name, session)
+
     username = user.get("username", "")
     task = create_group_task(
         session, data.class_name, data.title, data.description, username, data.dimensions

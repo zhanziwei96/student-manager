@@ -313,13 +313,17 @@ async def get_classes(
         # 管理员可以看到所有班级
         class_names = get_all_classes(session)
     else:
-        # 教师只能看到负责的班级
+        # 教师只能看到负责的班级（且班级仍有启用学生，已归档班级不显示）
         user_id = user.get("sub")
         if not user_id:
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无效的用户信息")
-        
+
         user_obj = session.get(User, int(user_id))
-        class_names = user_obj.get_assigned_classes() if user_obj else []
+        assigned = user_obj.get_assigned_classes() if user_obj else []
+
+        # 过滤掉所有学生已禁用的班级
+        active_classes = set(get_all_classes(session))
+        class_names = [c for c in assigned if c in active_classes]
     
     # 获取当前课堂会话状态
     cs = get_active_course_session_by_class_name(session, class_names[0]) if class_names else None

@@ -14,6 +14,16 @@ from app.models import CourseSchedule, User
 class TestScheduleCRUD:
     """测试课表 CRUD 操作"""
 
+    @pytest.fixture(autouse=True)
+    def _seed_class_students(self, session: Session):
+        """课表导入校验要求班级有启用学生：为导入测试所用班级预置启用学生"""
+        from app.models import Student
+        for i, cls in enumerate(["导入班级1", "导入班级2", "班级1", "班级2"]):
+            session.add(Student(
+                student_id=f"TS{i:03d}", name=f"学生{i}", class_name=cls, score=60.0,
+            ))
+        session.commit()
+
     def test_create_schedule(self, session: Session):
         """测试创建课表"""
         schedule = create_schedule(

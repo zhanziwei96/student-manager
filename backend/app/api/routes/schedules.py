@@ -118,7 +118,7 @@ class ScheduleTodayResponse(ApiListResponse[CourseScheduleWithWeekResponse]):
 class ImportResultData(BaseModel):
     """导入结果数据"""
     imported: int
-    errors: list[dict]
+    errors: list[str]
 
 
 class ImportResponse(ApiResponse[ImportResultData]):

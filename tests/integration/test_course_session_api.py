@@ -5,6 +5,22 @@ import pytest
 from sqlmodel import Session
 
 
+@pytest.fixture(autouse=True)
+def seed_class_students(test_engine):
+    """开课校验要求班级有启用学生：为本文件所用班级各预置 1 个启用学生"""
+    from app.models import Student
+
+    with Session(test_engine) as session:
+        for i, cls in enumerate(["一班", "二班", "三班", "四班", "五班", "六班"]):
+            session.add(Student(
+                student_id=f"CS{i:03d}",
+                name=f"学生{i}",
+                class_name=cls,
+                score=60.0,
+            ))
+        session.commit()
+
+
 @pytest.fixture
 def create_test_schedule(test_engine, teacher_user):
     """创建测试课表的 fixture"""
