@@ -374,3 +374,76 @@ class TestDisabledClassContentCreation:
             "class_name": "一班",
         })
         assert resp.status_code == 400
+
+    def test_cannot_clone_task_to_disabled_class(self, teacher_client, test_engine):
+        """不能把任务克隆到禁用班级 → 400"""
+        _create_students(test_engine, "一班", 2, id_prefix="DG")
+        _create_students(test_engine, "二班", 2, id_prefix="DH")
+
+        # 先在一班创建源任务
+        resp = teacher_client.post("/api/v1/teacher/group-tasks", json={
+            "class_name": "一班",
+            "title": "克隆源任务",
+            "description": "描述",
+            "dimensions": ["创意"],
+        })
+        assert resp.status_code == 200
+        task_id = resp.json()["data"]["task_id"]
+
+        # 禁用目标班级
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["二班"]}
+        )
+        assert resp.status_code == 200
+
+        resp = teacher_client.post(f"/api/v1/teacher/group-tasks/{task_id}/clone", json={
+            "target_class_name": "二班",
+        })
+        assert resp.status_code == 400
+
+    def test_cannot_auto_assign_in_disabled_class(self, teacher_client, test_engine):
+        """不能在禁用班级自动分组 → 400"""
+        _create_students(test_engine, "一班", 2, id_prefix="DI")
+        resp = teacher_client.post(
+            "/api/v1/students/disable-by-class",
+            json={"class_names": ["一班"]}
+        )
+        assert resp.status_code == 200
+
+        resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
+            "class_name": "一班",
+        })
+        assert resp.status_code == 400
+
+    def test_auto_assign_excludes_disabled_students(self, teacher_client, test_engine):
+        """自动分组不包含禁用学生：2 个启用学生 + 1 个禁用学生 → 只分 2 个启用学生"""
+        from app.models import Student
+
+        _create_students(test_engine, "一班", 2, id_prefix="DJ")
+        # 同班再加 1 个禁用学生
+        with Session(test_engine) as session:
+            session.add(Student(
+                student_id="DJ900",
+                name="禁用学生",
+                class_name="一班",
+                score=60.0,
+                is_account_enabled=False,
+            ))
+            session.commit()
+
+        resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
+            "class_name": "一班",
+        })
+        assert resp.status_code == 200
+
+        # 断言：小组只包含 2 个启用学生，禁用学生未被分配
+        resp = teacher_client.get("/api/v1/teacher/groups?class_name=一班")
+        assert resp.status_code == 200
+        assigned_ids = {
+            m["student_id"]
+            for g in resp.json()["data"]
+            for m in g["members"]
+        }
+        assert assigned_ids == {"DJ001", "DJ002"}
+        assert "DJ900" not in assigned_ids

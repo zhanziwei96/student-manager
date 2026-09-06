@@ -196,6 +196,8 @@ async def api_clone_group_task(
     username = user.get("username", "")
     if task.created_by != username:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权复制此任务")
+    # 校验目标班级存在且有启用学生（防止克隆到已归档班级）
+    verify_class_has_active_students(data.target_class_name, session)
     try:
         new_task = clone_group_task(session, task_id, data.target_class_name, username)
     except ValueError as e:
@@ -317,6 +319,8 @@ async def api_auto_assign(
     user: dict = Depends(require_teacher),
 ):
     """自动分配未组队学生"""
+    # 校验班级存在且有启用学生（防止对已归档班级分组）
+    verify_class_has_active_students(data.class_name, session)
     settings = get_or_create_class_group_settings(session, data.class_name)
     group_size = data.group_size if data.group_size is not None else settings.max_members_per_group
     new_groups = auto_assign_unassigned_students(session, data.class_name, group_size)

@@ -213,9 +213,12 @@ def transfer_group_leader(session: Session, group_id: int, new_leader_id: str) -
 def auto_assign_unassigned_students(session: Session, class_name: str, group_size: int = 4) -> List[Group]:
     """将某班未组队学生随机分配成新小组"""
     from app.models import Student
-    # 找出该班所有学生
+    # 找出该班所有启用学生（禁用学生不参与自动分组）
     all_students = session.exec(
-        select(Student).where(Student.class_name == class_name)
+        select(Student).where(
+            Student.class_name == class_name,
+            Student.is_account_enabled.is_(True),
+        )
     ).all()
     # 找出已在活跃小组的学生
     active_groups = get_groups_by_class(session, class_name)
