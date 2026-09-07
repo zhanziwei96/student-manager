@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useToast } from '@/composables'
-import { Card, Button, DataContainer, Dialog, Badge } from '@/components/ui'
+import { useSubjects, useToast } from '@/composables'
+import { Card, Button, Select, Label, DataContainer, Dialog, Badge } from '@/components/ui'
 import {
   useMyGroup,
   useStudentGroups,
@@ -59,6 +59,14 @@ async function handleDissolve() {
 const showCreateDialog = ref(false)
 const creating = ref(false)
 const createForm = ref({ name: '' })
+const createSubjectId = ref<number | string>('')
+
+// 当前学期科目（小组按科目划分）
+const { data: subjects } = useSubjects()
+const createSubjectOptions = computed(() => [
+  { value: '', label: '请选择科目', disabled: true },
+  ...(subjects.value || []).map((s) => ({ value: s.id, label: s.name })),
+])
 
 const { mutateAsync: createGroup } = useCreateGroup()
 async function handleCreate() {
@@ -71,10 +79,12 @@ async function handleCreate() {
     await createGroup({
       className: className.value,
       name: createForm.value.name,
+      subjectId: createSubjectId.value === '' ? undefined : Number(createSubjectId.value),
     })
     toastSuccess('小组创建成功')
     showCreateDialog.value = false
     createForm.value = { name: '' }
+    createSubjectId.value = ''
   } catch (err) {
     toastError(getErrorMessage(err) || '创建失败')
   } finally {
@@ -277,6 +287,14 @@ function formatTime(iso: string) {
           placeholder="小组名称"
           class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
         >
+        <div class="space-y-1">
+          <Label>科目</Label>
+          <Select
+            v-model="createSubjectId"
+            :options="createSubjectOptions"
+            data-testid="create-group-subject-select"
+          />
+        </div>
       </div>
       <template #footer>
         <div class="flex w-full gap-2 sm:justify-end">

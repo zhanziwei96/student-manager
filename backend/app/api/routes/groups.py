@@ -67,6 +67,7 @@ class TransferLeaderRequest(BaseModel):
 class CreateGroupRequest(BaseModel):
     class_name: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1)
+    subject_id: Optional[int] = Field(default=None, description="科目ID（小组按科目划分）")
 
 
 class StudentScoreItem(BaseModel):
@@ -288,7 +289,7 @@ async def api_teacher_groups(
     user: dict = Depends(require_teacher),
 ):
     """获取班级小组列表"""
-    from app.models import Student
+    from app.models import Student, Subject
     from sqlmodel import col, select as sql_select
     groups = get_groups_by_class(session, class_name)
     # 批量查询所有相关学生姓名
@@ -299,6 +300,12 @@ async def api_teacher_groups(
     if all_member_ids:
         students = session.exec(sql_select(Student).where(col(Student.student_id).in_(set(all_member_ids)))).all()
         student_map = {s.student_id: s.name for s in students}
+    # 批量查询科目名称（小组按科目划分）
+    subject_ids = {g.subject_id for g in groups if g.subject_id is not None}
+    subject_map = {}
+    if subject_ids:
+        subjects = session.exec(sql_select(Subject).where(col(Subject.id).in_(subject_ids))).all()
+        subject_map = {s.id: s.name for s in subjects}
     result = []
     for g in groups:
         members = get_group_members(session, g.id)
@@ -307,6 +314,9 @@ async def api_teacher_groups(
             "name": g.name,
             "leader_student_id": g.leader_student_id,
             "leader_name": student_map.get(g.leader_student_id, g.leader_student_id),
+            "subject_id": g.subject_id,
+            "subject_name": subject_map.get(g.subject_id) if g.subject_id is not None else None,
+            "score": g.score,
             "members": [{"student_id": m.student_id, "name": student_map.get(m.student_id, m.student_id)} for m in members],
         })
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
@@ -521,7 +531,7 @@ async def api_student_create_group(
     existing = get_student_active_group(session, student_id, data.class_name)
     if existing:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已在一个小组中")
-    group = create_group(session, data.class_name, data.name, student_id)
+    group = create_group(session, data.class_name, data.name, student_id, subject_id=data.subject_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {"group_id": group.id, "name": group.name},

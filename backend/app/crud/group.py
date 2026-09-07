@@ -48,12 +48,19 @@ def get_group_members(session: Session, group_id: int) -> List[GroupMember]:
     ).all()
 
 
-def create_group(session: Session, class_name: str, name: str, leader_student_id: str) -> Group:
+def create_group(
+    session: Session,
+    class_name: str,
+    name: str,
+    leader_student_id: str,
+    subject_id: Optional[int] = None,
+) -> Group:
     """创建小组，组长自动加入"""
     group = Group(
         class_name=class_name,
         name=name,
         leader_student_id=leader_student_id,
+        subject_id=subject_id,
         is_active=True,
     )
     session.add(group)

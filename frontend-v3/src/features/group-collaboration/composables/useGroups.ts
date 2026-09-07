@@ -39,8 +39,8 @@ export function useMyGroup() {
 export function useCreateGroup() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ className, name }: { className: string; name: string }) =>
-      groupsApi.createGroup(className, name),
+    mutationFn: ({ className, name, subjectId }: { className: string; name: string; subjectId?: number }) =>
+      groupsApi.createGroup(className, name, subjectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-group'] })
       queryClient.invalidateQueries({ queryKey: ['student-groups'] })
@@ -65,5 +65,39 @@ export function useApproveJoin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-group'] })
     },
+  })
+}
+
+export function useGroupScore() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ groupId, scoreChange, reason }: { groupId: number; scoreChange: number; reason: string }) =>
+      groupsApi.updateScore(groupId, scoreChange, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
+      queryClient.invalidateQueries({ queryKey: ['group-leaderboard'] })
+    },
+  })
+}
+
+export function useGroupScoreLogs(groupId: MaybeRefOrGetter<number | null>) {
+  return useQuery({
+    queryKey: ['group-score-logs', groupId],
+    queryFn: () => groupsApi.getScoreLogs(toValue(groupId)!),
+    enabled: () => toValue(groupId) !== null,
+  })
+}
+
+export function useGroupLeaderboard(
+  subjectId: MaybeRefOrGetter<number | null>,
+  className: MaybeRefOrGetter<string>,
+) {
+  return useQuery({
+    queryKey: ['group-leaderboard', className, subjectId],
+    queryFn: () => groupsApi.getLeaderboard({
+      subject_id: toValue(subjectId) ?? undefined,
+      class_name: toValue(className),
+    }),
+    enabled: () => !!toValue(className),
   })
 }

@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useClasses, useToast } from '@/composables'
-import { Card, Button, Select, DataContainer, Dialog, Badge } from '@/components/ui'
+import { useClasses, useSubjects, useToast } from '@/composables'
+import { Card, Button, Select, Input, Label, DataContainer, Dialog, Badge } from '@/components/ui'
 import {
   useTeacherGroups,
   useAutoAssign,
   useClassGroupSettings,
   useUpdateClassGroupSettings,
+  useGroupScore,
+  useGroupScoreLogs,
+  useGroupLeaderboard,
 } from '@/features/group-collaboration'
-import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2 } from 'lucide-vue-next'
+import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2, Plus } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import type { ClassInfo } from '@/api/classes'
 import type { GroupDetail } from '@/types/api'
@@ -39,6 +42,31 @@ const classOptions = computed(() => [
 
 // 小组列表
 const { data: groups, isPending: loadingGroups } = useTeacherGroups(selectedClass)
+
+// 科目筛选（从当前学期科目列表获取）
+const { data: subjects } = useSubjects()
+const selectedSubjectId = ref<number | string>('')
+const subjectOptions = computed(() => [
+  { value: '', label: '全部科目' },
+  ...(subjects.value || []).map((s) => ({ value: s.id, label: s.name })),
+])
+
+// 按科目过滤小组列表
+const filteredGroups = computed(() => {
+  const list = groups.value || []
+  if (selectedSubjectId.value === '' || selectedSubjectId.value === null) return list
+  return list.filter((g: Group) => g.subject_id === Number(selectedSubjectId.value))
+})
+
+// 科目名称（优先用后端返回的 subject_name，其次从科目列表映射）
+function subjectLabel(g: Group) {
+  if (g.subject_name) return g.subject_name
+  if (g.subject_id != null) {
+    const s = (subjects.value || []).find((x) => x.id === g.subject_id)
+    if (s) return s.name
+  }
+  return '未分科'
+}
 
 // 小组人数上限设置
 const { data: groupSettings } = useClassGroupSettings(selectedClass)
@@ -224,6 +252,62 @@ async function handleRejectDissolution(reqId: number) {
     toastError(getErrorMessage(err) || '操作失败')
   }
 }
+
+// 小组加减分
+const showScoreDialog = ref(false)
+const scoreGroup = ref<Group | null>(null)
+const scoreChange = ref(0)
+const scoreReason = ref('')
+const updatingScore = ref(false)
+
+const { mutateAsync: updateGroupScore } = useGroupScore()
+const { data: scoreLogs, isPending: loadingScoreLogs } = useGroupScoreLogs(
+  computed(() => scoreGroup.value?.id ?? null),
+)
+
+function openScoreDialog(group: Group) {
+  scoreGroup.value = group
+  scoreChange.value = 0
+  scoreReason.value = ''
+  showScoreDialog.value = true
+}
+
+async function handleUpdateScore() {
+  if (!scoreGroup.value) return
+  if (!scoreChange.value) {
+    toastError('请输入分数变化值')
+    return
+  }
+  if (!scoreReason.value.trim()) {
+    toastError('请输入分数变化原因')
+    return
+  }
+  try {
+    updatingScore.value = true
+    await updateGroupScore({
+      groupId: scoreGroup.value.id,
+      scoreChange: scoreChange.value,
+      reason: scoreReason.value.trim(),
+    })
+    toastSuccess('小组分数已更新')
+    showScoreDialog.value = false
+  } catch (err) {
+    toastError(getErrorMessage(err) || '更新分数失败')
+  } finally {
+    updatingScore.value = false
+  }
+}
+
+// 小组排行榜（按科目 + 班级）
+const leaderboardSubjectId = computed(() =>
+  selectedSubjectId.value === '' || selectedSubjectId.value === null
+    ? null
+    : Number(selectedSubjectId.value),
+)
+const { data: leaderboard, isPending: loadingLeaderboard } = useGroupLeaderboard(
+  leaderboardSubjectId,
+  selectedClass,
+)
 </script>
 
 <template>
@@ -242,6 +326,7 @@ async function handleRejectDissolution(reqId: number) {
       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 mb-4">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <Select v-model="selectedClass" :options="classOptions" class="w-full sm:w-48" />
+          <Select v-model="selectedSubjectId" :options="subjectOptions" class="w-full sm:w-40" />
           <div class="flex items-center gap-2">
             <span class="text-sm text-[#737373]">每组上限</span>
             <input
@@ -263,18 +348,18 @@ async function handleRejectDissolution(reqId: number) {
           </Button>
         </div>
         <span class="text-sm text-[#737373]">
-          共 {{ (groups || []).length }} 个小组
+          共 {{ (filteredGroups || []).length }} 个小组
         </span>
       </div>
 
       <DataContainer
         :loading="loadingGroups"
-        :has-data="(groups || []).length > 0"
+        :has-data="(filteredGroups || []).length > 0"
         empty-text="该班级暂无小组"
       >
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div
-            v-for="g in groups"
+            v-for="g in filteredGroups"
             :key="g.id"
             class="rounded-xl border border-[#e5e5e5] bg-white p-4"
           >
@@ -304,8 +389,26 @@ async function handleRejectDissolution(reqId: number) {
               </div>
             </div>
 
+            <!-- 科目与分数 -->
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">
+                {{ subjectLabel(g) }}
+              </Badge>
+              <span class="text-xs text-[#737373]">分数</span>
+              <span class="text-sm font-medium text-black">{{ g.score ?? 0 }}</span>
+            </div>
+
             <!-- 操作按钮 -->
-            <div class="mt-3 flex gap-2">
+            <div class="mt-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="cta"
+                data-testid="open-group-score-btn"
+                @click.stop="openScoreDialog(g)"
+              >
+                <Plus class="h-3.5 w-3.5 mr-1" />
+                加减分
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -355,6 +458,41 @@ async function handleRejectDissolution(reqId: number) {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </DataContainer>
+    </Card>
+
+    <!-- 小组排行榜（按科目 + 班级） -->
+    <Card class="bg-white border-[#e5e5e5] p-5">
+      <h2 class="text-lg font-medium text-black mb-4">
+        小组排行榜
+      </h2>
+      <DataContainer
+        :loading="loadingLeaderboard"
+        :has-data="(leaderboard?.groups || []).length > 0"
+        empty-text="暂无排行榜数据"
+      >
+        <div class="space-y-2">
+          <div
+            v-for="entry in leaderboard?.groups"
+            :key="entry.group_id"
+            class="flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] px-4 py-3"
+          >
+            <div class="flex items-center gap-3">
+              <span class="w-6 text-center text-sm font-medium text-[#737373]">
+                {{ entry.rank }}
+              </span>
+              <span class="text-sm font-medium text-black">
+                {{ entry.group_name }}
+              </span>
+              <span class="text-xs text-[#737373]">
+                {{ entry.class_name }}
+              </span>
+            </div>
+            <span class="text-sm font-medium text-black">
+              {{ entry.score }} 分
+            </span>
           </div>
         </div>
       </DataContainer>
@@ -463,6 +601,77 @@ async function handleRejectDissolution(reqId: number) {
             @click="handleDissolve"
           >
             确认解散
+          </Button>
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- 加减分弹窗 -->
+    <Dialog
+      v-model:open="showScoreDialog"
+      :title="scoreGroup ? `加减分 - ${scoreGroup.name}` : '加减分'"
+    >
+      <div class="space-y-4">
+        <div class="flex items-center justify-between rounded-lg bg-[#fafafa] px-3 py-2">
+          <span class="text-sm text-[#737373]">当前分数</span>
+          <span class="text-sm font-medium text-black">{{ scoreGroup?.score ?? 0 }}</span>
+        </div>
+        <div class="space-y-2">
+          <Label for="groupScoreChange">分数变化</Label>
+          <Input
+            id="groupScoreChange"
+            v-model.number="scoreChange"
+            type="number"
+            placeholder="正数加分，负数扣分"
+            data-testid="group-score-change"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="groupScoreReason">原因</Label>
+          <Input
+            id="groupScoreReason"
+            v-model="scoreReason"
+            placeholder="输入分数变化原因"
+            data-testid="group-score-reason"
+          />
+        </div>
+        <!-- 分数日志 -->
+        <div class="space-y-2">
+          <p class="text-sm font-medium text-black">分数日志</p>
+          <p v-if="loadingScoreLogs" class="text-xs text-[#737373]">加载中...</p>
+          <p v-else-if="!scoreLogs || scoreLogs.length === 0" class="text-xs text-[#737373]">
+            暂无分数变更记录
+          </p>
+          <div v-else class="max-h-40 space-y-1 overflow-y-auto">
+            <div
+              v-for="(log, idx) in scoreLogs"
+              :key="idx"
+              class="flex items-center justify-between text-xs"
+              data-testid="group-score-log"
+            >
+              <span class="text-[#737373]">{{ log.reason || '未填写原因' }}</span>
+              <span :class="(log.delta ?? 0) >= 0 ? 'text-[#16a34a]' : 'text-[#dc2626]'">
+                {{ (log.delta ?? 0) >= 0 ? '+' : '' }}{{ log.delta }}（{{ log.old_score }} → {{ log.new_score }}）
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex w-full gap-2 sm:justify-end">
+          <Button
+            variant="outline"
+            @click="showScoreDialog = false"
+          >
+            取消
+          </Button>
+          <Button
+            variant="cta"
+            :loading="updatingScore"
+            data-testid="confirm-group-score-btn"
+            @click="handleUpdateScore"
+          >
+            确认加减分
           </Button>
         </div>
       </template>

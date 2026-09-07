@@ -32,7 +32,33 @@ export interface Group {
   max_members?: number | null
   is_full?: boolean
   leader_name?: string
+  subject_id?: number | null
+  subject_name?: string | null
+  score?: number
   members?: { student_id: string; student_name?: string }[]
+}
+
+export interface GroupScoreLog {
+  old_score: number | null
+  new_score: number | null
+  delta: number | null
+  reason: string | null
+  operator: string | null
+  created_at: string
+}
+
+export interface GroupLeaderboardEntry {
+  rank: number
+  group_id: number
+  group_name: string
+  class_name: string
+  subject_id: number | null
+  score: number
+}
+
+export interface GroupLeaderboardData {
+  groups: GroupLeaderboardEntry[]
+  total: number
 }
 
 export interface GroupTask {
@@ -127,6 +153,12 @@ export const groupsApi = {
     del(`/teacher/groups/${groupId}/members/${studentId}`),
   dissolveGroup: (groupId: number): Promise<unknown> =>
     del(`/teacher/groups/${groupId}`),
+  updateScore: (groupId: number, scoreChange: number, reason: string): Promise<unknown> =>
+    put(`/groups/${groupId}/score`, { score_change: scoreChange, reason }),
+  getScoreLogs: (groupId: number, params?: { limit?: number; offset?: number }): Promise<GroupScoreLog[]> =>
+    get(`/groups/${groupId}/score-logs`, params),
+  getLeaderboard: (params: { subject_id?: number; class_name?: string; limit?: number }): Promise<GroupLeaderboardData> =>
+    get('/groups/leaderboard', params),
   getDissolutionRequests: (): Promise<DissolutionRequest[]> =>
     get('/teacher/group-dissolution-requests'),
   approveDissolution: (reqId: number): Promise<unknown> =>
@@ -135,8 +167,8 @@ export const groupsApi = {
     post(`/teacher/group-dissolution-requests/${reqId}/reject`, {}),
 
   // Student
-  createGroup: (className: string, name: string): Promise<unknown> =>
-    post('/student/groups', { class_name: className, name }),
+  createGroup: (className: string, name: string, subjectId?: number): Promise<unknown> =>
+    post('/student/groups', { class_name: className, name, subject_id: subjectId }),
   getGroups: (className: string): Promise<Group[]> =>
     get('/student/groups', { class_name: className }),
   requestJoin: (groupId: number): Promise<unknown> =>
