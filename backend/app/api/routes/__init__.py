@@ -16,6 +16,7 @@ from app.api.routes.lost_found import router as lost_found_router
 from app.api.routes.term import router as term_router
 from app.api.routes.subjects import router as subjects_router
 from app.api.routes.student_subject_scores import router as student_subject_scores_router
+from app.api.routes.group_scores import router as group_scores_router
 
 __all__ = [
     "login_router",
@@ -33,4 +34,5 @@ __all__ = [
     "term_router",
     "subjects_router",
     "student_subject_scores_router",
+    "group_scores_router",
 ]

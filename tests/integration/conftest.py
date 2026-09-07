@@ -59,6 +59,7 @@ def _clear_all_data():
             "group_task_dimensions",
             "group_tasks",
             "group_members",
+            "group_score_logs",
             "groups",
             "class_group_settings",
             "course_sessions",

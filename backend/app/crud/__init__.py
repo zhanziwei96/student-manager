@@ -52,6 +52,11 @@ from app.crud.student_subject_score import (
     transfer_student_to_new_teacher,
     update_student_subject_score,
 )
+from app.crud.group_score import (
+    update_group_score,
+    get_group_score_logs,
+    get_group_leaderboard,
+)
 from app.crud.group import (
     get_group, get_groups_by_class, get_student_active_group,
     get_group_members, create_group, create_membership_request,
@@ -123,6 +128,10 @@ __all__ = [
     "init_student_subject_scores",
     "transfer_student_to_new_teacher",
     "update_student_subject_score",
+    # GroupScore
+    "update_group_score",
+    "get_group_score_logs",
+    "get_group_leaderboard",
     # Group
     "get_group", "get_groups_by_class", "get_student_active_group",
     "get_group_members", "create_group", "create_membership_request",
