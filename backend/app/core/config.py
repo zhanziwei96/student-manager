@@ -146,7 +146,7 @@ class ScoreSettings(BaseSettings):
 
     min_score: float = Field(default=0, description="最低分数")
     max_score: float = Field(default=100, description="最高分数")
-    default_score: float = Field(default=70, description="学生默认分数")
+    default_score: float = Field(default=0, description="学生默认分数")
 
 
 class UploadSettings(BaseSettings):

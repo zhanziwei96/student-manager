@@ -148,7 +148,7 @@ class TestStudentCRUD:
             # 不传入 score，使用默认值
         )
         
-        assert student.score == 70.0  # 默认分数
+        assert student.score == 0.0  # 默认分数
     
     def test_update_student_score_not_found(self, session: Session):
         """测试更新不存在学生的分数"""

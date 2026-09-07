@@ -32,7 +32,7 @@ class TestStudentModel:
         )
         
         assert student.class_name == "未分班"
-        assert student.score == 70.0
+        assert student.score == 0.0
         assert student.is_account_enabled is True
     
     def test_student_with_password(self):

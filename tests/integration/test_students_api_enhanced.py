@@ -81,7 +81,7 @@ class TestStudentsAPIEnhanced:
         data = response.json()
         assert data["success"] is True
         assert data["data"]["student_id"] == "S100"
-        assert data["data"]["score"] == 70.0  # 默认分数
+        assert data["data"]["score"] == 0.0  # 默认分数
     
     def test_create_student_duplicate_id(self, admin_client, student_user):
         """测试创建重复学号的学生"""

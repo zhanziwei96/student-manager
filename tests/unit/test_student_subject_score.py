@@ -35,7 +35,7 @@ def test_init_student_subject_scores(session):
         student_id="TEST001", subject_id=subject.id, semester="2026-2027-1"
     ).first()
     assert score is not None
-    assert score.score == 70.0  # 默认分数
+    assert score.score == 0.0  # 默认分数
     assert score.teacher_id == 1  # 教师从课表推导
 
 
