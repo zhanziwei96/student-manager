@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useQueryClient } from '@tanstack/vue-query'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useStudentCreate, useToast } from '@/composables'
 import { StudentFilters, usePaginatedStudents } from '@/features/students'
-import { Card, Button, Badge, Dialog, Input, Label, Checkbox, DataContainer } from '@/components/ui'
-import { Plus, Archive, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Card, Button, Badge, Dialog, Input, Label, Checkbox, Select, DataContainer } from '@/components/ui'
+import { Plus, Archive, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { studentsApi } from '@/api'
+import type { StudentSubjectScore } from '@/api/students'
+import type { Student } from '@/types'
 import { getErrorMessage } from '@/lib/error'
 
 /**
@@ -77,6 +79,69 @@ const handleDisableByClass = async () => {
     showErrorToast(getErrorMessage(err) || '按班级禁用失败')
   } finally {
     isDisabling.value = false
+  }
+}
+
+// === 科目分数展开行 ===
+const expandedStudentId = ref<string | null>(null)
+
+// 切换展开/收起某学生的科目分数
+const toggleSubjects = (studentId: string) => {
+  expandedStudentId.value = expandedStudentId.value === studentId ? null : studentId
+}
+
+// 展开学生的科目分数（按学生缓存，收起时停用查询）
+const { data: subjectScores, isPending: isSubjectsPending } = useQuery({
+  queryKey: computed(() => ['student-subjects', expandedStudentId.value]),
+  queryFn: () => studentsApi.getSubjects(expandedStudentId.value!),
+  enabled: computed(() => expandedStudentId.value !== null),
+})
+
+// === 科目分数调整弹窗（下拉选科目 + 加减分） ===
+const showSubjectScoreDialog = ref(false)
+const scoreStudent = ref<Student | null>(null)
+const scoreSubjectId = ref<string | number>('')
+const scoreChange = ref(0)
+const scoreReason = ref('')
+const isUpdatingSubjectScore = ref(false)
+
+// 弹窗科目下拉选项（来自该学生已展开的科目分数）
+const scoreSubjectOptions = computed(() =>
+  (subjectScores.value ?? []).map((s: StudentSubjectScore) => ({
+    value: s.subject_id,
+    label: `${s.subject_name}（当前 ${s.score} 分）`,
+  }))
+)
+
+// 从展开行打开科目分数调整弹窗
+const openSubjectScoreDialog = (student: Student) => {
+  scoreStudent.value = student
+  scoreSubjectId.value = subjectScores.value?.[0]?.subject_id ?? ''
+  scoreChange.value = 0
+  scoreReason.value = ''
+  showSubjectScoreDialog.value = true
+}
+
+const handleUpdateSubjectScore = async () => {
+  if (!scoreStudent.value || scoreSubjectId.value === '') return
+  if (!scoreReason.value.trim()) {
+    showErrorToast('请输入分数变化原因')
+    return
+  }
+
+  try {
+    isUpdatingSubjectScore.value = true
+    const studentId = scoreStudent.value.student_id
+    await studentsApi.updateSubjectScore(studentId, Number(scoreSubjectId.value), scoreChange.value, scoreReason.value.trim())
+    // 刷新该学生科目分数与学生列表总分
+    await queryClient.invalidateQueries({ queryKey: ['student-subjects', studentId] })
+    await queryClient.invalidateQueries({ queryKey: ['students'] })
+    showSubjectScoreDialog.value = false
+    showSuccessToast(`${scoreStudent.value.name} 的科目分数已更新`)
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '更新科目分数失败')
+  } finally {
+    isUpdatingSubjectScore.value = false
   }
 }
 
@@ -240,6 +305,60 @@ const handleAddStudent = async () => {
               <p class="text-xs text-[#737373]">分</p>
             </div>
           </div>
+          <div class="relative z-10 mt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="w-full"
+              @click="toggleSubjects(student.student_id)"
+            >
+              科目分数
+              <ChevronUp
+                v-if="expandedStudentId === student.student_id"
+                class="ml-1 h-4 w-4"
+              />
+              <ChevronDown
+                v-else
+                class="ml-1 h-4 w-4"
+              />
+            </Button>
+            <div
+              v-if="expandedStudentId === student.student_id"
+              class="mt-2 rounded-lg bg-[#fafafa] p-3"
+            >
+              <p
+                v-if="isSubjectsPending"
+                class="text-sm text-[#737373]"
+              >
+                加载中...
+              </p>
+              <p
+                v-else-if="!subjectScores || subjectScores.length === 0"
+                class="text-sm text-[#737373]"
+              >
+                暂无科目分数记录
+              </p>
+              <div v-else class="space-y-2">
+                <div
+                  v-for="s in subjectScores"
+                  :key="s.subject_id"
+                  class="flex items-center justify-between text-sm"
+                >
+                  <span class="font-medium text-black">{{ s.subject_name }}</span>
+                  <span class="text-black">{{ s.score }} 分</span>
+                  <span class="text-xs text-[#a3a3a3]">{{ s.teacher_name }}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="w-full"
+                  @click="openSubjectScoreDialog(student)"
+                >
+                  调整科目分数
+                </Button>
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -270,32 +389,95 @@ const handleAddStudent = async () => {
               </tr>
             </thead>
             <tbody>
-              <tr
+              <template
                 v-for="student in filteredStudents"
                 :key="student.student_id"
-                class="border-b border-[#e5e5e5] transition-colors hover:bg-[#f5f5f5]"
               >
-                <td class="px-4 py-3 text-sm text-[#a3a3a3]">
-                  {{ student.student_id }}
-                </td>
-                <td class="px-4 py-3 text-sm font-medium text-black">
-                  {{ student.name }}
-                </td>
-                <td class="px-4 py-3 text-sm text-[#a3a3a3]">
-                  {{ student.class_name }}
-                </td>
-                <td class="px-4 py-3 text-sm font-medium text-[black]">
-                  {{ student.score }}
-                </td>
-                <td class="px-4 py-3">
-                  <Badge :variant="student.is_account_enabled ? 'success' : 'secondary'">
-                    {{ student.is_account_enabled ? '启用' : '禁用' }}
-                  </Badge>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="text-[#737373] text-sm">-</span>
-                </td>
-              </tr>
+                <tr class="border-b border-[#e5e5e5] transition-colors hover:bg-[#f5f5f5]">
+                  <td class="px-4 py-3 text-sm text-[#a3a3a3]">
+                    {{ student.student_id }}
+                  </td>
+                  <td class="px-4 py-3 text-sm font-medium text-black">
+                    {{ student.name }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-[#a3a3a3]">
+                    {{ student.class_name }}
+                  </td>
+                  <td class="px-4 py-3 text-sm font-medium text-[black]">
+                    {{ student.score }}
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge :variant="student.is_account_enabled ? 'success' : 'secondary'">
+                      {{ student.is_account_enabled ? '启用' : '禁用' }}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      data-testid="expand-subjects-btn"
+                      @click="toggleSubjects(student.student_id)"
+                    >
+                      科目分数
+                      <ChevronUp
+                        v-if="expandedStudentId === student.student_id"
+                        class="ml-1 h-4 w-4"
+                      />
+                      <ChevronDown
+                        v-else
+                        class="ml-1 h-4 w-4"
+                      />
+                    </Button>
+                  </td>
+                </tr>
+                <!-- 展开行：科目分数列表 -->
+                <tr
+                  v-if="expandedStudentId === student.student_id"
+                  class="border-b border-[#e5e5e5] bg-[#fafafa]"
+                  data-testid="subject-scores-row"
+                >
+                  <td
+                    colspan="6"
+                    class="px-4 py-3"
+                  >
+                    <p
+                      v-if="isSubjectsPending"
+                      class="text-sm text-[#737373]"
+                    >
+                      加载中...
+                    </p>
+                    <p
+                      v-else-if="!subjectScores || subjectScores.length === 0"
+                      class="text-sm text-[#737373]"
+                    >
+                      暂无科目分数记录
+                    </p>
+                    <div v-else>
+                      <div class="flex flex-wrap gap-2">
+                        <div
+                          v-for="s in subjectScores"
+                          :key="s.subject_id"
+                          class="flex items-center gap-2 rounded-lg border border-[#e5e5e5] bg-white px-3 py-2"
+                          data-testid="subject-score-item"
+                        >
+                          <span class="text-sm font-medium text-black">{{ s.subject_name }}</span>
+                          <span class="text-sm font-medium text-[black]">{{ s.score }} 分</span>
+                          <span class="text-xs text-[#a3a3a3]">{{ s.teacher_name }}</span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        class="mt-3"
+                        data-testid="open-subject-score-dialog-btn"
+                        @click="openSubjectScoreDialog(student)"
+                      >
+                        调整科目分数
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -404,6 +586,58 @@ const handleAddStudent = async () => {
         </Button>
       </template>
     </Dialog>
+    <!-- 科目分数调整对话框（下拉选科目 + 加减分） -->
+    <Dialog
+      v-model:open="showSubjectScoreDialog"
+      :title="scoreStudent ? `调整 ${scoreStudent.name} 的科目分数` : '调整科目分数'"
+    >
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="subjectScoreSelect">科目</Label>
+          <Select
+            id="subjectScoreSelect"
+            v-model="scoreSubjectId"
+            :options="scoreSubjectOptions"
+            placeholder="选择科目"
+            data-testid="subject-score-select"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="subjectScoreChange">分数变化</Label>
+          <Input
+            id="subjectScoreChange"
+            v-model.number="scoreChange"
+            type="number"
+            placeholder="输入分数（正数或负数）"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="subjectScoreReason">原因</Label>
+          <Input
+            id="subjectScoreReason"
+            v-model="scoreReason"
+            placeholder="输入分数变化原因"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          variant="outline"
+          @click="showSubjectScoreDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :loading="isUpdatingSubjectScore"
+          :disabled="scoreSubjectId === ''"
+          data-testid="confirm-subject-score-btn"
+          @click="handleUpdateSubjectScore"
+        >
+          更新分数
+        </Button>
+      </template>
+    </Dialog>
+
     <!-- 按班级禁用对话框（学期归档，支持多选班级） -->
     <Dialog
       v-model:open="showDisableDialog"

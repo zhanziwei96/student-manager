@@ -25,6 +25,15 @@ export interface ScoreLogParams {
   offset?: number
 }
 
+/** 学生科目分数 */
+export interface StudentSubjectScore {
+  subject_id: number
+  subject_name: string
+  teacher_id: number
+  teacher_name: string
+  score: number
+}
+
 /**
  * 学生相关 API - FE-003 修复后
  *
@@ -66,6 +75,14 @@ export const studentsApi = {
 
   getScoreLogs: (studentId: string, params?: ScoreLogParams): Promise<ScoreLog[]> =>
     get(`/students/${studentId}/scores`, params ? { ...params } : undefined),
+
+  /** 获取学生当前学期所有科目分数 */
+  getSubjects: (studentId: string): Promise<StudentSubjectScore[]> =>
+    get(`/students/${studentId}/subjects`),
+
+  /** 更新学生某科目分数（admin 或负责该班的教师） */
+  updateSubjectScore: (studentId: string, subjectId: number, scoreChange: number, reason: string): Promise<void> =>
+    put(`/students/${studentId}/subjects/${subjectId}/score`, { score_change: scoreChange, reason }),
 
   resetPassword: (id: number, newPassword: string): Promise<void> =>
     put(`/students/${id}/reset-password`, { new_password: newPassword }),

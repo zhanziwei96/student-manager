@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useQueryClient } from '@tanstack/vue-query'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useToast } from '@/composables'
 import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, usePaginatedStudents } from '@/features/students'
-import { DataContainer, Card, Button, Dialog, Label, Checkbox } from '@/components/ui'
+import { DataContainer, Card, Button, Dialog, Input, Label, Checkbox, Select } from '@/components/ui'
 import type { Student } from '@/types'
 import { studentsApi } from '@/api'
+import type { StudentSubjectScore } from '@/api/students'
 import { getErrorMessage } from '@/lib/error'
-import { Users, GraduationCap, Search, Archive, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Users, GraduationCap, Search, Archive, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-vue-next'
 
 /**
  * 教师学生管理页面 - FE-006 重构后
@@ -104,6 +105,69 @@ const handleDisableByClass = async () => {
     showErrorToast(getErrorMessage(err) || '按班级禁用失败')
   } finally {
     isDisabling.value = false
+  }
+}
+
+// === 科目分数展开区 ===
+const expandedStudentId = ref<string | null>(null)
+
+// 切换展开/收起某学生的科目分数
+const toggleSubjects = (studentId: string) => {
+  expandedStudentId.value = expandedStudentId.value === studentId ? null : studentId
+}
+
+// 展开学生的科目分数（按学生缓存，收起时停用查询）
+const { data: subjectScores, isPending: isSubjectsPending } = useQuery({
+  queryKey: computed(() => ['student-subjects', expandedStudentId.value]),
+  queryFn: () => studentsApi.getSubjects(expandedStudentId.value!),
+  enabled: computed(() => expandedStudentId.value !== null),
+})
+
+// === 科目分数调整弹窗（下拉选科目 + 加减分） ===
+const showSubjectScoreDialog = ref(false)
+const scoreStudent = ref<Student | null>(null)
+const scoreSubjectId = ref<string | number>('')
+const subjectScoreChange = ref(0)
+const subjectScoreReason = ref('')
+const isUpdatingSubjectScore = ref(false)
+
+// 弹窗科目下拉选项（来自该学生已展开的科目分数）
+const scoreSubjectOptions = computed(() =>
+  (subjectScores.value ?? []).map((s: StudentSubjectScore) => ({
+    value: s.subject_id,
+    label: `${s.subject_name}（当前 ${s.score} 分）`,
+  }))
+)
+
+// 从展开区打开科目分数调整弹窗
+const openSubjectScoreDialog = (student: Student) => {
+  scoreStudent.value = student
+  scoreSubjectId.value = subjectScores.value?.[0]?.subject_id ?? ''
+  subjectScoreChange.value = 0
+  subjectScoreReason.value = ''
+  showSubjectScoreDialog.value = true
+}
+
+const handleUpdateSubjectScore = async () => {
+  if (!scoreStudent.value || scoreSubjectId.value === '') return
+  if (!subjectScoreReason.value.trim()) {
+    showErrorToast('请输入分数变化原因')
+    return
+  }
+
+  try {
+    isUpdatingSubjectScore.value = true
+    const studentId = scoreStudent.value.student_id
+    await studentsApi.updateSubjectScore(studentId, Number(scoreSubjectId.value), subjectScoreChange.value, subjectScoreReason.value.trim())
+    // 刷新该学生科目分数与学生列表总分
+    await queryClient.invalidateQueries({ queryKey: ['student-subjects', studentId] })
+    await queryClient.invalidateQueries({ queryKey: ['students'] })
+    showSubjectScoreDialog.value = false
+    showSuccessToast(`${scoreStudent.value.name} 的科目分数已更新`)
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '更新科目分数失败')
+  } finally {
+    isUpdatingSubjectScore.value = false
   }
 }
 
@@ -218,16 +282,77 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
     >
       <!-- Students list -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <StudentCard
+        <div
           v-for="student in filteredStudents"
           :key="student.student_id"
-          :student="student"
-          :quick-score-options="quickScoreOptions"
-          :is-updating="isUpdating"
-          :updating-student-id="updatingStudentId || undefined"
-          @quick-score="handleQuickScore"
-          @open-score-dialog="openScoreDialog"
-        />
+          class="space-y-2"
+        >
+          <StudentCard
+            :student="student"
+            :quick-score-options="quickScoreOptions"
+            :is-updating="isUpdating"
+            :updating-student-id="updatingStudentId || undefined"
+            @quick-score="handleQuickScore"
+            @open-score-dialog="openScoreDialog"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            class="w-full"
+            data-testid="expand-subjects-btn"
+            @click="toggleSubjects(student.student_id)"
+          >
+            科目分数
+            <ChevronUp
+              v-if="expandedStudentId === student.student_id"
+              class="ml-1 h-4 w-4"
+            />
+            <ChevronDown
+              v-else
+              class="ml-1 h-4 w-4"
+            />
+          </Button>
+          <!-- 展开区：科目分数列表 -->
+          <div
+            v-if="expandedStudentId === student.student_id"
+            class="rounded-lg border border-[#e5e5e5] bg-[#fafafa] p-3"
+            data-testid="subject-scores-panel"
+          >
+            <p
+              v-if="isSubjectsPending"
+              class="text-sm text-[#737373]"
+            >
+              加载中...
+            </p>
+            <p
+              v-else-if="!subjectScores || subjectScores.length === 0"
+              class="text-sm text-[#737373]"
+            >
+              暂无科目分数记录
+            </p>
+            <div v-else class="space-y-2">
+              <div
+                v-for="s in subjectScores"
+                :key="s.subject_id"
+                class="flex items-center justify-between text-sm"
+                data-testid="subject-score-item"
+              >
+                <span class="font-medium text-black">{{ s.subject_name }}</span>
+                <span class="text-black">{{ s.score }} 分</span>
+                <span class="text-xs text-[#a3a3a3]">{{ s.teacher_name }}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                class="w-full"
+                data-testid="open-subject-score-dialog-btn"
+                @click="openSubjectScoreDialog(student)"
+              >
+                调整科目分数
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 分页（搜索模式下显示匹配数量） -->
@@ -275,6 +400,58 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
       :default-reason="defaultReason"
       @submit="handleUpdateScore"
     />
+
+    <!-- 科目分数调整对话框（下拉选科目 + 加减分） -->
+    <Dialog
+      v-model:open="showSubjectScoreDialog"
+      :title="scoreStudent ? `调整 ${scoreStudent.name} 的科目分数` : '调整科目分数'"
+    >
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="subjectScoreSelect">科目</Label>
+          <Select
+            id="subjectScoreSelect"
+            v-model="scoreSubjectId"
+            :options="scoreSubjectOptions"
+            placeholder="选择科目"
+            data-testid="subject-score-select"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="subjectScoreChange">分数变化</Label>
+          <Input
+            id="subjectScoreChange"
+            v-model.number="subjectScoreChange"
+            type="number"
+            placeholder="输入分数（正数或负数）"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="subjectScoreReason">原因</Label>
+          <Input
+            id="subjectScoreReason"
+            v-model="subjectScoreReason"
+            placeholder="输入分数变化原因"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          variant="outline"
+          @click="showSubjectScoreDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :loading="isUpdatingSubjectScore"
+          :disabled="scoreSubjectId === ''"
+          data-testid="confirm-subject-score-btn"
+          @click="handleUpdateSubjectScore"
+        >
+          更新分数
+        </Button>
+      </template>
+    </Dialog>
 
     <!-- 按班级禁用对话框（学期归档，支持多选班级） -->
     <Dialog
