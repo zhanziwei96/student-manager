@@ -575,3 +575,66 @@ def test_dissolve_group_not_blocked_by_previous_term_evaluating_task(student_cli
     data = resp.json()
     assert data["success"] is True
     assert "request_id" in data["data"]
+
+
+def test_teacher_groups_returns_subject_and_score(teacher_client: TestClient):
+    """GET /teacher/groups 返回 subject_id/subject_name/score"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import Group, Subject
+
+    with Session(_test_engine) as session:
+        subject = Subject(name="数学", semester="2026-2027-1")
+        session.add(subject)
+        session.commit()
+        session.refresh(subject)
+        subject_id = subject.id
+
+        group = Group(
+            class_name="一班",
+            name="第一组",
+            leader_student_id="S001",
+            subject_id=subject.id,
+            score=5.0,
+        )
+        session.add(group)
+        session.commit()
+        session.refresh(group)
+        group_id = group.id
+
+    resp = teacher_client.get("/api/v1/teacher/groups?class_name=一班")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    target = next((g for g in data if g["id"] == group_id), None)
+    assert target is not None
+    assert target["subject_id"] == subject_id
+    assert target["subject_name"] == "数学"
+    assert target["score"] == 5.0
+
+
+def test_student_create_group_with_subject(student_client: TestClient):
+    """学生创建小组带科目"""
+    from sqlmodel import Session, select
+    from tests.integration.conftest import _test_engine
+    from app.models import Subject, Group
+
+    with Session(_test_engine) as session:
+        subject = Subject(name="数学", semester="2026-2027-1")
+        session.add(subject)
+        session.commit()
+        session.refresh(subject)
+        subject_id = subject.id
+
+    resp = student_client.post(
+        "/api/v1/student/groups",
+        json={"class_name": "一班", "name": "数学第一组", "subject_id": subject_id},
+    )
+    assert resp.status_code == 200
+
+    # 验证小组带科目
+    with Session(_test_engine) as session:
+        group = session.exec(
+            select(Group).where(Group.name == "数学第一组")
+        ).first()
+        assert group is not None
+        assert group.subject_id == subject_id
