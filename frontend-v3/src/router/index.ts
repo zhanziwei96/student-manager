@@ -51,6 +51,7 @@ const routes = [
         name: 'AdminSchedules',
         component: () => import('@/views/teacher/Schedules.vue'),
       },
+      { path: 'subjects', name: 'AdminSubjects', component: () => import('@/views/admin/Subjects.vue') },
       { path: 'group-tasks', name: 'AdminGroupTasks', component: () => import('@/views/teacher/GroupTasks.vue') },
       { path: 'group-tasks/:id/results', name: 'AdminGroupTaskResults', component: () => import('@/views/teacher/GroupTaskResults.vue') },
       { path: 'groups', name: 'AdminGroups', component: () => import('@/views/teacher/Groups.vue') },
@@ -85,6 +86,7 @@ const routes = [
         name: 'TeacherSchedules',
         component: () => import('@/views/teacher/Schedules.vue'),
       },
+      { path: 'subjects', name: 'TeacherSubjects', component: () => import('@/views/teacher/Subjects.vue') },
       {
         path: 'sessions-history',
         name: 'TeacherSessionsHistory',

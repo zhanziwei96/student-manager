@@ -26,3 +26,5 @@ export type {
   MyGroup,
 } from './groups'
 export * as lostFoundApi from './lostFound'
+export { subjectsApi } from './subjects'
+export type { Subject } from './subjects'
