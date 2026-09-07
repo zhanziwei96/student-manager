@@ -77,6 +77,11 @@ const routes = [
         component: () => import('@/views/teacher/Students.vue'),
       },
       {
+        path: 'my-classes',
+        name: 'TeacherMyClasses',
+        component: () => import('@/views/teacher/MyClasses.vue'),
+      },
+      {
         path: 'session',
         name: 'TeacherSession',
         component: () => import('@/views/teacher/CourseSession.vue'),

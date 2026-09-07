@@ -238,7 +238,7 @@ const handleAddStudent = async () => {
           @click="openDisableDialog"
         >
           <Archive class="mr-2 h-4 w-4" />
-          按班级禁用
+          批量禁用毕业生账号
         </Button>
         <Button @click="openAddDialog">
           <Plus class="mr-2 h-4 w-4" />
@@ -638,11 +638,11 @@ const handleAddStudent = async () => {
       </template>
     </Dialog>
 
-    <!-- 按班级禁用对话框（学期归档，支持多选班级） -->
+    <!-- 批量禁用毕业生账号对话框（支持多选班级） -->
     <Dialog
       v-model:open="showDisableDialog"
-      title="按班级禁用"
-      description="禁用后所选班级学生无法登录，班级将从列表中消失，历史数据保留"
+      title="批量禁用毕业生账号"
+      description="禁用后学生无法登录（适用于毕业/离校学生）"
     >
       <div class="space-y-4">
         <div class="space-y-2">

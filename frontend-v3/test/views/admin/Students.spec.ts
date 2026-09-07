@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * 管理员学生管理页 - 按班级禁用（学期归档，多选班级）功能测试
+ * 管理员学生管理页 - 批量禁用毕业生账号（多选班级）功能测试
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -106,17 +106,17 @@ const openDialog = async (wrapper: ReturnType<typeof createWrapper>) => {
   return wrapper.find('.mock-dialog')
 }
 
-describe('Admin Students - 按班级禁用（多选）', () => {
+describe('Admin Students - 批量禁用毕业生账号（多选）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     holder.paginated = makePaginated()
   })
 
-  it('渲染"按班级禁用"按钮', () => {
+  it('渲染"批量禁用毕业生账号"按钮', () => {
     const wrapper = createWrapper()
     const btn = wrapper.find('[data-testid="disable-by-class-btn"]')
     expect(btn.exists()).toBe(true)
-    expect(btn.text()).toContain('按班级禁用')
+    expect(btn.text()).toContain('批量禁用毕业生账号')
   })
 
   it('点击按钮打开弹窗并展示班级复选框（不含"全部班级"）', async () => {
@@ -124,7 +124,7 @@ describe('Admin Students - 按班级禁用（多选）', () => {
     const dialog = await openDialog(wrapper)
 
     expect(dialog.exists()).toBe(true)
-    expect(dialog.find('h3').text()).toBe('按班级禁用')
+    expect(dialog.find('h3').text()).toBe('批量禁用毕业生账号')
 
     const checkboxes = dialog.findAll('input[type="checkbox"]')
     expect(checkboxes).toHaveLength(2)

@@ -40,6 +40,7 @@ const navItems = computed(() => {
     items.push(
       { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
       { name: '学生管理', path: '/teacher/students', icon: Users },
+      { name: '我的班级', path: '/teacher/my-classes', icon: School },
       { name: '课堂签到', path: '/teacher/session', icon: CheckCircle },
       { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
       { name: '科目管理', path: '/teacher/subjects', icon: BookMarked },

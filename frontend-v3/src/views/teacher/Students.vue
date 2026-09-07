@@ -3,12 +3,12 @@ import { ref, computed } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useToast } from '@/composables'
 import { StudentCard, ScoreDialog, StudentFilters, useStudentScore, usePaginatedStudents } from '@/features/students'
-import { DataContainer, Card, Button, Dialog, Input, Label, Checkbox, Select } from '@/components/ui'
+import { DataContainer, Card, Button, Dialog, Input, Label, Select } from '@/components/ui'
 import type { Student } from '@/types'
 import { studentsApi } from '@/api'
 import type { StudentSubjectScore } from '@/api/students'
 import { getErrorMessage } from '@/lib/error'
-import { Users, GraduationCap, Search, Archive, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { Users, GraduationCap, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-vue-next'
 
 /**
  * 教师学生管理页面 - FE-006 重构后
@@ -65,48 +65,7 @@ const defaultReason = ref('')
 // === Toast 状态 (队列模式) ===
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 
-// === 按班级禁用（学期归档，仅限自己负责的班级，支持多选） ===
 const queryClient = useQueryClient()
-const showDisableDialog = ref(false)
-const disableClassNames = ref<string[]>([])
-const isDisabling = ref(false)
-
-// 可选班级（排除“全部班级”占位项）
-const disableClassOptions = computed(() =>
-  classOptions.value.filter((o) => o.value !== '')
-)
-
-const openDisableDialog = () => {
-  disableClassNames.value = []
-  showDisableDialog.value = true
-}
-
-// 勾选/取消勾选班级
-const toggleDisableClass = (className: string, checked: boolean) => {
-  if (checked) {
-    disableClassNames.value = [...disableClassNames.value, className]
-  } else {
-    disableClassNames.value = disableClassNames.value.filter((c) => c !== className)
-  }
-}
-
-const handleDisableByClass = async () => {
-  if (disableClassNames.value.length === 0) return
-
-  try {
-    isDisabling.value = true
-    const result = await studentsApi.disableByClass(disableClassNames.value)
-    // 刷新学生列表与班级列表（禁用后班级从列表消失）
-    await queryClient.invalidateQueries({ queryKey: ['students'] })
-    await queryClient.invalidateQueries({ queryKey: ['classes'] })
-    showDisableDialog.value = false
-    showSuccessToast(`已禁用 ${result.disabled_count} 名学生`)
-  } catch (err: unknown) {
-    showErrorToast(getErrorMessage(err) || '按班级禁用失败')
-  } finally {
-    isDisabling.value = false
-  }
-}
 
 // === 科目分数展开区 ===
 const expandedStudentId = ref<string | null>(null)
@@ -222,14 +181,6 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
           查看和管理学生分数
         </p>
       </div>
-      <Button
-        variant="outline"
-        data-testid="disable-by-class-btn"
-        @click="openDisableDialog"
-      >
-        <Archive class="mr-2 h-4 w-4" />
-        按班级禁用
-      </Button>
     </div>
 
     <!-- Stats Cards -->
@@ -449,55 +400,6 @@ const handleUpdateScore = async (scoreChange: number, reason: string) => {
           @click="handleUpdateSubjectScore"
         >
           更新分数
-        </Button>
-      </template>
-    </Dialog>
-
-    <!-- 按班级禁用对话框（学期归档，支持多选班级） -->
-    <Dialog
-      v-model:open="showDisableDialog"
-      title="按班级禁用"
-      description="禁用后所选班级学生无法登录，班级将从列表中消失，历史数据保留"
-    >
-      <div class="space-y-4">
-        <div class="space-y-2">
-          <Label>选择班级（可多选）</Label>
-          <div class="max-h-60 space-y-2 overflow-y-auto rounded-md border border-[#e5e5e5] p-3">
-            <div
-              v-for="cls in disableClassOptions"
-              :key="cls.value"
-              class="flex items-center gap-2"
-            >
-              <Checkbox
-                :checked="disableClassNames.includes(String(cls.value))"
-                @update:checked="(checked) => toggleDisableClass(String(cls.value), checked)"
-              />
-              <span class="text-sm">{{ cls.label }}</span>
-            </div>
-          </div>
-        </div>
-        <p
-          v-if="disableClassNames.length > 0"
-          class="text-sm text-[#ef4444]"
-        >
-          将禁用 {{ disableClassNames.length }} 个班级的所有学生账号，确定吗？
-        </p>
-      </div>
-      <template #footer>
-        <Button
-          variant="outline"
-          @click="showDisableDialog = false"
-        >
-          取消
-        </Button>
-        <Button
-          variant="destructive"
-          :disabled="disableClassNames.length === 0"
-          :loading="isDisabling"
-          data-testid="confirm-disable-btn"
-          @click="handleDisableByClass"
-        >
-          确认禁用
         </Button>
       </template>
     </Dialog>
