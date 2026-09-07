@@ -182,7 +182,7 @@ cp backend/app/data/class_system.db backup/class_system_$(date +%Y%m%d).db
 
 ```bash
 # 本地开发库（backend/.env 的 DATABASE__URL）
-psql postgresql://yufeng:yufeng@localhost:5432/classhub
+psql postgresql://USER:PASSWORD@localhost:5432/classhub
 
 # 生产环境（Docker 容器）
 docker exec -it classhub-postgres psql -U classhub -d classhub

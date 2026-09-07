@@ -586,7 +586,7 @@ Expected: 迁移成功，无报错
 ```bash
 cd backend && conda run -n student-manage python -c "
 import psycopg2
-conn = psycopg2.connect('postgresql://yufeng:yufeng@localhost:5432/classhub')
+conn = psycopg2.connect('postgresql://USER:PASSWORD@localhost:5432/classhub')
 cur = conn.cursor()
 cur.execute(\"SELECT semester, COUNT(*) FROM course_schedules GROUP BY semester\")
 print('course_schedules:', cur.fetchall())
