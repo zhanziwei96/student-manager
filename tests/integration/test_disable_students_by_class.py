@@ -3,8 +3,7 @@
 
 覆盖：
 - admin 可禁用任意班级（支持一次传多个班级）
-- 教师可禁用自己负责的班级（支持一次传多个自己班）
-- 教师不能禁用其他班级或包含他班的组合（403）
+- 教师不能禁用任何班级（禁用收紧为 admin-only，403）
 - 学生无权调用（403）
 - 缺少班级列表或空列表返回 422
 - 禁用后学生无法登录，不出现在学生列表，且班级从班级列表消失
@@ -63,8 +62,8 @@ class TestDisableStudentsByClass:
         assert resp.status_code == 200
         assert resp.json()["data"]["disabled_count"] == 0
 
-    def test_teacher_can_disable_own_class(self, teacher_client, test_engine):
-        """教师可禁用自己负责的班级（一班）"""
+    def test_teacher_cannot_disable_own_class(self, teacher_client, test_engine):
+        """教师不能禁用自己负责的班级（一班）→ 403，数据不变"""
         from app.crud import get_students_by_class
 
         _create_students(test_engine, "一班", 2)
@@ -73,12 +72,11 @@ class TestDisableStudentsByClass:
             "/api/v1/students/disable-by-class",
             json={"class_names": ["一班"]}
         )
-        assert resp.status_code == 200
-        assert resp.json()["data"]["disabled_count"] == 2
+        assert resp.status_code == 403
 
         with Session(test_engine) as session:
             students = get_students_by_class(session, "一班", include_disabled=True)
-            assert all(s.is_account_enabled is False for s in students)
+            assert all(s.is_account_enabled is True for s in students)
 
     def test_teacher_cannot_disable_other_class(self, teacher_client, test_engine):
         """教师不能禁用未分配的班级（三班）→ 403，数据不变"""
@@ -245,8 +243,8 @@ class TestDisableMultipleClasses:
             students = get_students_by_class(session, "待禁用新班", include_disabled=True)
             assert all(s.is_account_enabled is False for s in students)
 
-    def test_teacher_can_disable_multiple_own_classes(self, teacher_client, test_engine):
-        """教师可一次禁用多个自己负责的班级（一班、二班）"""
+    def test_teacher_cannot_disable_multiple_own_classes(self, teacher_client, test_engine):
+        """教师不能一次禁用多个自己负责的班级（一班、二班）→ 403，数据不变"""
         from app.crud import get_students_by_class
 
         _create_students(test_engine, "一班", 2, id_prefix="BF")
@@ -256,13 +254,12 @@ class TestDisableMultipleClasses:
             "/api/v1/students/disable-by-class",
             json={"class_names": ["一班", "二班"]}
         )
-        assert resp.status_code == 200
-        assert resp.json()["data"]["disabled_count"] == 4
+        assert resp.status_code == 403
 
         with Session(test_engine) as session:
             for cls in ("一班", "二班"):
                 students = get_students_by_class(session, cls, include_disabled=True)
-                assert all(s.is_account_enabled is False for s in students)
+                assert all(s.is_account_enabled is True for s in students)
 
     def test_teacher_cannot_disable_mixed_classes(self, teacher_client, test_engine):
         """教师不能禁用包含他班的组合 → 403，且所有班级均不受影响"""
@@ -287,13 +284,13 @@ class TestDisableMultipleClasses:
 class TestDisabledClassContentCreation:
     """禁用班级后，教师侧不能为该班创建内容（课表/课堂/小组/问答）"""
 
-    def test_teacher_class_list_excludes_disabled_classes(self, teacher_client, test_engine):
+    def test_teacher_class_list_excludes_disabled_classes(self, admin_client, teacher_client, test_engine):
         """教师班级列表不显示所有学生已禁用的班级"""
         _create_students(test_engine, "一班", 2, id_prefix="DA")
         _create_students(test_engine, "二班", 2, id_prefix="DB")
 
-        # 禁用二班（教师负责的班级之一）
-        resp = teacher_client.post(
+        # 管理员禁用二班（教师负责的班级之一）
+        resp = admin_client.post(
             "/api/v1/students/disable-by-class",
             json={"class_names": ["二班"]}
         )
@@ -305,10 +302,10 @@ class TestDisabledClassContentCreation:
         assert "一班" in returned
         assert "二班" not in returned
 
-    def test_cannot_create_session_for_disabled_class(self, teacher_client, test_engine):
+    def test_cannot_create_session_for_disabled_class(self, admin_client, teacher_client, test_engine):
         """不能为禁用班级创建课堂 → 400"""
         _create_students(test_engine, "一班", 2, id_prefix="DC")
-        resp = teacher_client.post(
+        resp = admin_client.post(
             "/api/v1/students/disable-by-class",
             json={"class_names": ["一班"]}
         )
@@ -343,10 +340,10 @@ class TestDisabledClassContentCreation:
         assert data["imported"] == 0
         assert any("班级不存在或所有学生已禁用" in e for e in data["errors"])
 
-    def test_cannot_create_group_task_for_disabled_class(self, teacher_client, test_engine):
+    def test_cannot_create_group_task_for_disabled_class(self, admin_client, teacher_client, test_engine):
         """不能为禁用班级创建合作任务 → 400"""
         _create_students(test_engine, "一班", 2, id_prefix="DE")
-        resp = teacher_client.post(
+        resp = admin_client.post(
             "/api/v1/students/disable-by-class",
             json={"class_names": ["一班"]}
         )
@@ -360,10 +357,10 @@ class TestDisabledClassContentCreation:
         })
         assert resp.status_code == 400
 
-    def test_cannot_create_question_for_disabled_class(self, teacher_client, test_engine):
+    def test_cannot_create_question_for_disabled_class(self, admin_client, teacher_client, test_engine):
         """不能为禁用班级提问 → 400"""
         _create_students(test_engine, "一班", 2, id_prefix="DF")
-        resp = teacher_client.post(
+        resp = admin_client.post(
             "/api/v1/students/disable-by-class",
             json={"class_names": ["一班"]}
         )
@@ -375,7 +372,7 @@ class TestDisabledClassContentCreation:
         })
         assert resp.status_code == 400
 
-    def test_cannot_clone_task_to_disabled_class(self, teacher_client, test_engine):
+    def test_cannot_clone_task_to_disabled_class(self, admin_client, teacher_client, test_engine):
         """不能把任务克隆到禁用班级 → 400"""
         _create_students(test_engine, "一班", 2, id_prefix="DG")
         _create_students(test_engine, "二班", 2, id_prefix="DH")
@@ -390,8 +387,8 @@ class TestDisabledClassContentCreation:
         assert resp.status_code == 200
         task_id = resp.json()["data"]["task_id"]
 
-        # 禁用目标班级
-        resp = teacher_client.post(
+        # 管理员禁用目标班级
+        resp = admin_client.post(
             "/api/v1/students/disable-by-class",
             json={"class_names": ["二班"]}
         )
@@ -402,10 +399,10 @@ class TestDisabledClassContentCreation:
         })
         assert resp.status_code == 400
 
-    def test_cannot_auto_assign_in_disabled_class(self, teacher_client, test_engine):
+    def test_cannot_auto_assign_in_disabled_class(self, admin_client, teacher_client, test_engine):
         """不能在禁用班级自动分组 → 400"""
         _create_students(test_engine, "一班", 2, id_prefix="DI")
-        resp = teacher_client.post(
+        resp = admin_client.post(
             "/api/v1/students/disable-by-class",
             json={"class_names": ["一班"]}
         )

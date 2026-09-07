@@ -504,16 +504,13 @@ async def disable_students_by_class_api(
     request: Request,
     data: DisableByClassRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(require_admin_or_teacher)
+    user_id: str = Depends(require_admin)
 ):
-    """按班级批量禁用学生账号（学期归档，admin 或负责该班的教师）
+    """按班级批量禁用学生账号（学期归档，仅管理员）
 
     支持一次传多个班级。禁用后学生无法登录，班级从班级列表消失，历史数据保留。
+    老师不再具备禁用权限（业务纠正：老师不教了不再等于禁用学生账号）。
     """
-    # 先校验所有班级权限，全部通过后再执行禁用（避免部分禁用）
-    for class_name in data.class_names:
-        verify_teacher_class_access(user, class_name, session)
-
     total_disabled = 0
     for class_name in data.class_names:
         total_disabled += disable_students_by_class(session, class_name)
