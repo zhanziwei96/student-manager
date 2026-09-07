@@ -10,7 +10,7 @@ from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
 from app.crud.group_score import update_group_score, get_group_score_logs, get_group_leaderboard
-from app.models import Group
+from app.models import Group, User
 from app.models.constants import ApiResponseConst, ApiResponse, ApiSuccessResponse
 
 router = APIRouter(tags=["group-scores"])
@@ -87,7 +87,30 @@ def get_leaderboard(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher)
 ):
-    """小组排行榜（按科目+班级）"""
+    """小组排行榜（按科目+班级，教师限自己班）"""
+    # 教师权限：传 class_name 时校验归属；未传则限制在 assigned_classes 内
+    if user.get("role") != "admin":
+        user_obj = session.get(User, int(user.get("sub") or 0))
+        assigned = user_obj.get_assigned_classes() if user_obj else []
+
+        if class_name:
+            verify_teacher_class_access(user, class_name, session)
+        else:
+            # 未传 class_name，教师只能看自己班
+            if not assigned:
+                # 无班级的教师返回空
+                return {
+                    ApiResponseConst.SUCCESS: True,
+                    ApiResponseConst.DATA: {"groups": [], "total": 0}
+                }
+            groups = get_group_leaderboard(
+                session, subject_id=subject_id, class_names=assigned, limit=limit
+            )
+            return {
+                ApiResponseConst.SUCCESS: True,
+                ApiResponseConst.DATA: {"groups": groups, "total": len(groups)}
+            }
+
     groups = get_group_leaderboard(session, subject_id=subject_id, class_name=class_name, limit=limit)
 
     return {

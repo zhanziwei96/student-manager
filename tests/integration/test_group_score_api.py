@@ -67,3 +67,41 @@ def test_group_leaderboard(teacher_client, session):
     assert len(groups) == 2
     assert groups[0]["group_name"] == "第二组"  # 分数高的排前
     assert groups[0]["score"] == 20.0
+
+
+def test_group_leaderboard_teacher_cross_class_forbidden(teacher_client, session):
+    """教师访问非本班排行榜 → 403"""
+    from app.models import Group, Subject
+
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    group = Group(class_name="三班", name="其他班小组", leader_student_id="S003", subject_id=subject.id, score=10.0)
+    session.add(group)
+    session.commit()
+
+    resp = teacher_client.get(f"/api/v1/groups/leaderboard?subject_id={subject.id}&class_name=三班")
+    assert resp.status_code == 403
+
+
+def test_group_leaderboard_teacher_without_class_restricted(teacher_client, session):
+    """教师未传 class_name 时仅返回本班小组（限制在 assigned_classes 内）"""
+    from app.models import Group, Subject
+
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    own = Group(class_name="一班", name="本班小组", leader_student_id="S001", subject_id=subject.id, score=10.0)
+    other = Group(class_name="三班", name="他班小组", leader_student_id="S003", subject_id=subject.id, score=30.0)
+    session.add_all([own, other])
+    session.commit()
+
+    resp = teacher_client.get(f"/api/v1/groups/leaderboard?subject_id={subject.id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    groups = data["groups"]
+    class_names = {g["class_name"] for g in groups}
+    assert "一班" in class_names
+    assert "三班" not in class_names
