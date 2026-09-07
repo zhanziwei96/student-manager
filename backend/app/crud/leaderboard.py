@@ -2,7 +2,8 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy import func
 from sqlmodel import Session, select
-from app.models import Student
+from app.core.term import get_current_term
+from app.models import Student, Subject, StudentSubjectScore, User
 
 
 def get_leaderboard(
@@ -120,4 +121,103 @@ def _get_student_rank(
         "student_id": student.student_id,
         "name": student.name,
         "score": student.score
+    }
+
+
+def get_subject_leaderboard(
+    session: Session,
+    subject_id: Optional[int] = None,
+    teacher_id: Optional[int] = None,
+    limit: int = 50,
+    current_student_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    按教师+科目聚合排行榜（基于学生科目分数表）
+
+    Args:
+        session: 数据库会话
+        subject_id: 科目ID（可选，不传则跨科目）
+        teacher_id: 教师ID（可选，不传则跨教师）
+        limit: 返回数量限制
+        current_student_id: 当前登录学生ID（用于获取个人排名）
+
+    Returns:
+        {
+            "students": List[dict],
+            "total": int,
+            "my_rank": Optional[dict]
+        }
+    """
+    # 查询学生科目分数（关联学生、科目、教师）
+    query = select(StudentSubjectScore, Student, Subject, User).join(
+        Student, StudentSubjectScore.student_id == Student.student_id
+    ).join(
+        Subject, StudentSubjectScore.subject_id == Subject.id
+    ).join(
+        User, StudentSubjectScore.teacher_id == User.id
+    ).where(
+        StudentSubjectScore.semester == get_current_term(),
+        Student.is_account_enabled.is_(True)
+    )
+
+    if subject_id:
+        query = query.where(StudentSubjectScore.subject_id == subject_id)
+    if teacher_id:
+        query = query.where(StudentSubjectScore.teacher_id == teacher_id)
+
+    # 按分数降序排序
+    query = query.order_by(StudentSubjectScore.score.desc())
+
+    # 获取前 limit 条
+    results = session.exec(query.limit(limit)).all()
+
+    # 计算排名
+    ranked_students = []
+    for i, (score_record, student, subject, teacher) in enumerate(results):
+        ranked_students.append({
+            "rank": i + 1,
+            "student_id": student.student_id,
+            "name": student.name,
+            "class_name": student.class_name,
+            "subject_name": subject.name,
+            "teacher_name": teacher.name,
+            "score": score_record.score
+        })
+
+    # 获取当前学生的排名
+    my_rank = None
+    if current_student_id:
+        # 子查询：当前学生在该科目/教师下的分数
+        # 注意：必须带相同的 subject/teacher 过滤，否则学生有多条科目分数时
+        # 标量子查询返回多行会导致 PostgreSQL 报错
+        score_subquery = select(StudentSubjectScore.score).where(
+            StudentSubjectScore.student_id == current_student_id,
+            StudentSubjectScore.semester == get_current_term(),
+        )
+        if subject_id:
+            score_subquery = score_subquery.where(StudentSubjectScore.subject_id == subject_id)
+        if teacher_id:
+            score_subquery = score_subquery.where(StudentSubjectScore.teacher_id == teacher_id)
+        score_subquery = score_subquery.scalar_subquery()
+
+        # 统计分数更高的学生数量
+        rank_query = select(func.count()).select_from(StudentSubjectScore).join(
+            Student, StudentSubjectScore.student_id == Student.student_id
+        ).where(
+            StudentSubjectScore.semester == get_current_term(),
+            Student.is_account_enabled.is_(True),
+            StudentSubjectScore.score > score_subquery
+        )
+        if subject_id:
+            rank_query = rank_query.where(StudentSubjectScore.subject_id == subject_id)
+        if teacher_id:
+            rank_query = rank_query.where(StudentSubjectScore.teacher_id == teacher_id)
+
+        higher_count = session.exec(rank_query).one()
+        my_rank = {"rank": higher_count + 1, "student_id": current_student_id}
+
+    return {
+        "students": ranked_students,
+        "total": len(ranked_students),
+        "my_rank": my_rank
     }

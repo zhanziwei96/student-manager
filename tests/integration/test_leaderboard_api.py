@@ -125,3 +125,41 @@ class TestLeaderboardAPI:
         """测试未登录无法访问排行榜"""
         response = client.get("/api/v1/students/leaderboard")
         assert response.status_code == 401
+
+
+@pytest.fixture
+def session(test_engine):
+    """绑定集成测试共享引擎的会话（API 客户端与测试读写同一数据库）"""
+    with Session(test_engine) as s:
+        yield s
+
+
+def test_leaderboard_by_subject_and_teacher(student_client, session):
+    """按教师+科目聚合排行榜"""
+    from app.models import Subject, StudentSubjectScore, Student, User
+    from app.core.security import hash_password
+
+    # 造数据：student_client 已创建学生 S001，再补 1 个学生 + 2 个教师 + 1 个科目
+    student2 = Student(
+        student_id="S002", name="学生2", class_name="1班", score=80.0,
+        password_hash=hash_password("pass"), is_account_enabled=True
+    )
+    teacher1 = User(username="t_math_1", name="张老师", password_hash=hash_password("pass"), role="teacher")
+    teacher2 = User(username="t_math_2", name="李老师", password_hash=hash_password("pass"), role="teacher")
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add_all([student2, teacher1, teacher2, subject])
+    session.commit()
+
+    # 同一科目，不同老师
+    score1 = StudentSubjectScore(student_id="S001", subject_id=subject.id, teacher_id=teacher1.id, score=85.0, semester="2026-2027-1")
+    score2 = StudentSubjectScore(student_id="S002", subject_id=subject.id, teacher_id=teacher2.id, score=90.0, semester="2026-2027-1")
+    session.add_all([score1, score2])
+    session.commit()
+
+    # 按教师+科目排
+    resp = student_client.get(f"/api/v1/students/leaderboard?subject_id={subject.id}&teacher_id={teacher1.id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data["students"]) == 1
+    assert data["students"][0]["student_id"] == "S001"
+    assert data["students"][0]["score"] == 85.0
