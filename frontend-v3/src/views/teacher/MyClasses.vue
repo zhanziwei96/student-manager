@@ -65,6 +65,7 @@ const handleSave = async () => {
     isSaving.value = true
     await teacherClassesApi.updateMine(selectedClassNames.value)
     await queryClient.invalidateQueries({ queryKey: ['teacher-classes'] })
+    await queryClient.invalidateQueries({ queryKey: ['classes'] })
     showSuccessToast('班级列表已更新')
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '保存班级失败')
@@ -108,14 +109,14 @@ const handleSave = async () => {
         <div class="space-y-1">
           <div
             v-for="cls in allClasses"
-            :key="cls.name"
+            :key="cls"
             class="flex items-center gap-2 rounded-md p-2 hover:bg-[#fafafa]"
           >
             <Checkbox
-              :checked="selectedClassNames.includes(cls.name)"
-              @update:checked="(checked: boolean) => toggleClass(cls.name, checked)"
+              :checked="selectedClassNames.includes(cls)"
+              @update:checked="(checked: boolean) => toggleClass(cls, checked)"
             />
-            <span class="text-sm text-black">{{ cls.name }}</span>
+            <span class="text-sm text-black">{{ cls }}</span>
           </div>
         </div>
       </Card>

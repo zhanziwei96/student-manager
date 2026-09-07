@@ -47,6 +47,25 @@ def get_teacher_classes(
     }
 
 
+@router.get("/teacher/classes/available", response_model=ApiResponse[List[str]])
+def get_available_classes(
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user),
+):
+    """获取所有可用班级（有启用学生的班级，供老师选择添加）"""
+    role = user.get("role", "")
+    if role not in ("admin", "teacher"):
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="需要教师权限")
+
+    # get_all_classes 已按 is_account_enabled 过滤，只返回有启用学生的班级
+    class_names = get_all_classes(session)
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: class_names,
+    }
+
+
 @router.put("/teacher/classes", response_model=ApiSuccessResponse)
 def update_teacher_classes(
     data: UpdateTeacherClassesRequest,

@@ -54,10 +54,7 @@ function mountMyClasses() {
 describe('MyClasses', () => {
   beforeEach(() => {
     vi.mocked(teacherClassesApi.getMine).mockResolvedValue(['计算机1班'])
-    vi.mocked(teacherClassesApi.getAll).mockResolvedValue([
-      { name: '计算机1班', status: 'active' },
-      { name: '计算机2班', status: 'active' },
-    ])
+    vi.mocked(teacherClassesApi.getAll).mockResolvedValue(['计算机1班', '计算机2班'])
     vi.mocked(teacherClassesApi.updateMine).mockResolvedValue(undefined)
   })
 
