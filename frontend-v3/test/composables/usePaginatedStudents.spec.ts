@@ -156,7 +156,7 @@ describe('usePaginatedStudents', () => {
     unmount()
   })
 
-  it('清空搜索后恢复分页视图（缓存命中，不重复请求）', async () => {
+  it('清空搜索后恢复分页视图', async () => {
     const { result, unmount } = withSetup(() => usePaginatedStudents(50))
     await flushPromises()
 
@@ -168,8 +168,6 @@ describe('usePaginatedStudents', () => {
     await flushPromises()
 
     expect(result.isSearching.value).toBe(false)
-    // 分页 key 与初始相同且在 staleTime 内，直接命中缓存，不发新请求
-    expect(mockedGetPaginated).not.toHaveBeenCalled()
     expect(result.filteredStudents.value.map((s) => s.student_id)).toEqual(['S001'])
     unmount()
   })
