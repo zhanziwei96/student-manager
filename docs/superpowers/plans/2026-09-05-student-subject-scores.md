@@ -1689,9 +1689,157 @@ git commit -m "feat(subject): add subject management page"
 
 ---
 
-### Task 8-10: 前端学生管理页/Dashboard/排行榜改造
+### Task 8: 前端学生管理页改造
 
-（结构与 Task 7 相同，执行时补充）
+**Files:**
+- Modify: `frontend-v3/src/views/admin/Students.vue`
+- Modify: `frontend-v3/src/views/teacher/Students.vue`
+- Modify: `frontend-v3/src/api/students.ts`
+- Test: `frontend-v3/test/views/admin/Students.spec.ts`
+
+- [ ] **Step 1: API 客户端加科目分数接口**
+
+修改 `frontend-v3/src/api/students.ts` 追加：
+
+```typescript
+export interface StudentSubjectScore {
+  subject_id: number
+  subject_name: string
+  teacher_id: number
+  teacher_name: string
+  score: number
+}
+
+export const studentsApi = {
+  // ... 现有方法 ...
+  getSubjects: (studentId: string) => get<StudentSubjectScore[]>(`/students/${studentId}/subjects`),
+  updateSubjectScore: (studentId: string, subjectId: number, scoreChange: number, reason: string) =>
+    put(`/students/${studentId}/subjects/${subjectId}/score`, { score_change: scoreChange, reason }),
+}
+```
+
+- [ ] **Step 2: 学生管理页加科目分数展示**
+
+修改 `frontend-v3/src/views/admin/Students.vue` 和 `teacher/Students.vue`：
+
+1. 学生列表每行加"科目分数"展开按钮
+2. 点击展开显示该学生所有科目分数（科目名 + 分数 + 教师名）
+3. 分数管理改为按科目（下拉选科目 + 加减分）
+
+参照现有页面的展开行模式（如失物招领的展开详情）。
+
+- [ ] **Step 3: 测试**
+
+在 `frontend-v3/test/views/admin/Students.spec.ts` 追加：
+
+```typescript
+it('shows subject scores when expanding student row', async () => {
+  // 测试展开行显示科目分数
+})
+```
+
+- [ ] **Step 4: 验证**
+
+1. `cd frontend-v3 && pnpm test:run 2>&1 | tail -3`
+2. `cd frontend-v3 && pnpm exec vue-tsc --noEmit 2>&1 | tail -2`
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add frontend-v3/src/views/admin/Students.vue frontend-v3/src/views/teacher/Students.vue frontend-v3/src/api/students.ts frontend-v3/test/views/admin/Students.spec.ts
+git commit -m "feat(students): add subject scores display in student management"
+```
+
+（末尾加 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>）
+
+---
+
+### Task 9: 前端学生 Dashboard 改造
+
+**Files:**
+- Modify: `frontend-v3/src/views/student/Dashboard.vue`
+- Test: `frontend-v3/test/views/student/Dashboard.spec.ts`
+
+- [ ] **Step 1: "我的科目"卡片列表**
+
+修改 `frontend-v3/src/views/student/Dashboard.vue`：
+
+1. 删除"我的排名"卡片（或改为按科目显示）
+2. 加"我的科目"卡片列表（每个科目一张卡片：科目名 + 分数 + 排名）
+3. 点击卡片进入科目详情页（该科目的分数历史）
+
+- [ ] **Step 2: 测试**
+
+在 `frontend-v3/test/views/student/Dashboard.spec.ts` 追加：
+
+```typescript
+it('shows subject cards', async () => {
+  // 测试显示多个科目卡片
+})
+```
+
+- [ ] **Step 3: 验证**
+
+1. `cd frontend-v3 && pnpm test:run 2>&1 | tail -3`
+2. `cd frontend-v3 && pnpm exec vue-tsc --noEmit 2>&1 | tail -2`
+
+- [ ] **Step 4: 提交**
+
+```bash
+git add frontend-v3/src/views/student/Dashboard.vue frontend-v3/test/views/student/Dashboard.spec.ts
+git commit -m "feat(dashboard): add subject cards for student"
+```
+
+（末尾加 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>）
+
+---
+
+### Task 10: 前端排行榜改造
+
+**Files:**
+- Modify: `frontend-v3/src/views/student/Leaderboard.vue`
+- Modify: `frontend-v3/src/composables/useLeaderboard.ts`
+- Test: `frontend-v3/test/views/student/Leaderboard.spec.ts`
+
+- [ ] **Step 1: 加科目/教师筛选器**
+
+修改 `frontend-v3/src/views/student/Leaderboard.vue`：
+
+1. 加科目筛选器（下拉选科目）
+2. 加教师筛选器（下拉选教师）
+3. 默认显示当前学期第一个科目
+
+修改 `frontend-v3/src/composables/useLeaderboard.ts`：
+
+```typescript
+export function useLeaderboard(params: { scope?: string; subject_id?: number; teacher_id?: number }) {
+  // ... 加 subject_id/teacher_id 参数
+}
+```
+
+- [ ] **Step 2: 测试**
+
+在 `frontend-v3/test/views/student/Leaderboard.spec.ts` 追加：
+
+```typescript
+it('filters by subject and teacher', async () => {
+  // 测试科目/教师筛选器
+})
+```
+
+- [ ] **Step 3: 验证**
+
+1. `cd frontend-v3 && pnpm test:run 2>&1 | tail -3`
+2. `cd frontend-v3 && pnpm exec vue-tsc --noEmit 2>&1 | tail -2`
+
+- [ ] **Step 4: 提交**
+
+```bash
+git add frontend-v3/src/views/student/Leaderboard.vue frontend-v3/src/composables/useLeaderboard.ts frontend-v3/test/views/student/Leaderboard.spec.ts
+git commit -m "feat(leaderboard): add subject and teacher filters"
+```
+
+（末尾加 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>）
 
 ---
 
