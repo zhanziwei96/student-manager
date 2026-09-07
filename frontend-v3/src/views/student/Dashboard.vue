@@ -1,27 +1,77 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useQuery, useQueries } from '@tanstack/vue-query'
 import { useAuthStore } from '@/stores'
 import { useStudentProfile } from '@/composables/useStudentProfile'
-import { useLeaderboard } from '@/composables/useLeaderboard'
 import { useStudentScoreLogs } from '@/composables'
+import { studentsApi } from '@/api/students'
+import { get } from '@/lib/api'
+import type { LeaderboardData } from '@/types'
 import { Card } from '@/components/ui'
-import { Star, TrendingUp, Users, Award, Loader2, AlertCircle, Trophy } from 'lucide-vue-next'
+import { Star, TrendingUp, Users, Award, Loader2, AlertCircle, Trophy, BookOpen, ChevronDown } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const { data: currentStudent, isPending, error } = useStudentProfile()
-// 排名改用排行榜接口（学生可访问），不再拉取全量学生名单
-const { myRank } = useLeaderboard({ scope: 'class', limit: 50 })
 
 // 获取分数历史记录（加载更多分页：初始 20 条，点击按钮追加）
 const studentId = computed(() => currentStudent.value?.student_id || '')
 const { logs: scoreLogs, isPending: logsLoading, isLoadingMore, hasMore, loadMore } = useStudentScoreLogs(studentId)
 
-// 只显示名次，不显示排行榜返回的分数
-const rank = computed(() => {
-  const r = myRank.value?.rank
-  return r ? `第 ${r} 名` : '-'
+// 我的科目分数（当前学期）
+const { data: subjectScores, isPending: subjectsLoading } = useQuery({
+  queryKey: computed(() => ['student-subjects', studentId.value]),
+  queryFn: () => studentsApi.getSubjects(studentId.value),
+  enabled: computed(() => !!studentId.value),
+})
+
+// 每个科目的班级排名（排行榜接口支持按 subject_id 查询，my_rank 即本人名次）
+const subjectRankQueries = useQueries({
+  queries: computed(() =>
+    (subjectScores.value ?? []).map((s) => ({
+      queryKey: ['leaderboard', { scope: 'class', subject_id: s.subject_id, limit: 50 }],
+      queryFn: () =>
+        get<LeaderboardData>('/students/leaderboard', {
+          scope: 'class',
+          subject_id: s.subject_id,
+          limit: 50,
+        }),
+      staleTime: 5 * 60 * 1000,
+    }))
+  ),
+})
+
+// 科目卡片数据：科目名 + 分数 + 班级排名（只显示名次，不显示排行榜返回的分数）
+const subjectCards = computed(() =>
+  (subjectScores.value ?? []).map((s, i) => ({
+    ...s,
+    rank: subjectRankQueries.value[i]?.data?.my_rank?.rank ?? null,
+  }))
+)
+
+// 点击科目卡片展开/收起该科目的分数历史
+const expandedSubjectId = ref<number | null>(null)
+const toggleSubject = (subjectId: number) => {
+  expandedSubjectId.value = expandedSubjectId.value === subjectId ? null : subjectId
+}
+
+/** 科目分数历史记录 */
+interface SubjectScoreLog {
+  old_score: number
+  new_score: number
+  delta: number
+  reason: string
+  operator: string
+  created_at: string
+}
+
+// 展开科目的分数历史（收起时停用查询）
+const { data: subjectLogs, isPending: subjectLogsLoading } = useQuery({
+  queryKey: computed(() => ['student-subject-logs', studentId.value, expandedSubjectId.value]),
+  queryFn: () =>
+    get<SubjectScoreLog[]>(`/students/${studentId.value}/subjects/${expandedSubjectId.value}/logs`),
+  enabled: computed(() => !!studentId.value && expandedSubjectId.value !== null),
 })
 
 // 格式化日期
@@ -99,13 +149,6 @@ const getCardTextMutedColor = () => 'text-[#737373]'
             </div>
           </div>
           <div class="mt-5 flex items-center gap-2">
-            <button
-              class="inline-flex items-center gap-1.5 rounded-full bg-[#f5f5f5] px-3 py-1.5 text-xs font-medium text-black transition-colors hover:bg-[#e5e5e5]"
-              @click="router.push('/student/leaderboard')"
-            >
-              <TrendingUp class="h-3.5 w-3.5" />
-              排名 {{ rank }}
-            </button>
             <button
               class="inline-flex items-center gap-1.5 rounded-full bg-[#f5f5f5] px-3 py-1.5 text-xs font-medium text-black transition-colors hover:bg-[#e5e5e5]"
               @click="router.push('/student/leaderboard')"
@@ -190,6 +233,131 @@ const getCardTextMutedColor = () => 'text-[#737373]'
           </div>
         </Card>
       </div>
+
+      <!-- 我的科目 -->
+      <Card class="border-[#e5e5e5] bg-white p-5 mb-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-medium text-black">
+              我的科目
+            </h2>
+            <p class="text-xs text-[#a3a3a3] mt-0.5">
+              点击科目卡片查看分数历史
+            </p>
+          </div>
+          <div class="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <BookOpen class="h-4 w-4 text-primary" />
+          </div>
+        </div>
+
+        <!-- Loading state -->
+        <div
+          v-if="subjectsLoading"
+          class="mt-6 flex h-24 items-center justify-center"
+        >
+          <Loader2 class="h-6 w-6 animate-spin text-primary" />
+        </div>
+
+        <!-- 科目卡片列表 -->
+        <div
+          v-else-if="subjectCards.length > 0"
+          class="mt-5 space-y-2.5"
+          data-testid="subject-cards"
+        >
+          <div
+            v-for="subject in subjectCards"
+            :key="subject.subject_id"
+          >
+            <button
+              class="w-full flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-4 transition-colors hover:bg-[#f5f5f5] hover:border-[#d5d5d5]"
+              :data-testid="`subject-card-${subject.subject_id}`"
+              @click="toggleSubject(subject.subject_id)"
+            >
+              <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <BookOpen class="h-4 w-4" />
+                </div>
+                <div class="text-left">
+                  <p class="text-sm font-medium text-black">
+                    {{ subject.subject_name }}
+                  </p>
+                  <p class="text-[11px] text-[#a3a3a3] mt-0.5">
+                    {{ subject.teacher_name }}
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-lg font-medium text-black tabular-nums">{{ subject.score }}</span>
+                <span class="inline-flex items-center rounded-full bg-[#f5f5f5] px-2.5 py-1 text-xs font-medium text-black">
+                  {{ subject.rank ? `第 ${subject.rank} 名` : '暂无排名' }}
+                </span>
+                <ChevronDown
+                  class="h-4 w-4 text-[#a3a3a3] transition-transform"
+                  :class="{ 'rotate-180': expandedSubjectId === subject.subject_id }"
+                />
+              </div>
+            </button>
+
+            <!-- 展开的科目分数历史 -->
+            <div
+              v-if="expandedSubjectId === subject.subject_id"
+              class="mt-2 rounded-xl border border-[#e5e5e5] bg-white p-3.5"
+              data-testid="subject-logs-panel"
+            >
+              <div
+                v-if="subjectLogsLoading"
+                class="flex h-16 items-center justify-center"
+              >
+                <Loader2 class="h-5 w-5 animate-spin text-primary" />
+              </div>
+              <div
+                v-else-if="subjectLogs && subjectLogs.length > 0"
+                class="space-y-2"
+              >
+                <div
+                  v-for="log in subjectLogs"
+                  :key="log.created_at"
+                  class="flex items-center justify-between text-sm"
+                >
+                  <div>
+                    <p class="text-black/90">
+                      {{ log.reason || '分数变更' }}
+                    </p>
+                    <p class="text-[11px] text-[#a3a3a3] mt-0.5">
+                      {{ formatDate(log.created_at) }}
+                    </p>
+                  </div>
+                  <span
+                    class="font-medium tabular-nums"
+                    :class="log.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                  >
+                    {{ log.delta >= 0 ? '+' : '' }}{{ log.delta }}
+                  </span>
+                </div>
+              </div>
+              <p
+                v-else
+                class="py-3 text-center text-sm text-[#a3a3a3]"
+              >
+                暂无分数变更记录
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div
+          v-else
+          class="mt-6 flex flex-col items-center justify-center py-4 text-[#a3a3a3]"
+        >
+          <div class="h-12 w-12 rounded-full bg-[#f5f5f5] flex items-center justify-center mb-3">
+            <BookOpen class="h-5 w-5 opacity-50" />
+          </div>
+          <p class="text-sm">
+            暂无科目分数
+          </p>
+        </div>
+      </Card>
 
       <!-- Recent activity -->
       <Card class="border-[#e5e5e5] bg-white p-5 mt-5">

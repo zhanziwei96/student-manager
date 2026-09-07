@@ -34,9 +34,17 @@ vi.mock('@/composables', () => ({
   useStudentScoreLogs: () => holder.scoreLogs,
 }))
 
-// 排行榜 mock：myRank 由 holder 控制，便于各用例切换有名次/无名次场景
+// 科目数据 mock：subjects / subjectRanks / subjectLogs 由 holder 控制，便于各用例切换场景
 const holder = vi.hoisted(() => ({
-  myRank: null as null | { rank: number; student_id: string; name: string; score: number },
+  subjects: [] as Array<{
+    subject_id: number
+    subject_name: string
+    teacher_id: number
+    teacher_name: string
+    score: number
+  }>,
+  subjectRanks: {} as Record<number, { rank: number; student_id: string; name: string; score: number } | null>,
+  subjectLogs: [] as Array<Record<string, unknown>>,
   scoreLogs: null as unknown as Record<string, unknown>,
 }))
 
@@ -51,20 +59,31 @@ const makeScoreLogs = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-vi.mock('@/composables/useLeaderboard', async () => {
-  const { computed } = await import('vue')
-  return {
-    useLeaderboard: () => ({
-      data: computed(() => null),
-      isPending: computed(() => false),
-      error: computed(() => null),
-      refetch: vi.fn(),
-      students: computed(() => []),
-      myRank: computed(() => holder.myRank),
-      total: computed(() => 0)
-    })
-  }
-})
+// Mock 学生科目分数 API
+vi.mock('@/api/students', () => ({
+  studentsApi: {
+    getSubjects: () => Promise.resolve(holder.subjects),
+  },
+}))
+
+// Mock lib/api 的 get：排行榜（按科目）与科目分数历史都走它
+vi.mock('@/lib/api', () => ({
+  get: (url: string, params?: Record<string, unknown>) => {
+    if (url === '/students/leaderboard') {
+      const subjectId = params?.subject_id as number
+      return Promise.resolve({
+        scope: 'class',
+        students: [],
+        total: 0,
+        my_rank: holder.subjectRanks[subjectId] ?? null,
+      })
+    }
+    if (url.endsWith('/logs')) {
+      return Promise.resolve(holder.subjectLogs)
+    }
+    return Promise.resolve(null)
+  },
+}))
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -81,7 +100,15 @@ const createWrapper = () => {
 
 describe('Student Dashboard', () => {
   beforeEach(() => {
-    holder.myRank = { rank: 2, student_id: 'S001', name: '张三', score: 999 }
+    holder.subjects = [
+      { subject_id: 1, subject_name: '数学', teacher_id: 1, teacher_name: '王老师', score: 90 },
+      { subject_id: 2, subject_name: '语文', teacher_id: 2, teacher_name: '李老师', score: 85 },
+    ]
+    holder.subjectRanks = {
+      1: { rank: 3, student_id: 'S001', name: '张三', score: 999 },
+      2: null,
+    }
+    holder.subjectLogs = []
     holder.scoreLogs = makeScoreLogs()
   })
 
@@ -96,51 +123,10 @@ describe('Student Dashboard', () => {
     expect(wrapper.text()).toContain('88')
   })
 
-  it('shows rank badge', async () => {
-    const wrapper = createWrapper()
-    await flushPromises()
-    expect(wrapper.text()).toContain('排名')
-  })
-
-  it('displays rank from leaderboard my_rank', async () => {
-    const wrapper = createWrapper()
-    await flushPromises()
-
-    const rankButton = wrapper.findAll('button').find(b => b.text().includes('排名'))
-    expect(rankButton?.text()).toContain('第 2 名')
-  })
-
-  it('does not display score from leaderboard my_rank', async () => {
-    const wrapper = createWrapper()
-    await flushPromises()
-
-    // 排行榜 my_rank 中的分数（999）不应出现在 Dashboard 上（只显示名次）
-    expect(wrapper.text()).not.toContain('999')
-  })
-
-  it('shows placeholder when my_rank is null', async () => {
-    holder.myRank = null
-    const wrapper = createWrapper()
-    await flushPromises()
-
-    const rankButton = wrapper.findAll('button').find(b => b.text().includes('排名'))
-    expect(rankButton?.text()).toMatch(/排名\s*-/)
-  })
-
   it('has leaderboard entry button', async () => {
     const wrapper = createWrapper()
     await flushPromises()
     expect(wrapper.text()).toContain('查看排行榜')
-  })
-
-  it('rank badge is clickable', async () => {
-    const wrapper = createWrapper()
-    await flushPromises()
-
-    // 查找包含"排名"文本的按钮元素
-    const buttons = wrapper.findAll('button')
-    const hasRankBadge = buttons.some(el => el.text().includes('排名'))
-    expect(hasRankBadge).toBe(true)
   })
 
   it('leaderboard button is clickable', async () => {
@@ -151,6 +137,92 @@ describe('Student Dashboard', () => {
     const buttons = wrapper.findAll('button')
     const hasLeaderboardButton = buttons.some(el => el.text().includes('查看排行榜'))
     expect(hasLeaderboardButton).toBe(true)
+  })
+
+  it('shows subject cards', async () => {
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    // 显示多个科目卡片：科目名 + 分数 + 任课教师
+    expect(wrapper.text()).toContain('我的科目')
+    expect(wrapper.find('[data-testid="subject-card-1"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="subject-card-2"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('数学')
+    expect(wrapper.text()).toContain('语文')
+    expect(wrapper.text()).toContain('王老师')
+    expect(wrapper.text()).toContain('90')
+    expect(wrapper.text()).toContain('85')
+  })
+
+  it('shows subject rank from leaderboard my_rank', async () => {
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    const card = wrapper.find('[data-testid="subject-card-1"]')
+    expect(card.text()).toContain('第 3 名')
+  })
+
+  it('does not display score from leaderboard my_rank', async () => {
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    // 科目排行榜 my_rank 中的分数（999）不应出现在 Dashboard 上（只显示名次）
+    expect(wrapper.text()).not.toContain('999')
+  })
+
+  it('shows placeholder when subject rank is null', async () => {
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    const card = wrapper.find('[data-testid="subject-card-2"]')
+    expect(card.text()).toContain('暂无排名')
+  })
+
+  it('shows empty state when no subjects', async () => {
+    holder.subjects = []
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="subject-cards"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('暂无科目分数')
+  })
+
+  it('expands subject score history on card click', async () => {
+    holder.subjectLogs = [
+      {
+        old_score: 80,
+        new_score: 90,
+        delta: 10,
+        reason: '考试加分',
+        operator: '王老师',
+        created_at: '2026-09-01T08:00:00',
+      },
+    ]
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    // 展开前不显示分数历史面板
+    expect(wrapper.find('[data-testid="subject-logs-panel"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="subject-card-1"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="subject-logs-panel"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('考试加分')
+    expect(wrapper.text()).toContain('+10')
+  })
+
+  it('collapses subject score history on second click', async () => {
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="subject-card-1"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="subject-logs-panel"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="subject-card-1"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="subject-logs-panel"]').exists()).toBe(false)
   })
 })
 
@@ -167,7 +239,8 @@ describe('Student Dashboard - 分数日志加载更多', () => {
   })
 
   beforeEach(() => {
-    holder.myRank = null
+    holder.subjects = []
+    holder.subjectLogs = []
   })
 
   it('hasMore 为 true 时显示"加载更多"按钮', async () => {
