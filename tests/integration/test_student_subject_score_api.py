@@ -82,3 +82,87 @@ def test_get_student_subject_score_logs(student_client, session):
     assert len(data) == 1
     assert data[0]["old_score"] == 80.0
     assert data[0]["new_score"] == 85.0
+
+
+# ========== 越权负向测试 ==========
+
+
+def test_student_cannot_view_other_student_subjects(student_client, session):
+    """学生不能查看其他学生的科目分数"""
+    from app.models import Subject, StudentSubjectScore
+
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    score = StudentSubjectScore(
+        student_id="S999", subject_id=subject.id, teacher_id=1,
+        score=85.0, semester="2026-2027-1"
+    )
+    session.add(score)
+    session.commit()
+
+    resp = student_client.get("/api/v1/students/S999/subjects")
+    assert resp.status_code == 403
+
+
+def test_teacher_cannot_view_other_class_student_subjects(teacher_client, session):
+    """教师不能查看非负责班级的学生科目分数"""
+    from app.models import Subject, StudentSubjectScore, Student
+
+    # 造一个其他班级的学生
+    student = Student(
+        student_id="S999", name="他班学生", class_name="三班",
+        score=80.0, password_hash="hash", is_account_enabled=True
+    )
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add_all([student, subject])
+    session.commit()
+
+    score = StudentSubjectScore(
+        student_id="S999", subject_id=subject.id, teacher_id=1,
+        score=85.0, semester="2026-2027-1"
+    )
+    session.add(score)
+    session.commit()
+
+    resp = teacher_client.get("/api/v1/students/S999/subjects")
+    assert resp.status_code == 403
+
+
+def test_student_cannot_update_score(student_client, session):
+    """学生不能修改分数"""
+    from app.models import Subject
+
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    resp = student_client.put(
+        f"/api/v1/students/S001/subjects/{subject.id}/score",
+        json={"score_change": 5, "reason": "越权测试"}
+    )
+    assert resp.status_code == 403
+
+
+def test_admin_can_view_any_student_subjects(admin_client, session):
+    """admin 可查看任何学生的科目分数"""
+    from app.models import Subject, StudentSubjectScore, Student
+
+    student = Student(
+        student_id="S999", name="他班学生", class_name="三班",
+        score=80.0, password_hash="hash", is_account_enabled=True
+    )
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add_all([student, subject])
+    session.commit()
+
+    score = StudentSubjectScore(
+        student_id="S999", subject_id=subject.id, teacher_id=1,
+        score=85.0, semester="2026-2027-1"
+    )
+    session.add(score)
+    session.commit()
+
+    resp = admin_client.get("/api/v1/students/S999/subjects")
+    assert resp.status_code == 200
