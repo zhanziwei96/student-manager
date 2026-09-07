@@ -187,34 +187,38 @@ def get_subject_leaderboard(
     # 获取当前学生的排名
     my_rank = None
     if current_student_id:
-        # 子查询：当前学生在该科目/教师下的分数
-        # 注意：必须带相同的 subject/teacher 过滤，否则学生有多条科目分数时
-        # 标量子查询返回多行会导致 PostgreSQL 报错
-        score_subquery = select(StudentSubjectScore.score).where(
+        # 先查该生分数（取最新记录，学期中换老师后同一科目可能有多条记录，
+        # 直接用标量子查询会因多行导致 PostgreSQL 报错）
+        student_score_query = select(StudentSubjectScore.score).where(
             StudentSubjectScore.student_id == current_student_id,
             StudentSubjectScore.semester == get_current_term(),
         )
         if subject_id:
-            score_subquery = score_subquery.where(StudentSubjectScore.subject_id == subject_id)
+            student_score_query = student_score_query.where(StudentSubjectScore.subject_id == subject_id)
         if teacher_id:
-            score_subquery = score_subquery.where(StudentSubjectScore.teacher_id == teacher_id)
-        score_subquery = score_subquery.scalar_subquery()
+            student_score_query = student_score_query.where(StudentSubjectScore.teacher_id == teacher_id)
 
-        # 统计分数更高的学生数量
-        rank_query = select(func.count()).select_from(StudentSubjectScore).join(
-            Student, StudentSubjectScore.student_id == Student.student_id
-        ).where(
-            StudentSubjectScore.semester == get_current_term(),
-            Student.is_account_enabled.is_(True),
-            StudentSubjectScore.score > score_subquery
-        )
-        if subject_id:
-            rank_query = rank_query.where(StudentSubjectScore.subject_id == subject_id)
-        if teacher_id:
-            rank_query = rank_query.where(StudentSubjectScore.teacher_id == teacher_id)
+        student_score = session.exec(
+            student_score_query.order_by(StudentSubjectScore.id.desc()).limit(1)
+        ).first()
 
-        higher_count = session.exec(rank_query).one()
-        my_rank = {"rank": higher_count + 1, "student_id": current_student_id}
+        # 该生在过滤范围内无分数记录时，my_rank 返回 None（而不是误报第 1 名）
+        if student_score is not None:
+            # 统计分数更高的学生数量
+            rank_query = select(func.count()).select_from(StudentSubjectScore).join(
+                Student, StudentSubjectScore.student_id == Student.student_id
+            ).where(
+                StudentSubjectScore.semester == get_current_term(),
+                Student.is_account_enabled.is_(True),
+                StudentSubjectScore.score > student_score
+            )
+            if subject_id:
+                rank_query = rank_query.where(StudentSubjectScore.subject_id == subject_id)
+            if teacher_id:
+                rank_query = rank_query.where(StudentSubjectScore.teacher_id == teacher_id)
+
+            higher_count = session.exec(rank_query).one()
+            my_rank = {"rank": higher_count + 1, "student_id": current_student_id}
 
     return {
         "students": ranked_students,

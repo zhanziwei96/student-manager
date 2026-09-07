@@ -163,3 +163,44 @@ def test_leaderboard_by_subject_and_teacher(student_client, session):
     assert len(data["students"]) == 1
     assert data["students"][0]["student_id"] == "S001"
     assert data["students"][0]["score"] == 85.0
+
+
+def test_leaderboard_by_subject_only(student_client, session):
+    """只传 subject_id 时（全校数学排名），同一学生有多条记录（不同教师）不会 500"""
+    from app.models import Subject, StudentSubjectScore, User
+    from app.core.security import hash_password
+
+    # 造数据：1 个科目，2 个老师（学期中换老师，student_client 已创建学生 S001）
+    subject = Subject(name="数学", semester="2026-2027-1")
+    teacher1 = User(username="teacher1", name="张老师", role="teacher", password_hash=hash_password("pass"), is_account_enabled=True)
+    teacher2 = User(username="teacher2", name="李老师", role="teacher", password_hash=hash_password("pass"), is_account_enabled=True)
+    session.add_all([subject, teacher1, teacher2])
+    session.commit()
+
+    score1 = StudentSubjectScore(student_id="S001", subject_id=subject.id, teacher_id=teacher1.id, score=85.0, semester="2026-2027-1")
+    score2 = StudentSubjectScore(student_id="S001", subject_id=subject.id, teacher_id=teacher2.id, score=90.0, semester="2026-2027-1")
+    session.add_all([score1, score2])
+    session.commit()
+
+    # 只传 subject_id（全校数学排名）
+    resp = student_client.get(f"/api/v1/students/leaderboard?subject_id={subject.id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    # 不应 500，my_rank 应该正确（取最新记录的分数 90）
+    assert data["my_rank"] is not None
+    assert data["my_rank"]["student_id"] == "S001"
+
+
+def test_leaderboard_my_rank_no_score(student_client, session):
+    """无分数学生的 my_rank 返回 None（不报错第 1 名）"""
+    from app.models import Subject
+
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    # 学生 S001 无该科目分数记录
+    resp = student_client.get(f"/api/v1/students/leaderboard?subject_id={subject.id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["my_rank"] is None
