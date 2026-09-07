@@ -1460,7 +1460,238 @@ git commit -m "feat(leaderboard): support subject and teacher aggregation"
 
 ## Phase 7-10：前端改造
 
-（Task 7-10 的完整内容在执行时补充，包括：前端科目管理页、学生管理页改造、学生 Dashboard 改造、排行榜页改造）
+### Task 7: 前端科目管理页
+
+**Files:**
+- Create: `frontend-v3/src/api/subjects.ts`
+- Create: `frontend-v3/src/composables/useSubjects.ts`
+- Create: `frontend-v3/src/views/admin/Subjects.vue`
+- Create: `frontend-v3/src/views/teacher/Subjects.vue`
+- Modify: `frontend-v3/src/api/index.ts`
+- Modify: `frontend-v3/src/router/index.ts`
+- Test: `frontend-v3/test/views/admin/Subjects.spec.ts`
+
+- [ ] **Step 1: API 客户端**
+
+创建 `frontend-v3/src/api/subjects.ts`：
+
+```typescript
+/**
+ * 科目 API
+ */
+import { get, post, put } from '@/lib/api'
+
+export interface Subject {
+  id: number
+  name: string
+  semester: string
+}
+
+export const subjectsApi = {
+  getAll: () => get<Subject[]>('/subjects'),
+  update: (id: number, name: string) => put(`/subjects/${id}`, { name }),
+  derive: () => post('/subjects/derive', {}),
+}
+```
+
+修改 `frontend-v3/src/api/index.ts` 追加导出：
+
+```typescript
+export { subjectsApi } from './subjects'
+export type { Subject } from './subjects'
+```
+
+- [ ] **Step 2: composable**
+
+创建 `frontend-v3/src/composables/useSubjects.ts`：
+
+```typescript
+/**
+ * 科目列表
+ */
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { subjectsApi } from '@/api'
+
+export function useSubjects() {
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => subjectsApi.getAll(),
+    staleTime: 5 * 60 * 1000, // 5 分钟
+  })
+  return { data, isPending, error, refetch }
+}
+
+export function useUpdateSubject() {
+  const queryClient = useQueryClient()
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) =>
+      subjectsApi.update(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] })
+    },
+  })
+  return { mutateAsync, isPending }
+}
+
+export function useDeriveSubjects() {
+  const queryClient = useQueryClient()
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: () => subjectsApi.derive(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subjects'] })
+    },
+  })
+  return { mutateAsync, isPending }
+}
+```
+
+- [ ] **Step 3: 科目管理页**
+
+创建 `frontend-v3/src/views/admin/Subjects.vue`（admin）和 `frontend-v3/src/views/teacher/Subjects.vue`（teacher，内容相同）：
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useSubjects, useUpdateSubject, useDeriveSubjects } from '@/composables/useSubjects'
+import { Button } from '@/components/ui'
+import { Dialog } from '@/components/ui'
+import { Input } from '@/components/ui'
+import { useToast } from '@/composables/useToast'
+
+const { data: subjects, isPending } = useSubjects()
+const { mutateAsync: updateSubject } = useUpdateSubject()
+const { mutateAsync: deriveSubjects } = useDeriveSubjects()
+const { success, error: showError } = useToast()
+
+const showEditDialog = ref(false)
+const editingSubject = ref<{ id: number; name: string } | null>(null)
+const newName = ref('')
+
+function openEditDialog(subject: { id: number; name: string }) {
+  editingSubject.value = subject
+  newName.value = subject.name
+  showEditDialog.value = true
+}
+
+async function handleUpdate() {
+  if (!editingSubject.value || !newName.value.trim()) return
+  try {
+    await updateSubject({ id: editingSubject.value.id, name: newName.value.trim() })
+    success('科目已更新')
+    showEditDialog.value = false
+  } catch (err) {
+    showError('更新失败')
+  }
+}
+
+async function handleDerive() {
+  try {
+    const result = await deriveSubjects()
+    success(`已推导 ${result.created_count} 个科目`)
+  } catch (err) {
+    showError('推导失败')
+  }
+}
+</script>
+
+<template>
+  <div>
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">科目管理</h1>
+      <Button @click="handleDerive">从课表推导</Button>
+    </div>
+
+    <div v-if="isPending" class="text-center py-8">加载中...</div>
+
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        v-for="subject in subjects"
+        :key="subject.id"
+        class="border rounded-lg p-4 hover:shadow-md transition-shadow"
+      >
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-medium">{{ subject.name }}</h3>
+          <Button variant="outline" size="sm" @click="openEditDialog(subject)">修改</Button>
+        </div>
+      </div>
+    </div>
+
+    <Dialog v-model:open="showEditDialog" title="修改科目名称">
+      <div class="space-y-4">
+        <Input v-model="newName" placeholder="科目名称" />
+      </div>
+      <template #footer>
+        <Button variant="outline" @click="showEditDialog = false">取消</Button>
+        <Button @click="handleUpdate">确认</Button>
+      </template>
+    </Dialog>
+  </div>
+</template>
+```
+
+修改 `frontend-v3/src/router/index.ts` 加路由：
+
+```typescript
+{
+  path: 'subjects',
+  name: 'AdminSubjects',
+  component: () => import('@/views/admin/Subjects.vue'),
+},
+// teacher 路由同样加
+```
+
+- [ ] **Step 4: 测试**
+
+创建 `frontend-v3/test/views/admin/Subjects.spec.ts`：
+
+```typescript
+import { describe, it, expect, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
+import Subjects from '@/views/admin/Subjects.vue'
+
+// Mock composables
+vi.mock('@/composables/useSubjects', () => ({
+  useSubjects: vi.fn(() => ({
+    data: { value: [{ id: 1, name: '数学', semester: '2026-2027-1' }] },
+    isPending: { value: false },
+  })),
+  useUpdateSubject: vi.fn(() => ({ mutateAsync: vi.fn() })),
+  useDeriveSubjects: vi.fn(() => ({ mutateAsync: vi.fn() })),
+}))
+
+describe('Subjects', () => {
+  it('renders subject list', () => {
+    const wrapper = mount(Subjects)
+    expect(wrapper.text()).toContain('数学')
+  })
+
+  it('opens edit dialog when clicking edit button', async () => {
+    const wrapper = mount(Subjects)
+    await wrapper.find('button').trigger('click')
+    expect(wrapper.vm.showEditDialog).toBe(true)
+  })
+})
+```
+
+- [ ] **Step 5: 验证**
+
+Run: `cd frontend-v3 && pnpm vitest run test/views/admin/Subjects.spec.ts 2>&1 | tail -3`
+Expected: PASS
+
+- [ ] **Step 6: 提交**
+
+```bash
+git add frontend-v3/src/api/subjects.ts frontend-v3/src/composables/useSubjects.ts frontend-v3/src/views/admin/Subjects.vue frontend-v3/src/views/teacher/Subjects.vue frontend-v3/src/api/index.ts frontend-v3/src/router/index.ts frontend-v3/test/views/admin/Subjects.spec.ts
+git commit -m "feat(subject): add subject management page"
+```
+
+（末尾加 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>）
+
+---
+
+### Task 8-10: 前端学生管理页/Dashboard/排行榜改造
+
+（结构与 Task 7 相同，执行时补充）
 
 ---
 
