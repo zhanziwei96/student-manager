@@ -12,7 +12,7 @@ from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
     GroupTask, GroupTaskDimension, EvaluationAssignment,
     GroupEvaluationScore, GroupDissolutionRequest,
-    ClassGroupSettings,
+    ClassGroupSettings, GroupScoreLog,
 )
 from app.models.question import Question, Answer, QuestionResponse, AnswerResponse
 from app.models.lost_found import (
@@ -46,6 +46,7 @@ __all__ = [
     "Group", "GroupMember", "GroupMembershipRequest",
     "GroupTask", "GroupTaskDimension", "EvaluationAssignment",
     "GroupEvaluationScore", "GroupDissolutionRequest", "ClassGroupSettings",
+    "GroupScoreLog",
     # API Response Models
     "ApiResponse", "ApiSuccessResponse", "ApiListResponse", "ApiErrorResponse",
     # Question & Answer

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Index, desc
 from app.core.timezone import get_now
 from app.core.term import get_current_term
 
@@ -21,8 +22,11 @@ class Group(SQLModel, table=True):
         index=True
     )
     class_name: str = Field(..., description="班级名称", max_length=100, index=True)
+    subject_id: Optional[int] = Field(default=None, foreign_key="subjects.id", description="科目ID（小组按科目划分）", index=True)
     name: str = Field(..., description="小组名称", max_length=100)
     leader_student_id: str = Field(..., description="组长学号", max_length=50, index=True)
+    score: float = Field(default=0.0, description="小组平时分", index=True)
+    version: int = Field(default=1, description="乐观锁版本号")
     is_active: bool = Field(default=True, description="是否有效")
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
 
@@ -134,3 +138,22 @@ class ClassGroupSettings(SQLModel, table=True):
     class_name: str = Field(..., description="班级名称", max_length=100, primary_key=True)
     max_members_per_group: int = Field(default=5, description="每组上限人数")
     updated_at: datetime = Field(default_factory=get_now, description="最后修改时间")
+
+
+class GroupScoreLog(SQLModel, table=True):
+    """小组分数变更日志表"""
+    __tablename__ = "group_score_logs"
+    __table_args__ = (
+        Index('idx_group_score_logs_group_created_at', 'group_id', desc('created_at')),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(..., description="小组ID", index=True)
+    subject_id: Optional[int] = Field(default=None, description="科目ID")
+    old_score: Optional[float] = Field(default=None, description="旧分数")
+    new_score: Optional[float] = Field(default=None, description="新分数")
+    delta: Optional[float] = Field(default=None, description="变化值")
+    reason: Optional[str] = Field(default=None, description="原因")
+    operator: Optional[str] = Field(default=None, description="操作人")
+    semester: str = Field(default_factory=get_current_term, description="学期标识", max_length=20)
+    created_at: datetime = Field(default_factory=get_now, description="创建时间")
