@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useQuery } from '@tanstack/vue-query'
 import { useAuthStore } from '@/stores'
 import { useLeaderboard } from '@/composables/useLeaderboard'
-import { Card, Badge, Button } from '@/components/ui'
+import { useSubjects } from '@/composables/useSubjects'
+import { useTermInfo } from '@/composables/useTermInfo'
+import { studentsApi } from '@/api/students'
+import { Card, Badge, Button, Select } from '@/components/ui'
 import { Trophy, Users, School, Loader2, User } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
@@ -10,9 +14,81 @@ const currentStudentId = computed(() => authStore.user?.id)
 
 const activeTab = ref<'class' | 'school'>('class')
 
+// === 科目筛选器（默认当前学期第一个科目） ===
+const { data: subjectsData } = useSubjects()
+const { data: termInfo } = useTermInfo()
+
+// 当前学期科目列表（学期信息缺失或无匹配时回退为全部科目）
+const semesterSubjects = computed(() => {
+  const all = subjectsData.value ?? []
+  const term = termInfo.value?.term
+  if (!term) return all
+  const filtered = all.filter((s) => s.semester === term)
+  return filtered.length > 0 ? filtered : all
+})
+
+const selectedSubjectId = ref<string | number>('')
+const hasDefaultedSubject = ref(false)
+
+// 科目列表就绪后默认选中第一个科目（仅自动设置一次，不覆盖用户手动选择）
+watch(
+  semesterSubjects,
+  (list) => {
+    if (!hasDefaultedSubject.value && list.length > 0) {
+      selectedSubjectId.value = list[0].id
+      hasDefaultedSubject.value = true
+    }
+  },
+  { immediate: true }
+)
+
+const subjectOptions = computed(() => [
+  { value: '', label: '全部科目' },
+  ...semesterSubjects.value.map((s) => ({ value: s.id, label: s.name })),
+])
+
+// === 教师筛选器（从本人科目分数记录中提取任课教师列表） ===
+const studentId = computed(() => (currentStudentId.value ? String(currentStudentId.value) : ''))
+const { data: subjectScores } = useQuery({
+  queryKey: computed(() => ['student-subjects', studentId.value]),
+  queryFn: () => studentsApi.getSubjects(studentId.value),
+  enabled: computed(() => !!studentId.value),
+})
+
+const selectedTeacherId = ref<string | number>('')
+
+// 选中具体科目时只显示该科目的任课教师，否则显示全部任课教师
+const teacherOptions = computed(() => {
+  const scores = subjectScores.value ?? []
+  const filtered =
+    selectedSubjectId.value === ''
+      ? scores
+      : scores.filter((s) => s.subject_id === Number(selectedSubjectId.value))
+  const teacherMap = new Map<number, string>()
+  filtered.forEach((s) => teacherMap.set(s.teacher_id, s.teacher_name))
+  return [
+    { value: '', label: '全部教师' },
+    ...[...teacherMap.entries()].map(([value, label]) => ({ value, label })),
+  ]
+})
+
+// 切换科目后，若已选教师不在新选项中则重置为全部教师
+watch(teacherOptions, (options) => {
+  if (
+    selectedTeacherId.value !== '' &&
+    !options.some((o) => String(o.value) === String(selectedTeacherId.value))
+  ) {
+    selectedTeacherId.value = ''
+  }
+})
 
 const { isPending, students, myRank } = useLeaderboard(
-  computed(() => ({ scope: activeTab.value, limit: 50 }))
+  computed(() => ({
+    scope: activeTab.value,
+    limit: 50,
+    ...(selectedSubjectId.value !== '' ? { subject_id: Number(selectedSubjectId.value) } : {}),
+    ...(selectedTeacherId.value !== '' ? { teacher_id: Number(selectedTeacherId.value) } : {}),
+  }))
 )
 
 // 前三名样式 - 金银铜奖杯（高对比度配色）
@@ -87,6 +163,28 @@ const maskName = (name: string, studentId: string) => {
         <School class="mr-2 h-4 w-4" />
         全校榜
       </Button>
+    </div>
+
+    <!-- Filters: 科目 / 教师 -->
+    <div class="flex flex-col sm:flex-row gap-3 mb-5">
+      <div
+        class="sm:w-48"
+        data-testid="subject-filter"
+      >
+        <Select
+          v-model="selectedSubjectId"
+          :options="subjectOptions"
+        />
+      </div>
+      <div
+        class="sm:w-48"
+        data-testid="teacher-filter"
+      >
+        <Select
+          v-model="selectedTeacherId"
+          :options="teacherOptions"
+        />
+      </div>
     </div>
 
     <!-- My Rank Card - Indigo 主题 -->
