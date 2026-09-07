@@ -1018,7 +1018,449 @@ git commit -m "feat(subject): add subject management API"
 
 ---
 
-（后续 Task 5-10 的完整内容因长度限制省略，结构与 Task 1-4 相同：Task 5 学生科目分数 API、Task 6 排行榜改造、Task 7 前端科目管理页、Task 8 前端学生管理页改造、Task 9 前端学生 Dashboard 改造、Task 10 前端排行榜改造）
+## Phase 5：学生科目分数 API
+
+### Task 5: 学生科目分数 API
+
+**Files:**
+- Create: `backend/app/api/routes/student_subject_scores.py`
+- Modify: `backend/app/api/routes/__init__.py`
+- Modify: `backend/main.py`
+- Test: `tests/integration/test_student_subject_score_api.py`
+
+- [ ] **Step 1: 写失败测试**
+
+创建 `tests/integration/test_student_subject_score_api.py`：
+
+```python
+"""学生科目分数 API 集成测试"""
+
+
+def test_get_student_subjects(student_client, session):
+    """学生获取自己所有科目分数"""
+    from app.models import Subject, StudentSubjectScore
+
+    # 造数据
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    score = StudentSubjectScore(
+        student_id="S001", subject_id=subject.id, teacher_id=1,
+        score=85.0, semester="2026-2027-1"
+    )
+    session.add(score)
+    session.commit()
+
+    resp = student_client.get("/api/v1/students/S001/subjects")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data) == 1
+    assert data[0]["subject_name"] == "数学"
+    assert data[0]["score"] == 85.0
+
+
+def test_update_student_subject_score(teacher_client, session):
+    """教师给学生某科目加减分"""
+    from app.models import Subject, StudentSubjectScore
+
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    score = StudentSubjectScore(
+        student_id="S001", subject_id=subject.id, teacher_id=1,
+        score=80.0, semester="2026-2027-1"
+    )
+    session.add(score)
+    session.commit()
+
+    resp = teacher_client.put(
+        f"/api/v1/students/S001/subjects/{subject.id}/score",
+        json={"score_change": 5, "reason": "课堂表现"}
+    )
+    assert resp.status_code == 200
+
+    # 验证分数已更新
+    session.refresh(score)
+    assert score.score == 85.0
+
+
+def test_get_student_subject_score_logs(student_client, session):
+    """学生查看自己某科目分数历史"""
+    from app.models import Subject, StudentSubjectScoreLog
+
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    log = StudentSubjectScoreLog(
+        student_id="S001", subject_id=subject.id, teacher_id=1,
+        old_score=80.0, new_score=85.0, delta=5.0,
+        reason="课堂表现", operator="张老师", semester="2026-2027-1"
+    )
+    session.add(log)
+    session.commit()
+
+    resp = student_client.get(f"/api/v1/students/S001/subjects/{subject.id}/logs")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data) == 1
+    assert data[0]["old_score"] == 80.0
+    assert data[0]["new_score"] == 85.0
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+Run: `conda run -n student-manage pytest tests/integration/test_student_subject_score_api.py -v`
+Expected: FAIL — 404（路由不存在）
+
+- [ ] **Step 3: 实现路由**
+
+创建 `backend/app/api/routes/student_subject_scores.py`：
+
+```python
+"""
+学生科目分数 API
+"""
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, select
+from pydantic import BaseModel, Field
+
+from app.core.db import get_session
+from app.core.config import HttpStatus
+from app.core.term import get_current_term
+from app.api.deps import get_current_user, require_admin_or_teacher, verify_teacher_class_access
+from app.crud.student_subject_score import update_student_subject_score
+from app.models import StudentSubjectScore, StudentSubjectScoreLog, Subject, Student, User
+from app.models.constants import ApiResponseConst, ApiResponse, ApiSuccessResponse
+
+router = APIRouter(tags=["student-subject-scores"])
+
+
+class UpdateScoreRequest(BaseModel):
+    score_change: float = Field(..., description="分数变化值（正数加分，负数扣分）")
+    reason: str = Field(..., min_length=1, max_length=200, description="原因")
+
+
+@router.get("/students/{student_id}/subjects", response_model=ApiResponse[List[dict]])
+def get_student_subjects(
+    student_id: str,
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """获取学生所有科目分数（学生只能看自己，教师看自己班）"""
+    # 权限校验
+    role = user.get("role", "")
+    if role == "student":
+        if student_id != user.get("sub", ""):
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看其他学生信息")
+    elif role == "teacher":
+        student = session.get(Student, student_id)
+        if not student:
+            raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生不存在")
+        verify_teacher_class_access(user, student.class_name, session)
+
+    # 查询当前学期的所有科目分数
+    scores = session.exec(
+        select(StudentSubjectScore, Subject, User)
+        .join(Subject, StudentSubjectScore.subject_id == Subject.id)
+        .join(User, StudentSubjectScore.teacher_id == User.id)
+        .where(
+            StudentSubjectScore.student_id == student_id,
+            StudentSubjectScore.semester == get_current_term(),
+        )
+    ).all()
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: [
+            {
+                "subject_id": score.subject_id,
+                "subject_name": subject.name,
+                "teacher_id": score.teacher_id,
+                "teacher_name": teacher.name,
+                "score": score.score,
+            }
+            for score, subject, teacher in scores
+        ]
+    }
+
+
+@router.put("/students/{student_id}/subjects/{subject_id}/score", response_model=ApiSuccessResponse)
+def update_score(
+    student_id: str,
+    subject_id: int,
+    data: UpdateScoreRequest,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin_or_teacher)
+):
+    """更新学生科目分数（admin 或负责该班的教师）"""
+    # 权限校验
+    student = session.get(Student, student_id)
+    if not student:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生不存在")
+    verify_teacher_class_access(user, student.class_name, session)
+
+    # 更新分数
+    username = user.get("username", "")
+    result = update_student_subject_score(session, student_id, subject_id, data.score_change, data.reason, username)
+    if not result:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生科目分数记录不存在")
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: "分数已更新"
+    }
+
+
+@router.get("/students/{student_id}/subjects/{subject_id}/logs", response_model=ApiResponse[List[dict]])
+def get_student_subject_score_logs(
+    student_id: str,
+    subject_id: int,
+    limit: int = Query(50, ge=1, le=200, description="每页数量"),
+    offset: int = Query(0, ge=0, description="偏移量"),
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """获取学生某科目分数历史（学生只能看自己，教师看自己班）"""
+    # 权限校验
+    role = user.get("role", "")
+    if role == "student":
+        if student_id != user.get("sub", ""):
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看其他学生信息")
+    elif role == "teacher":
+        student = session.get(Student, student_id)
+        if not student:
+            raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生不存在")
+        verify_teacher_class_access(user, student.class_name, session)
+
+    # 查询日志
+    logs = session.exec(
+        select(StudentSubjectScoreLog)
+        .where(
+            StudentSubjectScoreLog.student_id == student_id,
+            StudentSubjectScoreLog.subject_id == subject_id,
+            StudentSubjectScoreLog.semester == get_current_term(),
+        )
+        .order_by(StudentSubjectScoreLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: [
+            {
+                "old_score": log.old_score,
+                "new_score": log.new_score,
+                "delta": log.delta,
+                "reason": log.reason,
+                "operator": log.operator,
+                "created_at": log.created_at.isoformat(),
+            }
+            for log in logs
+        ]
+    }
+```
+
+修改 `backend/app/api/routes/__init__.py` 追加导出：
+
+```python
+from app.api.routes.student_subject_scores import router as student_subject_scores_router
+
+__all__ = [
+    # ... 现有导出 ...
+    "student_subject_scores_router",
+]
+```
+
+修改 `backend/main.py` 注册路由（在 subjects_router 之后）：
+
+```python
+from app.api.routes.student_subject_scores import router as student_subject_scores_router
+app.include_router(student_subject_scores_router, prefix=API_V1_PREFIX)
+```
+
+- [ ] **Step 4: 运行测试确认通过**
+
+Run: `conda run -n student-manage pytest tests/integration/test_student_subject_score_api.py -v`
+Expected: PASS（3 passed）
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add backend/app/api/routes/student_subject_scores.py backend/app/api/routes/__init__.py backend/main.py tests/integration/test_student_subject_score_api.py
+git commit -m "feat(subject): add student subject score API"
+```
+
+（末尾加 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>）
+
+---
+
+## Phase 6：排行榜改造
+
+### Task 6: 排行榜按教师+科目聚合
+
+**Files:**
+- Modify: `backend/app/api/routes/leaderboard.py`
+- Modify: `backend/app/crud/leaderboard.py`
+- Test: `tests/integration/test_leaderboard_api.py`（追加）
+
+- [ ] **Step 1: 写失败测试**
+
+在 `tests/integration/test_leaderboard_api.py` 追加：
+
+```python
+def test_leaderboard_by_subject_and_teacher(student_client, session):
+    """按教师+科目聚合排行榜"""
+    from app.models import Subject, StudentSubjectScore
+
+    # 造数据：2 个学生，同一科目，不同老师
+    subject = Subject(name="数学", semester="2026-2027-1")
+    session.add(subject)
+    session.commit()
+
+    score1 = StudentSubjectScore(student_id="S001", subject_id=subject.id, teacher_id=1, score=85.0, semester="2026-2027-1")
+    score2 = StudentSubjectScore(student_id="S002", subject_id=subject.id, teacher_id=2, score=90.0, semester="2026-2027-1")
+    session.add_all([score1, score2])
+    session.commit()
+
+    # 按教师+科目排
+    resp = student_client.get(f"/api/v1/students/leaderboard?subject_id={subject.id}&teacher_id=1")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data["students"]) == 1
+    assert data["students"][0]["student_id"] == "S001"
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+Run: `conda run -n student-manage pytest tests/integration/test_leaderboard_api.py::test_leaderboard_by_subject_and_teacher -v`
+Expected: FAIL — 参数不存在或行为不符合
+
+- [ ] **Step 3: 实现改造**
+
+修改 `backend/app/api/routes/leaderboard.py` 的 `get_student_leaderboard`：
+
+```python
+@router.get("/students/leaderboard", response_model=LeaderboardResponse)
+def get_student_leaderboard(
+    scope: str = Query("class", description="范围: class 或 school"),
+    class_name: Optional[str] = Query(None, description="班级名称（scope=class 时）"),
+    subject_id: Optional[int] = Query(None, description="科目ID"),
+    teacher_id: Optional[int] = Query(None, description="教师ID"),
+    limit: int = Query(50, ge=1, le=100, description="返回数量限制"),
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """获取学生排行榜（支持按教师+科目聚合）
+
+    - subject_id + teacher_id：按教师+科目排（如"张老师的数学"）
+    - 只有 subject_id：按科目排（全校数学排名）
+    - 只有 teacher_id：按教师排（张老师教的所有科目）
+    - 都不传：按 scope/class_name 排（现有逻辑）
+    """
+    # ... 现有逻辑 ...
+
+    # 如果有 subject_id 或 teacher_id，按科目分数排
+    if subject_id or teacher_id:
+        data = get_subject_leaderboard(
+            session,
+            subject_id=subject_id,
+            teacher_id=teacher_id,
+            limit=limit,
+            current_student_id=current_student_id
+        )
+    else:
+        # 现有逻辑（按总分排）
+        data = get_leaderboard(...)
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: data
+    }
+```
+
+修改 `backend/app/crud/leaderboard.py` 加新函数：
+
+```python
+def get_subject_leaderboard(
+    session: Session,
+    subject_id: Optional[int] = None,
+    teacher_id: Optional[int] = None,
+    limit: int = 50,
+    current_student_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """按教师+科目聚合排行榜"""
+    # 查询学生科目分数
+    query = select(StudentSubjectScore, Student, Subject, User).join(
+        Student, StudentSubjectScore.student_id == Student.student_id
+    ).join(
+        Subject, StudentSubjectScore.subject_id == Subject.id
+    ).join(
+        User, StudentSubjectScore.teacher_id == User.id
+    ).where(
+        StudentSubjectScore.semester == get_current_term(),
+        Student.is_account_enabled.is_(True)
+    )
+
+    if subject_id:
+        query = query.where(StudentSubjectScore.subject_id == subject_id)
+    if teacher_id:
+        query = query.where(StudentSubjectScore.teacher_id == teacher_id)
+
+    # 按分数降序排序
+    query = query.order_by(StudentSubjectScore.score.desc())
+
+    # 获取前 limit 条
+    results = session.exec(query.limit(limit)).all()
+
+    # 计算排名
+    ranked_students = []
+    for i, (score_record, student, subject, teacher) in enumerate(results):
+        ranked_students.append({
+            "rank": i + 1,
+            "student_id": student.student_id,
+            "name": student.name,
+            "class_name": student.class_name,
+            "subject_name": subject.name,
+            "teacher_name": teacher.name,
+            "score": score_record.score
+        })
+
+    # 获取当前学生的排名
+    my_rank = None
+    if current_student_id:
+        # ... 类似现有逻辑 ...
+
+    return {
+        "students": ranked_students,
+        "total": len(ranked_students),
+        "my_rank": my_rank
+    }
+```
+
+- [ ] **Step 4: 运行测试确认通过**
+
+Run: `conda run -n student-manage pytest tests/integration/test_leaderboard_api.py -v`
+Expected: PASS（全部通过）
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add backend/app/api/routes/leaderboard.py backend/app/crud/leaderboard.py tests/integration/test_leaderboard_api.py
+git commit -m "feat(leaderboard): support subject and teacher aggregation"
+```
+
+（末尾加 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>）
+
+---
+
+## Phase 7-10：前端改造
+
+（Task 7-10 的完整内容在执行时补充，包括：前端科目管理页、学生管理页改造、学生 Dashboard 改造、排行榜页改造）
 
 ---
 
