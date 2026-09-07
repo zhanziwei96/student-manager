@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X, User, LayoutDashboard, Users, GraduationCap, BookOpen, CheckCircle, School, KeyRound, MessageCircle } from 'lucide-vue-next'
+import { X, User, LayoutDashboard, Users, GraduationCap, BookOpen, BookMarked, CheckCircle, School, KeyRound, MessageCircle } from 'lucide-vue-next'
 import { Button } from '.'
 import { useAuthStore } from '@/stores'
 import { computed, watch } from 'vue'
@@ -33,6 +33,7 @@ const navItems = computed(() => {
       { name: '教师管理', path: '/admin/teachers', icon: User },
       { name: '班级管理', path: '/admin/classes', icon: School },
       { name: '课表管理', path: '/admin/schedules', icon: BookOpen },
+      { name: '科目管理', path: '/admin/subjects', icon: BookMarked },
       { name: '签到管理', path: '/admin/checkins', icon: CheckCircle }
     )
   } else if (isTeacher.value) {
@@ -41,6 +42,7 @@ const navItems = computed(() => {
       { name: '学生管理', path: '/teacher/students', icon: Users },
       { name: '课堂签到', path: '/teacher/session', icon: CheckCircle },
       { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
+      { name: '科目管理', path: '/teacher/subjects', icon: BookMarked },
       { name: '合作项目', path: '/teacher/group-tasks', icon: Users },
       { name: '小组管理', path: '/teacher/groups', icon: GraduationCap },
       { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle }

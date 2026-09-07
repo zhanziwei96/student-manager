@@ -1,11 +1,11 @@
 /**
  * @vitest-environment jsdom
  *
- * 管理员科目管理页 - 科目列表渲染测试
+ * 科目管理页（实现位于 teacher 视图，admin 路由复用）- 科目列表渲染测试
  */
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import Subjects from '@/views/admin/Subjects.vue'
+import Subjects from '@/views/teacher/Subjects.vue'
 
 // Mock composables
 vi.mock('@/composables/useSubjects', () => ({
