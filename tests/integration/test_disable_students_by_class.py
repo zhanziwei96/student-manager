@@ -8,7 +8,7 @@
 - 缺少班级列表或空列表返回 422
 - 禁用后学生无法登录，不出现在学生列表，且班级从班级列表消失
 """
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 
 def _create_students(test_engine, class_name: str, count: int, id_prefix: str = "SA"):
@@ -415,7 +415,19 @@ class TestDisabledClassContentCreation:
 
     def test_auto_assign_excludes_disabled_students(self, teacher_client, test_engine):
         """自动分组不包含禁用学生：2 个启用学生 + 1 个禁用学生 → 只分 2 个启用学生"""
-        from app.models import Student
+        from datetime import date
+        from app.models import Cohort, Class_, Semester, Student
+
+        # seed 届/班/当前学期（设置表复合主键依赖）
+        with Session(test_engine) as session:
+            if session.exec(select(Cohort).where(Cohort.year == "2026")).first() is None:
+                session.add(Cohort(year="2026"))
+            if session.exec(select(Class_).where(Class_.name == "一班")).first() is None:
+                session.add(Class_(name="一班", cohort_year="2026"))
+            if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
+                session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                                     total_weeks=20, is_current=True))
+            session.commit()
 
         _create_students(test_engine, "一班", 2, id_prefix="DJ")
         # 同班再加 1 个禁用学生
