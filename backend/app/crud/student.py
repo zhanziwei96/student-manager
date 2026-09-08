@@ -310,10 +310,16 @@ def delete_student(session: Session, student_id: str) -> bool:
 
 
 def get_all_classes(session: Session) -> List[str]:
-    """获取所有班级列表（只包含有启用学生的班级）"""
-    query = select(Student.class_name).where(Student.is_account_enabled.is_(True)).distinct()
-    result = session.exec(query).all()
-    return [str(row) for row in result if row]
+    """获取所有班级列表：classes 表 ∪ 启用学生的 class_name（过渡期合并，
+    Phase 4 删除 students 部分后只保留 classes）"""
+    from app.models import Class_
+    class_names = set(session.exec(select(Class_.name)).all())
+    student_names = set(session.exec(
+        select(Student.class_name)
+        .where(Student.is_account_enabled.is_(True))
+        .distinct()
+    ).all())
+    return sorted(class_names | student_names)
 
 
 def disable_students_by_class(session: Session, class_name: str) -> int:
