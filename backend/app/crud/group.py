@@ -2,7 +2,9 @@
 from typing import List, Optional
 import random
 from sqlmodel import Session, select
-from app.core.term import get_current_term
+from app.core.class_cache import get_class_id_by_name
+from app.core.term import get_current_term, get_current_semester_id
+from app.core.transition_filters import class_filter, semester_filter
 from app.core.timezone import get_now
 from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
@@ -19,9 +21,15 @@ def get_groups_by_class(session: Session, class_name: str) -> List[Group]:
     """获取某班当前学期所有活跃小组"""
     return session.exec(
         select(Group).where(
-            Group.class_name == class_name,
+            class_filter(
+                Group.class_id, Group.class_name,
+                get_class_id_by_name(session, class_name), class_name,
+            ),
             Group.is_active.is_(True),
-            Group.semester == get_current_term(),
+            semester_filter(
+                Group.semester_id, Group.semester,
+                get_current_semester_id(session), get_current_term(),
+            ),
         ).order_by(Group.id)
     ).all()
 
@@ -33,9 +41,15 @@ def get_student_active_group(session: Session, student_id: str, class_name: str)
         .join(GroupMember, GroupMember.group_id == Group.id)
         .where(
             GroupMember.student_id == student_id,
-            Group.class_name == class_name,
+            class_filter(
+                Group.class_id, Group.class_name,
+                get_class_id_by_name(session, class_name), class_name,
+            ),
             Group.is_active.is_(True),
-            Group.semester == get_current_term(),
+            semester_filter(
+                Group.semester_id, Group.semester,
+                get_current_semester_id(session), get_current_term(),
+            ),
         )
     )
     return session.exec(statement).first()
@@ -58,6 +72,8 @@ def create_group(
     """创建小组，组长自动加入"""
     group = Group(
         class_name=class_name,
+        class_id=get_class_id_by_name(session, class_name),     # 双写：FK 列
+        semester_id=get_current_semester_id(session),           # 双写：FK 列
         name=name,
         leader_student_id=leader_student_id,
         subject_id=subject_id,
@@ -223,7 +239,10 @@ def auto_assign_unassigned_students(session: Session, class_name: str, group_siz
     # 找出该班所有启用学生（禁用学生不参与自动分组）
     all_students = session.exec(
         select(Student).where(
-            Student.class_name == class_name,
+            class_filter(
+                Student.class_id, Student.class_name,
+                get_class_id_by_name(session, class_name), class_name,
+            ),
             Student.is_account_enabled.is_(True),
         )
     ).all()
@@ -264,10 +283,14 @@ def get_class_group_settings(session: Session, class_name: str) -> Optional[Clas
 
 
 def get_or_create_class_group_settings(session: Session, class_name: str) -> ClassGroupSettings:
-    """获取或创建班级小组设置"""
+    """获取或创建班级小组设置（主键仍 class_name，Phase 2d 切换复合主键）"""
     settings = session.get(ClassGroupSettings, class_name)
     if not settings:
-        settings = ClassGroupSettings(class_name=class_name)
+        settings = ClassGroupSettings(
+            class_name=class_name,
+            class_id=get_class_id_by_name(session, class_name),   # 双写：FK 列
+            semester_id=get_current_semester_id(session),         # 双写：FK 列
+        )
         session.add(settings)
         session.commit()
         session.refresh(settings)
