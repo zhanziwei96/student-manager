@@ -41,12 +41,19 @@ def get_student_leaderboard(
 
     # 如果有 subject_id 或 teacher_id，按科目分数排
     if subject_id or teacher_id:
+        # 教师范围：assigned_classes 优先，空时从 offerings 派生；学生/admin 不限
+        accessible_classes = None
+        if user.get("role") == "teacher":
+            from app.api.deps import get_teacher_accessible_classes
+            accessible_classes = get_teacher_accessible_classes(user, session)
+
         data = get_subject_leaderboard(
             session,
             subject_id=subject_id,
             teacher_id=teacher_id,
             limit=limit,
-            current_student_id=current_student_id
+            current_student_id=current_student_id,
+            accessible_classes=accessible_classes,
         )
         return {
             ApiResponseConst.SUCCESS: True,

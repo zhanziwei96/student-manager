@@ -1,6 +1,6 @@
 # tests/integration/test_leaderboard_api.py
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.models import Student
 
 
@@ -134,9 +134,48 @@ def session(test_engine):
         yield s
 
 
+def _seed_enrollment(
+    session, student_id, course_name, teacher, score, class_name="1班",
+):
+    """造科目榜 enrollments 数据（完整 FK 链：届/班/学期/课程/教学班/选课）"""
+    from datetime import date
+    from app.models import (
+        Cohort, Class_, Semester, Course, CourseOffering, Enrollment,
+    )
+
+    if session.exec(select(Cohort).where(Cohort.year == "2026")).first() is None:
+        session.add(Cohort(year="2026"))
+    if session.exec(select(Semester).where(Semester.label == "2026-2027-1")).first() is None:
+        session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                             total_weeks=20, is_current=True))
+    course = session.exec(select(Course).where(Course.name == course_name)).first()
+    if course is None:
+        course = Course(code=f"C-{course_name}", name=course_name)
+        session.add(course)
+        session.flush()
+    sem = session.exec(select(Semester).where(Semester.label == "2026-2027-1")).one()
+    offering = session.exec(select(CourseOffering).where(
+        CourseOffering.course_id == course.id,
+        CourseOffering.semester_id == sem.id,
+        CourseOffering.teacher_id == teacher.id,
+    )).first()
+    if offering is None:
+        offering = CourseOffering(
+            course_id=course.id, semester_id=sem.id, teacher_id=teacher.id,
+            teacher_name=teacher.name, class_scope=class_name,
+        )
+        session.add(offering)
+        session.flush()
+    session.add(Enrollment(
+        student_id=student_id, offering_id=offering.id, semester_id=sem.id,
+        status="enrolled", score=score,
+    ))
+    session.commit()
+
+
 def test_leaderboard_by_subject_and_teacher(student_client, session):
     """按教师+科目聚合排行榜"""
-    from app.models import Subject, StudentSubjectScore, Student, User
+    from app.models import Subject, Student, User
     from app.core.security import hash_password
 
     # 造数据：student_client 已创建学生 S001，再补 1 个学生 + 2 个教师 + 1 个科目
@@ -150,11 +189,9 @@ def test_leaderboard_by_subject_and_teacher(student_client, session):
     session.add_all([student2, teacher1, teacher2, subject])
     session.commit()
 
-    # 同一科目，不同老师
-    score1 = StudentSubjectScore(student_id="S001", subject_id=subject.id, teacher_id=teacher1.id, score=85.0, semester="2026-2027-1")
-    score2 = StudentSubjectScore(student_id="S002", subject_id=subject.id, teacher_id=teacher2.id, score=90.0, semester="2026-2027-1")
-    session.add_all([score1, score2])
-    session.commit()
+    # 同一科目，不同老师的教学班
+    _seed_enrollment(session, "S001", "数学", teacher1, 85.0)
+    _seed_enrollment(session, "S002", "数学", teacher2, 90.0)
 
     # 按教师+科目排
     resp = student_client.get(f"/api/v1/students/leaderboard?subject_id={subject.id}&teacher_id={teacher1.id}")
@@ -166,8 +203,8 @@ def test_leaderboard_by_subject_and_teacher(student_client, session):
 
 
 def test_leaderboard_by_subject_only(student_client, session):
-    """只传 subject_id 时（全校数学排名），同一学生有多条记录（不同教师）不会 500"""
-    from app.models import Subject, StudentSubjectScore, User
+    """只传 subject_id 时（全校数学排名），同一学生多条教学班记录不会 500"""
+    from app.models import Subject, User
     from app.core.security import hash_password
 
     # 造数据：1 个科目，2 个老师（学期中换老师，student_client 已创建学生 S001）
@@ -177,16 +214,14 @@ def test_leaderboard_by_subject_only(student_client, session):
     session.add_all([subject, teacher1, teacher2])
     session.commit()
 
-    score1 = StudentSubjectScore(student_id="S001", subject_id=subject.id, teacher_id=teacher1.id, score=85.0, semester="2026-2027-1")
-    score2 = StudentSubjectScore(student_id="S001", subject_id=subject.id, teacher_id=teacher2.id, score=90.0, semester="2026-2027-1")
-    session.add_all([score1, score2])
-    session.commit()
+    _seed_enrollment(session, "S001", "数学", teacher1, 85.0)
+    _seed_enrollment(session, "S001", "数学", teacher2, 90.0)
 
     # 只传 subject_id（全校数学排名）
     resp = student_client.get(f"/api/v1/students/leaderboard?subject_id={subject.id}")
     assert resp.status_code == 200
     data = resp.json()["data"]
-    # 不应 500，my_rank 应该正确（取最新记录的分数 90）
+    # 不应 500，my_rank 应该正确（取最高分 90 的记录）
     assert data["my_rank"] is not None
     assert data["my_rank"]["student_id"] == "S001"
 

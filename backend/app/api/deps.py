@@ -55,6 +55,46 @@ async def require_admin_or_teacher(request: Request):
     return user
 
 
+def get_teacher_accessible_classes(user: dict, session: Session):
+    """教师可访问班级集合（过渡期兼容双路径，方案 9.7）
+
+    - admin → None（表示不限范围）
+    - teacher → assigned_classes 旧路径优先；为空/未配置时从
+      course_offerings 派生（class_scope 逗号拆分，教师授课班级集合）
+    - 其他角色/无效用户 → []（空集，任何班级都不可访问）
+
+    供 verify_teacher_class_access 与排行榜/列表类端点复用。
+    """
+    from app.models import CourseOffering, User
+
+    role = user.get("role", "")
+    if role == "admin":
+        return None
+
+    user_id = user.get("sub")
+    if not user_id:
+        return []
+    user_obj = session.get(User, int(user_id))
+    if user_obj is None or role != "teacher":
+        return []
+
+    assigned = user_obj.get_assigned_classes()
+    if assigned:
+        return assigned
+
+    # 派生路径：offerings.class_scope 逗号拆分
+    offerings = session.exec(select(CourseOffering).where(
+        CourseOffering.teacher_id == user_obj.id,
+    )).all()
+    classes = set()
+    for offering in offerings:
+        for name in offering.class_scope.split(","):
+            name = name.strip()
+            if name:
+                classes.add(name)
+    return sorted(classes)
+
+
 def verify_teacher_class_access(user: dict, class_name: str, session: Session) -> None:
     """校验教师是否有权操作指定班级（admin 放行，teacher 校验班级归属）
 
@@ -69,32 +109,16 @@ def verify_teacher_class_access(user: dict, class_name: str, session: Session) -
     Raises:
         HTTPException 403: 无权限
     """
-    from app.models import CourseOffering, User
-
     role = user.get("role", "")
     if role == "admin":
         return
     if role != "teacher":
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="需要管理员或教师权限")
 
-    user_id = user.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无效的用户信息")
-
-    user_obj = session.get(User, int(user_id))
-    if user_obj is None:
-        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="用户不存在")
-
-    assigned = user_obj.get_assigned_classes()
-    if assigned and class_name in assigned:
-        return
-
-    # 派生路径：offerings.teacher_id 的 class_scope 包含目标班级
-    offering = session.exec(select(CourseOffering).where(
-        CourseOffering.teacher_id == user_obj.id,
-        CourseOffering.class_scope.contains(class_name),
-    )).first()
-    if offering is None:
+    accessible = get_teacher_accessible_classes(user, session)
+    if not accessible:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权操作该班级")
+    if class_name not in accessible:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权操作该班级")
 
 
