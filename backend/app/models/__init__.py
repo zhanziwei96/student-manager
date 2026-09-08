@@ -27,6 +27,12 @@ from app.models.subject import Subject, StudentSubjectScore, StudentSubjectScore
 from app.models.semester import Semester, SemesterCreate, SemesterUpdate, SemesterResponse
 from app.models.cohort import Cohort, CohortCreate, CohortUpdate, CohortResponse
 from app.models.class_ import Class_, ClassCreate, ClassUpdate, ClassResponse
+from app.models.course import (
+    Course, CourseCreate, CourseUpdate, CourseResponse,
+    CourseOffering, CourseOfferingCreate, CourseOfferingUpdate, CourseOfferingResponse,
+    Enrollment, EnrollmentResponse,
+)
+from app.models.student_class_semester import StudentClassSemester, StudentClassSemesterResponse
 
 __all__ = [
     # Student
@@ -65,4 +71,10 @@ __all__ = [
     "Cohort", "CohortCreate", "CohortUpdate", "CohortResponse",
     # Class
     "Class_", "ClassCreate", "ClassUpdate", "ClassResponse",
+    # Course Line
+    "Course", "CourseCreate", "CourseUpdate", "CourseResponse",
+    "CourseOffering", "CourseOfferingCreate", "CourseOfferingUpdate", "CourseOfferingResponse",
+    "Enrollment", "EnrollmentResponse",
+    # Student-Class-Semester Bridge
+    "StudentClassSemester", "StudentClassSemesterResponse",
 ]

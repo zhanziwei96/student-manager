@@ -22,7 +22,8 @@ class Group(SQLModel, table=True):
         index=True
     )
     class_name: str = Field(..., description="班级名称", max_length=100, index=True)
-    subject_id: Optional[int] = Field(default=None, foreign_key="subjects.id", description="科目ID（小组按科目划分）", index=True)
+    subject_id: Optional[int] = Field(default=None, foreign_key="subjects.id", description="科目ID（过渡期保留，Phase 4 删除）", index=True)
+    course_id: Optional[int] = Field(default=None, foreign_key="courses.id", description="课程ID（小组按科目划分）", index=True)
     name: str = Field(..., description="小组名称", max_length=100)
     leader_student_id: str = Field(..., description="组长学号", max_length=50, index=True)
     score: float = Field(default=0.0, description="小组平时分", index=True)
