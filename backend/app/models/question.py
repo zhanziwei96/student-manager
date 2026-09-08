@@ -21,6 +21,14 @@ class Question(SQLModel, table=True):
     )
     teacher_id: int = Field(..., foreign_key="users.id", description="提问老师ID", index=True)
     class_name: Optional[str] = Field(default=None, description="目标班级，None表示所有班级可见", index=True)
+    class_id: Optional[int] = Field(
+        default=None, foreign_key="classes.id", index=True,
+        description="班级ID（FK，双写过渡期可空）",
+    )
+    semester_id: Optional[int] = Field(
+        default=None, foreign_key="semesters.id", index=True,
+        description="学期ID（FK，双写过渡期可空）",
+    )
     content: str = Field(..., description="问题内容")
     status: str = Field(default="active", description="状态: active/closed")
     is_realtime: bool = Field(default=False, description="是否课堂实时提问")

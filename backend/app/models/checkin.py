@@ -35,6 +35,14 @@ class CheckinRecord(SQLModel, table=True):
     student_id: str = Field(..., description="学号", index=True)
     student_name: Optional[str] = Field(default=None, description="学生姓名")
     class_name: Optional[str] = Field(default=None, description="班级", index=True)
+    class_id: Optional[int] = Field(
+        default=None, foreign_key="classes.id", index=True,
+        description="班级ID（FK，双写过渡期可空）",
+    )
+    semester_id: Optional[int] = Field(
+        default=None, foreign_key="semesters.id", index=True,
+        description="学期ID（FK，双写过渡期可空）",
+    )
     checkin_type: str = Field(default=CheckinTypeConst.SELF, description="签到类型")
     checkin_time: datetime = Field(default_factory=get_now, description="签到时间")
     device_id: Optional[str] = Field(default=None, description="设备指纹ID", index=True)
@@ -56,6 +64,10 @@ class ScoreLog(SQLModel, table=True):
         description="学期标识（如 2026-2027-1）",
         max_length=20,
         index=True
+    )
+    semester_id: Optional[int] = Field(
+        default=None, foreign_key="semesters.id", index=True,
+        description="学期ID（FK，双写过渡期可空）",
     )
     student_id: str = Field(..., description="学号")
     old_score: Optional[float] = Field(default=None, description="旧分数")

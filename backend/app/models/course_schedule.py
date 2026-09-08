@@ -12,6 +12,14 @@ class CourseScheduleBase(SQLModel):
     """课表基础模型"""
     course_name: str = Field(..., description="课程名称", max_length=100)
     class_name: str = Field(..., description="班级名称", max_length=100)
+    class_id: Optional[int] = Field(
+        default=None, foreign_key="classes.id", index=True,
+        description="班级ID（FK，双写过渡期可空）",
+    )
+    semester_id: Optional[int] = Field(
+        default=None, foreign_key="semesters.id", index=True,
+        description="学期ID（FK，双写过渡期可空）",
+    )
     teacher_id: Optional[int] = Field(default=None, description="教师ID")
     teacher_name: Optional[str] = Field(default=None, description="教师姓名", max_length=50)
     day_of_week: int = Field(..., description="星期几 (1-7)", ge=1, le=7)

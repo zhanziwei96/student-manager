@@ -25,6 +25,10 @@ class AuditLog(SQLModel, table=True):
     user_agent: Optional[str] = Field(default=None, description="UserAgent")
     status_code: Optional[int] = Field(default=None, description="状态码")
     response_msg: Optional[str] = Field(default=None, description="响应消息")
+    semester_id: Optional[int] = Field(
+        default=None, foreign_key="semesters.id", index=True,
+        description="学期ID（FK，双写过渡期可空，按学期审计）",
+    )
     created_at: datetime = Field(default_factory=get_now, description="创建时间", index=True)
 
 
