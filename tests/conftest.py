@@ -13,9 +13,20 @@ if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
 # 测试环境变量（必须在任何应用模块导入前设置）
+# xdist 并行：每 worker 独立分库（classhub_test_0..3），避免 TRUNCATE 交错
+def _worker_suffix() -> str:
+    worker = os.environ.get("PYTEST_XDIST_WORKER", "")
+    if worker.startswith("gw"):
+        return "_" + worker[2:]
+    return ""
+
+
 os.environ['ENV'] = 'testing'
 os.environ['RATE_LIMIT__ENABLED'] = 'false'
-os.environ['DATABASE__URL'] = 'postgresql+psycopg2://classhub:classhub_dev@localhost:5432/classhub_test'
+os.environ['DATABASE__URL'] = (
+    'postgresql+psycopg2://classhub:classhub_dev@localhost:5432/classhub_test'
+    + _worker_suffix()
+)
 TEST_DATABASE_URL = os.environ['DATABASE__URL']
 
 import pytest

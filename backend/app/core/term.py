@@ -17,22 +17,27 @@ from sqlmodel import Session, select
 from app.core.config import get_settings
 from app.core.timezone import get_now
 
-# 进程级当前学期缓存（60 秒 TTL；invalidate 供学期切换后清除）
-_current_semester_cache = None  # type: Optional[Semester]
+# 进程级当前学期缓存（60 秒 TTL；invalidate 供学期切换后清除）。
+# 只缓存简单值（id/label），ORM 对象按 session 现取——避免 detached 对象
+# 跨 session 生命周期问题（如模型 default_factory 实例化场景）。
+_current_semester_id: Optional[int] = None
+_current_semester_label: Optional[str] = None
 _current_semester_ts: float = 0.0
 _CACHE_TTL = 60.0
 
 
 def get_current_semester(session: Session):
     """从数据库读当前学期（is_current=true，进程级 TTL 缓存）"""
-    global _current_semester_cache, _current_semester_ts
-    now = time.time()
-    if _current_semester_cache is not None and (now - _current_semester_ts) < _CACHE_TTL:
-        return _current_semester_cache
+    global _current_semester_id, _current_semester_label, _current_semester_ts
     from app.models import Semester
+
+    now = time.time()
+    if _current_semester_id is not None and (now - _current_semester_ts) < _CACHE_TTL:
+        return session.get(Semester, _current_semester_id)
     sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).first()
     if sem is not None:
-        _current_semester_cache = sem
+        _current_semester_id = sem.id
+        _current_semester_label = sem.label
         _current_semester_ts = now
     return sem
 
@@ -45,8 +50,9 @@ def get_current_semester_id(session: Session) -> Optional[int]:
 
 def invalidate_semester_cache() -> None:
     """清除当前学期缓存（学期切换后调用）"""
-    global _current_semester_cache, _current_semester_ts
-    _current_semester_cache = None
+    global _current_semester_id, _current_semester_label, _current_semester_ts
+    _current_semester_id = None
+    _current_semester_label = None
     _current_semester_ts = 0.0
 
 
@@ -55,8 +61,8 @@ def get_current_term() -> str:
 
     优先返回 DB 缓存的当前学期 label；缓存未加载（模型 default_factory 等
     无 session 场景）时 fallback 配置值。"""
-    if _current_semester_cache is not None:
-        return _current_semester_cache.label
+    if _current_semester_label is not None:
+        return _current_semester_label
     return get_settings().term.label
 
 

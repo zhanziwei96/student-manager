@@ -126,7 +126,7 @@ class TestValidateExtension:
             _validate_extension("shell.php", [".xlsx"])
         assert exc_info.value.status_code == 400
     
-    @pytest.mark.parametrize("ext", list(DANGEROUS_EXTENSIONS))
+    @pytest.mark.parametrize("ext", sorted(DANGEROUS_EXTENSIONS))
     def test_all_dangerous_extensions(self, ext):
         """所有危险扩展名都被拒绝"""
         with pytest.raises(HTTPException) as exc_info:
@@ -160,7 +160,7 @@ class TestValidateContentType:
         assert exc_info.value.status_code == 400
         assert "不安全" in exc_info.value.detail
     
-    @pytest.mark.parametrize("ct", list(DANGEROUS_CONTENT_TYPES))
+    @pytest.mark.parametrize("ct", sorted(DANGEROUS_CONTENT_TYPES))
     def test_all_dangerous_content_types(self, ct):
         """所有危险MIME类型都被拒绝"""
         with pytest.raises(HTTPException) as exc_info:
