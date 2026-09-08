@@ -6,6 +6,7 @@ import sys
 import os
 from logging.config import fileConfig
 
+import sqlalchemy as sa
 from sqlalchemy import engine_from_config, pool, create_engine
 from alembic import context
 
@@ -82,6 +83,19 @@ def run_migrations_online() -> None:
             # SQLite 特定配置
             render_as_batch=True,  # 支持 SQLite 的 ALTER 操作
         )
+
+        # alembic_version.version_num 默认 varchar(32)，存不下长 revision id
+        # （如 2026_04_09_add_schedule_adjustment_unique_constraint 共 49 字符）。
+        # SQLite 不强制 varchar 长度故历史从未暴露；PG 必须加宽：
+        # 监听所有 DDL，alembic_version 表一创建就立即加宽列（首次/后续运行均覆盖）
+        from sqlalchemy import event
+
+        @event.listens_for(sa.Table, 'after_create')
+        def _widen_alembic_version(target, connection, **kw):
+            if target.name == 'alembic_version':
+                connection.execute(sa.text(
+                    "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE varchar(100)"
+                ))
 
         with context.begin_transaction():
             context.run_migrations()

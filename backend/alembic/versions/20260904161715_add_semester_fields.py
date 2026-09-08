@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = '20260904161715'
-down_revision: Union[str, Sequence[str], None] = '8d7a9e6f9898'
+down_revision: Union[str, Sequence[str], None] = '20260908_backfill_missing_tables'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
