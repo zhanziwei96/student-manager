@@ -11,6 +11,20 @@ from app.crud.question import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _seed_teacher(session):
+    """PG 强制 FK：questions.teacher_id → users.id，SQLite 时代无需此依赖"""
+    from app.models import User
+    from app.core.security import hash_password
+    session.add_all([
+        User(id=1, username="teacher1", name="教师1",
+             password_hash=hash_password("pass123"), role="teacher"),
+        User(id=2, username="teacher2", name="教师2",
+             password_hash=hash_password("pass123"), role="teacher"),
+    ])
+    session.commit()
+
+
 class TestQuestionCRUD:
     """测试问题 CRUD"""
 

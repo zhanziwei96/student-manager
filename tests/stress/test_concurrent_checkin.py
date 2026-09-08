@@ -8,6 +8,16 @@ import pytest
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from httpx import Client, AsyncClient
 
+# 后端服务探测：未运行时跳过压测（live-service 测试惯例，同根 conftest ServiceChecker）
+import urllib.request
+_backend_up = False
+try:
+    urllib.request.urlopen("http://localhost:8000/api/v1/health", timeout=2)
+    _backend_up = True
+except Exception:
+    pass
+pytestmark = pytest.mark.skipif(not _backend_up, reason="后端服务未运行，跳过压测")
+
 # 测试配置
 BASE_URL = "http://localhost:8000/api/v1"
 TEST_CLASS = "2025中医康复治疗2班"

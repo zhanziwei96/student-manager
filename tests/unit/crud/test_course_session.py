@@ -72,6 +72,14 @@ class TestStartCourseSession:
 
     def test_start_course_session_with_schedule_and_week(self, session: Session):
         """测试传入 schedule_id 和 week_number"""
+        # PG 强制 FK：course_sessions.schedule_id → course_schedules.id
+        from app.models import CourseSchedule
+        session.add(CourseSchedule(
+            id=10, course_name="网络安全", class_name="网络班",
+            day_of_week=1, start_time="08:00", end_time="09:40",
+        ))
+        session.commit()
+
         cs = start_course_session(
             session=session,
             class_name="网络班",
@@ -142,6 +150,14 @@ class TestGetCourseSession:
 
     def test_get_course_sessions_by_schedule_and_week(self, session: Session):
         """测试按课表和周次查询"""
+        # PG 强制 FK：course_sessions.schedule_id → course_schedules.id
+        from app.models import CourseSchedule
+        session.add(CourseSchedule(
+            id=100, course_name="大数据", class_name="大数据班",
+            day_of_week=1, start_time="08:00", end_time="09:40",
+        ))
+        session.commit()
+
         cs = start_course_session(
             session=session,
             class_name="大数据班",

@@ -183,10 +183,19 @@ def delete_answer(session: Session, answer_id: int) -> bool:
     if not answer:
         return False
 
-    replies = session.exec(select(Answer).where(Answer.parent_id == answer_id)).all()
-    for reply in replies:
-        session.delete(reply)
+    # 自引用 FK（answers.parent_id → answers.id）要求自底向上删除：
+    # PG 强制 FK 时，父与子不能在同一条 executemany 中删除（SQLite 无 FK 未暴露此问题）
+    to_delete = [answer]
+    pending = session.exec(select(Answer).where(Answer.parent_id == answer_id)).all()
+    while pending:
+        to_delete = list(pending) + to_delete
+        pending_ids = [a.id for a in pending]
+        pending = session.exec(
+            select(Answer).where(Answer.parent_id.in_(pending_ids))
+        ).all()
 
-    session.delete(answer)
+    for a in to_delete:
+        session.delete(a)
+        session.flush()
     session.commit()
     return True

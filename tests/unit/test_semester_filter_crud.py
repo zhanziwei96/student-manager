@@ -13,6 +13,18 @@ from app.crud.group_task import get_group_tasks_by_class
 from app.crud.question import get_questions_by_class
 
 
+@pytest.fixture(autouse=True)
+def _seed_teacher(session):
+    """PG 强制 FK：questions/course_sessions 的 teacher_id → users.id"""
+    from app.models import User
+    from app.core.security import hash_password
+    session.add(User(
+        id=1, username="teacher1", name="教师1",
+        password_hash=hash_password("pass123"), role="teacher",
+    ))
+    session.commit()
+
+
 @pytest.fixture
 def two_term_data(session: Session):
     """造数据：上学期 + 当前学期各一批"""

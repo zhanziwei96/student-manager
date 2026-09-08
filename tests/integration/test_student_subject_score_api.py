@@ -34,7 +34,7 @@ def test_get_student_subjects(student_client, teacher_user, session):
     assert data[0]["score"] == 85.0
 
 
-def test_update_student_subject_score(teacher_client, student_user, session):
+def test_update_student_subject_score(teacher_client, teacher_user, student_user, session):
     """教师给学生某科目加减分"""
     from app.models import Subject, StudentSubjectScore
 
@@ -43,7 +43,7 @@ def test_update_student_subject_score(teacher_client, student_user, session):
     session.commit()
 
     score = StudentSubjectScore(
-        student_id="S001", subject_id=subject.id, teacher_id=1,
+        student_id="S001", subject_id=subject.id, teacher_id=teacher_user.id,
         score=80.0, semester="2026-2027-1"
     )
     session.add(score)
@@ -60,7 +60,7 @@ def test_update_student_subject_score(teacher_client, student_user, session):
     assert score.score == 85.0
 
 
-def test_get_student_subject_score_logs(student_client, session):
+def test_get_student_subject_score_logs(student_client, teacher_user, session):
     """学生查看自己某科目分数历史"""
     from app.models import Subject, StudentSubjectScoreLog
 
@@ -69,7 +69,7 @@ def test_get_student_subject_score_logs(student_client, session):
     session.commit()
 
     log = StudentSubjectScoreLog(
-        student_id="S001", subject_id=subject.id, teacher_id=1,
+        student_id="S001", subject_id=subject.id, teacher_id=teacher_user.id,
         old_score=80.0, new_score=85.0, delta=5.0,
         reason="课堂表现", operator="张老师", semester="2026-2027-1"
     )
@@ -87,7 +87,7 @@ def test_get_student_subject_score_logs(student_client, session):
 # ========== 越权负向测试 ==========
 
 
-def test_student_cannot_view_other_student_subjects(student_client, session):
+def test_student_cannot_view_other_student_subjects(student_client, teacher_user, session):
     """学生不能查看其他学生的科目分数"""
     from app.models import Subject, StudentSubjectScore
 
@@ -96,7 +96,7 @@ def test_student_cannot_view_other_student_subjects(student_client, session):
     session.commit()
 
     score = StudentSubjectScore(
-        student_id="S999", subject_id=subject.id, teacher_id=1,
+        student_id="S999", subject_id=subject.id, teacher_id=teacher_user.id,
         score=85.0, semester="2026-2027-1"
     )
     session.add(score)
@@ -106,7 +106,7 @@ def test_student_cannot_view_other_student_subjects(student_client, session):
     assert resp.status_code == 403
 
 
-def test_teacher_cannot_view_other_class_student_subjects(teacher_client, session):
+def test_teacher_cannot_view_other_class_student_subjects(teacher_client, teacher_user, session):
     """教师不能查看非负责班级的学生科目分数"""
     from app.models import Subject, StudentSubjectScore, Student
 
@@ -120,7 +120,7 @@ def test_teacher_cannot_view_other_class_student_subjects(teacher_client, sessio
     session.commit()
 
     score = StudentSubjectScore(
-        student_id="S999", subject_id=subject.id, teacher_id=1,
+        student_id="S999", subject_id=subject.id, teacher_id=teacher_user.id,
         score=85.0, semester="2026-2027-1"
     )
     session.add(score)
@@ -130,7 +130,7 @@ def test_teacher_cannot_view_other_class_student_subjects(teacher_client, sessio
     assert resp.status_code == 403
 
 
-def test_student_cannot_update_score(student_client, session):
+def test_student_cannot_update_score(student_client, teacher_user, session):
     """学生不能修改分数"""
     from app.models import Subject
 
@@ -145,7 +145,7 @@ def test_student_cannot_update_score(student_client, session):
     assert resp.status_code == 403
 
 
-def test_admin_can_view_any_student_subjects(admin_client, session):
+def test_admin_can_view_any_student_subjects(admin_client, teacher_user, session):
     """admin 可查看任何学生的科目分数"""
     from app.models import Subject, StudentSubjectScore, Student
 
@@ -158,7 +158,7 @@ def test_admin_can_view_any_student_subjects(admin_client, session):
     session.commit()
 
     score = StudentSubjectScore(
-        student_id="S999", subject_id=subject.id, teacher_id=1,
+        student_id="S999", subject_id=subject.id, teacher_id=teacher_user.id,
         score=85.0, semester="2026-2027-1"
     )
     session.add(score)

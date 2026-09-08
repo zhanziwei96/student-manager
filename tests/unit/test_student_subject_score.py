@@ -1,4 +1,6 @@
 """学生科目分数 CRUD 测试"""
+import pytest
+
 from app.models import (
     StudentSubjectScore, StudentSubjectScoreLog, Subject, Student, CourseSchedule,
 )
@@ -9,22 +11,30 @@ from app.crud.student_subject_score import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _seed_deps(session):
+    """PG 强制 FK：score 记录的 teacher_id → users.id、student_id → students.student_id"""
+    from app.models import User
+    from app.core.security import hash_password
+    session.add_all([
+        User(id=1, username="t1", name="师1", password_hash=hash_password("p"), role="teacher"),
+        User(id=2, username="t2", name="师2", password_hash=hash_password("p"), role="teacher"),
+        Student(student_id="TEST001", name="测试学生", class_name="1班",
+                score=80.0, password_hash=hash_password("p")),
+    ])
+    session.commit()
+
+
 def test_init_student_subject_scores(session):
     """学期切换时初始化学生科目分数"""
-    from app.core.security import hash_password
-
-    # 造数据：1 个学生 + 1 个科目 + 1 条课表（供推导科目和教师）
-    student = Student(
-        student_id="TEST001", name="测试学生", class_name="1班",
-        score=80.0, password_hash=hash_password("pass123"), is_account_enabled=True
-    )
+    # 学生/教师依赖由 _seed_deps fixture 提供
     subject = Subject(name="数学", semester="2026-2027-1")
     schedule = CourseSchedule(
         course_name="数学", class_name="1班", teacher_id=1,
         day_of_week=1, start_time="08:00", end_time="09:40",
         semester="2026-2027-1"
     )
-    session.add_all([student, subject, schedule])
+    session.add_all([subject, schedule])
     session.commit()
 
     # 初始化
