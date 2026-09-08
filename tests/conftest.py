@@ -12,24 +12,36 @@ backend_path = os.path.join(_project_root, "backend")
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
+# 测试环境变量（必须在任何应用模块导入前设置）
+os.environ['ENV'] = 'testing'
+os.environ['RATE_LIMIT__ENABLED'] = 'false'
+os.environ['DATABASE__URL'] = 'postgresql+psycopg2://classhub:classhub_dev@localhost:5432/classhub_test'
+TEST_DATABASE_URL = os.environ['DATABASE__URL']
+
 import pytest
 from typing import Generator
+from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 
-# 创建内存数据库引擎（用于测试）
-@pytest.fixture(scope="function")
+def _truncate_all_tables(engine) -> None:
+    """清空测试库所有表（PG TRUNCATE，比逐表 DELETE 可靠且自动覆盖新表）"""
+    with Session(engine) as s:
+        s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
+                       % ", ".join(SQLModel.metadata.tables.keys())))
+        s.commit()
+
+
+# PostgreSQL 测试引擎（session 级，函数级清表见 session fixture）
+@pytest.fixture(scope="session")
 def engine():
-    """创建内存数据库引擎"""
-    test_engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    """PG 测试引擎"""
+    test_engine = create_engine(TEST_DATABASE_URL, poolclass=StaticPool)
     # 创建所有表
     from app.models import Student, User, CheckinRecord, CourseSession, ScoreLog, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
     from app.models.question import Question, Answer  # noqa: F401
+    SQLModel.metadata.drop_all(test_engine)
     SQLModel.metadata.create_all(test_engine)
     try:
         yield test_engine
@@ -39,7 +51,8 @@ def engine():
 
 @pytest.fixture(scope="function")
 def session(engine) -> Generator[Session, None, None]:
-    """数据库会话 fixture"""
+    """数据库会话 fixture — 每函数 TRUNCATE 清表，保持测试隔离"""
+    _truncate_all_tables(engine)
     with Session(engine) as session:
         yield session
         # 测试结束后回滚
@@ -189,33 +202,25 @@ redis_required = pytest.mark.skipif(
 # ========== JWT 集成测试 Fixtures ==========
 
 @pytest.fixture(scope="function")
-def jwt_client(monkeypatch):
-    """Create a test client with in-memory database for JWT tests"""
+def jwt_client(monkeypatch, engine):
+    """Create a test client with PostgreSQL test database for JWT tests"""
     from fastapi.testclient import TestClient
-    from sqlmodel import SQLModel, Session, create_engine
-    from sqlmodel.pool import StaticPool
+    from sqlmodel import Session
     from main import app
     import app.core.db as db_module
     from app.api import deps
     from app.api.routes import login, students, users, checkin, system
-    
-    # 创建内存数据库引擎
-    test_engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    
-    # 创建所有表
-    SQLModel.metadata.create_all(test_engine)
-    
+
+    # 清空测试库（与 session fixture 同机制）
+    _truncate_all_tables(engine)
+
     # 创建测试用的 get_session
     def get_test_session():
-        with Session(test_engine) as session:
+        with Session(engine) as session:
             yield session
-    
+
     # 猴子补丁替换所有相关模块的 get_session
-    monkeypatch.setattr(db_module, "engine", test_engine)
+    monkeypatch.setattr(db_module, "engine", engine)
     monkeypatch.setattr(db_module, "get_session", get_test_session)
     monkeypatch.setattr(deps, "get_session", get_test_session)
     monkeypatch.setattr(login, "get_session", get_test_session)
@@ -223,11 +228,9 @@ def jwt_client(monkeypatch):
     monkeypatch.setattr(users, "get_session", get_test_session)
     monkeypatch.setattr(checkin, "get_session", get_test_session)
     monkeypatch.setattr(system, "get_session", get_test_session)
-    
+
     with TestClient(app) as test_client:
         yield test_client
-
-    test_engine.dispose()
 
 
 @pytest.fixture
