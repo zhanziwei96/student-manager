@@ -59,6 +59,11 @@ def test_engine():
     _clear_all_data()
     # 模型变更后重新创建表/索引（如 partial unique index）
     SQLModel.metadata.create_all(_test_engine)
+    # 清理进程级缓存（班级/学期映射），避免跨测试污染
+    from app.core.class_cache import invalidate_class_cache
+    from app.core.term import invalidate_semester_cache
+    invalidate_class_cache()
+    invalidate_semester_cache()
     yield _test_engine
 
 

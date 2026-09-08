@@ -51,8 +51,12 @@ def engine():
 
 @pytest.fixture(scope="function")
 def session(engine) -> Generator[Session, None, None]:
-    """数据库会话 fixture — 每函数 TRUNCATE 清表，保持测试隔离"""
+    """数据库会话 fixture — 每函数 TRUNCATE 清表 + 清理进程级缓存，保持测试隔离"""
     _truncate_all_tables(engine)
+    from app.core.class_cache import invalidate_class_cache
+    from app.core.term import invalidate_semester_cache
+    invalidate_class_cache()
+    invalidate_semester_cache()
     with Session(engine) as session:
         yield session
         # 测试结束后回滚
