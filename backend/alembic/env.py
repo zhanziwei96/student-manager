@@ -31,6 +31,9 @@ from app.models.group import (
     ClassGroupSettings,
 )
 from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim
+from app.models.semester import Semester
+from app.models.cohort import Cohort
+from app.models.class_ import Class_
 
 # Alembic 配置对象
 config = context.config

@@ -14,8 +14,20 @@ class StudentBase(SQLModel):
     """学生基础属性"""
     student_id: str = Field(..., description="学号", primary_key=True)
     name: str = Field(..., description="姓名")
-    class_name: str = Field(default="未分班", description="班级")
-    score: float = Field(default=0.0, index=True, description="分数")
+    class_name: str = Field(default="未分班", description="班级（冗余快照）")
+    class_id: Optional[int] = Field(
+        default=None, foreign_key="classes.id", index=True,
+        description="当前班级（冗余缓存，真源见 student_class_semesters）",
+    )
+    cohort_year: Optional[str] = Field(
+        default=None, index=True, max_length=10,
+        description="届（身份属性=入学年，不随转班更新）",
+    )
+    status: str = Field(
+        default="active", max_length=20,
+        description="学籍状态: active|suspended|withdrawn|graduated",
+    )
+    score: float = Field(default=0.0, index=True, description="分数（过渡期只读，Phase 4 废弃）")
     is_account_enabled: bool = Field(default=True, description="账户是否启用")
 
 

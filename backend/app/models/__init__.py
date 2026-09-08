@@ -24,6 +24,9 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse, ApiListResponse, ApiErrorResponse,
 )
 from app.models.subject import Subject, StudentSubjectScore, StudentSubjectScoreLog
+from app.models.semester import Semester, SemesterCreate, SemesterUpdate, SemesterResponse
+from app.models.cohort import Cohort, CohortCreate, CohortUpdate, CohortResponse
+from app.models.class_ import Class_, ClassCreate, ClassUpdate, ClassResponse
 
 __all__ = [
     # Student
@@ -56,4 +59,10 @@ __all__ = [
     "LostFoundItemResponse", "LostFoundCommentResponse", "LostFoundClaimResponse",
     # Subject
     "Subject", "StudentSubjectScore", "StudentSubjectScoreLog",
+    # Semester
+    "Semester", "SemesterCreate", "SemesterUpdate", "SemesterResponse",
+    # Cohort
+    "Cohort", "CohortCreate", "CohortUpdate", "CohortResponse",
+    # Class
+    "Class_", "ClassCreate", "ClassUpdate", "ClassResponse",
 ]
