@@ -63,6 +63,14 @@ def test_engine():
 
 
 @pytest.fixture(scope="function")
+def session(test_engine):
+    """集成测试会话 — 绑定 _test_engine，与 API 客户端/清表逻辑同引擎同连接，
+    避免与 root conftest 引擎双连接共库交错（间歇性 refresh 失败的根因）"""
+    with Session(_test_engine) as s:
+        yield s
+
+
+@pytest.fixture(scope="function")
 def client(test_engine):
     """创建测试客户端"""
     def get_session_override():
