@@ -2,6 +2,21 @@ import pytest
 from sqlmodel import Session, select
 from app.models import Student
 from app.models.group import Group, GroupMember, GroupMembershipRequest, GroupDissolutionRequest, GroupTask
+
+
+def _seed_class_and_semester(session):
+    """seed 届/班/当前学期（复合主键设置表依赖）"""
+    from datetime import date
+    from app.models import Cohort, Class_, Semester
+
+    if session.exec(select(Cohort).where(Cohort.year == "2026")).first() is None:
+        session.add(Cohort(year="2026"))
+    if session.exec(select(Class_).where(Class_.name == "一班")).first() is None:
+        session.add(Class_(name="一班", cohort_year="2026"))
+    if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
+        session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                             total_weeks=20, is_current=True))
+    session.commit()
 from app.crud import (
     create_group, get_student_active_group, get_group_members,
     create_membership_request, approve_membership_request, reject_membership_request,
@@ -101,12 +116,14 @@ def test_dissolution_approval(session: Session):
 
 
 def test_get_or_create_class_group_settings_creates_default(session: Session):
+    _seed_class_and_semester(session)
     settings = get_or_create_class_group_settings(session, "一班")
     assert settings.class_name == "一班"
     assert settings.max_members_per_group == 5
 
 
 def test_get_or_create_class_group_settings_returns_existing(session: Session):
+    _seed_class_and_semester(session)
     settings1 = get_or_create_class_group_settings(session, "一班")
     settings2 = get_or_create_class_group_settings(session, "一班")
     assert settings1.class_name == settings2.class_name
@@ -114,6 +131,7 @@ def test_get_or_create_class_group_settings_returns_existing(session: Session):
 
 
 def test_update_class_group_settings(session: Session):
+    _seed_class_and_semester(session)
     get_or_create_class_group_settings(session, "一班")
     updated = update_class_group_settings(session, "一班", 8)
     assert updated.max_members_per_group == 8

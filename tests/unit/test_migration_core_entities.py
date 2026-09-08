@@ -138,22 +138,15 @@ def test_business_table_fk_columns_exist(migrated_db):
             assert [r[0] for r in rows] == ['semester_id'], t
 
 
-def test_class_group_settings_fk_columns(migrated_db):
-    """class_group_settings 含 class_id/semester_id 可空列（class_name 主键过渡期保留，
-    复合主键切换推迟到 Phase 2 CRUD 适配）"""
+def test_class_group_settings_composite_pk(migrated_db):
+    """class_group_settings 主键已切换为 (class_id, semester_id) 复合主键"""
     with migrated_db.connect() as conn:
         pk_cols = conn.execute(text(
             "SELECT a.attname FROM pg_index i"
             " JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)"
             " WHERE i.indrelid = 'class_group_settings'::regclass AND i.indisprimary"
         )).all()
-        new_cols = conn.execute(text(
-            "SELECT column_name FROM information_schema.columns"
-            " WHERE table_name = 'class_group_settings'"
-            " AND column_name IN ('class_id', 'semester_id')"
-        )).all()
-    assert {r[0] for r in pk_cols} == {'class_name'}
-    assert {r[0] for r in new_cols} == {'class_id', 'semester_id'}
+    assert {r[0] for r in pk_cols} == {'class_id', 'semester_id'}
 
 
 def test_backfill_cohort_class_student_by_import_year(migrated_db):

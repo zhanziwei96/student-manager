@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 
 @pytest.fixture(autouse=True)
@@ -61,7 +61,8 @@ def test_student_create_and_view_group(student_client: TestClient):
     assert data["data"]["is_leader"] is True
 
 
-def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient):
+def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient, session):
+    _seed_settings_deps(session)
     # 自动分配（前提是班级有未分组学生）
     resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
         "class_name": "一班",
@@ -106,7 +107,23 @@ def test_teacher_dissolution_requests(teacher_client: TestClient, student_client
     assert resp.json()["success"] is True
 
 
-def test_teacher_get_class_group_settings_default(teacher_client: TestClient):
+def _seed_settings_deps(session):
+    """seed 届/班/当前学期（复合主键设置表依赖）"""
+    from datetime import date
+    from app.models import Cohort, Class_, Semester
+
+    if session.exec(select(Cohort).where(Cohort.year == "2026")).first() is None:
+        session.add(Cohort(year="2026"))
+    if session.exec(select(Class_).where(Class_.name == "一班")).first() is None:
+        session.add(Class_(name="一班", cohort_year="2026"))
+    if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
+        session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                             total_weeks=20, is_current=True))
+    session.commit()
+
+
+def test_teacher_get_class_group_settings_default(teacher_client: TestClient, session):
+    _seed_settings_deps(session)
     resp = teacher_client.get("/api/v1/teacher/class-group-settings?class_name=一班")
     assert resp.status_code == 200
     data = resp.json()
@@ -114,7 +131,8 @@ def test_teacher_get_class_group_settings_default(teacher_client: TestClient):
     assert data["data"]["max_members_per_group"] == 5
 
 
-def test_teacher_update_class_group_settings(teacher_client: TestClient):
+def test_teacher_update_class_group_settings(teacher_client: TestClient, session):
+    _seed_settings_deps(session)
     resp = teacher_client.put("/api/v1/teacher/class-group-settings", json={
         "class_name": "一班",
         "max_members_per_group": 6,
@@ -125,8 +143,9 @@ def test_teacher_update_class_group_settings(teacher_client: TestClient):
     assert data["data"]["max_members_per_group"] == 6
 
 
-def test_student_cannot_join_full_group(teacher_client: TestClient):
+def test_student_cannot_join_full_group(teacher_client: TestClient, session):
     """教师设置上限后，设置端点返回正确值"""
+    _seed_settings_deps(session)
     # 教师设置上限为 2
     resp = teacher_client.put("/api/v1/teacher/class-group-settings", json={
         "class_name": "一班",

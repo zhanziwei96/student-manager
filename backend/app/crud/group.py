@@ -277,19 +277,30 @@ def auto_assign_unassigned_students(session: Session, class_name: str, group_siz
     return groups
 
 
+def _get_class_group_settings(session: Session, class_name: str) -> Optional[ClassGroupSettings]:
+    """按 class_name 解析 (class_id, semester_id) 后按复合主键查询；
+    无法解析（班级/学期不存在）时回退按 class_name 过滤（过渡期）"""
+    class_id = get_class_id_by_name(session, class_name)
+    semester_id = get_current_semester_id(session)
+    if class_id is not None and semester_id is not None:
+        return session.get(ClassGroupSettings, (class_id, semester_id))
+    return session.exec(select(ClassGroupSettings).where(
+        ClassGroupSettings.class_name == class_name)).first()
+
+
 def get_class_group_settings(session: Session, class_name: str) -> Optional[ClassGroupSettings]:
     """获取班级小组设置"""
-    return session.get(ClassGroupSettings, class_name)
+    return _get_class_group_settings(session, class_name)
 
 
 def get_or_create_class_group_settings(session: Session, class_name: str) -> ClassGroupSettings:
-    """获取或创建班级小组设置（主键仍 class_name，Phase 2d 切换复合主键）"""
-    settings = session.get(ClassGroupSettings, class_name)
+    """获取或创建班级小组设置（复合主键 (class_id, semester_id)）"""
+    settings = _get_class_group_settings(session, class_name)
     if not settings:
         settings = ClassGroupSettings(
+            class_id=get_class_id_by_name(session, class_name) or 0,  # 无法解析占位（无实际场景）
+            semester_id=get_current_semester_id(session) or 0,
             class_name=class_name,
-            class_id=get_class_id_by_name(session, class_name),   # 双写：FK 列
-            semester_id=get_current_semester_id(session),         # 双写：FK 列
         )
         session.add(settings)
         session.commit()
