@@ -9,8 +9,7 @@
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session, SQLModel
 
 from main import create_app
 from app.core.db import get_session
@@ -24,14 +23,13 @@ from app.core.security import generate_password_hash
 # ============== Fixtures ==============
 
 @pytest.fixture
-def session():
-    """创建内存数据库会话"""
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    SQLModel.metadata.create_all(engine)
+def session(engine):
+    """PG 数据库会话（复用根 conftest 引擎，函数级清表）"""
+    from sqlalchemy import text
+    with Session(engine) as s:
+        s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
+                       % ", ".join(SQLModel.metadata.tables.keys())))
+        s.commit()
     with Session(engine) as s:
         yield s
 

@@ -192,18 +192,22 @@ class TestConcurrentCheckin:
         使用 NullPool + 共享内存数据库，直接调用 CRUD，绕过 HTTP 层线程池干扰，
         专门验证 SQLite WAL 模式下大量并发写不会出现 DATABASE IS LOCKED 等异常。
         """
-        import uuid
+        import os
+        from sqlalchemy import text
         from sqlalchemy.pool import NullPool
         from app.crud.checkin import create_checkin
         from app.crud.course_session import start_course_session
 
         engine = create_engine(
-            f"sqlite:///file:checkin_wal_{uuid.uuid4().hex}?mode=memory&cache=shared",
-            connect_args={"check_same_thread": False},
+            os.environ['DATABASE__URL'],
             poolclass=NullPool,
         )
         from sqlmodel import SQLModel
         SQLModel.metadata.create_all(engine)
+        with Session(engine) as s:
+            s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
+                           % ", ".join(SQLModel.metadata.tables.keys())))
+            s.commit()
 
         with Session(engine) as session:
             password_hash, salt = generate_password_hash("teacher123")

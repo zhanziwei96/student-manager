@@ -7,10 +7,11 @@
 线程安全问题。因此并发竞争测试直接调用 CRUD 函数；HTTP 层的 409 响应通过
 顺序请求 + mock 验证。
 """
-import uuid
+import os
 import pytest
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import HTTPException
+from sqlalchemy import text
 from sqlmodel import Session, select, create_engine
 from sqlalchemy.pool import NullPool
 from app.models import Student, User, UserRoleConst
@@ -22,14 +23,16 @@ from app.core.config import HttpStatus
 pytestmark = pytest.mark.integration
 
 
-def _create_shared_memory_engine():
-    """创建一个使用 NullPool 的随机命名共享内存数据库引擎，保证每次测试完全隔离"""
-    name = f"score_update_test_{uuid.uuid4().hex}"
-    return create_engine(
-        f"sqlite:///file:{name}?mode=memory&cache=shared",
-        connect_args={"check_same_thread": False},
-        poolclass=NullPool,
-    )
+def _create_pg_engine():
+    """PG 测试引擎（NullPool：多线程独立连接真并发）；使用前清空共享测试库"""
+    from sqlmodel import SQLModel
+    eng = create_engine(os.environ['DATABASE__URL'], poolclass=NullPool)
+    SQLModel.metadata.create_all(eng)  # 幂等（已存在则跳过）
+    with Session(eng) as s:
+        s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
+                       % ", ".join(SQLModel.metadata.tables.keys())))
+        s.commit()
+    return eng
 
 
 class TestConcurrentScoreUpdate:
@@ -42,7 +45,7 @@ class TestConcurrentScoreUpdate:
         乐观锁应确保只有一个成功，另一个抛出 HTTPException(409)
         """
         # 创建支持多连接并发的共享内存数据库（避免 StaticPool 单连接竞争）
-        engine = _create_shared_memory_engine()
+        engine = _create_pg_engine()
         from sqlmodel import SQLModel
         SQLModel.metadata.create_all(engine)
 

@@ -7,9 +7,10 @@
 因此并发竞争测试直接调用 CRUD 函数并使用独立的多连接共享内存数据库；
 HTTP 层的 409 响应通过顺序请求 + mock 验证。
 """
-import uuid
+import os
 import pytest
 from concurrent.futures import ThreadPoolExecutor
+from sqlalchemy import text
 from sqlmodel import Session, select, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -22,14 +23,16 @@ from app.core.config import HttpStatus
 pytestmark = pytest.mark.integration
 
 
-def _create_shared_memory_engine():
-    """创建一个使用 NullPool 的随机命名共享内存数据库引擎，保证每次测试完全隔离"""
-    name = f"course_session_test_{uuid.uuid4().hex}"
-    return create_engine(
-        f"sqlite:///file:{name}?mode=memory&cache=shared",
-        connect_args={"check_same_thread": False},
-        poolclass=NullPool,
-    )
+def _create_pg_engine():
+    """PG 测试引擎（NullPool：多线程独立连接真并发）；使用前清空共享测试库"""
+    from sqlmodel import SQLModel
+    eng = create_engine(os.environ['DATABASE__URL'], poolclass=NullPool)
+    SQLModel.metadata.create_all(eng)  # 幂等（已存在则跳过）
+    with Session(eng) as s:
+        s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
+                       % ", ".join(SQLModel.metadata.tables.keys())))
+        s.commit()
+    return eng
 
 
 class TestConcurrentCourseSession:
@@ -40,7 +43,7 @@ class TestConcurrentCourseSession:
         多线程并发直接调用 start_course_session：
         使用独立的多连接共享内存数据库，数据库唯一约束应确保只有一个成功，其余抛出 IntegrityError
         """
-        engine = _create_shared_memory_engine()
+        engine = _create_pg_engine()
         from sqlmodel import SQLModel
         SQLModel.metadata.create_all(engine)
 

@@ -3,8 +3,7 @@
 """
 import time
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session, SQLModel
 
 from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim
 from app.models.user import User
@@ -21,24 +20,15 @@ from app.core.timezone import get_now
 
 
 @pytest.fixture
-def lost_found_engine():
-    """创建包含失物招领表的内存数据库引擎"""
-    from app.models import (  # noqa: F401 — 触发所有模型注册到 metadata
-        Student, User, CheckinRecord, CourseSession, ScoreLog,
-        AuditLog, SecurityAlert, CourseSchedule, DeviceBind,
-    )
-    from app.models.question import Question, Answer  # noqa: F401
+def lost_found_engine(engine):
+    """PG 测试引擎（复用根 conftest session 级引擎 + 函数级清表）"""
+    from sqlalchemy import text
 
-    test_engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    SQLModel.metadata.create_all(test_engine)
-    try:
-        yield test_engine
-    finally:
-        test_engine.dispose()
+    with Session(engine) as s:
+        s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
+                       % ", ".join(SQLModel.metadata.tables.keys())))
+        s.commit()
+    yield engine
 
 
 @pytest.fixture
