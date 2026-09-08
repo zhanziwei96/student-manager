@@ -194,6 +194,57 @@ def backfill_group_course_id(session: Session, term_label: str) -> None:
     session.commit()
 
 
+def backfill_business_table_fks(session: Session, sem: Semester, term_label: str) -> None:
+    """业务表 FK 回填（仅当前学期，幂等：WHERE FK 列为 NULL）
+
+    - 带班名+学期的表：semester_id=当前学期，class_id 按 (class_name, 当前学年届) 匹配
+    - 仅学期的表：semester_id=当前学期
+    - audit_logs（无 semester 列）：按 created_at >= 学期开始日期近似回填
+    - class_group_settings：从 classes 派生当前学期默认设置
+    """
+    cohort_year = term_label.split("-")[0]
+
+    class_tables = [
+        'course_schedules', 'course_sessions', 'checkin_records', 'groups', 'questions',
+    ]
+    for table in class_tables:
+        session.execute(text(f"""
+            UPDATE {table} t
+            SET semester_id = :sid,
+                class_id = c.id
+            FROM classes c
+            WHERE t.semester = :label
+              AND t.class_name = c.name
+              AND c.cohort_year = :cohort
+              AND t.semester_id IS NULL
+        """), {"sid": sem.id, "label": term_label, "cohort": cohort_year})
+
+    semester_tables = ['score_logs', 'schedule_adjustments', 'group_score_logs']
+    for table in semester_tables:
+        session.execute(text(f"""
+            UPDATE {table}
+            SET semester_id = :sid
+            WHERE semester = :label AND semester_id IS NULL
+        """), {"sid": sem.id, "label": term_label})
+
+    # audit_logs 无 semester 列：按学期开始日期近似回填
+    session.execute(text("""
+        UPDATE audit_logs
+        SET semester_id = :sid
+        WHERE semester_id IS NULL AND created_at >= :start
+    """), {"sid": sem.id, "start": sem.start_date})
+
+    # class_group_settings：每个班级一条当前学期默认设置
+    session.execute(text("""
+        INSERT INTO class_group_settings (class_id, semester_id, class_name,
+                                          max_members_per_group, updated_at)
+        SELECT id, :sid, name, 5, now()
+        FROM classes
+        ON CONFLICT (class_id, semester_id) DO NOTHING
+    """), {"sid": sem.id})
+    session.commit()
+
+
 def main() -> None:
     settings = get_settings()
     term_label = settings.term.label
@@ -205,6 +256,7 @@ def main() -> None:
         backfill_enrollments(session, sem, term_label)
         backfill_student_class_semesters(session, sem)
         backfill_group_course_id(session, term_label)
+        backfill_business_table_fks(session, sem, term_label)
 
         counts = {
             "semesters": len(session.exec(select(Semester)).all()),
