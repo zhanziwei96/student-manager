@@ -175,7 +175,8 @@ def create_app() -> FastAPI:
         checkin_router, system_router, schedules_router, leaderboard_router,
         course_sessions_router, schedule_adjustments_router, groups_router,
         questions_router, lost_found_router, term_router, subjects_router,
-        student_subject_scores_router, group_scores_router, teacher_classes_router
+        student_subject_scores_router, group_scores_router, teacher_classes_router,
+        enrollments_router,
     )
 
     # API v1 版本前缀
@@ -200,6 +201,7 @@ def create_app() -> FastAPI:
     app.include_router(student_subject_scores_router, prefix=API_V1_PREFIX)
     app.include_router(group_scores_router, prefix=API_V1_PREFIX)
     app.include_router(teacher_classes_router, prefix=API_V1_PREFIX)
+    app.include_router(enrollments_router, prefix=API_V1_PREFIX)
 
     # 挂载上传文件目录（必须在 catch-all 路由之前）
     uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
