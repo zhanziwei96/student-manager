@@ -73,3 +73,68 @@ def test_get_week_number_for_date_before_term():
 def test_get_week_number_for_date_during_term():
     start = get_term_start_date()
     assert get_week_number_for_date(start + timedelta(days=14)) == 3
+
+
+# ============ 数据库化测试（Phase 2a） ============
+
+def test_get_current_semester_reads_db(session):
+    """get_current_semester 从数据库读 is_current 行"""
+    from app.core.term import get_current_semester, invalidate_semester_cache
+    from app.models import Semester
+
+    invalidate_semester_cache()
+    sem = Semester(label="2026-2027-1", start_date=date(2026, 9, 7), total_weeks=20, is_current=True)
+    session.add(sem)
+    session.commit()
+
+    result = get_current_semester(session)
+    assert result is not None
+    assert result.label == "2026-2027-1"
+    assert result.is_current is True
+
+
+def test_get_current_semester_id(session):
+    from app.core.term import get_current_semester_id, invalidate_semester_cache
+    from app.models import Semester
+
+    invalidate_semester_cache()
+    sem = Semester(label="2026-2027-1", start_date=date(2026, 9, 7), total_weeks=20, is_current=True)
+    session.add(sem)
+    session.commit()
+
+    assert get_current_semester_id(session) == sem.id
+
+
+def test_get_current_term_falls_back_to_config():
+    """缓存失效且无 DB 行时 fallback 配置 label（模型 default_factory 场景）"""
+    from app.core.term import get_current_term, invalidate_semester_cache
+
+    invalidate_semester_cache()
+    assert get_current_term() == "2026-2027-1"
+
+
+def test_semester_cache_invalidate(session):
+    """缓存命中后改 DB 仍返回旧值；invalidate 后返回新值"""
+    from app.core.term import (
+        get_current_semester, get_current_semester_id,
+        invalidate_semester_cache,
+    )
+    from app.models import Semester
+    from sqlmodel import update
+
+    invalidate_semester_cache()
+    sem = Semester(label="2026-2027-1", start_date=date(2026, 9, 7), total_weeks=20, is_current=True)
+    session.add(sem)
+    session.commit()
+
+    assert get_current_semester_id(session) == sem.id
+
+    # 切到新学期并 invalidate
+    new_sem = Semester(label="2026-2027-2", start_date=date(2027, 2, 22), total_weeks=20, is_current=True)
+    session.add(new_sem)
+    session.execute(update(Semester).where(Semester.id == sem.id).values(is_current=False))
+    session.commit()
+    session.refresh(new_sem)
+
+    invalidate_semester_cache()
+    assert get_current_semester_id(session) == new_sem.id

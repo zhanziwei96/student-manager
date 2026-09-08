@@ -4,16 +4,59 @@
 第二学期引入：集中管理学期标识与教学周次计算，
 替代此前散落在 schedules.py / course_sessions.py / 前端 date.ts
 中互相矛盾的硬编码周次实现。
+
+Phase 2：学期实体化 — get_current_semester 从数据库读（进程级 TTL 缓存），
+get_current_term 保持兼容（模型 default_factory 无 session 场景）。
 """
+import time
 from datetime import date
 from typing import Optional
+
+from sqlmodel import Session, select
 
 from app.core.config import get_settings
 from app.core.timezone import get_now
 
+# 进程级当前学期缓存（60 秒 TTL；invalidate 供学期切换后清除）
+_current_semester_cache = None  # type: Optional[Semester]
+_current_semester_ts: float = 0.0
+_CACHE_TTL = 60.0
+
+
+def get_current_semester(session: Session):
+    """从数据库读当前学期（is_current=true，进程级 TTL 缓存）"""
+    global _current_semester_cache, _current_semester_ts
+    now = time.time()
+    if _current_semester_cache is not None and (now - _current_semester_ts) < _CACHE_TTL:
+        return _current_semester_cache
+    from app.models import Semester
+    sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).first()
+    if sem is not None:
+        _current_semester_cache = sem
+        _current_semester_ts = now
+    return sem
+
+
+def get_current_semester_id(session: Session) -> Optional[int]:
+    """当前学期 ID（无当前学期行时返回 None）"""
+    sem = get_current_semester(session)
+    return sem.id if sem else None
+
+
+def invalidate_semester_cache() -> None:
+    """清除当前学期缓存（学期切换后调用）"""
+    global _current_semester_cache, _current_semester_ts
+    _current_semester_cache = None
+    _current_semester_ts = 0.0
+
 
 def get_current_term() -> str:
-    """获取当前学期标识（如 '2026-2027-1'）"""
+    """获取当前学期标识（如 '2026-2027-1'）
+
+    优先返回 DB 缓存的当前学期 label；缓存未加载（模型 default_factory 等
+    无 session 场景）时 fallback 配置值。"""
+    if _current_semester_cache is not None:
+        return _current_semester_cache.label
     return get_settings().term.label
 
 
