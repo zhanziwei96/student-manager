@@ -116,6 +116,46 @@ def test_enrollments_final_score_and_groups_course_id_columns(migrated_db):
     assert course_id == 'integer'  # 小组科目外键（过渡期可空）
 
 
+def test_business_table_fk_columns_exist(migrated_db):
+    """业务表 FK 列：5 张表含 class_id+semester_id，4 张表仅 semester_id"""
+    class_tables = [
+        'course_schedules', 'course_sessions', 'checkin_records', 'groups', 'questions',
+    ]
+    semester_tables = ['score_logs', 'schedule_adjustments', 'group_score_logs', 'audit_logs']
+
+    with migrated_db.connect() as conn:
+        for t in class_tables:
+            rows = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns"
+                " WHERE table_name = :t AND column_name IN ('class_id', 'semester_id')"
+            ), {"t": t}).all()
+            assert {r[0] for r in rows} == {'class_id', 'semester_id'}, t
+        for t in semester_tables:
+            rows = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns"
+                " WHERE table_name = :t AND column_name = 'semester_id'"
+            ), {"t": t}).all()
+            assert [r[0] for r in rows] == ['semester_id'], t
+
+
+def test_class_group_settings_fk_columns(migrated_db):
+    """class_group_settings 含 class_id/semester_id 可空列（class_name 主键过渡期保留，
+    复合主键切换推迟到 Phase 2 CRUD 适配）"""
+    with migrated_db.connect() as conn:
+        pk_cols = conn.execute(text(
+            "SELECT a.attname FROM pg_index i"
+            " JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)"
+            " WHERE i.indrelid = 'class_group_settings'::regclass AND i.indisprimary"
+        )).all()
+        new_cols = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns"
+            " WHERE table_name = 'class_group_settings'"
+            " AND column_name IN ('class_id', 'semester_id')"
+        )).all()
+    assert {r[0] for r in pk_cols} == {'class_name'}
+    assert {r[0] for r in new_cols} == {'class_id', 'semester_id'}
+
+
 def test_backfill_cohort_class_student_by_import_year(migrated_db):
     """2025-09-01 导入的学生 → 届 2025 → 班级（迁移测试班, 2025）→ class_id 回填"""
     with migrated_db.connect() as conn:

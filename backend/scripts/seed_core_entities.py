@@ -235,12 +235,13 @@ def backfill_business_table_fks(session: Session, sem: Semester, term_label: str
     """), {"sid": sem.id, "start": sem.start_date})
 
     # class_group_settings：每个班级一条当前学期默认设置
+    # （主键仍是 class_name 过渡期，Phase 2 切换复合主键后改冲突目标）
     session.execute(text("""
         INSERT INTO class_group_settings (class_id, semester_id, class_name,
                                           max_members_per_group, updated_at)
         SELECT id, :sid, name, 5, now()
         FROM classes
-        ON CONFLICT (class_id, semester_id) DO NOTHING
+        ON CONFLICT (class_name) DO NOTHING
     """), {"sid": sem.id})
     session.commit()
 
