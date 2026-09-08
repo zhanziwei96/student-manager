@@ -91,6 +91,31 @@ def test_partial_index_is_current_exists(migrated_db):
     assert 'WHERE' in indexdef  # 部分索引（方案 4.1）
 
 
+def test_course_line_tables_exist(migrated_db):
+    with migrated_db.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT table_name FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name IN"
+            " ('courses', 'course_offerings', 'enrollments', 'student_class_semesters')"
+        )).all()
+    assert {r[0] for r in rows} == {
+        'courses', 'course_offerings', 'enrollments', 'student_class_semesters'}
+
+
+def test_enrollments_final_score_and_groups_course_id_columns(migrated_db):
+    with migrated_db.connect() as conn:
+        final_score = conn.execute(text(
+            "SELECT data_type FROM information_schema.columns"
+            " WHERE table_name = 'enrollments' AND column_name = 'final_score'"
+        )).scalar()
+        course_id = conn.execute(text(
+            "SELECT data_type FROM information_schema.columns"
+            " WHERE table_name = 'groups' AND column_name = 'course_id'"
+        )).scalar()
+    assert final_score == 'double precision'  # 期末成绩可空 float
+    assert course_id == 'integer'  # 小组科目外键（过渡期可空）
+
+
 def test_backfill_cohort_class_student_by_import_year(migrated_db):
     """2025-09-01 导入的学生 → 届 2025 → 班级（迁移测试班, 2025）→ class_id 回填"""
     with migrated_db.connect() as conn:
