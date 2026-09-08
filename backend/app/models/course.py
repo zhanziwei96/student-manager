@@ -4,6 +4,7 @@
 """
 from datetime import datetime
 from typing import Optional
+from sqlalchemy import Index, desc
 from sqlmodel import SQLModel, Field, UniqueConstraint
 
 from app.core.timezone import get_now
@@ -127,3 +128,23 @@ class EnrollmentResponse(EnrollmentBase):
     """选课响应"""
     id: int
     version: int
+
+
+class EnrollmentScoreLog(SQLModel, table=True):
+    """选课成绩变更日志（个人成绩/期末成绩）"""
+    __tablename__ = "enrollment_score_logs"
+    __table_args__ = (
+        Index('idx_enrollment_score_logs_enrollment_created', 'enrollment_id', desc('created_at')),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    enrollment_id: int = Field(..., description="选课ID", index=True)
+    old_score: Optional[float] = Field(default=None, description="旧分数")
+    new_score: Optional[float] = Field(default=None, description="新分数")
+    delta: Optional[float] = Field(default=None, description="变化值")
+    reason: Optional[str] = Field(default=None, description="原因", max_length=200)
+    operator: Optional[str] = Field(default=None, description="操作人", max_length=50)
+    semester_id: Optional[int] = Field(
+        default=None, foreign_key="semesters.id", index=True, description="学期ID",
+    )
+    created_at: datetime = Field(default_factory=get_now, description="创建时间")
