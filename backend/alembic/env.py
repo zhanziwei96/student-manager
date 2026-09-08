@@ -90,15 +90,14 @@ def run_migrations_online() -> None:
         # alembic_version.version_num 默认 varchar(32)，存不下长 revision id
         # （如 2026_04_09_add_schedule_adjustment_unique_constraint 共 49 字符）。
         # SQLite 不强制 varchar 长度故历史从未暴露；PG 必须加宽：
-        # 监听所有 DDL，alembic_version 表一创建就立即加宽列（首次/后续运行均覆盖）
-        from sqlalchemy import event
-
-        @event.listens_for(sa.Table, 'after_create')
-        def _widen_alembic_version(target, connection, **kw):
-            if target.name == 'alembic_version':
-                connection.execute(sa.text(
-                    "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE varchar(100)"
-                ))
+        # 预建宽版表（alembic 检测已存在则复用）+ 加宽既有表（幂等）
+        connection.execute(sa.text(
+            "CREATE TABLE IF NOT EXISTS alembic_version ("
+            "version_num varchar(100) NOT NULL PRIMARY KEY)"
+        ))
+        connection.execute(sa.text(
+            "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE varchar(100)"
+        ))
 
         with context.begin_transaction():
             context.run_migrations()
