@@ -34,7 +34,7 @@ from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClai
 from app.models.semester import Semester
 from app.models.cohort import Cohort
 from app.models.class_ import Class_
-from app.models.course import Course, CourseOffering, Enrollment
+from app.models.course import Course, CourseOffering, Enrollment, EnrollmentScoreLog
 from app.models.student_class_semester import StudentClassSemester
 
 # Alembic 配置对象
