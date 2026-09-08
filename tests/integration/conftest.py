@@ -8,19 +8,20 @@ import sys
 # 设置测试环境
 os.environ['ENV'] = 'testing'
 os.environ['RATE_LIMIT__ENABLED'] = 'false'  # 禁用限流
+os.environ.setdefault('DATABASE__URL',
+                      'postgresql+psycopg2://classhub:classhub_dev@localhost:5432/classhub_test')
 
 # 确保 backend 在路径中
 backend_path = os.path.join(os.path.dirname(__file__), '..', '..', 'backend')
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
-# 关键：在导入任何应用模块前，先创建内存引擎
+# 关键：在导入任何应用模块前，先创建 PG 测试引擎
 from sqlmodel import SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 _test_engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
+    os.environ['DATABASE__URL'],
     poolclass=StaticPool,
 )
 
@@ -29,6 +30,7 @@ import app.core.db as db_module
 db_module.engine = _test_engine
 
 # 在新引擎上创建所有表
+SQLModel.metadata.drop_all(_test_engine)
 SQLModel.metadata.create_all(_test_engine)
 
 # 现在可以安全导入其他组件
@@ -41,43 +43,13 @@ from app.core.security import generate_password_hash
 
 
 def _clear_all_data():
-    """清理所有表数据"""
+    """清理所有表数据 — PG TRUNCATE 一次清空，自动覆盖新表"""
     from sqlalchemy import text
     with Session(_test_engine) as session:
-        # 按照外键依赖顺序删除
-        tables = [
-            "lost_found_claims",
-            "lost_found_comments",
-            "lost_found_items",
-            "score_logs",
-            "checkin_records",
-            "answers",
-            "questions",
-            "group_evaluation_scores",
-            "group_membership_requests",
-            "group_dissolution_requests",
-            "group_task_dimensions",
-            "group_tasks",
-            "group_members",
-            "group_score_logs",
-            "groups",
-            "class_group_settings",
-            "course_sessions",
-            "schedule_adjustments",
-            "course_schedules",
-            "student_subject_score_logs",
-            "student_subject_scores",
-            "subjects",
-            "security_alerts",
-            "audit_logs",
-            "students",
-            "users",
-        ]
-        for table in tables:
-            try:
-                session.execute(text(f"DELETE FROM {table}"))
-            except Exception as e:
-                pass
+        session.execute(text(
+            "TRUNCATE %s RESTART IDENTITY CASCADE"
+            % ", ".join(SQLModel.metadata.tables.keys())
+        ))
         session.commit()
 
 
