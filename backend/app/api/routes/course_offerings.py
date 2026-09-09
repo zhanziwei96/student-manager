@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from app.api.deps import require_admin, require_admin_or_teacher
 from app.core.config import HttpStatus
@@ -129,16 +129,51 @@ def update_offering(
             ApiResponseConst.MESSAGE: "教学班更新成功"}
 
 
+@router.get("/teacher/offerings", response_model=ApiResponse[list])
+def list_teacher_offerings(
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin_or_teacher),
+):
+    """我的教学班：本学期本人授课列表（含课程信息与选课人数）"""
+    from app.core.term import get_current_semester_id
+    from app.models import Course
+
+    query = (
+        select(CourseOffering, Course, func.count(Enrollment.id))
+        .join(Course, CourseOffering.course_id == Course.id)
+        .outerjoin(Enrollment, (Enrollment.offering_id == CourseOffering.id)
+                   & (Enrollment.status == "enrolled"))
+        .group_by(CourseOffering.id, Course.id)
+    )
+    if user.get("role") != "admin":
+        query = query.where(CourseOffering.teacher_id == int(user.get("sub")))
+    semester_id = get_current_semester_id(session)
+    if semester_id is not None:
+        query = query.where(CourseOffering.semester_id == semester_id)
+    rows = session.exec(query.order_by(Course.name)).all()
+    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: [
+        {
+            "id": o.id, "course_id": o.course_id, "course_name": c.name,
+            "course_code": c.code, "teacher_name": o.teacher_name,
+            "class_scope": o.class_scope, "capacity": o.capacity,
+            "status": o.status, "enrolled_count": cnt,
+        }
+        for o, c, cnt in rows
+    ]}
+
+
 @router.get("/offerings/{offering_id}/enrollments", response_model=ApiResponse[list])
 def list_offering_enrollments(
     offering_id: int,
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
-    """教学班选课名单"""
+    """教学班选课名单（教师限本人授课教学班）"""
     offering = session.get(CourseOffering, offering_id)
     if offering is None:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="教学班不存在")
+    if user.get("role") != "admin" and offering.teacher_id != int(user.get("sub")):
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看该教学班名单")
     rows = session.exec(
         select(Enrollment, Student)
         .join(Student, Enrollment.student_id == Student.student_id)

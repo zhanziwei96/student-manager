@@ -24,6 +24,7 @@ from app.api.routes.cohorts import router as cohorts_router
 from app.api.routes.classes import router as classes_router
 from app.api.routes.courses import router as courses_router
 from app.api.routes.course_offerings import router as course_offerings_router
+from app.api.routes.rankings import router as rankings_router
 
 __all__ = [
     "login_router",
@@ -49,4 +50,5 @@ __all__ = [
     "classes_router",
     "courses_router",
     "course_offerings_router",
+    "rankings_router",
 ]
