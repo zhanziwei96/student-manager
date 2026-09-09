@@ -36,6 +36,10 @@ with _test_engine.begin() as conn:
         "DROP TABLE IF EXISTS group_evaluation_scores, evaluation_assignments, "
         "group_task_dimensions, group_tasks CASCADE"
     ))
+    conn.execute(text(
+        "DROP TABLE IF EXISTS student_subject_score_logs, student_subject_scores, "
+        "subjects, score_logs CASCADE"
+    ))
 
 # 在新引擎上创建所有表
 SQLModel.metadata.drop_all(_test_engine)

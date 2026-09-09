@@ -5,11 +5,11 @@ import pytest
 from datetime import datetime, date, time
 from sqlmodel import Session
 from app.crud.checkin import (
-    get_today_checkins, create_checkin, has_checked_in_today,
-    get_student_score_logs, is_device_checked_in_session
+    create_checkin, get_today_checkins, has_checked_in_today,
+    is_device_checked_in_session,
 )
 from app.crud.course_session import start_course_session, end_course_session
-from app.models import CheckinRecord, ScoreLog
+from app.models import CheckinRecord
 
 
 class TestCheckinCRUD:
@@ -110,67 +110,5 @@ class TestCheckinCRUD:
         assert is_device_checked_in_session(session, None, cs.id) is False
 
 
-class TestScoreLogCRUD:
+class TestCheckinRecordCRUD:
     """测试分数日志 CRUD"""
-
-    def test_get_student_score_logs(self, session: Session):
-        """测试获取学生分数日志"""
-        # 创建分数日志
-        for i in range(5):
-            log = ScoreLog(
-                student_id="S001",
-                old_score=80.0 + i,
-                new_score=81.0 + i,
-                delta=1.0,
-                reason=f"加分{i+1}",
-                operator="老师"
-            )
-            session.add(log)
-        session.commit()
-
-        logs = get_student_score_logs(session, "S001", limit=3)
-        assert len(logs) == 3
-
-    def test_get_student_score_logs_with_offset(self, session: Session):
-        """测试分数日志 offset 分页（加载更多场景）"""
-        # 创建 10 条分数日志
-        for i in range(10):
-            log = ScoreLog(
-                student_id="S002",
-                old_score=80.0 + i,
-                new_score=81.0 + i,
-                delta=1.0,
-                reason=f"加分{i+1}",
-                operator="老师"
-            )
-            session.add(log)
-        session.commit()
-
-        page1 = get_student_score_logs(session, "S002", limit=4, offset=0)
-        page2 = get_student_score_logs(session, "S002", limit=4, offset=4)
-        page3 = get_student_score_logs(session, "S002", limit=4, offset=8)
-
-        assert len(page1) == 4
-        assert len(page2) == 4
-        assert len(page3) == 2
-
-        # 三页 id 互不重复且覆盖全部 10 条
-        ids = {log.id for log in page1 + page2 + page3}
-        assert len(ids) == 10
-
-    def test_get_student_score_logs_offset_without_limit(self, session: Session):
-        """offset 单独使用时仍受默认 limit 约束"""
-        for i in range(5):
-            log = ScoreLog(
-                student_id="S003",
-                old_score=80.0 + i,
-                new_score=81.0 + i,
-                delta=1.0,
-                reason=f"加分{i+1}",
-                operator="老师"
-            )
-            session.add(log)
-        session.commit()
-
-        logs = get_student_score_logs(session, "S003", offset=3)
-        assert len(logs) == 2

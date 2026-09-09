@@ -7,15 +7,12 @@ from app.api.routes.users import router as users_router
 from app.api.routes.checkin import router as checkin_router
 from app.api.routes.system import router as system_router
 from app.api.routes.schedules import router as schedules_router
-from app.api.routes.leaderboard import router as leaderboard_router
 from app.api.routes.course_sessions import router as course_sessions_router
 from app.api.routes.schedule_adjustments import router as schedule_adjustments_router
 from app.api.routes.groups import router as groups_router
 from app.api.routes.questions import router as questions_router
 from app.api.routes.lost_found import router as lost_found_router
 from app.api.routes.term import router as term_router
-from app.api.routes.subjects import router as subjects_router
-from app.api.routes.student_subject_scores import router as student_subject_scores_router
 from app.api.routes.group_scores import router as group_scores_router
 from app.api.routes.teacher_classes import router as teacher_classes_router
 from app.api.routes.enrollments import router as enrollments_router
@@ -33,15 +30,12 @@ __all__ = [
     "checkin_router",
     "system_router",
     "schedules_router",
-    "leaderboard_router",
     "course_sessions_router",
     "schedule_adjustments_router",
     "groups_router",
     "questions_router",
     "lost_found_router",
     "term_router",
-    "subjects_router",
-    "student_subject_scores_router",
     "group_scores_router",
     "teacher_classes_router",
     "enrollments_router",

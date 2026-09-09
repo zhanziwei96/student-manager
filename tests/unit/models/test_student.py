@@ -14,14 +14,13 @@ class TestStudentModel:
         student = Student(
             student_id="2024001",
             name="张三",
-            class_name="软件1班",
-            score=85.5
+            class_name="软件1班"
         )
         
         assert student.student_id == "2024001"
         assert student.name == "张三"
         assert student.class_name == "软件1班"
-        assert student.score == 85.5
+        assert student.status == "active"
         assert student.is_account_enabled is True
     
     def test_student_default_values(self):
@@ -32,7 +31,7 @@ class TestStudentModel:
         )
         
         assert student.class_name == "未分班"
-        assert student.score == 0.0
+        assert student.status == "active"
         assert student.is_account_enabled is True
     
     def test_student_with_password(self):
@@ -64,8 +63,7 @@ class TestStudentSchemas:
     
     def test_student_update(self):
         """测试更新学生请求"""
-        data = StudentUpdate(name="新名字", score=90.0)
+        data = StudentUpdate(name="新名字")
         
         assert data.name == "新名字"
-        assert data.score == 90.0
         assert data.class_name is None

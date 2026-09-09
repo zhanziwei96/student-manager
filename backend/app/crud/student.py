@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 from sqlalchemy import event as sa_event
 from app.core.class_cache import get_class_id_by_name
 from app.core.transition_filters import class_filter
-from app.models import Student, ScoreLog
+from app.models import Student
 from app.core.events import ScoreUpdated, event_bus
 
 
@@ -145,15 +145,10 @@ def get_students_by_classes(
     return session.exec(query).all()
 
 
-def create_student(session: Session, student_id: str, name: str, class_name: str, score: Optional[float] = None) -> Student:
+def create_student(session: Session, student_id: str, name: str, class_name: str) -> Student:
     """创建学生 - SEC-003: 使用简化密码哈希接口"""
-    from app.core.config import get_settings
     from app.core.security import hash_password
-    settings = get_settings()
-    
-    if score is None:
-        score = settings.score.default_score
-    
+
     # 使用学号作为默认密码
     password_hash = hash_password(student_id)
     
@@ -161,141 +156,12 @@ def create_student(session: Session, student_id: str, name: str, class_name: str
         student_id=student_id,
         name=name,
         class_name=class_name,
-        score=score,
         password_hash=password_hash
         # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     )
     session.add(student)
     session.commit()
     session.refresh(student)
-    return student
-
-
-def update_student_score(
-    session: Session, 
-    student_id: str, 
-    delta: float, 
-    reason: str, 
-    operator: str
-) -> Optional[Student]:
-    """
-    更新学生分数 - 带乐观锁保护（BE-008 修复）
-    
-    事务边界明确：
-    1. 更新学生分数（主业务）- 在同一会话中
-    2. 记录分数日志（副作用）- 在同一会话中原子提交
-    3. 发布领域事件 - 用于其他副作用（审计、通知等）
-    4. 乐观锁保护 - 防止并发更新导致的数据丢失
-    
-    这种设计实现了：
-    - 单一事务：主业务和核心副作用在同一个事务中提交
-    - 职责分离：CRUD 协调操作，副作用逻辑由事件处理器封装
-    - 可扩展性：新增副作用只需添加处理器，无需修改原函数
-    - 并发安全：乐观锁防止并发修改导致的数据覆盖
-    
-    Args:
-        session: 数据库会话
-        student_id: 学生学号
-        delta: 分数变动值
-        reason: 变动原因
-        operator: 操作人
-        
-    Returns:
-        Student: 更新后的学生对象，如果不存在则返回 None
-        
-    Raises:
-        HTTPException: 409 冲突，如果检测到并发修改
-    """
-    from sqlalchemy import text
-    from sqlalchemy.orm import Session as SASession
-    from fastapi import HTTPException
-
-    # 获取学生（使用 select 确保获取最新版本号）
-    statement = select(Student).where(Student.student_id == student_id)
-    student = session.exec(statement).first()
-
-    if not student:
-        return None
-
-    # 执行业务操作：计算新分数（通过领域方法封装业务规则）
-    old_score, new_score = student.update_score(delta)
-
-    # 乐观锁：使用原生 UPDATE 检查 affected rows（BE-008 修复）
-    # 只有版本号匹配时才更新，否则说明有其他事务已修改
-    expected_version = student.version
-    new_version = expected_version + 1
-
-    # 使用底层 SQLAlchemy session.execute() 执行参数化 SQL
-    sa_session: SASession = session
-    result = sa_session.execute(
-        text("""
-            UPDATE students
-            SET score = :score, version = :new_version
-            WHERE student_id = :student_id AND version = :expected_version
-        """),
-        {
-            "score": new_score,
-            "new_version": new_version,
-            "student_id": student_id,
-            "expected_version": expected_version
-        }
-    )
-
-    # 检查是否有行被更新，如果没有说明版本号已变化（并发冲突）
-    if result.rowcount == 0:
-        session.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="分数已被其他用户修改，请刷新后重试"
-        )
-
-    # 注意：不要在此处修改内存对象状态（student.version / student.score）。
-    # 原生 UPDATE 已经正确更新了数据库，如果此时再修改内存对象，
-    # session.commit() 的 dirty flush 会再次发起无条件 UPDATE，
-    # 覆盖并发事务的乐观锁保护，导致 Lost Update（BE-008）。
-    # commit() 后对象会被 expire，后续 lazy load 会自动读到最新值。
-
-    # 创建领域事件
-    event = ScoreUpdated(
-        student_id=student_id,
-        old_score=old_score,
-        new_score=new_score,
-        delta=delta,
-        reason=reason,
-        operator=operator
-    )
-
-    # 核心副作用：记录分数日志（必须在同一事务中）
-    score_log = ScoreLog(
-        student_id=student_id,
-        old_score=old_score,
-        new_score=new_score,
-        delta=delta,
-        reason=reason,
-        operator=operator
-    )
-    session.add(score_log)
-
-    # 使用一次性事件发布机制，确保事件只在事务成功提交后发布一次
-    # 使用事件对象的 id 作为去重键，防止重复发布
-    _published_events = getattr(session, '_published_events', None)
-    if _published_events is None:
-        _published_events = set()
-        session._published_events = _published_events
-
-    event_id = id(event)
-
-    def _publish_event_once(session):
-        # 检查事件是否已发布
-        if event_id not in _published_events:
-            _published_events.add(event_id)
-            event_bus.publish(event)
-
-    # 注册事务提交后的回调
-    sa_event.listen(session, "after_commit", _publish_event_once, once=True)
-
-    session.commit()
-
     return student
 
 

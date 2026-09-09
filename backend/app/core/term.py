@@ -14,7 +14,6 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.core.config import get_settings
 from app.core.timezone import get_now
 
 # 进程级当前学期缓存（60 秒 TTL；invalidate 供学期切换后清除）。
@@ -59,52 +58,44 @@ def invalidate_semester_cache() -> None:
 def get_current_term() -> str:
     """获取当前学期标识（如 '2026-2027-1'）
 
-    优先返回 DB 缓存的当前学期 label；缓存未加载（模型 default_factory 等
-    无 session 场景）时 fallback 配置值。"""
-    if _current_semester_label is not None:
-        return _current_semester_label
-    return get_settings().term.label
-
-
-def get_term_start_date() -> date:
-    """获取当前学期开始日期（第 1 周周一）"""
-    return get_settings().term.start_date
-
-
-def get_term_total_weeks() -> int:
-    """获取当前学期总周数"""
-    return get_settings().term.total_weeks
+    返回 DB 缓存的当前学期 label；缓存未加载（模型 default_factory 无
+    session 场景）时返回空串（冗余 semester 列，过渡期保留）。"""
+    return _current_semester_label or ""
 
 
 def get_current_week_number(
+    session: Session,
     today: Optional[date] = None,
     total_weeks: Optional[int] = None,
 ) -> int:
-    """计算当前教学周次。
+    """计算当前教学周次（从 semesters 表读当前学期）。
 
     以学期开始日期（周一）为基准：
-    - 开学前返回 0（前端显示"未开学"）
+    - 无当前学期或开学前返回 0（前端显示"未开学"）
     - 学期中返回 1..total_weeks
     - 超过总周数返回 total_weeks
 
     Args:
+        session: 数据库会话
         today: 指定日期（测试用），默认今天
-        total_weeks: 周数上限，默认取配置 TERM_CFG__TOTAL_WEEKS
+        total_weeks: 周数上限，默认取当前学期 total_weeks
     """
+    sem = get_current_semester(session)
+    if sem is None:
+        return 0
     if today is None:
         today = get_now().date()
     if total_weeks is None:
-        total_weeks = get_term_total_weeks()
+        total_weeks = sem.total_weeks
 
-    start = get_term_start_date()
-    if today < start:
+    if today < sem.start_date:
         return 0
 
-    days_since_start = (today - start).days
+    days_since_start = (today - sem.start_date).days
     week = days_since_start // 7 + 1
     return min(week, total_weeks)
 
 
-def get_week_number_for_date(target_date: date) -> int:
+def get_week_number_for_date(session: Session, target_date: date) -> int:
     """计算指定日期所在的教学周次（开学前返回 0）"""
-    return get_current_week_number(today=target_date)
+    return get_current_week_number(session, today=target_date)

@@ -3,7 +3,7 @@ CRUD 导出
 """
 from app.crud.student import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
-    create_student, update_student_score, delete_student, get_all_classes,
+    create_student, delete_student, get_all_classes,
     reset_student_password, count_students, count_students_filtered, disable_students_by_class,
     record_student_login_failure, reset_student_login_lock, unlock_student_account
 )
@@ -14,7 +14,6 @@ from app.crud.user import (
 )
 from app.crud.checkin import (
     get_today_checkins, create_checkin, has_checked_in_today,
-    get_student_score_logs, count_today_checkins, is_device_checked_in_session,
 )
 from app.crud.schedule import (
     get_schedule, get_schedules, delete_schedule,
@@ -39,18 +38,6 @@ from app.crud.schedule_adjustment import (
 from app.crud.audit import (
     create_audit_log, get_audit_logs, get_my_logs,
     create_security_alert, get_unresolved_alerts, resolve_alert, cleanup_old_audit_logs
-)
-from app.crud.leaderboard import get_leaderboard
-from app.crud.subject import (
-    derive_subjects_and_teachers,
-    get_subjects_by_semester,
-    create_subject,
-    update_subject_name,
-)
-from app.crud.student_subject_score import (
-    init_student_subject_scores,
-    transfer_student_to_new_teacher,
-    update_student_subject_score,
 )
 from app.crud.group_score import (
     update_group_score,
@@ -94,8 +81,7 @@ __all__ = [
     "update_user", "update_user_info", "record_login_success", "record_login_failure",
     "reset_password", "update_user_password", "delete_user",
     # Checkin
-    "get_today_checkins", "create_checkin", "has_checked_in_today",
-    "get_student_score_logs", "count_today_checkins", "is_device_checked_in_session",
+    "get_today_checkins", "create_checkin", "has_checked_in_today", "count_today_checkins", "is_device_checked_in_session",
     # Schedule
     "get_schedule", "get_schedules", "delete_schedule",
     "create_schedule", "import_schedules",
@@ -110,16 +96,8 @@ __all__ = [
     "get_adjustment", "get_adjustments", "create_adjustment",
     "has_active_session", "has_ended_session",
     # Leaderboard
-    "get_leaderboard",
     # Subject
-    "derive_subjects_and_teachers",
-    "get_subjects_by_semester",
-    "create_subject",
-    "update_subject_name",
     # StudentSubjectScore
-    "init_student_subject_scores",
-    "transfer_student_to_new_teacher",
-    "update_student_subject_score",
     # GroupScore
     "update_group_score",
     "get_group_score_logs",

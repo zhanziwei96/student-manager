@@ -33,49 +33,10 @@ from app.models import (
     CourseSchedule,
     CourseSession,
     Group,
-    ScoreLog,
     Student,
 )
 
-ARCHIVE_REASON_PREFIX = "[学期归档]"
 
-
-def _archive_scores(session: Session, old_term: str) -> Tuple[int, int]:
-    """分数归档重置：每生写一条归档 score_log 并把 score 置 0（幂等）
-
-    Returns:
-        (归档人数, 跳过人数) - 已存在归档记录的学生跳过
-    """
-    students = session.exec(select(Student)).all()
-    archived = 0
-    skipped = 0
-
-    for student in students:
-        existing = session.exec(
-            select(ScoreLog).where(
-                ScoreLog.student_id == student.student_id,
-                ScoreLog.reason == f"{ARCHIVE_REASON_PREFIX} {old_term}",
-            )
-        ).first()
-        if existing:
-            skipped += 1
-            continue
-
-        session.add(ScoreLog(
-            student_id=student.student_id,
-            old_score=student.score,
-            new_score=0.0,
-            delta=-student.score,
-            reason=f"{ARCHIVE_REASON_PREFIX} {old_term}",
-            operator="system",
-            semester=old_term,
-        ))
-        student.score = 0.0
-        session.add(student)
-        archived += 1
-
-    session.commit()
-    return archived, skipped
 
 
 def _close_legacy_sessions(session: Session, old_term: str) -> int:
@@ -215,7 +176,6 @@ def main() -> None:
     with Session(engine) as session:
         sessions_closed = _close_legacy_sessions(session, old_term)
         groups_closed = _close_legacy_groups(session, old_term)
-        archived, skipped = _archive_scores(session, old_term)
         disabled = 0
         if args.disable_graduates:
             disabled = _disable_graduates(session, args.disable_graduates)

@@ -167,7 +167,7 @@ async def get_schedules(
     query = query.order_by(CourseSchedule.day_of_week, CourseSchedule.start_time)
     
     schedules = session.exec(query).all()
-    target_week = week_number if week_number is not None else _get_current_week_number()
+    target_week = week_number if week_number is not None else _get_current_week_number(session)
 
     # 先获取原始课表数据
     data = []
@@ -314,7 +314,7 @@ async def get_today_schedules(
 ):
     """获取今日课表"""
     today = datetime.now().isoweekday()
-    current_week = _get_current_week_number()
+    current_week = _get_current_week_number(session)
 
     query = select(CourseSchedule).where(
         CourseSchedule.day_of_week == today,

@@ -49,30 +49,3 @@ class CheckinRecord(SQLModel, table=True):
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
     qr_signature: str | None = Field(default=None, description="二维码签名")
     device_bound: bool = Field(default=True, description="是否绑定设备")
-
-
-class ScoreLog(SQLModel, table=True):
-    """分数变更日志表"""
-    __tablename__ = "score_logs"
-    __table_args__ = (
-        Index('idx_score_logs_student_created_at', 'student_id', desc('created_at')),
-    )
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    semester: Optional[str] = Field(
-        default_factory=get_current_term,
-        description="学期标识（如 2026-2027-1）",
-        max_length=20,
-        index=True
-    )
-    semester_id: Optional[int] = Field(
-        default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
-    )
-    student_id: str = Field(..., description="学号")
-    old_score: Optional[float] = Field(default=None, description="旧分数")
-    new_score: Optional[float] = Field(default=None, description="新分数")
-    delta: Optional[float] = Field(default=None, description="变化值")
-    reason: Optional[str] = Field(default=None, description="原因")
-    operator: Optional[str] = Field(default=None, description="操作人")
-    created_at: datetime = Field(default_factory=get_now, description="创建时间")

@@ -3,7 +3,7 @@
 """
 from app.models.student import Student, StudentCreate, StudentUpdate, StudentResponse
 from app.models.user import User, UserCreate, UserUpdate, UserResponse
-from app.models.checkin import CheckinRecord, ScoreLog
+from app.models.checkin import CheckinRecord
 from app.models.device_bind import DeviceBind, DeviceBindCreate
 from app.models.audit import AuditLog, SecurityAlert
 from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
@@ -22,7 +22,6 @@ from app.models.constants import (
     UserRole, UserRoleConst, UserStatus, CheckinType,
     ApiResponse, ApiSuccessResponse, ApiListResponse, ApiErrorResponse,
 )
-from app.models.subject import Subject, StudentSubjectScore, StudentSubjectScoreLog
 from app.models.semester import Semester, SemesterCreate, SemesterUpdate, SemesterResponse
 from app.models.cohort import Cohort, CohortCreate, CohortUpdate, CohortResponse
 from app.models.class_ import Class_, ClassCreate, ClassUpdate, ClassResponse
@@ -62,7 +61,7 @@ __all__ = [
     "LostFoundItem", "LostFoundComment", "LostFoundClaim",
     "LostFoundItemResponse", "LostFoundCommentResponse", "LostFoundClaimResponse",
     # Subject
-    "Subject", "StudentSubjectScore", "StudentSubjectScoreLog",
+ "StudentSubjectScore", "StudentSubjectScoreLog",
     # Semester
     "Semester", "SemesterCreate", "SemesterUpdate", "SemesterResponse",
     # Cohort

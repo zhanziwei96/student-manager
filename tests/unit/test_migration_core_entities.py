@@ -121,7 +121,7 @@ def test_business_table_fk_columns_exist(migrated_db):
     class_tables = [
         'course_schedules', 'course_sessions', 'checkin_records', 'groups', 'questions',
     ]
-    semester_tables = ['score_logs', 'schedule_adjustments', 'group_score_logs', 'audit_logs']
+    semester_tables = ['schedule_adjustments', 'group_score_logs', 'audit_logs']
 
     with migrated_db.connect() as conn:
         for t in class_tables:

@@ -27,7 +27,7 @@ class TestStudentPermissionArchitecture:
         # CRUD 层应有的纯粹函数
         pure_functions = [
             'get_student', 'get_students', 'get_students_by_class',
-            'create_student', 'update_student_score', 'delete_student',
+            'create_student', 'delete_student',
             'get_all_classes', 'reset_student_password', 'count_students'
         ]
         
