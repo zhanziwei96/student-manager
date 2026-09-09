@@ -52,6 +52,12 @@ def engine():
     # 创建所有表
     from app.models import Student, User, CheckinRecord, CourseSession, ScoreLog, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
     from app.models.question import Question, Answer  # noqa: F401
+    # 先删废弃表（任务/互评已停用，旧测试库残留且 FK 引用 groups，阻止 drop_all）
+    with test_engine.begin() as conn:
+        conn.execute(text(
+            "DROP TABLE IF EXISTS group_evaluation_scores, evaluation_assignments, "
+            "group_task_dimensions, group_tasks CASCADE"
+        ))
     SQLModel.metadata.drop_all(test_engine)
     SQLModel.metadata.create_all(test_engine)
     try:

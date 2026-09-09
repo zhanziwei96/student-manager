@@ -1,6 +1,6 @@
 """小组合作评分 API 路由"""
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -10,48 +10,30 @@ from app.core.jwt import get_current_user, require_teacher
 from app.api.deps import verify_class_has_active_students
 from app.core.term import get_current_term
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse
-from app.models.group import GroupMember, GroupMembershipRequest, GroupTask, Group, GroupEvaluationScore
+from app.models.group import GroupMember, GroupMembershipRequest, Group
 from app.crud import (
-    create_group_task, get_group_task, get_group_tasks_by_class,
-    get_task_dimensions, start_group_task, close_group_task,
-    submit_teacher_score, get_task_results,
     get_groups_by_class, get_group_members, transfer_group_leader,
     auto_assign_unassigned_students,
     get_pending_dissolution_requests, approve_dissolution_request,
     reject_dissolution_request,
-    create_group, get_student_active_group, create_membership_request,
+    create_group, get_student_active_group, get_student_groups, create_membership_request,
     get_pending_membership_requests, approve_membership_request,
     reject_membership_request, create_dissolution_request,
-    get_evaluation_assignments, submit_student_scores, get_group,
+    get_group,
     get_class_group_settings, get_or_create_class_group_settings,
     update_class_group_settings,
-    clone_group_task,
-    delete_group_task,
     get_group_with_members, remove_group_member, dissolve_group,
 )
 
 router = APIRouter(tags=["groups"])
 
 
-class CloneGroupTaskRequest(BaseModel):
-    target_class_name: str = Field(..., min_length=1, max_length=100)
 
-
-class CreateGroupTaskRequest(BaseModel):
-    class_name: str = Field(..., min_length=1)
-    title: str = Field(..., min_length=1)
-    description: Optional[str] = None
-    dimensions: List[str] = Field(..., min_length=1, max_length=5)
-
-
-class TeacherScoreRequest(BaseModel):
-    target_group_id: int
-    dimension_id: int
-    score: int = Field(..., ge=0, le=100)
 
 
 class AutoAssignRequest(BaseModel):
     class_name: str = Field(..., min_length=1)
+    course_id: int = Field(..., description="课程ID（小组按科目划分）")
     group_size: Optional[int] = Field(default=None, ge=2, le=10)
 
 
@@ -67,231 +49,26 @@ class TransferLeaderRequest(BaseModel):
 class CreateGroupRequest(BaseModel):
     class_name: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1)
-    subject_id: Optional[int] = Field(default=None, description="科目ID（小组按科目划分）")
+    course_id: int = Field(..., description="课程ID（小组按科目划分）")
 
 
-class StudentScoreItem(BaseModel):
-    dimension_id: int
-    score: int = Field(..., ge=0, le=100)
-
-
-class StudentScoresSubmit(BaseModel):
-    target_group_id: int
-    scores: List[StudentScoreItem]
 
 
 class DissolutionRequestCreate(BaseModel):
     reason: str = Field(..., min_length=1)
 
 
-def _check_class_not_evaluating(session: Session, class_name: str, student_id: str = None) -> None:
-    """检查班级是否处于互评阶段，若是则拒绝组队操作（允许未分配小组的学生创建和加入小组）"""
-    evaluating_task = session.exec(
-        select(GroupTask).where(
-            GroupTask.class_name == class_name,
-            GroupTask.status == "evaluating",
-            GroupTask.semester == get_current_term(),
-        )
-    ).first()
-    if evaluating_task:
-        # 如果提供了学生ID，检查该学生是否已有小组
-        if student_id:
-            existing_group = get_student_active_group(session, student_id, class_name)
-            if not existing_group:
-                # 未分配小组的学生，允许创建和加入小组
-                return
-        # 已有小组的学生或未提供学生ID，禁止操作
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级正在互评阶段，不可变更小组")
-
-
-# ============================================================
-# Teacher endpoints — 使用 require_teacher 校验角色
-# ============================================================
-
-@router.get("/teacher/group-tasks", response_model=ApiResponse[list])
-async def api_teacher_group_tasks(
-    class_name: str,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """获取班级合作任务列表"""
-    tasks = get_group_tasks_by_class(session, class_name)
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [
-            {"id": t.id, "title": t.title, "status": t.status, "class_name": t.class_name}
-            for t in tasks
-        ],
-    }
-
-
-@router.post("/teacher/group-tasks", response_model=ApiResponse[dict])
-async def api_create_group_task(
-    data: CreateGroupTaskRequest,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """创建合作任务"""
-    # 学期归档后，禁用/不存在班级不可创建合作任务
-    verify_class_has_active_students(data.class_name, session)
-
-    username = user.get("username", "")
-    task = create_group_task(
-        session, data.class_name, data.title, data.description, username, data.dimensions
-    )
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: {"task_id": task.id, "status": task.status},
-    }
-
-
-@router.post("/teacher/group-tasks/{task_id}/start", response_model=ApiResponse[dict])
-async def api_start_group_task(
-    task_id: int,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """启动合作任务"""
-    task = get_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
-    try:
-        start_group_task(session, task_id)
-    except ValueError as e:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: "任务已启动",
-        ApiResponseConst.DATA: {"task_id": task_id, "status": "evaluating"},
-    }
-
-
-@router.post("/teacher/group-tasks/{task_id}/close", response_model=ApiResponse[dict])
-async def api_close_group_task(
-    task_id: int,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """关闭合作任务"""
-    task = close_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="任务不存在或状态错误")
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: "任务已结束",
-        ApiResponseConst.DATA: {"task_id": task_id, "status": "closed"},
-    }
-
-
-@router.post("/teacher/group-tasks/{task_id}/clone", response_model=ApiResponse[dict])
-async def api_clone_group_task(
-    task_id: int,
-    data: CloneGroupTaskRequest,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """复制合作任务到其他班级"""
-    task = get_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
-    username = user.get("username", "")
-    if task.created_by != username:
-        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权复制此任务")
-    # 校验目标班级存在且有启用学生（防止克隆到已归档班级）
-    verify_class_has_active_students(data.target_class_name, session)
-    try:
-        new_task = clone_group_task(session, task_id, data.target_class_name, username)
-    except ValueError as e:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: "任务已复制",
-        ApiResponseConst.DATA: {"task_id": new_task.id, "status": new_task.status},
-    }
-
-
-@router.delete("/teacher/group-tasks/{task_id}", response_model=ApiResponse[dict])
-async def api_delete_group_task(
-    task_id: int,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """删除合作任务"""
-    task = get_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
-    username = user.get("username", "")
-    if task.created_by != username:
-        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权删除此任务")
-    if task.status == "evaluating":
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="互评中的任务不可删除")
-    try:
-        delete_group_task(session, task_id)
-    except ValueError as e:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail=str(e))
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: "任务已删除",
-        ApiResponseConst.DATA: {"task_id": task_id},
-    }
-
-
-@router.get("/teacher/group-tasks/{task_id}/results", response_model=ApiResponse[dict])
-async def api_get_task_results(
-    task_id: int,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """获取合作任务评分结果"""
-    task = get_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
-    results = get_task_results(session, task_id)
-    dimensions = get_task_dimensions(session, task_id)
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: {
-            "task": {"id": task.id, "title": task.title, "status": task.status},
-            "dimensions": [{"id": d.id, "name": d.name} for d in dimensions],
-            "results": results,
-        },
-    }
-
-
-@router.post("/teacher/group-tasks/{task_id}/scores", response_model=ApiResponse[dict])
-async def api_submit_teacher_score(
-    task_id: int,
-    data: TeacherScoreRequest,
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_teacher),
-):
-    """教师提交评分"""
-    # C3: 校验任务必须在 evaluating 状态才允许评分
-    task = get_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
-    if task.status != "evaluating":
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="任务不在评分阶段")
-    username = user.get("username", "")
-    submit_teacher_score(
-        session, task_id, data.target_group_id, data.dimension_id, data.score, username
-    )
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: "评分已保存",
-    }
-
-
 @router.get("/teacher/groups", response_model=ApiResponse[list])
 async def api_teacher_groups(
     class_name: str,
+    course_id: Optional[int] = Query(None, description="按课程过滤"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """获取班级小组列表"""
-    from app.models import Student, Subject
+    """获取班级小组列表（小组按课程划分）"""
+    from app.models import Student, Course
     from sqlmodel import col, select as sql_select
-    groups = get_groups_by_class(session, class_name)
+    groups = get_groups_by_class(session, class_name, course_id=course_id)
     # 批量查询所有相关学生姓名
     all_member_ids = []
     for g in groups:
@@ -300,12 +77,12 @@ async def api_teacher_groups(
     if all_member_ids:
         students = session.exec(sql_select(Student).where(col(Student.student_id).in_(set(all_member_ids)))).all()
         student_map = {s.student_id: s.name for s in students}
-    # 批量查询科目名称（小组按科目划分）
-    subject_ids = {g.subject_id for g in groups if g.subject_id is not None}
-    subject_map = {}
-    if subject_ids:
-        subjects = session.exec(sql_select(Subject).where(col(Subject.id).in_(subject_ids))).all()
-        subject_map = {s.id: s.name for s in subjects}
+    # 批量查询课程名称（小组按课程划分）
+    course_ids = {g.course_id for g in groups if g.course_id is not None}
+    course_map = {}
+    if course_ids:
+        courses = session.exec(sql_select(Course).where(col(Course.id).in_(course_ids))).all()
+        course_map = {c.id: c.name for c in courses}
     result = []
     for g in groups:
         members = get_group_members(session, g.id)
@@ -314,12 +91,33 @@ async def api_teacher_groups(
             "name": g.name,
             "leader_student_id": g.leader_student_id,
             "leader_name": student_map.get(g.leader_student_id, g.leader_student_id),
-            "subject_id": g.subject_id,
-            "subject_name": subject_map.get(g.subject_id) if g.subject_id is not None else None,
+            "course_id": g.course_id,
+            "course_name": course_map.get(g.course_id) if g.course_id is not None else None,
             "score": g.score,
             "members": [{"student_id": m.student_id, "name": student_map.get(m.student_id, m.student_id)} for m in members],
         })
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
+
+
+@router.post("/teacher/groups", response_model=ApiResponse[dict])
+async def api_teacher_create_group(
+    data: CreateGroupRequest,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_teacher),
+):
+    """教师建组（按课程划分，组长自动加入）"""
+    from app.models import Course
+
+    if session.get(Course, data.course_id) is None:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程不存在")
+    verify_class_has_active_students(data.class_name, session)
+
+    group = create_group(session, data.class_name, data.name, "", course_id=data.course_id)
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: {"group_id": group.id, "name": group.name},
+        ApiResponseConst.MESSAGE: "小组创建成功",
+    }
 
 
 @router.post("/teacher/groups/auto-assign", response_model=ApiResponse[list])
@@ -328,12 +126,12 @@ async def api_auto_assign(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """自动分配未组队学生"""
+    """自动分配未组队学生（按课程）"""
     # 校验班级存在且有启用学生（防止对已归档班级分组）
     verify_class_has_active_students(data.class_name, session)
     settings = get_or_create_class_group_settings(session, data.class_name)
     group_size = data.group_size if data.group_size is not None else settings.max_members_per_group
-    new_groups = auto_assign_unassigned_students(session, data.class_name, group_size)
+    new_groups = auto_assign_unassigned_students(session, data.class_name, group_size, course_id=data.course_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [{"id": g.id, "name": g.name} for g in new_groups],
@@ -521,17 +319,20 @@ async def api_student_create_group(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
-    """学生创建小组"""
+    """学生创建小组（按科目划分：同科目仅一个小组）"""
     from app.models.constants import UserRoleConst
+    from app.models import Course
+
     role = user.get("role", "")
     if role != UserRoleConst.STUDENT:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="仅限学生")
+    if session.get(Course, data.course_id) is None:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程不存在")
     student_id = user.get("sub", "")
-    _check_class_not_evaluating(session, data.class_name, student_id)
-    existing = get_student_active_group(session, student_id, data.class_name)
+    existing = get_student_active_group(session, student_id, data.class_name, course_id=data.course_id)
     if existing:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已在一个小组中")
-    group = create_group(session, data.class_name, data.name, student_id, subject_id=data.subject_id)
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已在该科目的一个小组中")
+    group = create_group(session, data.class_name, data.name, student_id, course_id=data.course_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {"group_id": group.id, "name": group.name},
@@ -541,11 +342,12 @@ async def api_student_create_group(
 @router.get("/student/groups", response_model=ApiResponse[list])
 async def api_student_groups(
     class_name: str,
+    course_id: Optional[int] = Query(None, description="按课程过滤"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
-    """获取班级可加入小组列表"""
-    groups = get_groups_by_class(session, class_name)
+    """获取班级可加入小组列表（小组按课程划分）"""
+    groups = get_groups_by_class(session, class_name, course_id=course_id)
     settings = get_class_group_settings(session, class_name)
     max_m = settings.max_members_per_group if settings else None
     result = []
@@ -574,8 +376,6 @@ async def api_create_join_request(
     group = get_group(session, group_id)
     if not group or not group.is_active:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
-    # C2: 组队锁定 — evaluating 状态下禁止申请加入（未分配小组的学生除外）
-    _check_class_not_evaluating(session, group.class_name, student_id)
     # 检查小组是否已满
     settings = get_class_group_settings(session, group.class_name)
     if settings:
@@ -669,15 +469,6 @@ async def api_create_dissolution(
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="未在活跃小组中")
     if group.leader_student_id != student_id:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="仅组长可申请")
-    evaluating_task = session.exec(
-        select(GroupTask).where(
-            GroupTask.class_name == group.class_name,
-            GroupTask.status == "evaluating",
-            GroupTask.semester == get_current_term(),
-        )
-    ).first()
-    if evaluating_task:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级正在互评阶段，不可解散小组")
     req = create_dissolution_request(session, group.id, data.reason)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -705,20 +496,9 @@ async def api_leave_group(
     if group.leader_student_id == student_id:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="组长不可退出，请先转让组长或申请解散")
 
-    # Check if class is in evaluation phase
-    evaluating_task = session.exec(
-        select(GroupTask).where(
-            GroupTask.class_name == group.class_name,
-            GroupTask.status == "evaluating",
-            GroupTask.semester == get_current_term(),
-        )
-    ).first()
-    if evaluating_task:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级正在互评阶段，不可退出小组")
-
-    # Remove student from all groups in this class
-    from app.crud.group import _remove_student_from_class_groups
-    _remove_student_from_class_groups(session, student_id, group.class_name)
+    # 学生退出仅离开当前科目的小组（小组按科目划分）
+    from app.crud.group import _remove_student_from_course_groups
+    _remove_student_from_course_groups(session, student_id, group.class_name, group.course_id)
 
     return {
         ApiResponseConst.SUCCESS: True,
@@ -726,168 +506,55 @@ async def api_leave_group(
     }
 
 
-@router.get("/student/group-tasks", response_model=ApiResponse[list])
-async def api_student_tasks(
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
-):
-    """获取学生班级的合作任务列表"""
-    from app.models import Student
-    student_id = user.get("sub", "")
-    stu = session.get(Student, student_id)
-    if not stu:
-        return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
-    tasks = get_group_tasks_by_class(session, stu.class_name)
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [
-            {"id": t.id, "title": t.title, "status": t.status, "class_name": t.class_name}
-            for t in tasks
-        ],
-    }
-
-
-@router.get("/student/group-tasks/{task_id}/evaluations", response_model=ApiResponse[list])
-async def api_student_evaluations(
-    task_id: int,
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
-):
-    """获取学生互评任务列表"""
-    student_id = user.get("sub", "")
-    task = get_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
-    from app.models import Student
-    stu = session.get(Student, student_id)
-    if not stu:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="学生信息异常")
-    my_group = get_student_active_group(session, student_id, stu.class_name)
-    if not my_group:
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="未在小组中")
-    assignments = get_evaluation_assignments(session, task_id, my_group.id)
-    dimensions = get_task_dimensions(session, task_id)
-    # 优化 N+1 查询：一次查出该学生对当前任务的所有评分
-    all_my_scores = session.exec(
-        select(GroupEvaluationScore).where(
-            GroupEvaluationScore.task_id == task_id,
-            GroupEvaluationScore.evaluator_type == "student",
-            GroupEvaluationScore.evaluator_id == student_id,
-        )
-    ).all()
-    score_map = {(s.target_group_id, s.dimension_id): s.score for s in all_my_scores}
-    result = []
-    for assign in assignments:
-        target = get_group(session, assign.target_group_id)
-        result.append({
-            "target_group_id": assign.target_group_id,
-            "target_group_name": target.name if target else "",
-            "dimensions": [
-                {
-                    "id": d.id,
-                    "name": d.name,
-                    "scored": (assign.target_group_id, d.id) in score_map,
-                    "score": score_map.get((assign.target_group_id, d.id)),
-                }
-                for d in dimensions
-            ],
-            "all_scored": all(
-                (assign.target_group_id, d.id) in score_map for d in dimensions
-            ),
-        })
-    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
-
-
-@router.post("/student/group-tasks/{task_id}/scores", response_model=ApiResponse[dict])
-async def api_submit_student_scores(
-    task_id: int,
-    data: StudentScoresSubmit,
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
-):
-    """学生提交互评分数"""
-    # C3: 校验任务必须在 evaluating 状态才允许评分
-    task = get_group_task(session, task_id)
-    if not task:
-        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="任务不存在")
-    if task.status != "evaluating":
-        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="任务不在评分阶段")
-    student_id = user.get("sub", "")
-    scores_map = {item.dimension_id: item.score for item in data.scores}
-    submit_student_scores(session, task_id, data.target_group_id, student_id, scores_map)
-    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.MESSAGE: "评分已提交"}
-
-
-@router.get("/student/groups/my-group/results", response_model=ApiResponse[list])
-async def api_student_my_group_results(
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user),
-):
-    """获取学生小组的任务成绩"""
-    student_id = user.get("sub", "")
-    from app.models import Student
-    stu = session.get(Student, student_id)
-    if not stu:
-        return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
-    my_group = get_student_active_group(session, student_id, stu.class_name)
-    if not my_group:
-        return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
-    tasks = get_group_tasks_by_class(session, stu.class_name)
-    result = []
-    for task in tasks:
-        if task.status == "preparing":
-            continue
-        task_results = get_task_results(session, task.id)
-        group_result = task_results.get(my_group.id, {})
-        if group_result:
-            result.append({
-                "task_id": task.id,
-                "title": task.title,
-                "status": task.status,
-                "group_name": my_group.name,
-                "teacher_scores": group_result.get("teacher_scores", {}),
-                "peer_scores": group_result.get("peer_scores", {}),
-                "final_scores": group_result.get("final_scores", {}),
-                "task_final": group_result.get("task_final", 0.0),
-            })
-    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}
-
-
-@router.get("/student/groups/my-group", response_model=ApiResponse[dict])
+@router.get("/student/groups/my-group", response_model=ApiResponse[list])
 async def api_student_my_group(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
-    """获取学生当前小组信息"""
+    """获取学生当前学期全部小组信息（小组按科目划分，每科一个）"""
     student_id = user.get("sub", "")
-    from app.models import Student
+    from app.models import Student, Course
     stu = session.get(Student, student_id)
     if not stu:
-        return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: None}
-    my_group = get_student_active_group(session, student_id, stu.class_name)
-    if not my_group:
-        return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: None}
-    members = get_group_members(session, my_group.id)
-    pending_reqs = get_pending_membership_requests(session, my_group.id)
-    # 批量查询成员姓名
-    member_ids = [m.student_id for m in members]
-    student_map = {}
-    if member_ids:
+        return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
+    my_groups = get_student_groups(session, student_id, stu.class_name)
+    if not my_groups:
+        return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
+
+    # 批量查询课程名称与成员姓名
+    course_ids = {g.course_id for g in my_groups if g.course_id is not None}
+    course_map = {}
+    if course_ids:
         from sqlmodel import col
-        students = session.exec(select(Student).where(col(Student.student_id).in_(member_ids))).all()
+        courses = session.exec(select(Course).where(col(Course.id).in_(course_ids))).all()
+        course_map = {c.id: c.name for c in courses}
+    all_member_ids = set()
+    for g in my_groups:
+        all_member_ids.update(m.student_id for m in get_group_members(session, g.id))
+    student_map = {}
+    if all_member_ids:
+        from sqlmodel import col
+        students = session.exec(select(Student).where(col(Student.student_id).in_(all_member_ids))).all()
         student_map = {s.student_id: s.name for s in students}
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: {
-            "id": my_group.id,
-            "name": my_group.name,
-            "class_name": my_group.class_name,
-            "leader_student_id": my_group.leader_student_id,
-            "is_leader": my_group.leader_student_id == student_id,
+
+    result = []
+    for g in my_groups:
+        members = get_group_members(session, g.id)
+        pending_reqs = get_pending_membership_requests(session, g.id)
+        result.append({
+            "id": g.id,
+            "name": g.name,
+            "class_name": g.class_name,
+            "course_id": g.course_id,
+            "course_name": course_map.get(g.course_id),
+            "score": g.score,
+            "leader_student_id": g.leader_student_id,
+            "leader_name": student_map.get(g.leader_student_id, g.leader_student_id),
+            "is_leader": g.leader_student_id == student_id,
             "members": [{"student_id": m.student_id, "name": student_map.get(m.student_id, m.student_id)} for m in members],
             "pending_requests": [
                 {"id": r.id, "student_id": r.student_id, "created_at": r.created_at.isoformat()}
                 for r in pending_reqs
             ],
-        },
-    }
+        })
+    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: result}

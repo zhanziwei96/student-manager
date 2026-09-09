@@ -26,9 +26,7 @@ from app.models.course_schedule import CourseSchedule
 from app.models.course_session import CourseSession, ScheduleAdjustment
 from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
-    GroupTask, GroupTaskDimension, EvaluationAssignment,
-    GroupEvaluationScore, GroupDissolutionRequest,
-    ClassGroupSettings,
+    GroupDissolutionRequest, ClassGroupSettings,
 )
 from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim
 from app.models.semester import Semester

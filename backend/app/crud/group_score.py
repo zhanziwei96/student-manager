@@ -62,7 +62,6 @@ def update_group_score(
 
     log = GroupScoreLog(
         group_id=group_id,
-        subject_id=group.subject_id,
         old_score=old_score,
         new_score=new_score,
         delta=delta,
@@ -87,63 +86,3 @@ def get_group_score_logs(session: Session, group_id: int, limit: int = 50, offse
         .limit(limit)
     )
     return list(session.exec(query).all())
-
-
-def get_group_leaderboard(
-    session: Session,
-    subject_id: Optional[int] = None,
-    class_name: Optional[str] = None,
-    class_names: Optional[List[str]] = None,
-    limit: int = 50,
-) -> List[Dict[str, Any]]:
-    """小组排行榜（按科目+班级，分数降序，竞赛排名并列跳位）
-
-    subject_id 旧参数桥接：subjects.name → courses.name → course_id 过滤
-    （未回填 course_id 的小组回退 subject_id 匹配）。
-    class_name 与 class_names 二选一：class_name 精确匹配单个班级，
-    class_names 用于限制在多个班级范围内（教师未指定班级时）。
-    """
-    query = select(Group).where(
-        Group.is_active.is_(True),
-        semester_filter(
-            Group.semester_id, Group.semester,
-            get_current_semester_id(session), get_current_term(),
-        ),
-    )
-    if subject_id:
-        subject = session.get(Subject, subject_id)
-        if subject is not None:
-            course = session.exec(select(Course).where(
-                Course.name == subject.name)).first()
-            if course is not None:
-                query = query.where(or_(
-                    Group.course_id == course.id,
-                    and_(Group.course_id.is_(None), Group.subject_id == subject_id),
-                ))
-            else:
-                query = query.where(Group.subject_id == subject_id)
-        else:
-            query = query.where(Group.subject_id == subject_id)
-    if class_name:
-        query = query.where(Group.class_name == class_name)
-    elif class_names is not None:
-        query = query.where(Group.class_name.in_(class_names))
-    query = query.order_by(Group.score.desc()).limit(limit)
-
-    groups = session.exec(query).all()
-
-    # 竞赛排名（并列跳位：1,2,2,4）
-    result = []
-    prev_score = None
-    for i, g in enumerate(groups):
-        rank = i + 1 if (i == 0 or g.score != prev_score) else result[-1]["rank"]
-        result.append({
-            "rank": rank,
-            "group_id": g.id,
-            "group_name": g.name,
-            "class_name": g.class_name,
-            "subject_id": g.subject_id,
-            "score": g.score,
-        })
-        prev_score = g.score
-    return result

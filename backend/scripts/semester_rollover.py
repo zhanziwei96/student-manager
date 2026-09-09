@@ -33,7 +33,6 @@ from app.models import (
     CourseSchedule,
     CourseSession,
     Group,
-    GroupTask,
     ScoreLog,
     Student,
 )
@@ -93,18 +92,13 @@ def _close_legacy_sessions(session: Session, old_term: str) -> int:
     return result.rowcount
 
 
-def _close_legacy_groups(session: Session, old_term: str) -> Tuple[int, int]:
-    """旧学期小组失效；遗留 evaluating 任务 -> closed"""
+def _close_legacy_groups(session: Session, old_term: str) -> int:
+    """旧学期小组失效"""
     groups_result = session.exec(
         update(Group).where(Group.semester == old_term).values(is_active=False)
     )
-    tasks_result = session.exec(
-        update(GroupTask)
-        .where(GroupTask.semester == old_term, GroupTask.status == "evaluating")
-        .values(status="closed")
-    )
     session.commit()
-    return groups_result.rowcount, tasks_result.rowcount
+    return groups_result.rowcount
 
 
 def _disable_graduates(session: Session, names_file: str) -> int:
@@ -220,7 +214,7 @@ def main() -> None:
 
     with Session(engine) as session:
         sessions_closed = _close_legacy_sessions(session, old_term)
-        groups_closed, tasks_closed = _close_legacy_groups(session, old_term)
+        groups_closed = _close_legacy_groups(session, old_term)
         archived, skipped = _archive_scores(session, old_term)
         disabled = 0
         if args.disable_graduates:
@@ -229,7 +223,7 @@ def main() -> None:
         total_students = session.exec(select(Student)).all()
         print("\n[验证报告]")
         print(f"  遗留课堂收敛: {sessions_closed}")
-        print(f"  小组失效: {groups_closed}  任务关闭: {tasks_closed}")
+        print(f"  小组失效: {groups_closed}")
         print(f"  分数归档: {archived}  跳过(幂等): {skipped}")
         print(f"  软禁用学生: {disabled}")
         print(f"  库内学生总数: {len(total_students)}")

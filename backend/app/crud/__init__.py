@@ -55,10 +55,9 @@ from app.crud.student_subject_score import (
 from app.crud.group_score import (
     update_group_score,
     get_group_score_logs,
-    get_group_leaderboard,
 )
 from app.crud.group import (
-    get_group, get_groups_by_class, get_student_active_group,
+    get_group, get_groups_by_class, get_student_active_group, get_student_groups,
     get_group_members, create_group, create_membership_request,
     get_pending_membership_requests, approve_membership_request,
     reject_membership_request, create_dissolution_request,
@@ -68,13 +67,6 @@ from app.crud.group import (
     get_class_group_settings, get_or_create_class_group_settings,
     update_class_group_settings,
     get_group_with_members, remove_group_member, dissolve_group,
-)
-from app.crud.group_task import (
-    create_group_task, get_group_task, get_group_tasks_by_class,
-    get_task_dimensions, start_group_task, close_group_task,
-    get_evaluation_assignments, submit_teacher_score,
-    submit_student_scores, get_task_results, clone_group_task,
-    delete_group_task,
 )
 from app.crud.question import (
     create_question, get_question, get_questions_by_teacher,
@@ -131,9 +123,8 @@ __all__ = [
     # GroupScore
     "update_group_score",
     "get_group_score_logs",
-    "get_group_leaderboard",
     # Group
-    "get_group", "get_groups_by_class", "get_student_active_group",
+    "get_group", "get_groups_by_class", "get_student_active_group", "get_student_groups",
     "get_group_members", "create_group", "create_membership_request",
     "get_pending_membership_requests", "approve_membership_request",
     "reject_membership_request", "create_dissolution_request",
@@ -143,12 +134,6 @@ __all__ = [
     "get_class_group_settings", "get_or_create_class_group_settings",
     "update_class_group_settings",
     "get_group_with_members", "remove_group_member", "dissolve_group",
-    # GroupTask
-    "create_group_task", "get_group_task", "get_group_tasks_by_class",
-    "get_task_dimensions", "start_group_task", "close_group_task",
-    "get_evaluation_assignments", "submit_teacher_score",
-    "submit_student_scores", "get_task_results", "clone_group_task",
-    "delete_group_task",
     # Question
     "create_question", "get_question", "get_questions_by_teacher",
     "get_questions_by_class", "close_question", "count_answers",

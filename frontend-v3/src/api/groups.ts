@@ -1,41 +1,35 @@
 import { get, post, put, del } from '@/lib/api'
-import type { GroupDetail } from '@/types/api'
+import type { GroupDetail } from '@/types'
 
-export interface CreateGroupTaskRequest {
-  class_name: string
-  title: string
-  description?: string
-  dimensions: string[]
-}
-
-export interface TeacherScoreRequest {
-  target_group_id: number
-  dimension_id: number
-  score: number
-}
-
-export interface StudentScoreItem {
-  dimension_id: number
-  score: number
-}
-
-export interface StudentScoresSubmit {
-  target_group_id: number
-  scores: StudentScoreItem[]
-}
-
+/** 小组 - 对应后端 GET /teacher/groups 响应（小组按课程划分） */
 export interface Group {
   id: number
   name: string
   leader_student_id: string
+  leader_name?: string
+  course_id: number | null
+  course_name?: string | null
+  score?: number
+  members?: { student_id: string; name?: string }[]
+  // 学生可加入小组列表字段（GET /student/groups）
   member_count?: number
   max_members?: number | null
   is_full?: boolean
+}
+
+/** 我的小组条目 - 对应后端 GET /student/groups/my-group 响应 */
+export interface MyGroup {
+  id: number
+  name: string
+  class_name: string
+  course_id: number | null
+  course_name?: string | null
+  score: number
+  leader_student_id: string
   leader_name?: string
-  subject_id?: number | null
-  subject_name?: string | null
-  score?: number
-  members?: { student_id: string; student_name?: string }[]
+  is_leader: boolean
+  members: { student_id: string; name: string }[]
+  pending_requests: { id: number; student_id: string; created_at: string }[]
 }
 
 export interface GroupScoreLog {
@@ -47,100 +41,28 @@ export interface GroupScoreLog {
   created_at: string
 }
 
-export interface GroupLeaderboardEntry {
-  rank: number
-  group_id: number
-  group_name: string
-  class_name: string
-  subject_id: number | null
-  score: number
-}
-
-export interface GroupLeaderboardData {
-  groups: GroupLeaderboardEntry[]
-  total: number
-}
-
-export interface GroupTask {
-  id: number
-  title: string
-  status: 'preparing' | 'evaluating' | 'closed'
-  class_name: string
-}
-
-export interface TaskResultItem {
-  group_id: number
-  group_name: string
-  teacher_scores: Record<string, number>
-  peer_scores: Record<string, number>
-  final_scores: Record<string, number>
-  task_final: number
-}
-
-export interface TaskResultData {
-  task: { id: number; title: string; status: string }
-  dimensions: { id: number; name: string }[]
-  results: Record<string, TaskResultItem>
-}
-
-export interface GroupTaskResult {
-  task_id: number
-  title: string
-  status: string
-  group_name: string
-  teacher_scores: Record<string, number>
-  peer_scores: Record<string, number>
-  final_scores: Record<string, number>
-  task_final: number
-}
-
-export interface EvaluationTarget {
-  target_group_id: number
-  target_group_name: string
-  dimensions: { id: number; name: string; scored: boolean; score: number | null }[]
-  all_scored: boolean
-}
-
 export interface DissolutionRequest {
   id: number
   group_id: number
   reason: string
   status: string
   created_at: string
+  group_name?: string
 }
 
-export interface MyGroup {
-  id: number
-  name: string
-  class_name: string
-  leader_student_id: string
-  is_leader: boolean
-  members: { student_id: string; name: string }[]
-  pending_requests: { id: number; student_id: string; created_at: string }[]
-}
-
+/**
+ * 小组 API - 科目式小组（课程维度，持续一学期，累计分）
+ *
+ * 后端路由: backend/app/api/routes/groups.py + group_scores.py
+ */
 export const groupsApi = {
-  // Teacher
-  getTeacherTasks: (className: string): Promise<GroupTask[]> =>
-    get('/teacher/group-tasks', { class_name: className }),
-  createTask: (data: CreateGroupTaskRequest): Promise<{ task_id: number; status: string }> =>
-    post('/teacher/group-tasks', data),
-  startTask: (taskId: number): Promise<{ task_id: number; status: string }> =>
-    post(`/teacher/group-tasks/${taskId}/start`, {}),
-  closeTask: (taskId: number): Promise<{ task_id: number; status: string }> =>
-    post(`/teacher/group-tasks/${taskId}/close`, {}),
-  cloneTask: (taskId: number, targetClassName: string): Promise<{ task_id: number; status: string }> =>
-    post(`/teacher/group-tasks/${taskId}/clone`, { target_class_name: targetClassName }),
-  deleteTask: (taskId: number): Promise<unknown> =>
-    del(`/teacher/group-tasks/${taskId}`),
-  getTaskResults: (taskId: number): Promise<TaskResultData> =>
-    get(`/teacher/group-tasks/${taskId}/results`),
-  submitTeacherScore: (taskId: number, data: TeacherScoreRequest): Promise<unknown> =>
-    post(`/teacher/group-tasks/${taskId}/scores`, data),
-  getTeacherGroups: (className: string): Promise<Group[]> =>
-    get('/teacher/groups', { class_name: className }),
-  autoAssign: (className: string): Promise<Group[]> =>
-    post('/teacher/groups/auto-assign', { class_name: className }),
+  // 教师
+  getTeacherGroups: (className: string, courseId?: number): Promise<Group[]> =>
+    get('/teacher/groups', courseId ? { class_name: className, course_id: courseId } : { class_name: className }),
+  createTeacherGroup: (data: { class_name: string; name: string; course_id: number }): Promise<{ group_id: number; name: string }> =>
+    post('/teacher/groups', data),
+  autoAssign: (className: string, courseId: number): Promise<Group[]> =>
+    post('/teacher/groups/auto-assign', { class_name: className, course_id: courseId }),
   getClassGroupSettings: (className: string): Promise<{ class_name: string; max_members_per_group: number }> =>
     get('/teacher/class-group-settings', { class_name: className }),
   updateClassGroupSettings: (data: { class_name: string; max_members_per_group: number }): Promise<{ class_name: string; max_members_per_group: number }> =>
@@ -157,8 +79,6 @@ export const groupsApi = {
     put(`/groups/${groupId}/score`, { score_change: scoreChange, reason }),
   getScoreLogs: (groupId: number, params?: { limit?: number; offset?: number }): Promise<GroupScoreLog[]> =>
     get(`/groups/${groupId}/score-logs`, params),
-  getLeaderboard: (params: { subject_id?: number; class_name?: string; limit?: number }): Promise<GroupLeaderboardData> =>
-    get('/groups/leaderboard', params),
   getDissolutionRequests: (): Promise<DissolutionRequest[]> =>
     get('/teacher/group-dissolution-requests'),
   approveDissolution: (reqId: number): Promise<unknown> =>
@@ -166,11 +86,11 @@ export const groupsApi = {
   rejectDissolution: (reqId: number): Promise<unknown> =>
     post(`/teacher/group-dissolution-requests/${reqId}/reject`, {}),
 
-  // Student
-  createGroup: (className: string, name: string, subjectId?: number): Promise<unknown> =>
-    post('/student/groups', { class_name: className, name, subject_id: subjectId }),
-  getGroups: (className: string): Promise<Group[]> =>
-    get('/student/groups', { class_name: className }),
+  // 学生
+  createGroup: (className: string, name: string, courseId: number): Promise<{ group_id: number; name: string }> =>
+    post('/student/groups', { class_name: className, name, course_id: courseId }),
+  getGroups: (className: string, courseId?: number): Promise<Group[]> =>
+    get('/student/groups', courseId ? { class_name: className, course_id: courseId } : { class_name: className }),
   requestJoin: (groupId: number): Promise<unknown> =>
     post(`/student/groups/${groupId}/join-requests`, {}),
   approveJoin: (reqId: number): Promise<unknown> =>
@@ -179,12 +99,8 @@ export const groupsApi = {
     post(`/student/groups/join-requests/${reqId}/reject`, {}),
   requestDissolution: (reason: string): Promise<unknown> =>
     post('/student/groups/dissolution-requests', { reason }),
-  getStudentTasks: (): Promise<GroupTask[]> =>
-    get('/student/group-tasks'),
-  getEvaluations: (taskId: number): Promise<EvaluationTarget[]> =>
-    get(`/student/group-tasks/${taskId}/evaluations`),
-  submitStudentScores: (taskId: number, data: StudentScoresSubmit): Promise<unknown> =>
-    post(`/student/group-tasks/${taskId}/scores`, data),
-  getMyGroup: (): Promise<MyGroup> =>
+  leaveGroup: (): Promise<unknown> =>
+    post('/student/groups/leave', {}),
+  getMyGroups: (): Promise<MyGroup[]> =>
     get('/student/groups/my-group'),
 }

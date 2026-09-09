@@ -8,11 +8,8 @@ from pydantic import BaseModel, Field
 
 from app.core.db import get_session
 from app.core.config import HttpStatus
-from app.api.deps import (
-    require_admin_or_teacher, verify_teacher_class_access,
-    get_teacher_accessible_classes,
-)
-from app.crud.group_score import update_group_score, get_group_score_logs, get_group_leaderboard
+from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
+from app.crud.group_score import update_group_score, get_group_score_logs
 from app.models import Group
 from app.models.constants import ApiResponseConst, ApiResponse, ApiSuccessResponse
 
@@ -82,43 +79,3 @@ def get_score_logs(
     }
 
 
-@router.get("/groups/leaderboard", response_model=ApiResponse[dict])
-def get_leaderboard(
-    subject_id: Optional[int] = Query(None, description="科目ID"),
-    class_name: Optional[str] = Query(None, description="班级名称"),
-    limit: int = Query(50, ge=1, le=100, description="返回数量限制"),
-    session: Session = Depends(get_session),
-    user: dict = Depends(require_admin_or_teacher)
-):
-    """小组排行榜（按科目+班级，教师限自己班）"""
-    # 教师权限：传 class_name 时校验归属；未传则限制在可访问班级内（assigned 优先+offerings 派生）
-    if user.get("role") != "admin":
-        accessible = get_teacher_accessible_classes(user, session)
-
-        if class_name:
-            verify_teacher_class_access(user, class_name, session)
-        else:
-            # 未传 class_name，教师只能看自己班
-            if not accessible:
-                # 无班级的教师返回空
-                return {
-                    ApiResponseConst.SUCCESS: True,
-                    ApiResponseConst.DATA: {"groups": [], "total": 0}
-                }
-            groups = get_group_leaderboard(
-                session, subject_id=subject_id, class_names=accessible, limit=limit
-            )
-            return {
-                ApiResponseConst.SUCCESS: True,
-                ApiResponseConst.DATA: {"groups": groups, "total": len(groups)}
-            }
-
-    groups = get_group_leaderboard(session, subject_id=subject_id, class_name=class_name, limit=limit)
-
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: {
-            "groups": groups,
-            "total": len(groups),
-        }
-    }

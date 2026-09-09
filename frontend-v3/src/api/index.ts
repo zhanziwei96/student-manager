@@ -15,21 +15,10 @@ export { termApi } from './term'
 export type { TermInfo } from './term'
 export { groupsApi } from './groups'
 export type {
-  CreateGroupTaskRequest,
-  TeacherScoreRequest,
-  StudentScoreItem,
-  StudentScoresSubmit,
   Group,
-  GroupTask,
-  TaskResultItem,
-  TaskResultData,
-  GroupTaskResult,
-  EvaluationTarget,
   DissolutionRequest,
   MyGroup,
   GroupScoreLog,
-  GroupLeaderboardEntry,
-  GroupLeaderboardData,
 } from './groups'
 export * as lostFoundApi from './lostFound'
 export { subjectsApi } from './subjects'
