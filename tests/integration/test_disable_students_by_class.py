@@ -390,8 +390,16 @@ class TestDisabledClassContentCreation:
         )
         assert resp.status_code == 200
 
+        from app.models import Course
+        with Session(test_engine) as session:
+            math = Course(code="MATH1", name="高等数学")
+            session.add(math)
+            session.commit()
+            math_id = math.id
+
         resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
             "class_name": "一班",
+            "course_id": math_id,
         })
         assert resp.status_code == 400
 
@@ -423,8 +431,16 @@ class TestDisabledClassContentCreation:
             ))
             session.commit()
 
+        from app.models import Course
+        with Session(test_engine) as session:
+            math = Course(code="MATH1", name="高等数学")
+            session.add(math)
+            session.commit()
+            math_id = math.id
+
         resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
             "class_name": "一班",
+            "course_id": math_id,
         })
         assert resp.status_code == 200
 

@@ -24,6 +24,19 @@ def seed_class_students(test_engine):
         session.commit()
 
 
+@pytest.fixture
+def course(test_engine):
+    """创建课程 MATH1（小组按课程划分），返回 course_id"""
+    from app.models import Course
+
+    with Session(test_engine) as session:
+        c = Course(code="MATH1", name="高等数学")
+        session.add(c)
+        session.commit()
+        session.refresh(c)
+        return c.id
+
+
 def test_teacher_create_task(teacher_client: TestClient):
     resp = teacher_client.post("/api/v1/teacher/group-tasks", json={
         "class_name": "一班",
@@ -42,30 +55,33 @@ def test_student_my_group_unauthenticated(client: TestClient):
     assert resp.status_code == 401
 
 
-def test_student_create_and_view_group(student_client: TestClient):
+def test_student_create_and_view_group(student_client: TestClient, course):
     # 创建小组
     resp = student_client.post("/api/v1/student/groups", json={
         "class_name": "一班",
         "name": "先锋组",
+        "course_id": course,
     })
     assert resp.status_code == 200
     data = resp.json()
     assert data["success"] is True
     assert data["data"]["name"] == "先锋组"
 
-    # 查看我的小组
+    # 查看我的小组（列表结构：每科一个）
     resp = student_client.get("/api/v1/student/groups/my-group")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["data"]["name"] == "先锋组"
-    assert data["data"]["is_leader"] is True
+    assert len(data["data"]) == 1
+    assert data["data"][0]["name"] == "先锋组"
+    assert data["data"][0]["is_leader"] is True
 
 
-def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient, session):
+def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient, session, course):
     _seed_settings_deps(session)
     # 自动分配（前提是班级有未分组学生）
     resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
         "class_name": "一班",
+        "course_id": course,
     })
     assert resp.status_code == 200
     data = resp.json()
@@ -79,11 +95,12 @@ def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient, session
     assert isinstance(data["data"], list)
 
 
-def test_teacher_dissolution_requests(teacher_client: TestClient, student_client: TestClient):
+def test_teacher_dissolution_requests(teacher_client: TestClient, student_client: TestClient, course):
     # 学生先创建小组
     student_client.post("/api/v1/student/groups", json={
         "class_name": "一班",
         "name": "解散测试组",
+        "course_id": course,
     })
 
     # 学生申请解散
@@ -157,12 +174,13 @@ def test_student_cannot_join_full_group(teacher_client: TestClient, session):
     assert resp.json()["data"]["max_members_per_group"] == 2
 
 
-def test_student_groups_returns_max_members_and_is_full(student_client: TestClient):
+def test_student_groups_returns_max_members_and_is_full(student_client: TestClient, course):
     """学生小组列表应返回 max_members 和 is_full 字段"""
     # 学生创建小组
     resp = student_client.post("/api/v1/student/groups", json={
         "class_name": "一班",
         "name": "测试组",
+        "course_id": course,
     })
     assert resp.status_code == 200
     # 获取小组列表
@@ -238,7 +256,7 @@ def test_teacher_delete_own_task(teacher_client: TestClient):
     assert resp.status_code == 404
 
 
-def test_group_operation_during_evaluation_flow(student_client: TestClient):
+def test_group_operation_during_evaluation_flow(student_client: TestClient, course):
     """测试互评阶段小组操作完整流程"""
     from sqlmodel import Session, select
     from tests.integration.conftest import _test_engine
@@ -260,6 +278,7 @@ def test_group_operation_during_evaluation_flow(student_client: TestClient):
     resp = student_client.post("/api/v1/student/groups", json={
         "class_name": "一班",
         "name": "新小组",
+        "course_id": course,
     })
     assert resp.status_code == 200
     assert resp.json()["success"] is True
@@ -289,7 +308,7 @@ def test_group_operation_during_evaluation_flow(student_client: TestClient):
             session.commit()
 
 
-def test_teacher_delete_evaluating_task(teacher_client: TestClient, student_client: TestClient):
+def test_teacher_delete_evaluating_task(teacher_client: TestClient, student_client: TestClient, course):
     # 通过底层数据操作确保一班有两个活跃小组（启动互评的前提）
     from sqlmodel import Session
     from tests.integration.conftest import _test_engine
@@ -304,6 +323,7 @@ def test_teacher_delete_evaluating_task(teacher_client: TestClient, student_clie
     student_client.post("/api/v1/student/groups", json={
         "class_name": "一班",
         "name": "删除测试组1",
+        "course_id": course,
     })
 
     # 底层创建组2（S002 为组长）
@@ -376,7 +396,7 @@ def test_join_group_during_evaluation(student_client):
     assert "request_id" in data["data"]
 
 
-def test_create_group_during_evaluation(student_client):
+def test_create_group_during_evaluation(student_client, course):
     """测试互评阶段未分配学生可以创建小组"""
     from sqlmodel import Session
     from tests.integration.conftest import _test_engine
@@ -398,6 +418,7 @@ def test_create_group_during_evaluation(student_client):
     resp = student_client.post("/api/v1/student/groups", json={
         "class_name": "一班",
         "name": "新小组",
+        "course_id": course,
     })
     assert resp.status_code == 200
     data = resp.json()
@@ -596,24 +617,24 @@ def test_dissolve_group_not_blocked_by_previous_term_evaluating_task(student_cli
     assert "request_id" in data["data"]
 
 
-def test_teacher_groups_returns_subject_and_score(teacher_client: TestClient):
-    """GET /teacher/groups 返回 subject_id/subject_name/score"""
+def test_teacher_groups_returns_course_and_score(teacher_client: TestClient):
+    """GET /teacher/groups 返回 course_id/course_name/score"""
     from sqlmodel import Session
     from tests.integration.conftest import _test_engine
-    from app.models import Group, Subject
+    from app.models import Course, Group
 
     with Session(_test_engine) as session:
-        subject = Subject(name="数学", semester="2026-2027-1")
-        session.add(subject)
+        course = Course(code="MATH1", name="高等数学")
+        session.add(course)
         session.commit()
-        session.refresh(subject)
-        subject_id = subject.id
+        session.refresh(course)
+        course_id = course.id
 
         group = Group(
             class_name="一班",
             name="第一组",
             leader_student_id="S001",
-            subject_id=subject.id,
+            course_id=course_id,
             score=5.0,
         )
         session.add(group)
@@ -626,34 +647,110 @@ def test_teacher_groups_returns_subject_and_score(teacher_client: TestClient):
     data = resp.json()["data"]
     target = next((g for g in data if g["id"] == group_id), None)
     assert target is not None
-    assert target["subject_id"] == subject_id
-    assert target["subject_name"] == "数学"
+    assert target["course_id"] == course_id
+    assert target["course_name"] == "高等数学"
     assert target["score"] == 5.0
 
 
-def test_student_create_group_with_subject(student_client: TestClient):
-    """学生创建小组带科目"""
+def test_student_create_group_with_course(student_client: TestClient):
+    """学生创建小组带课程（course_id 必填）"""
     from sqlmodel import Session, select
     from tests.integration.conftest import _test_engine
-    from app.models import Subject, Group
+    from app.models import Course, Group
 
     with Session(_test_engine) as session:
-        subject = Subject(name="数学", semester="2026-2027-1")
-        session.add(subject)
+        course = Course(code="MATH1", name="高等数学")
+        session.add(course)
         session.commit()
-        session.refresh(subject)
-        subject_id = subject.id
+        session.refresh(course)
 
     resp = student_client.post(
         "/api/v1/student/groups",
-        json={"class_name": "一班", "name": "数学第一组", "subject_id": subject_id},
+        json={"class_name": "一班", "name": "数学第一组", "course_id": course.id},
     )
     assert resp.status_code == 200
 
-    # 验证小组带科目
+    # 验证小组带课程
     with Session(_test_engine) as session:
         group = session.exec(
             select(Group).where(Group.name == "数学第一组")
         ).first()
         assert group is not None
-        assert group.subject_id == subject_id
+        assert group.course_id == course.id
+
+
+def test_student_can_join_multiple_course_groups(student_client: TestClient):
+    """学生在不同科目可分别建组（每科一个小组）"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import Course
+
+    with Session(_test_engine) as session:
+        math = Course(code="MATH1", name="高等数学")
+        eng = Course(code="ENG1", name="大学英语")
+        session.add(math)
+        session.add(eng)
+        session.commit()
+        math_id, eng_id = math.id, eng.id
+
+    resp = student_client.post(
+        "/api/v1/student/groups",
+        json={"class_name": "一班", "name": "数学一组", "course_id": math_id},
+    )
+    assert resp.status_code == 200
+
+    # 同科目重复建组被拒
+    resp = student_client.post(
+        "/api/v1/student/groups",
+        json={"class_name": "一班", "name": "数学二组", "course_id": math_id},
+    )
+    assert resp.status_code == 400
+
+    # 不同科目可再建组
+    resp = student_client.post(
+        "/api/v1/student/groups",
+        json={"class_name": "一班", "name": "英语一组", "course_id": eng_id},
+    )
+    assert resp.status_code == 200
+
+    # 我的小组返回两个（每科一个）
+    resp = student_client.get("/api/v1/student/groups/my-group")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data) == 2
+    assert {g["course_id"] for g in data} == {math_id, eng_id}
+    assert all(g["course_name"] for g in data)
+
+
+def test_teacher_creates_group(teacher_client: TestClient):
+    """教师建组（TCH-06）：按班级+课程创建"""
+    from sqlmodel import Session
+    from tests.integration.conftest import _test_engine
+    from app.models import Course
+
+    with Session(_test_engine) as session:
+        course = Course(code="MATH1", name="高等数学")
+        session.add(course)
+        session.commit()
+        course_id = course.id
+
+    resp = teacher_client.post(
+        "/api/v1/teacher/groups",
+        json={"class_name": "一班", "name": "数学A组", "course_id": course_id},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["data"]["group_id"] > 0
+
+    resp = teacher_client.get("/api/v1/teacher/groups", params={
+        "class_name": "一班", "course_id": course_id,
+    })
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert len(data) == 1
+    assert data[0]["name"] == "数学A组"
+
+
+def test_groups_leaderboard_removed(teacher_client: TestClient):
+    """旧小组排行榜端点已删除（新 /rankings?type=group 取代）→ 404"""
+    resp = teacher_client.get("/api/v1/groups/leaderboard")
+    assert resp.status_code == 404

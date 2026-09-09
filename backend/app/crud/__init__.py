@@ -58,7 +58,7 @@ from app.crud.group_score import (
     get_group_leaderboard,
 )
 from app.crud.group import (
-    get_group, get_groups_by_class, get_student_active_group,
+    get_group, get_groups_by_class, get_student_active_group, get_student_groups,
     get_group_members, create_group, create_membership_request,
     get_pending_membership_requests, approve_membership_request,
     reject_membership_request, create_dissolution_request,
@@ -133,7 +133,7 @@ __all__ = [
     "get_group_score_logs",
     "get_group_leaderboard",
     # Group
-    "get_group", "get_groups_by_class", "get_student_active_group",
+    "get_group", "get_groups_by_class", "get_student_active_group", "get_student_groups",
     "get_group_members", "create_group", "create_membership_request",
     "get_pending_membership_requests", "approve_membership_request",
     "reject_membership_request", "create_dissolution_request",
