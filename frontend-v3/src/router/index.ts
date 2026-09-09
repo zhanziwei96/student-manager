@@ -97,9 +97,14 @@ const routes = [
         component: () => import('@/views/teacher/Students.vue'),
       },
       {
-        path: 'my-classes',
-        name: 'TeacherMyClasses',
-        component: () => import('@/views/teacher/MyClasses.vue'),
+        path: 'my-offerings',
+        name: 'TeacherMyOfferings',
+        component: () => import('@/views/teacher/MyOfferings.vue'),
+      },
+      {
+        path: 'offerings/:id/grades',
+        name: 'TeacherOfferingGrades',
+        component: () => import('@/views/teacher/OfferingGrades.vue'),
       },
       {
         path: 'session',

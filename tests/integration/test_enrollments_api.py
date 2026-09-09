@@ -46,6 +46,7 @@ def test_student_views_own_enrollments(student_client, enrollment_chain):
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data) == 1
+    assert data[0]["course_id"] is not None
     assert data[0]["course_name"] == "高等数学"
     assert data[0]["score"] == 80.0
     assert data[0]["final_score"] is None
