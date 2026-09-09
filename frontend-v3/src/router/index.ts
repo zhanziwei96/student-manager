@@ -107,6 +107,11 @@ const routes = [
         component: () => import('@/views/teacher/OfferingGrades.vue'),
       },
       {
+        path: 'rankings',
+        name: 'TeacherRankings',
+        component: () => import('@/views/teacher/TeacherRankings.vue'),
+      },
+      {
         path: 'session',
         name: 'TeacherSession',
         component: () => import('@/views/teacher/CourseSession.vue'),
