@@ -19,6 +19,11 @@ from app.api.routes.student_subject_scores import router as student_subject_scor
 from app.api.routes.group_scores import router as group_scores_router
 from app.api.routes.teacher_classes import router as teacher_classes_router
 from app.api.routes.enrollments import router as enrollments_router
+from app.api.routes.semesters import router as semesters_router
+from app.api.routes.cohorts import router as cohorts_router
+from app.api.routes.classes import router as classes_router
+from app.api.routes.courses import router as courses_router
+from app.api.routes.course_offerings import router as course_offerings_router
 
 __all__ = [
     "login_router",
@@ -39,4 +44,9 @@ __all__ = [
     "group_scores_router",
     "teacher_classes_router",
     "enrollments_router",
+    "semesters_router",
+    "cohorts_router",
+    "classes_router",
+    "courses_router",
+    "course_offerings_router",
 ]
