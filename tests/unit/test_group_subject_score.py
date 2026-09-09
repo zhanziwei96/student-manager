@@ -2,13 +2,13 @@
 from app.models import Group, GroupScoreLog
 
 
-def test_group_has_subject_score_fields():
-    """小组有科目和分数字段"""
+def test_group_has_course_score_fields():
+    """小组有课程和分数字段"""
     group = Group(
         class_name="1班", name="第一组", leader_student_id="TEST001",
-        subject_id=1, score=0.0
+        course_id=1, score=0.0
     )
-    assert group.subject_id == 1
+    assert group.course_id == 1
     assert group.score == 0.0
     assert group.version == 1
 
@@ -22,7 +22,7 @@ def test_group_score_default_zero():
 def test_group_score_log_creation():
     """小组分数日志创建"""
     log = GroupScoreLog(
-        group_id=1, subject_id=1,
+        group_id=1,
         old_score=0.0, new_score=5.0, delta=5.0,
         reason="课堂表现", operator="张老师", semester="2026-2027-1"
     )

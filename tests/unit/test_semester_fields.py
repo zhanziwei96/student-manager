@@ -2,7 +2,7 @@
 from app.models import (
     CourseSchedule, CourseSession, ScheduleAdjustment,
     CheckinRecord, ScoreLog,
-    Group, GroupTask, GroupEvaluationScore,
+    Group,
 )
 from app.models.question import Question
 
@@ -27,13 +27,6 @@ def test_semester_default_fills_current_term():
 
     group = Group(class_name="1班", name="第一组", leader_student_id="TEST001")
     assert group.semester == "2026-2027-1"
-
-    task = GroupTask(class_name="1班", title="小组作业", created_by="teacher1")
-    assert task.semester == "2026-2027-1"
-
-    score = GroupEvaluationScore(task_id=1, target_group_id=1, evaluator_type="teacher",
-                                 evaluator_id="teacher1", dimension_id=1, score=90)
-    assert score.semester == "2026-2027-1"
 
     question = Question(teacher_id=1, content="今天讲了什么？")
     assert question.semester == "2026-2027-1"

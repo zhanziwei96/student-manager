@@ -8,11 +8,8 @@ from pydantic import BaseModel, Field
 
 from app.core.db import get_session
 from app.core.config import HttpStatus
-from app.api.deps import (
-    require_admin_or_teacher, verify_teacher_class_access,
-    get_teacher_accessible_classes,
-)
-from app.crud.group_score import update_group_score, get_group_score_logs, get_group_leaderboard
+from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
+from app.crud.group_score import update_group_score, get_group_score_logs
 from app.models import Group
 from app.models.constants import ApiResponseConst, ApiResponse, ApiSuccessResponse
 

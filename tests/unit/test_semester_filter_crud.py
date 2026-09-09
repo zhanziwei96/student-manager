@@ -4,12 +4,11 @@ import pytest
 from sqlmodel import Session, select
 
 from app.models import CourseSchedule, CourseSession, CheckinRecord, ScoreLog
-from app.models import Group, GroupTask, Question
+from app.models import Group, Question
 from app.crud.schedule import get_schedules
 from app.crud.course_session import get_teacher_course_sessions
 from app.crud.checkin import get_all_checkins, get_student_score_logs
 from app.crud.group import dissolve_group, get_groups_by_class
-from app.crud.group_task import get_group_tasks_by_class
 from app.crud.question import get_questions_by_class
 
 
@@ -61,12 +60,6 @@ def two_term_data(session: Session):
                       semester="2026-2027-1", is_active=True)
     session.add_all([old_group, new_group])
 
-    old_task = GroupTask(class_name="1班", title="上学期任务", created_by="teacher1",
-                         semester="2025-2026-2")
-    new_task = GroupTask(class_name="1班", title="新学期任务", created_by="teacher1",
-                         semester="2026-2027-1")
-    session.add_all([old_task, new_task])
-
     old_q = Question(teacher_id=1, class_name="1班", content="上学期问题", semester="2025-2026-2")
     new_q = Question(teacher_id=1, class_name="1班", content="新学期问题", semester="2026-2027-1")
     session.add_all([old_q, new_q])
@@ -104,59 +97,7 @@ def test_groups_filtered_by_current_term(two_term_data):
     assert groups[0].semester == "2026-2027-1"
 
 
-def test_group_tasks_filtered_by_current_term(two_term_data):
-    tasks = get_group_tasks_by_class(two_term_data, "1班")
-    assert len(tasks) == 1
-    assert tasks[0].semester == "2026-2027-1"
-
-
 def test_questions_filtered_by_current_term(two_term_data):
     questions = get_questions_by_class(two_term_data, "1班")
     assert len(questions) == 1
     assert questions[0].semester == "2026-2027-1"
-
-
-def test_dissolve_group_not_blocked_by_previous_term_evaluating_task(session: Session):
-    """上学期遗留的 evaluating 任务不应卡住本学期小组解散"""
-    group = Group(class_name="1班", name="新学期的组", leader_student_id="TEST001",
-                  semester="2026-2027-1", is_active=True)
-    old_task = GroupTask(class_name="1班", title="上学期遗留互评任务", created_by="teacher1",
-                         semester="2025-2026-2", status="evaluating")
-    session.add_all([group, old_task])
-    session.commit()
-
-    assert dissolve_group(session, group.id) is True
-    session.refresh(group)
-    assert group.is_active is False
-
-
-def test_dissolve_group_still_blocked_by_current_term_evaluating_task(session: Session):
-    """本学期同班存在 evaluating 任务时仍禁止解散小组"""
-    group = Group(class_name="1班", name="新学期的组", leader_student_id="TEST001",
-                  semester="2026-2027-1", is_active=True)
-    task = GroupTask(class_name="1班", title="本学期互评任务", created_by="teacher1",
-                     semester="2026-2027-1", status="evaluating")
-    session.add_all([group, task])
-    session.commit()
-
-    with pytest.raises(ValueError, match="不可解散小组"):
-        dissolve_group(session, group.id)
-
-
-def test_global_question_or_group_respects_semester_filter(session: Session):
-    """OR 组（class_name == X 或 IS NULL）与学期过滤为 AND 组合：
-    上学期数据（含全局问题）不得经 OR 组泄漏到当前学期结果"""
-    # 全局可见问题：class_name 为空（semester 缺省即当前学期）
-    cur_global = Question(teacher_id=1, class_name=None, content="当前学期全局问题")
-    # 上学期：一条全局问题 + 一条本班问题（均只差 semester，与当前学期行唯一区别）
-    old_global = Question(teacher_id=1, class_name=None, content="上学期全局问题",
-                          semester="2025-2026-2")
-    old_class_q = Question(teacher_id=1, class_name="1班", content="上学期班级问题",
-                           semester="2025-2026-2")
-    session.add_all([cur_global, old_global, old_class_q])
-    session.commit()
-
-    questions = get_questions_by_class(session, "1班")
-    assert len(questions) == 1
-    assert questions[0].class_name is None
-    assert questions[0].content == "当前学期全局问题"

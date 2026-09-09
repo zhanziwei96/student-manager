@@ -29,6 +29,14 @@ _test_engine = create_engine(
 import app.core.db as db_module
 db_module.engine = _test_engine
 
+# 先删废弃表（任务/互评已停用，旧测试库残留且 FK 引用 groups，阻止 drop_all）
+with _test_engine.begin() as conn:
+    from sqlalchemy import text
+    conn.execute(text(
+        "DROP TABLE IF EXISTS group_evaluation_scores, evaluation_assignments, "
+        "group_task_dimensions, group_tasks CASCADE"
+    ))
+
 # 在新引擎上创建所有表
 SQLModel.metadata.drop_all(_test_engine)
 SQLModel.metadata.create_all(_test_engine)

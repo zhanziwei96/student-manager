@@ -436,22 +436,10 @@ def remove_group_member(session: Session, group_id: int, student_id: str) -> boo
 
 
 def dissolve_group(session: Session, group_id: int) -> bool:
-    """解散小组（标记为非活跃）；互评阶段不可解散"""
-    from app.models.group import GroupTask
-
+    """解散小组（标记为非活跃）"""
     group = session.get(Group, group_id)
     if not group or not group.is_active:
         return False
-
-    evaluating_task = session.exec(
-        select(GroupTask).where(
-            GroupTask.class_name == group.class_name,
-            GroupTask.semester == get_current_term(),
-            GroupTask.status == "evaluating",
-        )
-    ).first()
-    if evaluating_task:
-        raise ValueError("班级正在互评阶段，不可解散小组")
 
     group.is_active = False
     session.add(group)

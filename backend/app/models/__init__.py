@@ -10,8 +10,7 @@ from app.models.course_schedule import CourseSchedule, CourseScheduleResponse
 from app.models.course_session import CourseSession, ScheduleAdjustment, CourseSessionResponse
 from app.models.group import (
     Group, GroupMember, GroupMembershipRequest,
-    GroupTask, GroupTaskDimension, EvaluationAssignment,
-    GroupEvaluationScore, GroupDissolutionRequest,
+    GroupDissolutionRequest,
     ClassGroupSettings, GroupScoreLog,
 )
 from app.models.question import Question, Answer, QuestionResponse, AnswerResponse
@@ -53,8 +52,7 @@ __all__ = [
     "CourseSchedule", "CourseScheduleResponse",
     # Group Collaboration
     "Group", "GroupMember", "GroupMembershipRequest",
-    "GroupTask", "GroupTaskDimension", "EvaluationAssignment",
-    "GroupEvaluationScore", "GroupDissolutionRequest", "ClassGroupSettings",
+    "GroupDissolutionRequest", "ClassGroupSettings",
     "GroupScoreLog",
     # API Response Models
     "ApiResponse", "ApiSuccessResponse", "ApiListResponse", "ApiErrorResponse",
