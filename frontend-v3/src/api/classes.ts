@@ -1,29 +1,35 @@
-import { get } from '@/lib/api'
-import type { Student } from '@/types'
+import { get, post, put, del } from '@/lib/api'
+import type { AdminClass } from '@/types'
 
-export interface ClassInfo {
+/** 创建班级请求 - 对应后端 CreateClassRequest */
+export interface CreateClassRequest {
   name: string
-  status: 'active' | 'inactive'
+  major?: string
+  cohort_year: string
 }
 
-export interface ClassWithStats {
-  name: string
-  student_count: number
-  teacher?: string
-  status: 'active' | 'inactive'
-  average_score: number
+/** 更新班级请求 - 对应后端 UpdateClassRequest */
+export interface UpdateClassRequest {
+  name?: string
+  major?: string
 }
 
 /**
- * 班级管理 API - FE-003 修复后
+ * 班级管理 API（管理员 CRUD）
  *
- * 调用方无需再检查 res.success，错误会自动抛出
- * 返回类型直接是数据 T，而不是 ApiResponse<T>
+ * 后端路由: backend/app/api/routes/classes.py
  */
 export const classesApi = {
-  getAll: (): Promise<ClassInfo[]> =>
-    get('/classes'),
+  /** 班级列表（可按届过滤，含学生数） */
+  list: (cohortYear?: string): Promise<AdminClass[]> =>
+    get('/classes', cohortYear ? { cohort_year: cohortYear } : undefined),
 
-  getStudentsByClass: (className: string): Promise<Student[]> =>
-    get('/students', { class_name: className }),
+  create: (data: CreateClassRequest): Promise<AdminClass> =>
+    post('/classes', data),
+
+  update: (id: number, data: UpdateClassRequest): Promise<AdminClass> =>
+    put(`/classes/${id}`, data),
+
+  delete: (id: number): Promise<void> =>
+    del(`/classes/${id}`),
 }

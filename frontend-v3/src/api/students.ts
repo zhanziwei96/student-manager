@@ -64,6 +64,10 @@ export const studentsApi = {
   getByStudentId: (studentId: string): Promise<Student> =>
     get(`/students/${studentId}`),
 
+  /** 按班级名获取学生列表 */
+  getStudentsByClass: (className: string): Promise<Student[]> =>
+    get('/students', { class_name: className }),
+
   create: (data: CreateStudentRequest): Promise<Student> =>
     post('/students', data),
 

@@ -196,23 +196,87 @@ export interface CourseSessionStatus {
 }
 
 /**
- * 班级信息类型 - 对应后端 ClassInfo
+ * 班级类型 - 对应后端 classes 路由 _class_dict
  *
- * 注意: 与后端返回的班级数据结构保持一致
+ * 后端模型: backend/app/api/routes/classes.py
+ * 注意: 保持与后端字段一致，修改时需同步更新
  */
-export interface ClassInfo {
-  name: string
-  status: 'active' | 'inactive'
-  student_count?: number        // 学生数量（由前端计算）
-  average_score?: number        // 平均分（由前端计算）
+export interface AdminClass {
+  id: number                    // 班级ID
+  name: string                  // 班级名（如 1班）
+  major: string                 // 专业
+  cohort_year: string           // 所属届
+  display_name: string          // 显示名（届+专业+班）
+  student_count: number         // 学生数
 }
 
 /**
- * 班级详细信息 - 包含统计数据
+ * 学期类型 - 对应后端 semesters 路由 _semester_dict
+ *
+ * 后端模型: backend/app/api/routes/semesters.py
  */
-export interface ClassWithStats extends ClassInfo {
-  student_count: number
-  average_score: number
+export interface Semester {
+  id: number                    // 学期ID
+  label: string                 // 学期标识（如 2026-2027-1）
+  start_date: string            // 开学第一天（ISO格式）
+  total_weeks: number           // 总周数
+  is_current: boolean           // 是否当前学期
+  status: 'active' | 'archived' // 状态
+}
+
+/**
+ * 届类型 - 对应后端 cohorts 路由 _cohort_dict
+ *
+ * 后端模型: backend/app/api/routes/cohorts.py
+ */
+export interface Cohort {
+  year: string                  // 届（入学年份，如 2026）
+  label: string                 // 显示名（如 2026届）
+  entry_semester_id: number | null // 入学学期ID
+  status: 'active' | 'graduated'   // 状态
+}
+
+/**
+ * 课程类型 - 对应后端 courses 路由 _course_dict
+ *
+ * 后端模型: backend/app/api/routes/courses.py
+ */
+export interface Course {
+  id: number                    // 课程ID
+  code: string                  // 课程编码（如 MATH1001）
+  name: string                  // 课程名称
+  department: string            // 开课院系
+  status: 'active' | 'archived' // 状态
+}
+
+/**
+ * 教学班类型 - 对应后端 offerings 路由 _offering_dict
+ *
+ * 后端模型: backend/app/api/routes/course_offerings.py
+ */
+export interface CourseOffering {
+  id: number                    // 教学班ID
+  course_id: number             // 课程ID
+  semester_id: number           // 学期ID
+  teacher_id: number | null     // 教师ID（可空：先排课后定教师）
+  teacher_name: string          // 教师姓名
+  class_scope: string           // 面向范围（如 计科1-2班）
+  capacity: number | null       // 容量
+  status: 'active' | 'ended'    // 状态
+}
+
+/**
+ * 选课名单行 - 对应后端 offerings/{id}/enrollments 响应
+ *
+ * 后端模型: backend/app/api/routes/course_offerings.py::list_offering_enrollments
+ */
+export interface EnrollmentRow {
+  enrollment_id: number         // 选课记录ID
+  student_id: string            // 学号
+  name: string                  // 姓名
+  class_name: string            // 班级
+  score: number                 // 平时成绩
+  final_score: number | null    // 期末成绩
 }
 
 // 排行榜类型

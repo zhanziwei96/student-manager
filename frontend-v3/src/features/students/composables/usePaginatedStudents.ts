@@ -20,10 +20,10 @@ export function usePaginatedStudents(pageSize = 50) {
 
   const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
-  // 班级选项（/classes 接口：教师端只返回负责且未归档的班级）
+  // 班级选项（/classes 接口：班级管理列表，含学生数）
   const { data: classes } = useQuery({
     queryKey: ['classes'],
-    queryFn: () => classesApi.getAll(),
+    queryFn: () => classesApi.list(),
     staleTime: 1000 * 60 * 5,
   })
 

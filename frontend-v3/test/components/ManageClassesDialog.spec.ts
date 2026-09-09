@@ -26,11 +26,20 @@ vi.mock('@/api/users', () => ({
 }))
 
 // Mock useClasses composable
+const fakeClass = (id: number, name: string) => ({
+  id,
+  name,
+  major: '',
+  cohort_year: '2026',
+  display_name: `2026届${name}`,
+  student_count: 0,
+})
+
 const mockClasses = ref([
-  { name: '一年级一班', status: 'active' },
-  { name: '一年级二班', status: 'active' },
-  { name: '二年级一班', status: 'inactive' },
-  { name: '二年级二班', status: 'active' }
+  fakeClass(1, '一年级一班'),
+  fakeClass(2, '一年级二班'),
+  fakeClass(3, '二年级一班'),
+  fakeClass(4, '二年级二班')
 ])
 
 vi.mock('@/composables/useClasses', () => ({
@@ -89,10 +98,10 @@ describe('ManageClassesDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockClasses.value = [
-      { name: '一年级一班', status: 'active' },
-      { name: '一年级二班', status: 'active' },
-      { name: '二年级一班', status: 'inactive' },
-      { name: '二年级二班', status: 'active' }
+      fakeClass(1, '一年级一班'),
+      fakeClass(2, '一年级二班'),
+      fakeClass(3, '二年级一班'),
+      fakeClass(4, '二年级二班')
     ]
   })
 
@@ -287,16 +296,14 @@ describe('ManageClassesDialog', () => {
     expect(vm.selectedClasses).toEqual(['一年级一班'])
   })
 
-  it('displays class status correctly', async () => {
+  it('displays class list correctly', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    // 检查已分配班级中的状态标签
+    // 检查已分配班级与可分配班级列表渲染
     const text = wrapper.text()
-    expect(text).toContain('启用') // 一年级一班是启用的
-    
-    // 添加一个停用的班级到可分配区域检查
-    expect(text).toContain('停用') // 二年级一班是停用的
+    expect(text).toContain('一年级一班')
+    expect(text).toContain('二年级一班')
   })
 
   it('save button shows correct text based on changes', async () => {
