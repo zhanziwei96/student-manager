@@ -185,8 +185,6 @@ export const groupsApi = {
     get(`/student/group-tasks/${taskId}/evaluations`),
   submitStudentScores: (taskId: number, data: StudentScoresSubmit): Promise<unknown> =>
     post(`/student/group-tasks/${taskId}/scores`, data),
-  getMyGroupResults: (): Promise<GroupTaskResult[]> =>
-    get('/student/groups/my-group/results'),
   getMyGroup: (): Promise<MyGroup> =>
     get('/student/groups/my-group'),
 }

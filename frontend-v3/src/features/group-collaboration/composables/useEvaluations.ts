@@ -28,9 +28,3 @@ export function useSubmitStudentScores() {
   })
 }
 
-export function useMyGroupResults() {
-  return useQuery({
-    queryKey: ['my-group-results'],
-    queryFn: () => groupsApi.getMyGroupResults(),
-  })
-}

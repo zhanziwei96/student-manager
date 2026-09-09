@@ -99,10 +99,10 @@ const navGroups = computed(() => {
       label: '',
       items: [
         { name: '仪表板', path: '/student', icon: LayoutDashboard },
+        { name: '我的成绩', path: '/student/grades', icon: GraduationCap },
+        { name: '排行榜', path: '/student/rankings', icon: Trophy },
         { name: '课堂签到', path: '/student/checkin', icon: CheckCircle },
         { name: '我的小组', path: '/student/my-group', icon: Users },
-        { name: '组间互评', path: '/student/group-evaluations', icon: CheckCircle },
-        { name: '成绩单', path: '/student/group-results', icon: GraduationCap },
         { name: '课堂问答', path: '/student/questions', icon: MessageCircle },
         { name: '失物招领', path: '/student/lost-found', icon: Search }
       ]
