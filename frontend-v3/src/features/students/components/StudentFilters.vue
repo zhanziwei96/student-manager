@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { SearchableSelect, Input, Card } from '@/components/ui'
-import { Search, GraduationCap } from 'lucide-vue-next'
+import { SearchableSelect, Select, Input, Card } from '@/components/ui'
+import { Search, GraduationCap, Layers } from 'lucide-vue-next'
 import type { ClassOption } from '../types'
 
 /**
  * 学生筛选组件
  *
  * 提供班级筛选和搜索功能 - 视觉优化版本
+ * 传入 cohortOptions 时显示届筛选（届 → 班级联动，admin 使用）
  */
 
 interface Props {
   searchQuery: string
   selectedClass: string
   classOptions: ClassOption[]
+  selectedCohort?: string
+  cohortOptions?: ClassOption[]
 }
 
 defineProps<Props>()
@@ -20,6 +23,7 @@ defineProps<Props>()
 const emit = defineEmits<{
   'update:searchQuery': [value: string]
   'update:selectedClass': [value: string]
+  'update:selectedCohort': [value: string]
 }>()
 
 const handleSearchUpdate = (value: string | number) => {
@@ -29,11 +33,32 @@ const handleSearchUpdate = (value: string | number) => {
 const handleClassUpdate = (value: string | number) => {
   emit('update:selectedClass', String(value))
 }
+
+const handleCohortUpdate = (value: string | number) => {
+  emit('update:selectedCohort', String(value))
+}
 </script>
 
 <template>
   <Card class="relative border-[#e5e5e5] bg-white p-4">
     <div class="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+      <!-- Cohort Filter（可选，届 → 班级联动） -->
+      <div
+        v-if="cohortOptions"
+        class="w-full sm:w-44"
+      >
+        <label class="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[#737373]">
+          <Layers class="h-3.5 w-3.5" />
+          届筛选
+        </label>
+        <Select
+          :model-value="selectedCohort"
+          :options="cohortOptions"
+          placeholder="全部届"
+          @update:model-value="handleCohortUpdate"
+        />
+      </div>
+
       <!-- Class Filter -->
       <div class="w-full sm:w-64">
         <label class="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[#737373]">

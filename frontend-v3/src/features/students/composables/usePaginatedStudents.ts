@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { studentsApi } from '@/api'
 import { classesApi } from '@/api/classes'
@@ -13,19 +13,26 @@ import type { ClassOption } from '../types'
  *   （搜索需跨页匹配，故搜索时不分页）
  * - 班级选项来自 /classes 接口，不再依赖全量学生列表
  */
-export function usePaginatedStudents(pageSize = 50) {
+export function usePaginatedStudents(pageSize = 50, cohortYear?: Ref<string | undefined>) {
   const page = ref(1)
   const searchQuery = ref('')
   const className = ref('')
 
   const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
-  // 班级选项（/classes 接口：班级管理列表，含学生数）
+  // 班级选项（/classes 接口：班级管理列表，含学生数；传入届时按届过滤）
   const { data: classes } = useQuery({
-    queryKey: ['classes'],
-    queryFn: () => classesApi.list(),
+    queryKey: ['classes', cohortYear],
+    queryFn: () => classesApi.list(cohortYear?.value || undefined),
     staleTime: 1000 * 60 * 5,
   })
+
+  // 届切换后班级选项变化，重置已选班级并自动选中新届第一个班级
+  if (cohortYear) {
+    watch(cohortYear, () => {
+      className.value = ''
+    })
+  }
 
   const classOptions = computed<ClassOption[]>(() => [
     { value: '', label: '全部班级', count: 0 },

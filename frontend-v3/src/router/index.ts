@@ -52,6 +52,16 @@ const routes = [
         component: () => import('@/views/admin/Cohorts.vue'),
       },
       {
+        path: 'courses',
+        name: 'AdminCourses',
+        component: () => import('@/views/admin/Courses.vue'),
+      },
+      {
+        path: 'offerings',
+        name: 'AdminOfferings',
+        component: () => import('@/views/admin/Offerings.vue'),
+      },
+      {
         path: 'checkins',
         name: 'AdminCheckins',
         component: () => import('@/views/admin/Checkins.vue'),

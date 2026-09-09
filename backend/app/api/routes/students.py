@@ -164,6 +164,7 @@ async def get_students_list(
             'name': student.name,
             'class_name': student.class_name,
             'score': student.score,
+            'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
             'checkin_status': 'checked_in' if student.student_id in checked_in_students else 'not_checked_in',
@@ -210,6 +211,7 @@ async def get_student_info(
             'name': student.name,
             'class_name': student.class_name,
             'score': student.score,
+            'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
         }
@@ -244,6 +246,7 @@ async def add_student(
             'name': student.name,
             'class_name': student.class_name,
             'score': student.score,
+            'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
         }

@@ -99,11 +99,15 @@ export interface Student {
   name: string                  // 姓名
   class_name: string            // 班级
   score: number                 // 分数
+  status?: StudentStatus        // 学籍状态（active|suspended|withdrawn|graduated）
   is_account_enabled: boolean   // 账户是否启用
   checkin_status?: 'checked_in' | 'not_checked_in' // 课堂签到状态（API 动态返回）
   created_at?: string           // 创建时间（ISO格式）
   last_login?: string           // 最后登录时间（ISO格式）
 }
+
+// 学籍状态 - 对应后端 Student.status
+export type StudentStatus = 'active' | 'suspended' | 'withdrawn' | 'graduated'
 
 /**
  * 创建学生请求 - 对应后端 StudentCreate
