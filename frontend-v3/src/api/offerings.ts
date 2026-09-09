@@ -23,6 +23,19 @@ export interface ImportEnrollmentsRequest {
   student_ids: string[]
 }
 
+/** 我的教学班条目 - 对应后端 /teacher/offerings 响应 */
+export interface TeacherOffering {
+  id: number
+  course_id: number
+  course_name: string
+  course_code: string
+  teacher_name: string
+  class_scope: string
+  capacity: number | null
+  status: 'active' | 'ended'
+  enrolled_count: number
+}
+
 /**
  * 教学班管理 API（管理员）
  *
@@ -32,6 +45,10 @@ export const offeringsApi = {
   /** 教学班列表（可按学期过滤，缺省当前学期） */
   list: (semesterId?: number): Promise<CourseOffering[]> =>
     get('/offerings', semesterId ? { semester_id: semesterId } : undefined),
+
+  /** 我的教学班（教师：本学期本人授课；管理员：全部），含课程信息与选课人数 */
+  listMine: (): Promise<TeacherOffering[]> =>
+    get('/teacher/offerings'),
 
   create: (data: CreateOfferingRequest): Promise<CourseOffering> =>
     post('/offerings', data),

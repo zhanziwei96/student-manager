@@ -22,6 +22,7 @@ import {
   Library,
   Presentation,
   CalendarDays,
+  Trophy,
 } from 'lucide-vue-next'
 import { KeyRound } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
@@ -82,8 +83,8 @@ const navGroups = computed(() => {
       label: '',
       items: [
         { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
-        { name: '学生管理', path: '/teacher/students', icon: Users },
-        { name: '我的班级', path: '/teacher/my-classes', icon: School },
+        { name: '我的教学班', path: '/teacher/my-offerings', icon: Presentation },
+        { name: '排行榜', path: '/teacher/rankings', icon: Trophy },
         { name: '课堂签到', path: '/teacher/session', icon: Calendar },
         { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
         { name: '科目管理', path: '/teacher/subjects', icon: BookMarked },
@@ -98,10 +99,10 @@ const navGroups = computed(() => {
       label: '',
       items: [
         { name: '仪表板', path: '/student', icon: LayoutDashboard },
+        { name: '我的成绩', path: '/student/grades', icon: GraduationCap },
+        { name: '排行榜', path: '/student/rankings', icon: Trophy },
         { name: '课堂签到', path: '/student/checkin', icon: CheckCircle },
         { name: '我的小组', path: '/student/my-group', icon: Users },
-        { name: '组间互评', path: '/student/group-evaluations', icon: CheckCircle },
-        { name: '成绩单', path: '/student/group-results', icon: GraduationCap },
         { name: '课堂问答', path: '/student/questions', icon: MessageCircle },
         { name: '失物招领', path: '/student/lost-found', icon: Search }
       ]

@@ -146,6 +146,7 @@ def get_student_enrollments(
     query = (
         select(
             Enrollment,
+            Course.id,
             Course.name,
             CourseOffering.teacher_name,
             CourseOffering.class_scope,
@@ -161,6 +162,7 @@ def get_student_enrollments(
     return [
         {
             "enrollment_id": e.id,
+            "course_id": course_id,
             "course_name": course_name,
             "teacher_name": teacher_name,
             "class_scope": class_scope,
@@ -168,5 +170,5 @@ def get_student_enrollments(
             "final_score": e.final_score,
             "status": e.status,
         }
-        for e, course_name, teacher_name, class_scope in session.exec(query).all()
+        for e, course_id, course_name, teacher_name, class_scope in session.exec(query).all()
     ]
