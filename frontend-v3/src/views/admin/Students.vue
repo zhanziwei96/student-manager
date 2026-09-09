@@ -4,11 +4,34 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useStudentCreate, useToast } from '@/composables'
 import { StudentFilters, usePaginatedStudents } from '@/features/students'
 import { Card, Button, Badge, Dialog, Input, Label, Checkbox, Select, DataContainer } from '@/components/ui'
-import { Plus, Archive, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { Plus, Archive, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Loader2 } from 'lucide-vue-next'
 import { studentsApi } from '@/api'
 import type { StudentSubjectScore } from '@/api/students'
-import type { Student } from '@/types'
+import { classesApi } from '@/api/classes'
+import { cohortsApi } from '@/api/cohorts'
+import type { Student, StudentStatus } from '@/types'
+import type { ClassOption } from '@/features/students/types'
 import { getErrorMessage } from '@/lib/error'
+
+// 学籍状态展示映射（与后端 Student.status 一致）
+const STUDENT_STATUS_LABEL: Record<StudentStatus, string> = {
+  active: '在读',
+  suspended: '休学',
+  withdrawn: '退学',
+  graduated: '毕业',
+}
+const STUDENT_STATUS_BADGE: Record<StudentStatus, 'success' | 'warning' | 'error' | 'secondary'> = {
+  active: 'success',
+  suspended: 'warning',
+  withdrawn: 'error',
+  graduated: 'secondary',
+}
+const STUDENT_STATUS_OPTIONS: { value: StudentStatus; label: string }[] = [
+  { value: 'active', label: '在读' },
+  { value: 'suspended', label: '休学' },
+  { value: 'withdrawn', label: '退学' },
+  { value: 'graduated', label: '毕业' },
+]
 
 /**
  * 管理员学生管理页面 - FE-006 重构后
@@ -18,7 +41,19 @@ import { getErrorMessage } from '@/lib/error'
  */
 
 
-// === 数据获取（服务端分页） ===
+// === 届 → 班级联动筛选 ===
+const cohortFilter = ref('')
+const { data: cohortsData } = useQuery({
+  queryKey: ['cohorts'],
+  queryFn: () => cohortsApi.list(),
+})
+const cohorts = computed(() => cohortsData.value ?? [])
+const cohortOptions = computed<ClassOption[]>(() => [
+  { value: '', label: '全部届', count: 0 },
+  ...cohorts.value.map((c) => ({ value: c.year, label: c.label, count: 0 })),
+])
+
+// === 数据获取（服务端分页，班级选项按届过滤） ===
 const {
   page,
   searchQuery,
@@ -33,7 +68,7 @@ const {
   refetch,
   setSearchQuery,
   setClassFilter,
-} = usePaginatedStudents()
+} = usePaginatedStudents(50, cohortFilter)
 const { mutateAsync: createStudent, isPending: isCreating } = useStudentCreate()
 
 // === Toast 状态 (队列模式) ===
@@ -145,31 +180,41 @@ const handleUpdateSubjectScore = async () => {
   }
 }
 
-// === 添加学生对话框 ===
+// === 添加学生对话框（届 → 班级联动选择） ===
 const showAddDialog = ref(false)
 const newStudent = ref({
   student_id: '',
   name: '',
-  class_name: '',
+  class_id: '',
 })
 const addFormErrors = ref({
   student_id: '',
   name: '',
-  class_name: '',
+  class_id: '',
 })
+const addCohortYear = ref('')
+
+const { data: addClassesData } = useQuery({
+  queryKey: ['classes', addCohortYear],
+  queryFn: () => classesApi.list(addCohortYear.value || undefined),
+})
+const addClassOptions = computed(() =>
+  (addClassesData.value ?? []).map((c) => ({ value: c.id, label: c.display_name })),
+)
 
 // 打开添加学生弹窗
 const openAddDialog = () => {
   newStudent.value = {
     student_id: '',
     name: '',
-    class_name: '',
+    class_id: '',
   }
   addFormErrors.value = {
     student_id: '',
     name: '',
-    class_name: '',
+    class_id: '',
   }
+  addCohortYear.value = ''
   showAddDialog.value = true
 }
 
@@ -178,7 +223,7 @@ const validateAddForm = () => {
   addFormErrors.value = {
     student_id: '',
     name: '',
-    class_name: '',
+    class_id: '',
   }
   let isValid = true
 
@@ -192,8 +237,8 @@ const validateAddForm = () => {
     isValid = false
   }
 
-  if (!newStudent.value.class_name.trim()) {
-    addFormErrors.value.class_name = '请输入班级'
+  if (!newStudent.value.class_id) {
+    addFormErrors.value.class_id = '请选择班级'
     isValid = false
   }
 
@@ -204,17 +249,93 @@ const validateAddForm = () => {
 const handleAddStudent = async () => {
   if (!validateAddForm()) return
 
+  const cls = (addClassesData.value ?? []).find((c) => c.id === Number(newStudent.value.class_id))
+
   try {
     await createStudent({
       student_id: newStudent.value.student_id.trim(),
       name: newStudent.value.name.trim(),
-      class_name: newStudent.value.class_name.trim(),
+      class_name: cls?.name ?? '',
     })
 
     showSuccessToast(`学生 ${newStudent.value.name} 添加成功`)
     showAddDialog.value = false
   } catch (err: unknown) {
     showErrorToast(getErrorMessage(err) || '添加学生失败')
+  }
+}
+
+// === 学籍状态切换 ===
+const showStatusDialog = ref(false)
+const statusStudent = ref<Student | null>(null)
+const statusForm = ref<StudentStatus>('active')
+const isUpdatingStatus = ref(false)
+
+const openStatusDialog = (student: Student) => {
+  statusStudent.value = student
+  statusForm.value = (student.status ?? 'active') as StudentStatus
+  showStatusDialog.value = true
+}
+
+const handleUpdateStatus = async () => {
+  if (!statusStudent.value) return
+
+  try {
+    isUpdatingStatus.value = true
+    await studentsApi.updateStatus(statusStudent.value.student_id, statusForm.value)
+    await queryClient.invalidateQueries({ queryKey: ['students'] })
+    showStatusDialog.value = false
+    showSuccessToast(`${statusStudent.value.name} 的学籍状态已更新`)
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '更新学籍状态失败')
+  } finally {
+    isUpdatingStatus.value = false
+  }
+}
+
+// === 转班（届 → 班级联动选择目标班） ===
+const showTransferDialog = ref(false)
+const transferStudent = ref<Student | null>(null)
+const transferCohortYear = ref('')
+const transferClassId = ref<number | ''>('')
+const transferError = ref('')
+const isTransferring = ref(false)
+
+const { data: transferClassesData } = useQuery({
+  queryKey: ['classes', transferCohortYear],
+  queryFn: () => classesApi.list(transferCohortYear.value || undefined),
+  enabled: () => showTransferDialog.value,
+})
+const transferClassOptions = computed(() =>
+  (transferClassesData.value ?? []).map((c) => ({ value: c.id, label: c.display_name })),
+)
+
+const openTransferDialog = (student: Student) => {
+  transferStudent.value = student
+  transferCohortYear.value = ''
+  transferClassId.value = ''
+  transferError.value = ''
+  showTransferDialog.value = true
+}
+
+const handleTransfer = async () => {
+  if (!transferStudent.value) return
+  if (transferClassId.value === '') {
+    transferError.value = '请选择目标班级'
+    return
+  }
+
+  try {
+    isTransferring.value = true
+    await studentsApi.transferClass(transferStudent.value.student_id, Number(transferClassId.value))
+    await queryClient.invalidateQueries({ queryKey: ['students'] })
+    await queryClient.invalidateQueries({ queryKey: ['classes'] })
+    showTransferDialog.value = false
+    showSuccessToast(`${transferStudent.value.name} 已转班`)
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '转班失败')
+  } finally {
+    isTransferring.value = false
   }
 }
 </script>
@@ -251,7 +372,9 @@ const handleAddStudent = async () => {
     <StudentFilters
       v-model:search-query="searchQuery"
       v-model:selected-class="className"
+      v-model:selected-cohort="cohortFilter"
       :class-options="classOptions"
+      :cohort-options="cohortOptions"
       class="mb-5"
       @update:search-query="setSearchQuery"
       @update:selected-class="setClassFilter"
@@ -291,10 +414,10 @@ const handleAddStudent = async () => {
                 </div>
                 <span class="font-medium text-black truncate">{{ student.name }}</span>
                 <Badge
-                  :variant="student.is_account_enabled ? 'success' : 'secondary'"
+                  :variant="STUDENT_STATUS_BADGE[(student.status ?? 'active') as StudentStatus]"
                   class="text-xs flex-shrink-0"
                 >
-                  {{ student.is_account_enabled ? '启用' : '禁用' }}
+                  {{ STUDENT_STATUS_LABEL[(student.status ?? 'active') as StudentStatus] }}
                 </Badge>
               </div>
               <p class="text-sm text-[#a3a3a3] mt-1">{{ student.student_id }}</p>
@@ -306,6 +429,24 @@ const handleAddStudent = async () => {
             </div>
           </div>
           <div class="relative z-10 mt-3">
+            <div class="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                class="flex-1 hover:bg-[#fafafa]"
+                @click="openTransferDialog(student)"
+              >
+                转班
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                class="flex-1 hover:bg-[#fafafa]"
+                @click="openStatusDialog(student)"
+              >
+                学籍
+              </Button>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -381,6 +522,9 @@ const handleAddStudent = async () => {
                   分数
                 </th>
                 <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
+                  学籍
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   状态
                 </th>
                 <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
@@ -407,27 +551,48 @@ const handleAddStudent = async () => {
                     {{ student.score }}
                   </td>
                   <td class="px-4 py-3">
+                    <Badge :variant="STUDENT_STATUS_BADGE[(student.status ?? 'active') as StudentStatus]">
+                      {{ STUDENT_STATUS_LABEL[(student.status ?? 'active') as StudentStatus] }}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3">
                     <Badge :variant="student.is_account_enabled ? 'success' : 'secondary'">
                       {{ student.is_account_enabled ? '启用' : '禁用' }}
                     </Badge>
                   </td>
                   <td class="px-4 py-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      data-testid="expand-subjects-btn"
-                      @click="toggleSubjects(student.student_id)"
-                    >
-                      科目分数
-                      <ChevronUp
-                        v-if="expandedStudentId === student.student_id"
-                        class="ml-1 h-4 w-4"
-                      />
-                      <ChevronDown
-                        v-else
-                        class="ml-1 h-4 w-4"
-                      />
-                    </Button>
+                    <div class="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        @click="openTransferDialog(student)"
+                      >
+                        转班
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        @click="openStatusDialog(student)"
+                      >
+                        学籍
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid="expand-subjects-btn"
+                        @click="toggleSubjects(student.student_id)"
+                      >
+                        科目分数
+                        <ChevronUp
+                          v-if="expandedStudentId === student.student_id"
+                          class="ml-1 h-4 w-4"
+                        />
+                        <ChevronDown
+                          v-else
+                          class="ml-1 h-4 w-4"
+                        />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
                 <!-- 展开行：科目分数列表 -->
@@ -437,7 +602,7 @@ const handleAddStudent = async () => {
                   data-testid="subject-scores-row"
                 >
                   <td
-                    colspan="6"
+                    colspan="7"
                     class="px-4 py-3"
                   >
                     <p
@@ -556,18 +721,28 @@ const handleAddStudent = async () => {
           </p>
         </div>
         <div class="space-y-2">
-          <Label for="className">班级</Label>
-          <Input
-            id="className"
-            v-model="newStudent.class_name"
-            placeholder="输入班级名称"
-            :class="addFormErrors.class_name ? 'border-[#ef4444]' : ''"
+          <Label for="addCohort">所属届</Label>
+          <Select
+            id="addCohort"
+            v-model="addCohortYear"
+            :options="cohortOptions.filter((o) => o.value !== '')"
+            placeholder="选择届"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="addClass">班级</Label>
+          <Select
+            id="addClass"
+            v-model="newStudent.class_id"
+            :options="addClassOptions"
+            placeholder="选择班级"
+            :class="addFormErrors.class_id ? 'border-[#ef4444]' : ''"
           />
           <p
-            v-if="addFormErrors.class_name"
+            v-if="addFormErrors.class_id"
             class="text-sm text-[#ef4444]"
           >
-            {{ addFormErrors.class_name }}
+            {{ addFormErrors.class_id }}
           </p>
         </div>
       </div>
@@ -683,6 +858,98 @@ const handleAddStudent = async () => {
           @click="handleDisableByClass"
         >
           确认禁用
+        </Button>
+      </template>
+    </Dialog>
+
+    <!-- 学籍状态切换对话框 -->
+    <Dialog
+      v-model:open="showStatusDialog"
+      :title="statusStudent ? `调整 ${statusStudent.name} 的学籍状态` : '调整学籍状态'"
+      description="休学/退学/毕业的学生将保留历史数据"
+    >
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="studentStatus">学籍状态</Label>
+          <Select
+            id="studentStatus"
+            v-model="statusForm"
+            :options="STUDENT_STATUS_OPTIONS"
+            data-testid="student-status-select"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          variant="outline"
+          @click="showStatusDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :disabled="isUpdatingStatus"
+          data-testid="confirm-status-btn"
+          @click="handleUpdateStatus"
+        >
+          <Loader2
+            v-if="isUpdatingStatus"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
+          保存
+        </Button>
+      </template>
+    </Dialog>
+
+    <!-- 转班对话框（届 → 班级联动） -->
+    <Dialog
+      v-model:open="showTransferDialog"
+      :title="transferStudent ? `${transferStudent.name} 转班` : '转班'"
+      :description="transferStudent ? `当前班级：${transferStudent.class_name}` : ''"
+    >
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="transferCohort">目标届</Label>
+          <Select
+            id="transferCohort"
+            v-model="transferCohortYear"
+            :options="cohortOptions.filter((o) => o.value !== '')"
+            placeholder="选择届"
+          />
+        </div>
+        <div class="space-y-2">
+          <Label for="transferClass">目标班级</Label>
+          <Select
+            id="transferClass"
+            v-model="transferClassId"
+            :options="transferClassOptions"
+            placeholder="选择班级"
+            data-testid="transfer-class-select"
+          />
+        </div>
+        <p
+          v-if="transferError"
+          class="text-sm text-[#ef4444]"
+        >
+          {{ transferError }}
+        </p>
+      </div>
+      <template #footer>
+        <Button
+          variant="outline"
+          @click="showTransferDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :disabled="isTransferring"
+          data-testid="confirm-transfer-btn"
+          @click="handleTransfer"
+        >
+          <Loader2
+            v-if="isTransferring"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
+          确认转班
         </Button>
       </template>
     </Dialog>

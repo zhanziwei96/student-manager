@@ -1,0 +1,53 @@
+import { get, post, put } from '@/lib/api'
+import type { CourseOffering, EnrollmentRow } from '@/types'
+
+/** 创建教学班请求 - 对应后端 CreateOfferingRequest */
+export interface CreateOfferingRequest {
+  course_id: number
+  semester_id: number
+  teacher_id?: number | null
+  class_scope: string
+  capacity?: number | null
+}
+
+/** 更新教学班请求 - 对应后端 UpdateOfferingRequest */
+export interface UpdateOfferingRequest {
+  teacher_id?: number | null
+  class_scope?: string
+  capacity?: number | null
+  status?: 'active' | 'ended'
+}
+
+/** 导入选课请求 - 对应后端 ImportEnrollmentsRequest */
+export interface ImportEnrollmentsRequest {
+  student_ids: string[]
+}
+
+/**
+ * 教学班管理 API（管理员）
+ *
+ * 后端路由: backend/app/api/routes/course_offerings.py
+ */
+export const offeringsApi = {
+  /** 教学班列表（可按学期过滤，缺省当前学期） */
+  list: (semesterId?: number): Promise<CourseOffering[]> =>
+    get('/offerings', semesterId ? { semester_id: semesterId } : undefined),
+
+  create: (data: CreateOfferingRequest): Promise<CourseOffering> =>
+    post('/offerings', data),
+
+  update: (id: number, data: UpdateOfferingRequest): Promise<CourseOffering> =>
+    put(`/offerings/${id}`, data),
+
+  /** 教学班选课名单 */
+  listEnrollments: (offeringId: number): Promise<EnrollmentRow[]> =>
+    get(`/offerings/${offeringId}/enrollments`),
+
+  /** 批量导入选课名单 */
+  importEnrollments: (offeringId: number, studentIds: string[]): Promise<{ imported: number; skipped: number }> =>
+    post(`/offerings/${offeringId}/enrollments`, { student_ids: studentIds }),
+
+  /** 退课标记（保留历史） */
+  dropEnrollment: (enrollmentId: number): Promise<void> =>
+    put(`/enrollments/${enrollmentId}/drop`),
+}

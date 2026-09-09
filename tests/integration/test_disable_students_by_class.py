@@ -284,24 +284,6 @@ class TestDisableMultipleClasses:
 class TestDisabledClassContentCreation:
     """禁用班级后，教师侧不能为该班创建内容（课表/课堂/小组/问答）"""
 
-    def test_teacher_class_list_excludes_disabled_classes(self, admin_client, teacher_client, test_engine):
-        """教师班级列表不显示所有学生已禁用的班级"""
-        _create_students(test_engine, "一班", 2, id_prefix="DA")
-        _create_students(test_engine, "二班", 2, id_prefix="DB")
-
-        # 管理员禁用二班（教师负责的班级之一）
-        resp = admin_client.post(
-            "/api/v1/students/disable-by-class",
-            json={"class_names": ["二班"]}
-        )
-        assert resp.status_code == 200
-
-        resp = teacher_client.get("/api/v1/classes")
-        assert resp.status_code == 200
-        returned = {c["name"] for c in resp.json()["data"]}
-        assert "一班" in returned
-        assert "二班" not in returned
-
     def test_cannot_create_session_for_disabled_class(self, admin_client, teacher_client, test_engine):
         """不能为禁用班级创建课堂 → 400"""
         _create_students(test_engine, "一班", 2, id_prefix="DC")

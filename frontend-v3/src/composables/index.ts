@@ -1,7 +1,7 @@
 export { useStudents, useScoreUpdate, useStudentCreate } from './useStudents'
 export { useStats } from './useStats'
 export { useToast } from './useToast'
-export { useClasses, useClassStats, useClassStudents } from './useClasses'
+export { useClasses, useClassStudents } from './useClasses'
 export { useSessionCheckinStats, useSessionCheckins } from './useCheckins'
 export { useStudentProfile } from './useStudentProfile'
 export { useStudentScoreLogs } from './useStudentScoreLogs'

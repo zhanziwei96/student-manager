@@ -13,7 +13,7 @@ import {
 } from '@/features/group-collaboration'
 import { Plus, Play, Square, BarChart2, PenLine, Copy, Trash2 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
-import type { ClassInfo } from '@/api/classes'
+import type { AdminClass } from '@/types'
 
 const router = useRouter()
 const { success: toastSuccess, error: toastError } = useToast()
@@ -33,7 +33,7 @@ watch(
 
 const classOptions = computed(() => [
   { value: '', label: '请选择班级', disabled: true },
-  ...(classes.value || []).map((c: ClassInfo) => ({ value: c.name, label: c.name })),
+  ...(classes.value || []).map((c: AdminClass) => ({ value: c.name, label: c.name })),
 ])
 
 // 任务列表

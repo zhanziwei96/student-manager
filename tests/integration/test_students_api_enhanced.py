@@ -189,20 +189,6 @@ class TestStudentsAPIEnhanced:
         # 只验证 API 返回成功，数据条数可能为 0（由于会话隔离）或更多
         assert isinstance(data["data"], list)
     
-    def test_get_classes_as_admin(self, admin_client, sample_students):
-        """测试管理员获取班级列表"""
-        response = admin_client.get("/api/v1/classes")
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        # 应该有一班、二班、三班
-        class_names = [c["name"] for c in data["data"]]
-        assert "一班" in class_names
-        assert "二班" in class_names
-        assert "三班" in class_names
-
-
 class TestStudentsPagination:
     """学生列表分页（limit/offset/total）集成测试"""
 

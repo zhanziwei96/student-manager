@@ -1,6 +1,7 @@
 import { get, post, put, del, requestRaw } from '@/lib/api'
 import type {
   Student,
+  StudentStatus,
   CreateStudentRequest,
   UpdateScoreRequest,
   ScoreLog,
@@ -64,6 +65,10 @@ export const studentsApi = {
   getByStudentId: (studentId: string): Promise<Student> =>
     get(`/students/${studentId}`),
 
+  /** 按班级名获取学生列表 */
+  getStudentsByClass: (className: string): Promise<Student[]> =>
+    get('/students', { class_name: className }),
+
   create: (data: CreateStudentRequest): Promise<Student> =>
     post('/students', data),
 
@@ -90,6 +95,14 @@ export const studentsApi = {
   /** 按班级批量禁用学生账号（学期归档，admin 或负责该班的教师），支持一次传多个班级 */
   disableByClass: (classNames: string[]): Promise<{ disabled_count: number; class_names: string[] }> =>
     post('/students/disable-by-class', { class_names: classNames }),
+
+  /** 学籍状态管理（在读/休学/退学/毕业，仅管理员） */
+  updateStatus: (studentId: string, status: StudentStatus): Promise<void> =>
+    put(`/students/${studentId}/status`, { status }),
+
+  /** 学生转班（仅管理员） */
+  transferClass: (studentId: string, classId: number): Promise<void> =>
+    put(`/students/${studentId}/class`, { class_id: classId }),
 
   import: (file: File): Promise<{ imported: number }> => {
     const formData = new FormData()

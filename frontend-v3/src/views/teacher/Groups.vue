@@ -13,7 +13,7 @@ import {
 } from '@/features/group-collaboration'
 import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2, Plus } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
-import type { ClassInfo } from '@/api/classes'
+import type { AdminClass } from '@/types'
 import type { GroupDetail } from '@/types/api'
 import type { Group } from '@/api/groups'
 import { groupsApi } from '@/api'
@@ -37,7 +37,7 @@ watch(
 
 const classOptions = computed(() => [
   { value: '', label: '请选择班级', disabled: true },
-  ...(classes.value || []).map((c: ClassInfo) => ({ value: c.name, label: c.name })),
+  ...(classes.value || []).map((c: AdminClass) => ({ value: c.name, label: c.name })),
 ])
 
 // 小组列表

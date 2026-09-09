@@ -5,14 +5,14 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, Field
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
 from app.core.jwt import require_admin, get_current_user
 from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
-    create_student, update_student_score, delete_student, get_all_classes, reset_student_password,
+    create_student, update_student_score, delete_student, reset_student_password,
     unlock_student_account, disable_students_by_class, count_students_filtered
 )
 from app.crud.checkin import get_today_checkins
@@ -48,12 +48,6 @@ class StudentWithCheckin(BaseModel):
     created_at: Optional[datetime] = None
 
 
-class ClassWithStatus(BaseModel):
-    """带状态的班级数据"""
-    name: str
-    status: str
-
-
 class ScoreLogResponse(BaseModel):
     """分数日志响应"""
     id: int
@@ -83,11 +77,6 @@ class StudentCreateResponse(ApiResponse[dict]):
 
 class ScoreUpdateResponse(ApiResponse[dict]):
     """分数更新响应"""
-    pass
-
-
-class ClassListResponse(ApiResponse[list[ClassWithStatus]]):
-    """班级列表响应"""
     pass
 
 
@@ -175,6 +164,7 @@ async def get_students_list(
             'name': student.name,
             'class_name': student.class_name,
             'score': student.score,
+            'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
             'checkin_status': 'checked_in' if student.student_id in checked_in_students else 'not_checked_in',
@@ -221,6 +211,7 @@ async def get_student_info(
             'name': student.name,
             'class_name': student.class_name,
             'score': student.score,
+            'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
         }
@@ -255,6 +246,7 @@ async def add_student(
             'name': student.name,
             'class_name': student.class_name,
             'score': student.score,
+            'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
         }
@@ -312,54 +304,6 @@ async def remove_student(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.STUDENT_DELETED
     }
-
-
-@router.get("/classes", response_model=ClassListResponse)
-async def get_classes(
-    request: Request,
-    session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
-):
-    """获取班级列表（管理员看所有，教师看负责班级）"""
-    # REVIEW-P1: 权限检查统一在 API 层处理，CRUD 层保持纯粹
-    from app.models import User
-    
-    is_admin = user.get("is_admin", False)
-    
-    if is_admin:
-        # 管理员可以看到所有班级
-        class_names = get_all_classes(session)
-    else:
-        # 教师只能看到负责的班级（且班级仍有启用学生，已归档班级不显示）
-        user_id = user.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无效的用户信息")
-
-        user_obj = session.get(User, int(user_id))
-        assigned = user_obj.get_assigned_classes() if user_obj else []
-
-        # 过滤掉所有学生已禁用的班级
-        active_classes = set(get_all_classes(session))
-        class_names = [c for c in assigned if c in active_classes]
-    
-    # 获取当前课堂会话状态
-    cs = get_active_course_session_by_class_name(session, class_names[0]) if class_names else None
-    current_class = cs.class_name if cs and cs.status == "active" else None
-    
-    # 返回带状态的班级列表
-    classes_with_status = [
-        {
-            'name': class_name,
-            'status': 'active' if class_name == current_class else 'inactive'
-        }
-        for class_name in class_names
-    ]
-    
-    return {
-        ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: classes_with_status
-    }
-
 
 @router.post("/students/import", response_model=ImportResponse)
 async def import_students(
@@ -519,4 +463,83 @@ async def disable_students_by_class_api(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: f"已禁用 {total_disabled} 名学生",
         ApiResponseConst.DATA: {"disabled_count": total_disabled, "class_names": data.class_names}
+    }
+
+
+class UpdateStudentStatusRequest(BaseModel):
+    status: str = Field(..., description="学籍状态: active|suspended|withdrawn|graduated")
+
+
+@router.put("/students/{student_id}/status", response_model=ApiSuccessResponse)
+def update_student_status(
+    student_id: str,
+    body: UpdateStudentStatusRequest,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin)
+):
+    """学生学籍状态管理（在读/休学/退学/毕业，仅管理员）"""
+    if body.status not in ("active", "suspended", "withdrawn", "graduated"):
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="无效学籍状态")
+
+    student = get_student(session, student_id)
+    if not student:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生不存在")
+
+    student.status = body.status
+    session.add(student)
+    session.commit()
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: f"学籍状态已更新为 {body.status}",
+    }
+
+
+class TransferClassRequest(BaseModel):
+    class_id: int = Field(..., description="目标行政班ID")
+
+
+@router.put("/students/{student_id}/class", response_model=ApiSuccessResponse)
+def transfer_student_class(
+    student_id: str,
+    body: TransferClassRequest,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin)
+):
+    """学生转班（仅管理员）：更新行政班归属 + 同步冗余缓存"""
+    from app.core.class_cache import get_class_by_id, invalidate_class_cache
+    from app.core.term import get_current_semester_id
+    from app.models import Class_, StudentClassSemester
+
+    student = get_student(session, student_id)
+    if not student:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生不存在")
+
+    target = get_class_by_id(session, body.class_id)
+    if target is None:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="目标班级不存在")
+
+    # 行政班归属：当前学期记录 upsert（历史学期归属保留）
+    semester_id = get_current_semester_id(session)
+    if semester_id is not None:
+        scs = session.exec(select(StudentClassSemester).where(
+            StudentClassSemester.student_id == student_id,
+            StudentClassSemester.semester_id == semester_id,
+        )).first()
+        if scs is None:
+            session.add(StudentClassSemester(
+                student_id=student_id, class_id=target.id, semester_id=semester_id,
+            ))
+        else:
+            scs.class_id = target.id
+            session.add(scs)
+
+    # 同步冗余缓存（cohort_year 为身份属性不随转班更新）
+    student.class_id = target.id
+    student.class_name = target.name
+    session.add(student)
+    session.commit()
+    invalidate_class_cache()
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.MESSAGE: f"已转入 {target.cohort_year}届 {target.name}",
     }

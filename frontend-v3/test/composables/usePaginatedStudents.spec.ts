@@ -19,12 +19,21 @@ vi.mock('@/api', () => ({
 
 vi.mock('@/api/classes', () => ({
   classesApi: {
-    getAll: vi.fn(),
+    list: vi.fn(),
   },
 }))
 
 const mockedGetPaginated = vi.mocked(studentsApi.getPaginated)
-const mockedGetClasses = vi.mocked(classesApi.getAll)
+const mockedGetClasses = vi.mocked(classesApi.list)
+
+const fakeClass = (id: number, name: string) => ({
+  id,
+  name,
+  major: '',
+  cohort_year: '2026',
+  display_name: `2026届${name}`,
+  student_count: 0,
+})
 
 // 在 Vue setup 上下文中运行 composable
 function withSetup<T>(composable: () => T): { result: T; unmount: () => void } {
@@ -63,7 +72,7 @@ const fakeStudent = (id: string, name: string, className = '一班') => ({
 describe('usePaginatedStudents', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockedGetClasses.mockResolvedValue([{ name: '一班', status: 'inactive' }, { name: '二班', status: 'inactive' }])
+    mockedGetClasses.mockResolvedValue([fakeClass(1, '一班'), fakeClass(2, '二班')])
     mockedGetPaginated.mockResolvedValue({
       items: [fakeStudent('S001', '张三')],
       total: 120,

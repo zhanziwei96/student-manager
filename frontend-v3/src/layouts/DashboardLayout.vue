@@ -17,6 +17,11 @@ import {
   Menu,
   MessageCircle,
   Search,
+  CalendarRange,
+  Layers,
+  Library,
+  Presentation,
+  CalendarDays,
 } from 'lucide-vue-next'
 import { KeyRound } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
@@ -33,46 +38,77 @@ const showDropdown = ref(false)
 const showChangePassword = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
-// Navigation items based on role
-const navItems = computed(() => {
-  const items: { name: string; path: string; icon: Component }[] = []
+interface NavItem {
+  name: string
+  path: string
+  icon: Component
+}
+
+// 导航分组（管理员按管理域分组；教师/学生为单组平面列表）
+const navGroups = computed(() => {
+  const groups: { label: string; items: NavItem[] }[] = []
 
   if (authStore.isAdmin) {
-    items.push(
-      { name: '仪表板', path: '/admin', icon: LayoutDashboard },
-      { name: '学生管理', path: '/admin/students', icon: Users },
-      { name: '教师管理', path: '/admin/teachers', icon: User },
-      { name: '班级管理', path: '/admin/classes', icon: School },
-      { name: '课表管理', path: '/admin/schedules', icon: BookOpen },
-      { name: '科目管理', path: '/admin/subjects', icon: BookMarked },
-      { name: '签到管理', path: '/admin/checkins', icon: CheckCircle }
+    groups.push(
+      {
+        label: '核心管理',
+        items: [
+          { name: '仪表板', path: '/admin', icon: LayoutDashboard },
+          { name: '学期管理', path: '/admin/semesters', icon: CalendarRange },
+          { name: '届管理', path: '/admin/cohorts', icon: Layers },
+          { name: '班级管理', path: '/admin/classes', icon: School },
+          { name: '课程管理', path: '/admin/courses', icon: Library },
+          { name: '教学班', path: '/admin/offerings', icon: Presentation }
+        ]
+      },
+      {
+        label: '人员管理',
+        items: [
+          { name: '学生管理', path: '/admin/students', icon: Users },
+          { name: '教师管理', path: '/admin/teachers', icon: User }
+        ]
+      },
+      {
+        label: '教学运营',
+        items: [
+          { name: '课表管理', path: '/admin/schedules', icon: CalendarDays },
+          { name: '科目管理', path: '/admin/subjects', icon: BookMarked },
+          { name: '签到管理', path: '/admin/checkins', icon: CheckCircle }
+        ]
+      }
     )
   } else if (authStore.isTeacher) {
-    items.push(
-      { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
-      { name: '学生管理', path: '/teacher/students', icon: Users },
-      { name: '我的班级', path: '/teacher/my-classes', icon: School },
-      { name: '课堂签到', path: '/teacher/session', icon: Calendar },
-      { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
-      { name: '科目管理', path: '/teacher/subjects', icon: BookMarked },
-      { name: '合作项目', path: '/teacher/group-tasks', icon: Users },
-      { name: '小组管理', path: '/teacher/groups', icon: GraduationCap },
-      { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle },
-      { name: '失物招领', path: '/teacher/lost-found', icon: Search }
-    )
+    groups.push({
+      label: '',
+      items: [
+        { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
+        { name: '学生管理', path: '/teacher/students', icon: Users },
+        { name: '我的班级', path: '/teacher/my-classes', icon: School },
+        { name: '课堂签到', path: '/teacher/session', icon: Calendar },
+        { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
+        { name: '科目管理', path: '/teacher/subjects', icon: BookMarked },
+        { name: '合作项目', path: '/teacher/group-tasks', icon: Users },
+        { name: '小组管理', path: '/teacher/groups', icon: GraduationCap },
+        { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle },
+        { name: '失物招领', path: '/teacher/lost-found', icon: Search }
+      ]
+    })
   } else if (authStore.isStudent) {
-    items.push(
-      { name: '仪表板', path: '/student', icon: LayoutDashboard },
-      { name: '课堂签到', path: '/student/checkin', icon: CheckCircle },
-      { name: '我的小组', path: '/student/my-group', icon: Users },
-      { name: '组间互评', path: '/student/group-evaluations', icon: CheckCircle },
-      { name: '成绩单', path: '/student/group-results', icon: GraduationCap },
-      { name: '课堂问答', path: '/student/questions', icon: MessageCircle },
-      { name: '失物招领', path: '/student/lost-found', icon: Search }
-    )
+    groups.push({
+      label: '',
+      items: [
+        { name: '仪表板', path: '/student', icon: LayoutDashboard },
+        { name: '课堂签到', path: '/student/checkin', icon: CheckCircle },
+        { name: '我的小组', path: '/student/my-group', icon: Users },
+        { name: '组间互评', path: '/student/group-evaluations', icon: CheckCircle },
+        { name: '成绩单', path: '/student/group-results', icon: GraduationCap },
+        { name: '课堂问答', path: '/student/questions', icon: MessageCircle },
+        { name: '失物招领', path: '/student/lost-found', icon: Search }
+      ]
+    })
   }
 
-  return items
+  return groups
 })
 
 const isActive = (path: string) => {
@@ -167,21 +203,33 @@ const handleChangePassword = () => {
       </div>
 
       <!-- Navigation -->
-      <nav class="space-y-1 p-4">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.path"
-          :to="item.path"
-          :class="[
-            'flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
-            isActive(item.path)
-              ? 'bg-[#e5e5e5] text-black'
-              : 'text-[#737373] hover:bg-[#fafafa] hover:text-black',
-          ]"
+      <nav class="space-y-4 p-4">
+        <div
+          v-for="group in navGroups"
+          :key="group.label || 'main'"
+          class="space-y-1"
         >
-          <component :is="item.icon" class="h-5 w-5" />
-          {{ item.name }}
-        </RouterLink>
+          <p
+            v-if="group.label"
+            class="px-3 pb-1 text-xs font-medium text-[#a3a3a3]"
+          >
+            {{ group.label }}
+          </p>
+          <RouterLink
+            v-for="item in group.items"
+            :key="item.path"
+            :to="item.path"
+            :class="[
+              'flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
+              isActive(item.path)
+                ? 'bg-[#e5e5e5] text-black'
+                : 'text-[#737373] hover:bg-[#fafafa] hover:text-black',
+            ]"
+          >
+            <component :is="item.icon" class="h-5 w-5" />
+            {{ item.name }}
+          </RouterLink>
+        </div>
       </nav>
 
       <!-- Bottom spacer -->

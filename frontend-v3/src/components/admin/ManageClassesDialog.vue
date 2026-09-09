@@ -219,14 +219,6 @@ const handleClose = () => {
             >
               <BookOpen class="h-4 w-4 text-[#16a34a]" />
               <span class="flex-1 text-sm text-black">{{ cls.name }}</span>
-              <span 
-                class="text-[10px] px-1.5 py-0.5 rounded border"
-                :class="cls.status === 'active' 
-                  ? 'border-[rgba(34,197,94,0.3)] text-[#16a34a] bg-[rgba(34,197,94,0.1)]' 
-                  : 'border-gray-500/30 text-gray-400/70 bg-gray-500/5'"
-              >
-                {{ cls.status === 'active' ? '启用' : '停用' }}
-              </span>
               <button
                 type="button"
                 class="ml-1 p-1 rounded hover:bg-[rgba(239,68,68,0.1)] text-[#a3a3a3] hover:text-[#dc2626] transition-colors opacity-0 group-hover:opacity-100"
@@ -304,14 +296,6 @@ const handleClose = () => {
               </div>
               <BookOpen class="h-4 w-4 text-[#a3a3a3]" />
               <span class="flex-1 text-sm text-[#262626]">{{ cls.name }}</span>
-              <span 
-                class="text-[10px] px-1.5 py-0.5 rounded border"
-                :class="cls.status === 'active' 
-                  ? 'border-[rgba(34,197,94,0.3)] text-[#16a34a] bg-[rgba(34,197,94,0.1)]' 
-                  : 'border-gray-500/30 text-gray-400/70 bg-gray-500/5'"
-              >
-                {{ cls.status === 'active' ? '启用' : '停用' }}
-              </span>
             </div>
           </div>
         </div>

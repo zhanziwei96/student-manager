@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X, User, LayoutDashboard, Users, GraduationCap, BookOpen, BookMarked, CheckCircle, School, KeyRound, MessageCircle } from 'lucide-vue-next'
+import { X, User, LayoutDashboard, Users, GraduationCap, BookOpen, BookMarked, CheckCircle, School, KeyRound, MessageCircle, CalendarRange, Layers, Library, Presentation, CalendarDays } from 'lucide-vue-next'
 import { Button } from '.'
 import { useAuthStore } from '@/stores'
 import { computed, watch } from 'vue'
@@ -29,10 +29,14 @@ const navItems = computed(() => {
   if (isAdmin.value) {
     items.push(
       { name: '仪表板', path: '/admin', icon: LayoutDashboard },
+      { name: '学期管理', path: '/admin/semesters', icon: CalendarRange },
+      { name: '届管理', path: '/admin/cohorts', icon: Layers },
+      { name: '班级管理', path: '/admin/classes', icon: School },
+      { name: '课程管理', path: '/admin/courses', icon: Library },
+      { name: '教学班', path: '/admin/offerings', icon: Presentation },
       { name: '学生管理', path: '/admin/students', icon: Users },
       { name: '教师管理', path: '/admin/teachers', icon: User },
-      { name: '班级管理', path: '/admin/classes', icon: School },
-      { name: '课表管理', path: '/admin/schedules', icon: BookOpen },
+      { name: '课表管理', path: '/admin/schedules', icon: CalendarDays },
       { name: '科目管理', path: '/admin/subjects', icon: BookMarked },
       { name: '签到管理', path: '/admin/checkins', icon: CheckCircle }
     )

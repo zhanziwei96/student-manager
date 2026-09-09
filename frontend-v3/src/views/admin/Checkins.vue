@@ -2,11 +2,9 @@
 import { Card } from '@/components/ui'
 import { CheckCircle, Users, Clock, TrendingUp } from 'lucide-vue-next'
 import { useSessionCheckinStats } from '@/composables/useCheckins'
-import { useClassStats } from '@/composables/useClasses'
 
 // Data
 const { data: stats } = useSessionCheckinStats()
-useClassStats()
 </script>
 
 <template>
