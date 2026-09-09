@@ -10,14 +10,11 @@ import Groups from '@/views/teacher/Groups.vue'
 // Shared mutable state for mocks
 const mockGroupSettingsData = ref<{ class_name: string; max_members_per_group: number } | null>(null)
 const mockGroupsData = ref<any[]>([])
-const mockSubjectsData = ref<any[]>([])
 const mockScoreLogsData = ref<any[]>([])
-const mockLeaderboardData = ref<{ groups: any[]; total: number }>({ groups: [], total: 0 })
 const mockUpdateScore = vi.fn()
 
 vi.mock('@/composables', () => ({
   useClasses: () => ({ data: ref([{ name: '计算机1班', status: 'active' }]) }),
-  useSubjects: () => ({ data: mockSubjectsData }),
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }))
 
@@ -28,7 +25,6 @@ vi.mock('@/features/group-collaboration', () => ({
   useUpdateClassGroupSettings: () => ({ mutateAsync: vi.fn() }),
   useGroupScore: () => ({ mutateAsync: mockUpdateScore }),
   useGroupScoreLogs: () => ({ data: mockScoreLogsData, isPending: ref(false) }),
-  useGroupLeaderboard: () => ({ data: mockLeaderboardData, isPending: ref(false) }),
 }))
 
 vi.mock('@tanstack/vue-query', async () => {
@@ -72,9 +68,7 @@ describe('Groups', () => {
   beforeEach(() => {
     mockGroupSettingsData.value = null
     mockGroupsData.value = []
-    mockSubjectsData.value = []
     mockScoreLogsData.value = []
-    mockLeaderboardData.value = { groups: [], total: 0 }
     mockUpdateScore.mockReset()
   })
 
@@ -118,13 +112,12 @@ describe('Groups', () => {
         name: '第一组',
         leader_student_id: '2021001',
         leader_name: '张三',
-        subject_id: 1,
-        subject_name: '数学',
+        course_id: 1,
+        course_name: '数学',
         score: 12,
         members: [{ student_id: '2021001', name: '张三' }],
       },
     ]
-    mockSubjectsData.value = [{ id: 1, name: '数学', semester: '2026-2027-1' }]
 
     const wrapper = mountGroups()
     await flushPromises()
@@ -142,8 +135,8 @@ describe('Groups', () => {
         name: '第一组',
         leader_student_id: '2021001',
         leader_name: '张三',
-        subject_id: 1,
-        subject_name: '数学',
+        course_id: 1,
+        course_name: '数学',
         score: 12,
         members: [{ student_id: '2021001', name: '张三' }],
       },
@@ -165,20 +158,5 @@ describe('Groups', () => {
     expect(dialog.text()).toContain('12')
   })
 
-  it('shows leaderboard entries', async () => {
-    mockLeaderboardData.value = {
-      groups: [
-        { rank: 1, group_id: 1, group_name: '第一组', class_name: '计算机1班', subject_id: 1, score: 20 },
-      ],
-      total: 1,
-    }
 
-    const wrapper = mountGroups()
-    await flushPromises()
-    await nextTick()
-
-    expect(wrapper.text()).toContain('小组排行榜')
-    expect(wrapper.text()).toContain('第一组')
-    expect(wrapper.text()).toContain('20')
-  })
 })

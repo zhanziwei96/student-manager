@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useClasses, useSubjects, useToast } from '@/composables'
+import { useClasses, useToast } from '@/composables'
 import { Card, Button, Select, Input, Label, DataContainer, Dialog, Badge } from '@/components/ui'
 import {
   useTeacherGroups,
@@ -9,7 +9,6 @@ import {
   useUpdateClassGroupSettings,
   useGroupScore,
   useGroupScoreLogs,
-  useGroupLeaderboard,
 } from '@/features/group-collaboration'
 import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2, Plus } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
@@ -17,6 +16,7 @@ import type { AdminClass } from '@/types'
 import type { GroupDetail } from '@/types/api'
 import type { Group } from '@/api/groups'
 import { groupsApi } from '@/api'
+import { coursesApi } from '@/api/courses'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 
 const { success: toastSuccess, error: toastError } = useToast()
@@ -40,33 +40,23 @@ const classOptions = computed(() => [
   ...(classes.value || []).map((c: AdminClass) => ({ value: c.name, label: c.name })),
 ])
 
-// 小组列表
-const { data: groups, isPending: loadingGroups } = useTeacherGroups(selectedClass)
-
-// 科目筛选（从当前学期科目列表获取）
-const { data: subjects } = useSubjects()
-const selectedSubjectId = ref<number | string>('')
-const subjectOptions = computed(() => [
-  { value: '', label: '全部科目' },
-  ...(subjects.value || []).map((s) => ({ value: s.id, label: s.name })),
+// 课程下拉（小组按课程划分）
+const { data: courses } = useQuery({
+  queryKey: ['courses'],
+  queryFn: () => coursesApi.list(),
+})
+const selectedCourseId = ref<number | string>('')
+const courseOptions = computed(() => [
+  { value: '', label: '全部课程' },
+  ...(courses.value ?? []).map((c) => ({ value: c.id, label: c.name })),
 ])
 
-// 按科目过滤小组列表
-const filteredGroups = computed(() => {
-  const list = groups.value || []
-  if (selectedSubjectId.value === '' || selectedSubjectId.value === null) return list
-  return list.filter((g: Group) => g.subject_id === Number(selectedSubjectId.value))
-})
-
-// 科目名称（优先用后端返回的 subject_name，其次从科目列表映射）
-function subjectLabel(g: Group) {
-  if (g.subject_name) return g.subject_name
-  if (g.subject_id != null) {
-    const s = (subjects.value || []).find((x) => x.id === g.subject_id)
-    if (s) return s.name
-  }
-  return '未分科'
-}
+// 小组列表（按课程过滤）
+const { data: groups, isPending: loadingGroups } = useTeacherGroups(
+  selectedClass,
+  computed(() => (selectedCourseId.value === '' ? null : Number(selectedCourseId.value))),
+)
+const filteredGroups = computed(() => groups.value || [])
 
 // 小组人数上限设置
 const { data: groupSettings } = useClassGroupSettings(selectedClass)
@@ -82,9 +72,12 @@ watch(() => groupSettings.value, (s) => {
 // 自动分配
 const { mutateAsync: autoAssign, isPending: autoAssigning } = useAutoAssign()
 async function handleAutoAssign() {
-  if (!selectedClass.value) return
+  if (!selectedClass.value || selectedCourseId.value === '') {
+    toastError('请先选择班级和课程')
+    return
+  }
   try {
-    await autoAssign({ className: selectedClass.value })
+    await autoAssign({ className: selectedClass.value, courseId: Number(selectedCourseId.value) })
     toastSuccess('自动分组完成')
   } catch (err) {
     toastError(getErrorMessage(err) || '自动分组失败')
@@ -105,6 +98,45 @@ async function handleSaveSettings() {
     toastError(getErrorMessage(err) || '设置失败')
   } finally {
     savingSettings.value = false
+  }
+}
+
+// 教师建组
+const showCreateGroupDialog = ref(false)
+const newGroupName = ref('')
+const newGroupCourseId = ref<number | string>('')
+const creatingGroup = ref(false)
+
+function openCreateGroupDialog() {
+  newGroupName.value = ''
+  newGroupCourseId.value = ''
+  showCreateGroupDialog.value = true
+}
+
+async function handleCreateGroup() {
+  if (!selectedClass.value) return
+  if (!newGroupName.value.trim()) {
+    toastError('请输入小组名称')
+    return
+  }
+  if (newGroupCourseId.value === '') {
+    toastError('请选择课程')
+    return
+  }
+  try {
+    creatingGroup.value = true
+    await groupsApi.createTeacherGroup({
+      class_name: selectedClass.value,
+      name: newGroupName.value.trim(),
+      course_id: Number(newGroupCourseId.value),
+    })
+    toastSuccess('小组创建成功')
+    showCreateGroupDialog.value = false
+    queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
+  } catch (err) {
+    toastError(getErrorMessage(err) || '创建失败')
+  } finally {
+    creatingGroup.value = false
   }
 }
 
@@ -168,7 +200,7 @@ async function handleRemoveMember(groupId: number, studentId: string) {
     await queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
     if (expandedGroupId.value === groupId) {
       // 刷新后检查小组是否仍存在（踢出最后一名成员后小组会自动解散）
-      const updatedGroups = queryClient.getQueryData<Group[]>(['teacher-groups', selectedClass.value])
+      const updatedGroups = queryClient.getQueryData<Group[]>(['teacher-groups', selectedClass.value, selectedCourseId.value === '' ? null : Number(selectedCourseId.value)])
       const stillExists = updatedGroups?.some((g: Group) => g.id === groupId)
       if (stillExists) {
         groupDetail.value = await groupsApi.getGroupDetail(groupId)
@@ -298,16 +330,6 @@ async function handleUpdateScore() {
   }
 }
 
-// 小组排行榜（按科目 + 班级）
-const leaderboardSubjectId = computed(() =>
-  selectedSubjectId.value === '' || selectedSubjectId.value === null
-    ? null
-    : Number(selectedSubjectId.value),
-)
-const { data: leaderboard, isPending: loadingLeaderboard } = useGroupLeaderboard(
-  leaderboardSubjectId,
-  selectedClass,
-)
 </script>
 
 <template>
@@ -326,7 +348,7 @@ const { data: leaderboard, isPending: loadingLeaderboard } = useGroupLeaderboard
       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 mb-4">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <Select v-model="selectedClass" :options="classOptions" class="w-full sm:w-48" />
-          <Select v-model="selectedSubjectId" :options="subjectOptions" class="w-full sm:w-40" />
+          <Select v-model="selectedCourseId" :options="courseOptions" class="w-full sm:w-40" />
           <div class="flex items-center gap-2">
             <span class="text-sm text-[#737373]">每组上限</span>
             <input
@@ -345,6 +367,13 @@ const { data: leaderboard, isPending: loadingLeaderboard } = useGroupLeaderboard
           >
             <Shuffle class="h-4 w-4 mr-1" />
             自动分组
+          </Button>
+          <Button
+            variant="outline"
+            @click="openCreateGroupDialog"
+          >
+            <Plus class="h-4 w-4 mr-1" />
+            建组
           </Button>
         </div>
         <span class="text-sm text-[#737373]">
@@ -392,7 +421,7 @@ const { data: leaderboard, isPending: loadingLeaderboard } = useGroupLeaderboard
             <!-- 科目与分数 -->
             <div class="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="secondary">
-                {{ subjectLabel(g) }}
+                {{ g.course_name || '未分科' }}
               </Badge>
               <span class="text-xs text-[#737373]">分数</span>
               <span class="text-sm font-medium text-black">{{ g.score ?? 0 }}</span>
@@ -458,41 +487,6 @@ const { data: leaderboard, isPending: loadingLeaderboard } = useGroupLeaderboard
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </DataContainer>
-    </Card>
-
-    <!-- 小组排行榜（按科目 + 班级） -->
-    <Card class="bg-white border-[#e5e5e5] p-5">
-      <h2 class="text-lg font-medium text-black mb-4">
-        小组排行榜
-      </h2>
-      <DataContainer
-        :loading="loadingLeaderboard"
-        :has-data="(leaderboard?.groups || []).length > 0"
-        empty-text="暂无排行榜数据"
-      >
-        <div class="space-y-2">
-          <div
-            v-for="entry in leaderboard?.groups"
-            :key="entry.group_id"
-            class="flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] px-4 py-3"
-          >
-            <div class="flex items-center gap-3">
-              <span class="w-6 text-center text-sm font-medium text-[#737373]">
-                {{ entry.rank }}
-              </span>
-              <span class="text-sm font-medium text-black">
-                {{ entry.group_name }}
-              </span>
-              <span class="text-xs text-[#737373]">
-                {{ entry.class_name }}
-              </span>
-            </div>
-            <span class="text-sm font-medium text-black">
-              {{ entry.score }} 分
-            </span>
           </div>
         </div>
       </DataContainer>
@@ -672,6 +666,49 @@ const { data: leaderboard, isPending: loadingLeaderboard } = useGroupLeaderboard
             @click="handleUpdateScore"
           >
             确认加减分
+          </Button>
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- 建组 Dialog -->
+    <Dialog
+      v-model:open="showCreateGroupDialog"
+      title="创建小组"
+      description="小组按课程划分，学生可申请加入"
+    >
+      <div class="space-y-3">
+        <div class="space-y-1">
+          <label class="text-sm text-[#737373]">课程</label>
+          <Select
+            v-model="newGroupCourseId"
+            :options="courses?.filter((c) => c.status === 'active').map((c) => ({ value: c.id, label: c.name })) ?? []"
+            placeholder="选择课程"
+          />
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm text-[#737373]">小组名称</label>
+          <input
+            v-model="newGroupName"
+            placeholder="如：数学A组"
+            class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+          >
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex w-full gap-2 sm:justify-end">
+          <Button
+            variant="outline"
+            @click="showCreateGroupDialog = false"
+          >
+            取消
+          </Button>
+          <Button
+            variant="cta"
+            :loading="creatingGroup"
+            @click="handleCreateGroup"
+          >
+            创建
           </Button>
         </div>
       </template>

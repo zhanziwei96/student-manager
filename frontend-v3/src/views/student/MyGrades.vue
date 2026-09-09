@@ -2,8 +2,9 @@
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { Card, Badge } from '@/components/ui'
-import { Loader2, GraduationCap } from 'lucide-vue-next'
+import { Loader2, GraduationCap, Users } from 'lucide-vue-next'
 import { enrollmentsApi } from '@/api/enrollments'
+import { groupsApi } from '@/api/groups'
 import { useAuthQuery } from '@/composables/useAuth'
 
 const { user } = useAuthQuery()
@@ -16,6 +17,14 @@ const { data: enrollmentsData, isPending } = useQuery({
   enabled: () => !!studentId.value,
 })
 const enrollments = computed(() => enrollmentsData.value ?? [])
+
+// 我的小组分（每科小组累计分）
+const { data: myGroupsData } = useQuery({
+  queryKey: ['my-groups', studentId],
+  queryFn: () => groupsApi.getMyGroups(),
+  enabled: () => !!studentId.value,
+})
+const myGroups = computed(() => myGroupsData.value ?? [])
 </script>
 
 <template>
@@ -107,6 +116,50 @@ const enrollments = computed(() => enrollmentsData.value ?? [])
           请联系管理员确认选课名单
         </p>
       </div>
+    </Card>
+
+    <!-- 小组成绩 -->
+    <Card class="mt-5 overflow-hidden p-0">
+      <table
+        v-if="myGroups.length > 0"
+        class="w-full text-sm"
+      >
+        <thead class="bg-[#fafafa] text-[#737373] border-b border-[#e5e5e5]">
+          <tr>
+            <th
+              colspan="3"
+              class="px-4 py-3 text-left font-medium"
+            >
+              <span class="inline-flex items-center gap-1.5">
+                <Users class="h-4 w-4" />
+                小组成绩
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#e5e5e5]">
+          <tr
+            v-for="group in myGroups"
+            :key="group.id"
+            class="text-[#737373]"
+          >
+            <td class="px-4 py-3">
+              <p class="font-medium text-black">
+                {{ group.name }}
+              </p>
+              <p class="text-xs text-[#a3a3a3]">
+                {{ group.course_name || '未分科' }}
+              </p>
+            </td>
+            <td class="px-4 py-3">
+              {{ group.leader_name || group.leader_student_id }} 组
+            </td>
+            <td class="px-4 py-3 text-right font-medium text-black">
+              {{ group.score }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </Card>
   </div>
 </template>

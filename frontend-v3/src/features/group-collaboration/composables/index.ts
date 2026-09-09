@@ -1,4 +1,2 @@
-export { useTeacherGroupTasks, useCreateGroupTask, useStartGroupTask, useCloseGroupTask, useTaskResults, useSubmitTeacherScore } from './useGroupTasks'
-export { useTeacherGroups, useAutoAssign, useStudentGroups, useMyGroup, useCreateGroup, useJoinGroup, useApproveJoin } from './useGroups'
-export { useStudentGroupTasks, useEvaluations, useSubmitStudentScores } from './useEvaluations'
+export { useTeacherGroups, useAutoAssign, useStudentGroups, useMyGroups, useCreateGroup, useJoinGroup, useApproveJoin, useGroupScore, useGroupScoreLogs } from './useGroups'
 export { useClassGroupSettings, useUpdateClassGroupSettings } from './useGroupSettings'

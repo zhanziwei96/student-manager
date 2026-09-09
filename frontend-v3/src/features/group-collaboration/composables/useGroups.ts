@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { groupsApi } from '@/api'
 import { toValue, type MaybeRefOrGetter } from 'vue'
 
-export function useTeacherGroups(className: MaybeRefOrGetter<string>) {
+export function useTeacherGroups(className: MaybeRefOrGetter<string>, courseId?: MaybeRefOrGetter<number | null>) {
   return useQuery({
-    queryKey: ['teacher-groups', className],
-    queryFn: () => groupsApi.getTeacherGroups(toValue(className)),
+    queryKey: ['teacher-groups', className, courseId],
+    queryFn: () => groupsApi.getTeacherGroups(toValue(className), toValue(courseId) ?? undefined),
     enabled: () => !!toValue(className),
   })
 }
@@ -13,36 +13,36 @@ export function useTeacherGroups(className: MaybeRefOrGetter<string>) {
 export function useAutoAssign() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ className }: { className: string }) =>
-      groupsApi.autoAssign(className),
+    mutationFn: ({ className, courseId }: { className: string; courseId: number }) =>
+      groupsApi.autoAssign(className, courseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
     },
   })
 }
 
-export function useStudentGroups(className: MaybeRefOrGetter<string>) {
+export function useStudentGroups(className: MaybeRefOrGetter<string>, courseId?: MaybeRefOrGetter<number | null>) {
   return useQuery({
-    queryKey: ['student-groups', className],
-    queryFn: () => groupsApi.getGroups(toValue(className)),
+    queryKey: ['student-groups', className, courseId],
+    queryFn: () => groupsApi.getGroups(toValue(className), toValue(courseId) ?? undefined),
     enabled: () => !!toValue(className),
   })
 }
 
-export function useMyGroup() {
+export function useMyGroups() {
   return useQuery({
-    queryKey: ['my-group'],
-    queryFn: () => groupsApi.getMyGroup(),
+    queryKey: ['my-groups'],
+    queryFn: () => groupsApi.getMyGroups(),
   })
 }
 
 export function useCreateGroup() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ className, name, subjectId }: { className: string; name: string; subjectId?: number }) =>
-      groupsApi.createGroup(className, name, subjectId),
+    mutationFn: ({ className, name, courseId }: { className: string; name: string; courseId: number }) =>
+      groupsApi.createGroup(className, name, courseId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-group'] })
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] })
       queryClient.invalidateQueries({ queryKey: ['student-groups'] })
     },
   })
@@ -53,7 +53,7 @@ export function useJoinGroup() {
   return useMutation({
     mutationFn: (groupId: number) => groupsApi.requestJoin(groupId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-group'] })
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] })
     },
   })
 }
@@ -63,7 +63,7 @@ export function useApproveJoin() {
   return useMutation({
     mutationFn: (reqId: number) => groupsApi.approveJoin(reqId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-group'] })
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] })
     },
   })
 }
@@ -75,7 +75,6 @@ export function useGroupScore() {
       groupsApi.updateScore(groupId, scoreChange, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
-      queryClient.invalidateQueries({ queryKey: ['group-leaderboard'] })
     },
   })
 }
@@ -85,19 +84,5 @@ export function useGroupScoreLogs(groupId: MaybeRefOrGetter<number | null>) {
     queryKey: ['group-score-logs', groupId],
     queryFn: () => groupsApi.getScoreLogs(toValue(groupId)!),
     enabled: () => toValue(groupId) !== null,
-  })
-}
-
-export function useGroupLeaderboard(
-  subjectId: MaybeRefOrGetter<number | null>,
-  className: MaybeRefOrGetter<string>,
-) {
-  return useQuery({
-    queryKey: ['group-leaderboard', className, subjectId],
-    queryFn: () => groupsApi.getLeaderboard({
-      subject_id: toValue(subjectId) ?? undefined,
-      class_name: toValue(className),
-    }),
-    enabled: () => !!toValue(className),
   })
 }
