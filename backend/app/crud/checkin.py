@@ -7,7 +7,6 @@ from sqlmodel import Session, select, func
 from app.models import CheckinRecord
 from app.core.class_cache import get_class_id_by_name
 from app.core.term import get_current_term, get_current_semester_id
-from app.core.transition_filters import class_filter, semester_filter
 from app.core.timezone import get_now
 
 
@@ -23,10 +22,7 @@ def get_all_checkins(
     class_names: Optional[List[str]] = None,
 ) -> List[CheckinRecord]:
     """获取当前学期签到记录列表（按时间倒序，用于 admin 签到管理；可选按班级过滤）"""
-    query = select(CheckinRecord).where(semester_filter(
-        CheckinRecord.semester_id, CheckinRecord.semester,
-        get_current_semester_id(session), get_current_term(),
-    ))
+    query = select(CheckinRecord).where(CheckinRecord.semester_id == get_current_semester_id(session))
     # 注意：用 is not None 而非 truthiness——空列表应过滤掉全部（fail-closed），
     # 而不是跳过过滤（否则无班级教师会看到全量记录）
     if class_names is not None:
@@ -48,16 +44,10 @@ def get_today_checkins(
 
     query = select(CheckinRecord).where(
         CheckinRecord.checkin_time >= query_start,
-        semester_filter(
-            CheckinRecord.semester_id, CheckinRecord.semester,
-            get_current_semester_id(session), get_current_term(),
-        ),
+        CheckinRecord.semester_id == get_current_semester_id(session),
     )
     if class_name:
-        query = query.where(class_filter(
-            CheckinRecord.class_id, CheckinRecord.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ))
+        query = query.where(CheckinRecord.class_id == get_class_id_by_name(session, class_name))
     return list(session.exec(query).all())
 
 
@@ -69,16 +59,10 @@ def count_today_checkins(session: Session, class_name: Optional[str] = None) -> 
 
     query = select(func.count()).select_from(CheckinRecord).where(
         CheckinRecord.checkin_time >= today_start,
-        semester_filter(
-            CheckinRecord.semester_id, CheckinRecord.semester,
-            get_current_semester_id(session), get_current_term(),
-        ),
+        CheckinRecord.semester_id == get_current_semester_id(session),
     )
     if class_name:
-        query = query.where(class_filter(
-            CheckinRecord.class_id, CheckinRecord.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ))
+        query = query.where(CheckinRecord.class_id == get_class_id_by_name(session, class_name))
 
     result = session.exec(query)
     return result.one()
@@ -112,9 +96,8 @@ def create_checkin(
         session_id=session_id,
         student_id=student_id,
         student_name=student_name,
-        class_name=class_name,
-        class_id=get_class_id_by_name(session, class_name),      # 双写：FK 列
-        semester_id=get_current_semester_id(session),            # 双写：FK 列
+        class_id=get_class_id_by_name(session, class_name),
+        semester_id=get_current_semester_id(session),
         checkin_type=checkin_type,
         device_id=device_id,
         device_info=device_info,
@@ -157,10 +140,7 @@ def has_checked_in_today(
         CheckinRecord.checkin_time >= query_start
     )
     if class_name:
-        query = query.where(class_filter(
-            CheckinRecord.class_id, CheckinRecord.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ))
+        query = query.where(CheckinRecord.class_id == get_class_id_by_name(session, class_name))
     return session.exec(query).first() is not None
 
 

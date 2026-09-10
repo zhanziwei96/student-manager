@@ -8,7 +8,6 @@ from zoneinfo import ZoneInfo
 from sqlmodel import Session, select
 from app.core.class_cache import get_class_id_by_name
 from app.core.term import get_current_term, get_current_semester_id
-from app.core.transition_filters import class_filter, semester_filter
 from app.models import CourseSession
 
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
@@ -28,15 +27,9 @@ def get_course_session_by_session_code(session: Session, session_code: str) -> O
 def get_active_course_session_by_class_name(session: Session, class_name: str) -> Optional[CourseSession]:
     """根据班级名称获取当前学期活跃课程会话"""
     query = select(CourseSession).where(
-        class_filter(
-            CourseSession.class_id, CourseSession.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ),
+        CourseSession.class_id == get_class_id_by_name(session, class_name),
         CourseSession.status == "active",
-        semester_filter(
-            CourseSession.semester_id, CourseSession.semester,
-            get_current_semester_id(session), get_current_term(),
-        ),
+        CourseSession.semester_id == get_current_semester_id(session),
     )
     return session.exec(query).first()
 
@@ -46,10 +39,7 @@ def get_teacher_active_course_sessions(session: Session, teacher_id: int) -> Lis
     query = select(CourseSession).where(
         CourseSession.teacher_id == teacher_id,
         CourseSession.status == "active",  # 只返回 active，不包含 scheduled
-        semester_filter(
-            CourseSession.semester_id, CourseSession.semester,
-            get_current_semester_id(session), get_current_term(),
-        ),
+        CourseSession.semester_id == get_current_semester_id(session),
     )
     return list(session.exec(query).all())
 
@@ -59,10 +49,7 @@ def get_teacher_scheduled_course_sessions(session: Session, teacher_id: int) -> 
     query = select(CourseSession).where(
         CourseSession.teacher_id == teacher_id,
         CourseSession.status == "scheduled",
-        semester_filter(
-            CourseSession.semester_id, CourseSession.semester,
-            get_current_semester_id(session), get_current_term(),
-        ),
+        CourseSession.semester_id == get_current_semester_id(session),
     )
     return list(session.exec(query).all())
 
@@ -95,9 +82,8 @@ def start_course_session(
         session_code=session_code,
         schedule_id=schedule_id,
         course_name=course_name,
-        class_name=class_name,
-        class_id=get_class_id_by_name(session, class_name),      # 双写：FK 列
-        semester_id=get_current_semester_id(session),            # 双写：FK 列
+        class_id=get_class_id_by_name(session, class_name),
+        semester_id=get_current_semester_id(session),
         classroom=classroom,
         teacher_id=teacher_id,
         teacher_name=teacher_name,
@@ -123,10 +109,7 @@ def end_course_session(
         CourseSession.status == "active"
     )
     if class_name:
-        query = query.where(class_filter(
-            CourseSession.class_id, CourseSession.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ))
+        query = query.where(CourseSession.class_id == get_class_id_by_name(session, class_name))
 
     sessions = session.exec(query).all()
     ended_sessions = []
@@ -149,10 +132,7 @@ def get_teacher_course_sessions(
     """获取教师当前学期的课程会话列表（支持按状态筛选）"""
     query = select(CourseSession).where(
         CourseSession.teacher_id == teacher_id,
-        semester_filter(
-            CourseSession.semester_id, CourseSession.semester,
-            get_current_semester_id(session), get_current_term(),
-        ),
+        CourseSession.semester_id == get_current_semester_id(session),
     )
     if status:
         query = query.where(CourseSession.status == status)

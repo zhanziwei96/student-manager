@@ -6,8 +6,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy import and_, or_
 from sqlmodel import Session, select
 from app.models import Group, GroupScoreLog, Course
-from app.core.term import get_current_term, get_current_semester_id
-from app.core.transition_filters import semester_filter
+from app.core.term import get_current_semester_id
 from app.core.config import get_settings
 
 
@@ -67,7 +66,6 @@ def update_group_score(
         delta=delta,
         reason=reason,
         operator=operator,
-        semester=get_current_term(),
         semester_id=get_current_semester_id(session),   # 双写：FK 列
     )
     session.add(log)

@@ -10,7 +10,6 @@ from typing import List, Optional
 from sqlmodel import Session, select
 from sqlalchemy import event as sa_event
 from app.core.class_cache import get_class_id_by_name
-from app.core.transition_filters import class_filter
 from app.models import Student
 from app.core.events import ScoreUpdated, event_bus
 
@@ -40,10 +39,7 @@ def get_students(
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if class_name:
-        query = query.where(class_filter(
-            Student.class_id, Student.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ))
+        query = query.where(Student.class_id == get_class_id_by_name(session, class_name))
     if offset:
         query = query.offset(offset)
     if limit:
@@ -92,10 +88,7 @@ def get_students_by_class(
         limit: 返回数量限制（None=全部）
         offset: 偏移量（分页用）
     """
-    query = select(Student).where(class_filter(
-        Student.class_id, Student.class_name,
-        get_class_id_by_name(session, class_name), class_name,
-    )).order_by(Student.student_id)
+    query = select(Student).where(Student.class_id == get_class_id_by_name(session, class_name)).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if offset:
@@ -205,10 +198,7 @@ def disable_students_by_class(session: Session, class_name: str) -> int:
     result = session.exec(
         update(Student)
         .where(
-            class_filter(
-                Student.class_id, Student.class_name,
-                get_class_id_by_name(session, class_name), class_name,
-            ),
+            Student.class_id == get_class_id_by_name(session, class_name),
             Student.is_account_enabled.is_(True),
         )
         .values(is_account_enabled=False)

@@ -346,7 +346,7 @@ def get_active_course_sessions(
     from sqlmodel import select
     query = select(CourseSession).where(
         CourseSession.status == "active",
-        CourseSession.semester == get_current_term(),
+        CourseSession.semester_id == get_current_semester_id(session),
     )
     active_sessions = session.exec(query).all()
 
