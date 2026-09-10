@@ -51,8 +51,8 @@ def get_today_checkins(
     return list(session.exec(query).all())
 
 
-def count_today_checkins(session: Session, class_name: Optional[str] = None) -> int:
-    """使用 SQL COUNT 计算今日签到数（性能优化）"""
+def count_today_checkins(session: Session, class_ids: Optional[List[int]] = None) -> int:
+    """使用 SQL COUNT 计算今日签到数（性能优化；可选按班级过滤）"""
     from datetime import time
 
     today_start = datetime.combine(date.today(), time.min)
@@ -61,8 +61,10 @@ def count_today_checkins(session: Session, class_name: Optional[str] = None) -> 
         CheckinRecord.checkin_time >= today_start,
         CheckinRecord.semester_id == get_current_semester_id(session),
     )
-    if class_name:
-        query = query.where(CheckinRecord.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    # 注意：用 is not None 而非 truthiness——空列表应过滤掉全部（fail-closed），
+    # 而不是跳过过滤（否则无班级教师会看到全量签到）
+    if class_ids is not None:
+        query = query.where(CheckinRecord.class_id.in_(class_ids))
 
     result = session.exec(query)
     return result.one()

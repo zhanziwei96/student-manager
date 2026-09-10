@@ -88,6 +88,36 @@ def test_classes_crud(admin_client, seed_basics, session):
     assert resp.status_code == 409
 
 
+def test_delete_class_blocked_by_schedule_but_empty_deletable(
+    admin_client, seed_basics, session
+):
+    """删除班级：被课表引用时 409 并说明来源；无引用班级可正常删除"""
+    from app.models import CourseSchedule
+
+    cls = session.exec(select(Class_).where(Class_.name == "一班")).one()
+    sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).one()
+    session.add(CourseSchedule(
+        course_name="高等数学", class_id=cls.id, semester_id=sem.id,
+        teacher_id=1, teacher_name="张老师", day_of_week=1,
+        start_time="08:00", end_time="09:40",
+    ))
+    session.commit()
+
+    resp = admin_client.delete(f"/api/v1/classes/{cls.id}")
+    assert resp.status_code == 409
+    message = resp.json()["message"]  # 统一错误包装：{"success": false, "message": ...}
+    assert "课表 1 条" in message
+    assert "学生 1 人" in message
+
+    resp = admin_client.post("/api/v1/classes", json={
+        "name": "空班", "major": "", "cohort_year": "2026",
+    })
+    assert resp.status_code == 200
+    resp = admin_client.delete(f"/api/v1/classes/{resp.json()['data']['id']}")
+    assert resp.status_code == 200
+    assert resp.json()["message"] == "班级已删除"
+
+
 def test_courses_crud(admin_client, seed_basics):
     """课程目录 CRUD"""
     resp = admin_client.post("/api/v1/courses", json={

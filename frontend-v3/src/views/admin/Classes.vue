@@ -350,7 +350,7 @@ const { mutateAsync: deleteClass, isPending: isDeleting } = useMutation({
     <Dialog
       v-model:open="showDeleteDialog"
       title="删除班级"
-      :description="`确定要删除 '${deletingClass?.display_name}' 吗？班下有学生时将无法删除。`"
+      :description="`确定要删除 '${deletingClass?.display_name}' 吗？班级仍被学生、课表、课堂等引用时将无法删除。`"
     >
       <template #footer>
         <Button
