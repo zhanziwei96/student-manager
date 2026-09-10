@@ -14,8 +14,6 @@ const holder = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
   disableByClass: vi.fn(() => Promise.resolve({ disabled_count: 3, class_names: ['一班'] })),
-  getSubjects: vi.fn(),
-  updateSubjectScore: vi.fn(() => Promise.resolve()),
   paginated: null as unknown as Record<string, unknown>,
 }))
 
@@ -33,8 +31,6 @@ vi.mock('@/composables', () => ({
 vi.mock('@/api', () => ({
   studentsApi: {
     disableByClass: holder.disableByClass,
-    getSubjects: holder.getSubjects,
-    updateSubjectScore: holder.updateSubjectScore,
   },
 }))
 
@@ -202,108 +198,6 @@ describe('Admin Students - 批量禁用毕业生账号（多选）', () => {
 
     expect(holder.error).toHaveBeenCalled()
     expect(wrapper.find('.mock-dialog').exists()).toBe(true)
-  })
-})
-
-describe('Admin Students - 科目分数展示', () => {
-  const fakeStudent = {
-    student_id: 'S001',
-    name: '小明',
-    class_name: '一班',
-    score: 175,
-    is_account_enabled: true,
-    checkin_status: 'not_checked_in',
-  }
-
-  const fakeSubjectScores = [
-    { subject_id: 1, subject_name: '数学', teacher_id: 1, teacher_name: '张老师', score: 90 },
-    { subject_id: 2, subject_name: '语文', teacher_id: 2, teacher_name: '李老师', score: 85 },
-  ]
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    holder.getSubjects.mockResolvedValue(fakeSubjectScores)
-    holder.paginated = makePaginated({
-      filteredStudents: ref([fakeStudent]),
-      total: ref(1),
-    })
-  })
-
-  it('点击"科目分数"按钮展开行并显示该学生所有科目分数', async () => {
-    const wrapper = createWrapper()
-
-    await wrapper.find('[data-testid="expand-subjects-btn"]').trigger('click')
-    await flushPromises()
-
-    expect(holder.getSubjects).toHaveBeenCalledWith('S001')
-
-    const row = wrapper.find('[data-testid="subject-scores-row"]')
-    expect(row.exists()).toBe(true)
-
-    const items = row.findAll('[data-testid="subject-score-item"]')
-    expect(items).toHaveLength(2)
-    expect(row.text()).toContain('数学')
-    expect(row.text()).toContain('90')
-    expect(row.text()).toContain('张老师')
-    expect(row.text()).toContain('语文')
-    expect(row.text()).toContain('李老师')
-  })
-
-  it('再次点击按钮收起展开行', async () => {
-    const wrapper = createWrapper()
-
-    await wrapper.find('[data-testid="expand-subjects-btn"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="subject-scores-row"]').exists()).toBe(true)
-
-    await wrapper.find('[data-testid="expand-subjects-btn"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.find('[data-testid="subject-scores-row"]').exists()).toBe(false)
-  })
-
-  it('无科目分数记录时显示空态文案', async () => {
-    holder.getSubjects.mockResolvedValue([])
-    const wrapper = createWrapper()
-
-    await wrapper.find('[data-testid="expand-subjects-btn"]').trigger('click')
-    await flushPromises()
-
-    const row = wrapper.find('[data-testid="subject-scores-row"]')
-    expect(row.text()).toContain('暂无科目分数记录')
-  })
-
-  it('展开后打开科目分数调整弹窗，默认选中第一个科目', async () => {
-    const wrapper = createWrapper()
-
-    await wrapper.find('[data-testid="expand-subjects-btn"]').trigger('click')
-    await flushPromises()
-    await wrapper.find('[data-testid="open-subject-score-dialog-btn"]').trigger('click')
-    await flushPromises()
-
-    const dialogs = wrapper.findAll('.mock-dialog')
-    const scoreDialog = dialogs[dialogs.length - 1]
-    expect(scoreDialog.find('h3').text()).toBe('调整 小明 的科目分数')
-    expect(scoreDialog.text()).toContain('数学（当前 90 分）')
-    expect(scoreDialog.text()).toContain('语文（当前 85 分）')
-  })
-
-  it('填写原因后提交调用 updateSubjectScore 并显示成功提示', async () => {
-    const wrapper = createWrapper()
-
-    await wrapper.find('[data-testid="expand-subjects-btn"]').trigger('click')
-    await flushPromises()
-    await wrapper.find('[data-testid="open-subject-score-dialog-btn"]').trigger('click')
-    await flushPromises()
-
-    const dialogs = wrapper.findAll('.mock-dialog')
-    const scoreDialog = dialogs[dialogs.length - 1]
-    await scoreDialog.find('#subjectScoreChange').setValue(5)
-    await scoreDialog.find('#subjectScoreReason').setValue('课堂表现优秀')
-    await scoreDialog.find('[data-testid="confirm-subject-score-btn"]').trigger('click')
-    await flushPromises()
-
-    expect(holder.updateSubjectScore).toHaveBeenCalledWith('S001', 1, 5, '课堂表现优秀')
-    expect(holder.success).toHaveBeenCalledWith('小明 的科目分数已更新')
   })
 })
 

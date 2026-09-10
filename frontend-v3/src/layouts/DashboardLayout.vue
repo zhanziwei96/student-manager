@@ -13,7 +13,6 @@ import {
   School,
   CheckCircle,
   BookOpen,
-  BookMarked,
   Menu,
   MessageCircle,
   Search,
@@ -73,7 +72,6 @@ const navGroups = computed(() => {
         label: '教学运营',
         items: [
           { name: '课表管理', path: '/admin/schedules', icon: CalendarDays },
-          { name: '科目管理', path: '/admin/subjects', icon: BookMarked },
           { name: '签到管理', path: '/admin/checkins', icon: CheckCircle }
         ]
       }
@@ -87,7 +85,6 @@ const navGroups = computed(() => {
         { name: '排行榜', path: '/teacher/rankings', icon: Trophy },
         { name: '课堂签到', path: '/teacher/session', icon: Calendar },
         { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
-        { name: '科目管理', path: '/teacher/subjects', icon: BookMarked },
         { name: '小组管理', path: '/teacher/groups', icon: GraduationCap },
         { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle },
         { name: '失物招领', path: '/teacher/lost-found', icon: Search }

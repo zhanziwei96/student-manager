@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useStats } from '@/composables'
 import { Card, Badge } from '@/components/ui'
-import { Users, GraduationCap, BookOpen, TrendingUp, Loader2, Clock } from 'lucide-vue-next'
+import { Users, GraduationCap, BookOpen, Loader2, Clock } from 'lucide-vue-next'
 import { checkinApi } from '@/api/checkin'
 import { formatDistanceToNow } from '@/lib/date'
 const { data: stats, isPending, error } = useStats()
@@ -35,12 +35,6 @@ const statCards = computed(() => [
     value: stats.value?.total_classes ?? 0,
     icon: BookOpen,
     trend: '0%',
-  },
-  {
-    title: '平均分数',
-    value: Math.round(stats.value?.average_score ?? 0),
-    icon: TrendingUp,
-    trend: '+2%',
   },
 ])
 

@@ -4,7 +4,6 @@ import { Card, Button, Badge, Input, Dialog } from '@/components/ui'
 import { Plus, Search, Loader2, Trash2, Key, BookOpen, Calendar, UserCircle } from 'lucide-vue-next'
 import { useTeachers, useTeacherCreate, useTeacherUpdate, useTeacherDelete } from '@/composables/useTeachers'
 import { useToast } from '@/composables/useToast'
-import ManageClassesDialog from '@/components/admin/ManageClassesDialog.vue'
 import ManageSchedulesDialog from '@/components/admin/ManageSchedulesDialog.vue'
 import type { User } from '@/types'
 import { getErrorMessage } from '@/lib/error'
@@ -170,15 +169,6 @@ const openResetDialog = (teacher: User) => {
   showResetDialog.value = true
 }
 
-// Manage Classes Dialog
-const showManageClassesDialog = ref(false)
-const managingClassesTeacher = ref<User | null>(null)
-
-const openManageClassesDialog = (teacher: User) => {
-  managingClassesTeacher.value = teacher
-  showManageClassesDialog.value = true
-}
-
 // Manage Schedules Dialog
 const showManageSchedulesDialog = ref(false)
 const managingSchedulesTeacher = ref<User | null>(null)
@@ -307,7 +297,7 @@ const handleResetPassword = async () => {
             <span class="text-xs">任课信息</span>
           </div>
           <p class="text-sm text-[#737373] mt-1">
-            管理班级和课表安排
+            管理课表安排
           </p>
         </div>
 
@@ -340,15 +330,6 @@ const handleResetPassword = async () => {
           </Button>
         </div>
         <div class="relative z-10 mt-2 flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            class="flex-1 hover:bg-[#fafafa]"
-            @click="openManageClassesDialog(teacher)"
-          >
-            <BookOpen class="mr-2 h-4 w-4" />
-            管理班级
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -592,13 +573,6 @@ const handleResetPassword = async () => {
         </Button>
       </template>
     </Dialog>
-
-    <!-- Manage Classes Dialog -->
-    <ManageClassesDialog
-      v-model:open="showManageClassesDialog"
-      :teacher="managingClassesTeacher"
-      @success="() => { /* 数据会自动刷新 */ }"
-    />
 
     <!-- Manage Schedules Dialog -->
     <ManageSchedulesDialog
