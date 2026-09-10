@@ -69,13 +69,16 @@ def get_course_sessions(
     else:
         sessions = get_teacher_active_course_sessions(session, teacher_id)
 
+    from app.core.class_cache import get_class_id_by_name, get_class_names
+    name_map = get_class_names(session, (cs.class_id for cs in sessions))
+
     data = []
     for cs in sessions:
         data.append({
             "id": cs.id,
             "active": cs.status == "active",
             "course_name": cs.course_name,
-            "class_name": cs.class_name,
+            "class_name": name_map.get(cs.class_id),
             "start_time": cs.start_time,
             "end_time": cs.end_time,
             "status": cs.status,
@@ -124,7 +127,7 @@ def begin_course_session(
         schedule = session.get(CourseSchedule, schedule_id)
         if not schedule:
             raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课表不存在")
-        if schedule.class_name != data.class_name:
+        if schedule.class_id != get_class_id_by_name(session, data.class_name):
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级与课表不匹配")
         if data.course_name and schedule.course_name != data.course_name:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程名称与课表不匹配")
@@ -200,7 +203,7 @@ def begin_course_session(
             "id": course_session.id,
             "active": True,
             "course_name": course_session.course_name,
-            "class_name": course_session.class_name,
+            "class_name": data.class_name,
             "start_time": course_session.start_time,
             "status": course_session.status,
             "session_code": course_session.session_code,

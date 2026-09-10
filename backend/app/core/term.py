@@ -5,8 +5,7 @@
 替代此前散落在 schedules.py / course_sessions.py / 前端 date.ts
 中互相矛盾的硬编码周次实现。
 
-Phase 2：学期实体化 — get_current_semester 从数据库读（进程级 TTL 缓存），
-get_current_term 保持兼容（模型 default_factory 无 session 场景）。
+Phase 2：学期实体化 — 当前学期从数据库读（进程级 TTL 缓存）。
 """
 import time
 from datetime import date
@@ -53,14 +52,6 @@ def invalidate_semester_cache() -> None:
     _current_semester_id = None
     _current_semester_label = None
     _current_semester_ts = 0.0
-
-
-def get_current_term() -> str:
-    """获取当前学期标识（如 '2026-2027-1'）
-
-    返回 DB 缓存的当前学期 label；缓存未加载（模型 default_factory 无
-    session 场景）时返回空串（冗余 semester 列，过渡期保留）。"""
-    return _current_semester_label or ""
 
 
 def get_current_week_number(

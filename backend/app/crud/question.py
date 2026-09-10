@@ -6,7 +6,7 @@ from sqlalchemy import and_, or_
 from sqlmodel import Session, select, func
 from app.models.question import Question, Answer
 from app.core.class_cache import get_class_id_by_name
-from app.core.term import get_current_term, get_current_semester_id
+from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 
 
@@ -20,7 +20,7 @@ def create_question(
     """创建问题"""
     question = Question(
         teacher_id=teacher_id,
-        class_id=get_class_id_by_name(session, class_name) if class_name else None,  # 双写：FK 列
+        class_id=get_class_id_by_name(session, class_name) if class_name else None,
         semester_id=get_current_semester_id(session),                                # 双写：FK 列
         content=content,
         status="active",
@@ -65,7 +65,7 @@ def get_questions_by_class(
     query = select(Question).where(
         or_(
             Question.class_id == get_class_id_by_name(session, class_name),
-            and_(Question.class_id.is_(None), Question.class_name.is_(None)),
+            Question.class_id.is_(None),
         ),
         Question.semester_id == get_current_semester_id(session),
     )

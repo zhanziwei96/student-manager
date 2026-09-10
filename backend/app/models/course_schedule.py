@@ -37,8 +37,9 @@ class CourseSchedule(CourseScheduleBase, table=True):
 
 
 class CourseScheduleResponse(CourseScheduleBase):
-    """课表响应模型"""
+    """课表响应模型（class_name 由 FK 运行时解析填充）"""
     id: int
+    class_name: Optional[str] = None
     created_at: Optional[str] = None
 
 

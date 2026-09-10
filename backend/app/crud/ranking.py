@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
+from app.core.class_cache import get_class_names, get_class_id_by_name
 from app.models import CourseOffering, Enrollment, Group, GroupMember, Student
 
 
@@ -41,7 +42,7 @@ def get_individual_ranking(
         )
     )
     if scope == "class" and class_name:
-        query = query.where(Student.class_name == class_name)
+        query = query.where(Student.class_id == get_class_id_by_name(session, class_name))
     rows = session.exec(query).all()
     entries = [
         {"student_id": sid, "name": name, "class_name": cls_name, "score": score}
@@ -65,7 +66,7 @@ def get_group_ranking(
         Group.is_active.is_(True),
     )
     if scope == "class" and class_name:
-        query = query.where(Group.class_name == class_name)
+        query = query.where(Group.class_id == get_class_id_by_name(session, class_name))
     groups = session.exec(query).all()
     member_rows = session.exec(
         select(GroupMember.group_id, Student.name)
@@ -75,8 +76,9 @@ def get_group_ranking(
     members: Dict[int, List[str]] = {}
     for group_id, name in member_rows:
         members.setdefault(group_id, []).append(name)
+    class_names = get_class_names(session, (g.class_id for g in groups))
     entries = [
-        {"group_id": g.id, "name": g.name, "class_name": g.class_name,
+        {"group_id": g.id, "name": g.name, "class_name": class_names.get(g.class_id),
          "score": g.score, "members": members.get(g.id, [])}
         for g in groups
     ]

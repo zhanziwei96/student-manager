@@ -410,7 +410,7 @@ def transfer_student_class(
     user: dict = Depends(require_admin)
 ):
     """学生转班（仅管理员）：更新行政班归属 + 同步冗余缓存"""
-    from app.core.class_cache import get_class_by_id, invalidate_class_cache
+    from app.core.class_cache import invalidate_class_cache
     from app.core.term import get_current_semester_id
     from app.models import Class_, StudentClassSemester
 
@@ -418,7 +418,7 @@ def transfer_student_class(
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生不存在")
 
-    target = get_class_by_id(session, body.class_id)
+    target = session.get(Class_, body.class_id)
     if target is None:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="目标班级不存在")
 

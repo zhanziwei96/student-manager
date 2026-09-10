@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlmodel import Session, select, func
 from app.models import CheckinRecord
 from app.core.class_cache import get_class_id_by_name
-from app.core.term import get_current_term, get_current_semester_id
+from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 
 
@@ -19,14 +19,14 @@ def get_checkins_by_session_id(session: Session, session_id: int) -> List[Checki
 def get_all_checkins(
     session: Session,
     limit: int = 200,
-    class_names: Optional[List[str]] = None,
+    class_ids: Optional[List[int]] = None,
 ) -> List[CheckinRecord]:
     """获取当前学期签到记录列表（按时间倒序，用于 admin 签到管理；可选按班级过滤）"""
     query = select(CheckinRecord).where(CheckinRecord.semester_id == get_current_semester_id(session))
     # 注意：用 is not None 而非 truthiness——空列表应过滤掉全部（fail-closed），
     # 而不是跳过过滤（否则无班级教师会看到全量记录）
-    if class_names is not None:
-        query = query.where(CheckinRecord.class_name.in_(class_names))
+    if class_ids is not None:
+        query = query.where(CheckinRecord.class_id.in_(class_ids))
     query = query.order_by(CheckinRecord.checkin_time.desc()).limit(limit)
     return list(session.exec(query).all())
 

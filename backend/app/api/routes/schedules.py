@@ -32,7 +32,6 @@ from app.models.constants import (
 )
 # 周次计算收敛至 core/term.py 单一真源（以 _ 前缀别名导入，避免与本地函数名混淆）
 from app.core.term import (
-    get_current_term as _get_current_term,
     get_current_week_number as _get_current_week_number,
     get_week_number_for_date as _get_week_number_for_date,
 )
@@ -47,7 +46,10 @@ def _enrich_schedule_with_week_data(
     from app.crud.schedule_adjustment import get_adjustment
     from app.crud.course_session import get_course_sessions_by_schedule_and_week
 
+    from app.core.class_cache import get_class_name_by_id
+
     schedule_data = schedule.model_dump()
+    schedule_data["class_name"] = get_class_name_by_id(session, schedule.class_id)
     schedule_data["week_number"] = week_number
 
     week_type = getattr(schedule, "week_type", "all")

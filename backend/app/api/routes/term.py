@@ -6,7 +6,6 @@ from sqlmodel import Session
 
 from app.core.db import get_session
 from app.core.term import (
-    get_current_term,
     get_current_semester,
     get_current_week_number,
 )
@@ -22,7 +21,7 @@ def get_current_term_info(session: Session = Depends(get_session)):
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
-            "term": get_current_term(),
+            "term": sem.label if sem else "",
             "start_date": sem.start_date.isoformat() if sem else None,
             "current_week": get_current_week_number(session),
             "total_weeks": sem.total_weeks if sem else None,

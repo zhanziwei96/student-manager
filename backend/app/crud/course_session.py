@@ -7,7 +7,7 @@ import uuid
 from zoneinfo import ZoneInfo
 from sqlmodel import Session, select
 from app.core.class_cache import get_class_id_by_name
-from app.core.term import get_current_term, get_current_semester_id
+from app.core.term import get_current_semester_id
 from app.models import CourseSession
 
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")

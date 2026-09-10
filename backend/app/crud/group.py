@@ -2,7 +2,7 @@
 from typing import List, Optional
 import random
 from sqlmodel import Session, select
-from app.core.class_cache import get_class_id_by_name
+from app.core.class_cache import get_class_id_by_name, get_class_name_by_id
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 from app.models.group import (
@@ -161,7 +161,8 @@ def approve_membership_request(session: Session, request_id: int) -> Optional[Gr
     req.status = "approved"
     req.resolved_at = get_now()
     # 先退出同科目旧组（小组按科目划分）
-    _remove_student_from_course_groups(session, req.student_id, group.class_name, group.course_id)
+    _remove_student_from_course_groups(
+        session, req.student_id, get_class_name_by_id(session, group.class_id), group.course_id)
     # 加入新组
     member = GroupMember(group_id=group.id, student_id=req.student_id)
     session.add(member)
@@ -364,7 +365,7 @@ def get_group_with_members(session: Session, group_id: int) -> Optional[dict]:
 
     return {
         "id": group.id,
-        "class_name": group.class_name,
+        "class_name": get_class_name_by_id(session, group.class_id),
         "name": group.name,
         "leader_student_id": group.leader_student_id,
         "is_active": group.is_active,
