@@ -41,6 +41,9 @@ with _test_engine.begin() as conn:
     ))
 
 # 在新引擎上创建所有表
+# 必须先导入全部模型：否则 metadata 不完整，drop_all/create_all 会跳过这些表，
+# 长期存在的测试库会保留旧 schema（模型改动看起来"没生效"）
+import app.models  # noqa: F401
 SQLModel.metadata.drop_all(_test_engine)
 SQLModel.metadata.create_all(_test_engine)
 

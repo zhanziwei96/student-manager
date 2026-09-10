@@ -88,6 +88,31 @@ def test_classes_crud(admin_client, seed_basics, session):
     assert resp.status_code == 409
 
 
+def test_class_archive_and_restore(admin_client, seed_basics):
+    """班级归档：默认列表隐藏、include_archived 可见、可恢复、无效状态 400"""
+    resp = admin_client.get("/api/v1/classes")
+    cls = resp.json()["data"][0]
+    assert cls["status"] == "active"
+
+    resp = admin_client.put(f"/api/v1/classes/{cls['id']}", json={"status": "archived"})
+    assert resp.status_code == 200
+    assert resp.json()["data"]["status"] == "archived"
+
+    ids = [c["id"] for c in admin_client.get("/api/v1/classes").json()["data"]]
+    assert cls["id"] not in ids  # 归档后默认不可见
+    ids = [c["id"] for c in admin_client.get(
+        "/api/v1/classes", params={"include_archived": True}).json()["data"]]
+    assert cls["id"] in ids
+
+    resp = admin_client.put(f"/api/v1/classes/{cls['id']}", json={"status": "bogus"})
+    assert resp.status_code == 400
+
+    resp = admin_client.put(f"/api/v1/classes/{cls['id']}", json={"status": "active"})
+    assert resp.status_code == 200
+    ids = [c["id"] for c in admin_client.get("/api/v1/classes").json()["data"]]
+    assert cls["id"] in ids
+
+
 def test_delete_class_blocked_by_schedule_but_empty_deletable(
     admin_client, seed_basics, session
 ):

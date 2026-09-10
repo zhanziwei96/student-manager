@@ -11,6 +11,7 @@ class ClassBase(SQLModel):
     name: str = Field(..., description="班级名（如 1班）", max_length=100)
     major: str = Field(default="", description="专业", max_length=50)
     cohort_year: str = Field(..., description="所属届（入学年份）", max_length=10)
+    status: str = Field(default="active", description="状态: active|archived（归档保留历史）", max_length=20)
 
 
 class Class_(ClassBase, table=True):
@@ -36,6 +37,7 @@ class ClassUpdate(SQLModel):
     name: Optional[str] = None
     major: Optional[str] = None
     cohort_year: Optional[str] = None
+    status: Optional[str] = None
 
 
 class ClassResponse(ClassBase):
