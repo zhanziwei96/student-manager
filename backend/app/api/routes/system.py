@@ -261,19 +261,39 @@ def get_stats(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取系统统计（需要登录）- 使用 COUNT 查询优化性能"""
-    from app.crud import count_students, get_all_classes
+    """获取统计（需要登录）- 使用 COUNT 查询优化性能
+
+    统计范围按角色收敛（教师范围唯一真源：course_offerings.class_scope）：
+    - admin → 全校
+    - teacher → 本人授课班级
+    - student → 本人所在班级
+    无可见班级时统计为 0（fail-closed）。
+    """
+    from app.api.deps import get_teacher_accessible_classes
+    from app.core.class_cache import get_class_ids_by_names
+    from app.crud import count_students, count_students_filtered, get_all_classes
     from app.crud.checkin import count_today_checkins
 
-    total_students = count_students(session)
-    classes = get_all_classes(session)
-    today_checkins = count_today_checkins(session)
+    role = user.get("role", "")
+    if role == "admin":
+        total_students = count_students(session)
+        total_classes = len(get_all_classes(session))
+        today_checkins = count_today_checkins(session)
+    else:
+        if role == "teacher":
+            class_names = sorted(get_teacher_accessible_classes(user, session) or [])
+        else:
+            class_names = [user["class_name"]] if user.get("class_name") else []
+        total_students = count_students_filtered(session, class_names=class_names)
+        total_classes = len(class_names)
+        today_checkins = count_today_checkins(
+            session, class_ids=get_class_ids_by_names(session, class_names))
 
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
             'total_students': total_students,
-            'total_classes': len(classes),
+            'total_classes': total_classes,
             'today_checkins': today_checkins
         }
     }

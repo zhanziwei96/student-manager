@@ -221,13 +221,15 @@ def teacher_user(test_engine):
 
 @pytest.fixture
 def student_user(test_engine):
-    """创建学生用户"""
+    """创建学生用户（所属班级为一班，class_id 与 class_name 同步写入）"""
+    class_id = ensure_class(test_engine, "一班")
     with Session(_test_engine) as session:
         password_hash, salt = generate_password_hash("student123")
         student = Student(
             student_id="S001",
             name="学生1",
             class_name="一班",
+            class_id=class_id,
             password_hash=password_hash,
             salt=salt
         )

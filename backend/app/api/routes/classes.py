@@ -11,10 +11,26 @@ from app.api.deps import require_admin, require_admin_or_teacher
 from app.core.class_cache import invalidate_class_cache
 from app.core.config import HttpStatus
 from app.core.db import get_session
-from app.models import Class_, Cohort, Student
+from app.models import (
+    CheckinRecord, Class_, ClassGroupSettings, Cohort, CourseSchedule,
+    CourseSession, Group, Question, Student, StudentClassSemester,
+)
 from app.models.constants import ApiResponseConst, ApiResponse
 
 router = APIRouter(tags=["classes"])
+
+# 引用 classes.id 的外键表（均未配置 ondelete → RESTRICT）：
+# 删除班级前逐表检查，命中则 409 说明来源，避免外键冲突变成 500
+_CLASS_REFERENCES = (
+    ("学生", "人", Student, Student.class_id),
+    ("班级归属记录", "条", StudentClassSemester, StudentClassSemester.class_id),
+    ("课表", "条", CourseSchedule, CourseSchedule.class_id),
+    ("课堂", "条", CourseSession, CourseSession.class_id),
+    ("签到记录", "条", CheckinRecord, CheckinRecord.class_id),
+    ("小组", "个", Group, Group.class_id),
+    ("小组设置", "条", ClassGroupSettings, ClassGroupSettings.class_id),
+    ("问题", "条", Question, Question.class_id),
+)
 
 
 class CreateClassRequest(BaseModel):
@@ -115,18 +131,24 @@ def delete_class(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin),
 ):
-    """删除班级（RESTRICT：班下有学生时拒绝）"""
+    """删除班级（RESTRICT：仍被学生/课表/课堂等引用时拒绝，并说明引用来源）"""
     cls = session.get(Class_, class_id)
     if cls is None:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="班级不存在")
-    student_count = session.exec(
-        select(func.count()).select_from(Student).where(Student.class_id == class_id)
-    ).one()
-    if student_count > 0:
+
+    refs = []
+    for label, unit, model, column in _CLASS_REFERENCES:
+        count = session.exec(
+            select(func.count()).select_from(model).where(column == class_id)
+        ).one()
+        if count > 0:
+            refs.append(f"{label} {count} {unit}")
+    if refs:
         raise HTTPException(
             status_code=HttpStatus.CONFLICT,
-            detail=f"该班级有 {student_count} 名学生，请先转出或删除学生",
+            detail="该班级仍被引用：" + "、".join(refs) + "，请先处理后再删除",
         )
+
     session.delete(cls)
     session.commit()
     invalidate_class_cache()

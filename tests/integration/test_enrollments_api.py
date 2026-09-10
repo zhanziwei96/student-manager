@@ -14,14 +14,19 @@ from app.models import (
 def enrollment_chain(session, teacher_user, student_user):
     """造完整 FK 链：届/班/学期/课程/教学班（teacher_user 授课）/选课，
     返回 (enrollment, offering)——学生复用 student_user（S001），教师为登录教师"""
-    session.add(Cohort(year="2026"))
-    session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
-                         total_weeks=20, is_current=True))
+    if session.exec(select(Cohort).where(Cohort.year == "2026")).first() is None:
+        session.add(Cohort(year="2026"))
+    if session.exec(select(Semester).where(Semester.label == "2026-2027-1")).first() is None:
+        session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                             total_weeks=20, is_current=True))
     if session.exec(select(Course).where(Course.code == "MATH1")).first() is None:
         session.add(Course(code="MATH1", name="高等数学"))
     session.flush()
-    cls = Class_(name="一班", cohort_year="2026")
-    session.add(cls)
+    # 班级可能已由 conftest 的 student_user fixture 创建，get-or-create
+    cls = session.exec(select(Class_).where(Class_.name == "一班")).first()
+    if cls is None:
+        cls = Class_(name="一班", cohort_year="2026")
+        session.add(cls)
     session.flush()
     offering = CourseOffering(
         course_id=session.exec(select(Course).where(Course.code == "MATH1")).one().id,

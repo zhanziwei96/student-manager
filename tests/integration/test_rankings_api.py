@@ -10,10 +10,15 @@ from app.models import Class_, Course, CourseOffering, Enrollment, Semester, Stu
 @pytest.fixture
 def seed_rankings(session, teacher_user):
     """届/班/学期/课程/教学班/选课基础数据（teacher1 授两个数学教学班）"""
-    cls1 = Class_(name="一班", cohort_year="2026")
-    cls2 = Class_(name="二班", cohort_year="2026")
-    session.add(cls1)
-    session.add(cls2)
+    # 班级可能已由 conftest 的 student_user fixture 创建，get-or-create
+    cls1 = session.exec(select(Class_).where(Class_.name == "一班")).first()
+    if cls1 is None:
+        cls1 = Class_(name="一班", cohort_year="2026")
+        session.add(cls1)
+    cls2 = session.exec(select(Class_).where(Class_.name == "二班")).first()
+    if cls2 is None:
+        cls2 = Class_(name="二班", cohort_year="2026")
+        session.add(cls2)
     session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
                          total_weeks=20, is_current=True))
     math = session.exec(select(Course).where(Course.code == "MATH1")).first()
