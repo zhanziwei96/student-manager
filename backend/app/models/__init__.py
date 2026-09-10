@@ -40,7 +40,7 @@ __all__ = [
     # Constants
     "UserRole", "UserRoleConst", "UserStatus", "CheckinType",
     # Checkin
-    "CheckinRecord", "ScoreLog",
+    "CheckinRecord",
     # DeviceBind
     "DeviceBind", "DeviceBindCreate",
     # Audit
@@ -60,8 +60,6 @@ __all__ = [
     # Lost & Found
     "LostFoundItem", "LostFoundComment", "LostFoundClaim",
     "LostFoundItemResponse", "LostFoundCommentResponse", "LostFoundClaimResponse",
-    # Subject
- "StudentSubjectScore", "StudentSubjectScoreLog",
     # Semester
     "Semester", "SemesterCreate", "SemesterUpdate", "SemesterResponse",
     # Cohort
