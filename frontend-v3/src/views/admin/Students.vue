@@ -3,8 +3,9 @@ import { ref, computed } from 'vue'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useStudentCreate, useToast } from '@/composables'
 import { StudentFilters, usePaginatedStudents } from '@/features/students'
+import StudentImportDialog from '@/components/admin/StudentImportDialog.vue'
 import { Card, Button, Badge, Dialog, Input, Label, Checkbox, Select, DataContainer } from '@/components/ui'
-import { Plus, Archive, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
+import { Plus, Archive, ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-vue-next'
 import { studentsApi } from '@/api'
 import { classesApi } from '@/api/classes'
 import { cohortsApi } from '@/api/cohorts'
@@ -69,6 +70,14 @@ const {
   setClassFilter,
 } = usePaginatedStudents(50, cohortFilter)
 const { mutateAsync: createStudent, isPending: isCreating } = useStudentCreate()
+
+// 批量导入
+const showImportDialog = ref(false)
+const handleImported = async () => {
+  await queryClient.invalidateQueries({ queryKey: ['students'] })
+  await queryClient.invalidateQueries({ queryKey: ['classes'] })  // 导入可能自动建班
+  await queryClient.invalidateQueries({ queryKey: ['stats'] })
+}
 
 // === Toast 状态 (队列模式) ===
 const { success: showSuccessToast, error: showErrorToast } = useToast()
@@ -291,6 +300,14 @@ const handleTransfer = async () => {
       <div class="flex gap-2">
         <Button
           variant="outline"
+          data-testid="import-students-btn"
+          @click="showImportDialog = true"
+        >
+          <Upload class="mr-2 h-4 w-4" />
+          批量导入
+        </Button>
+        <Button
+          variant="outline"
           data-testid="disable-by-class-btn"
           @click="openDisableDialog"
         >
@@ -303,6 +320,11 @@ const handleTransfer = async () => {
         </Button>
       </div>
     </div>
+
+    <StudentImportDialog
+      v-model:open="showImportDialog"
+      @imported="handleImported"
+    />
 
     <!-- Filters -->
     <StudentFilters
