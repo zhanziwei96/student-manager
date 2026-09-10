@@ -23,12 +23,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """course_schedules 补 week_type 列（与模型 CourseScheduleBase 对齐）"""
-    op.add_column(
-        'course_schedules',
-        sa.Column('week_type', sa.String(length=20), nullable=False, server_default='all'),
-    )
+    # 幂等：week_type 历史上可能已由 create_all 建列，存在则跳过
+    inspector = sa.inspect(op.get_bind())
+    existing = {c["name"] for c in inspector.get_columns('course_schedules')}
+    if 'week_type' not in existing:
+        op.add_column(
+            'course_schedules',
+            sa.Column('week_type', sa.String(length=20), nullable=False, server_default='all'),
+        )
 
 
 def downgrade() -> None:
     """回滚：删除补列"""
-    op.drop_column('course_schedules', 'week_type')
+    inspector = sa.inspect(op.get_bind())
+    existing = {c["name"] for c in inspector.get_columns('course_schedules')}
+    if 'week_type' in existing:
+        op.drop_column('course_schedules', 'week_type')
