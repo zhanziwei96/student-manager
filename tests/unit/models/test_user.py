@@ -22,15 +22,9 @@ class TestUserModel:
             role="teacher"
         )
         
-        # 设置班级列表（JSON格式）
-        user.set_assigned_classes(["软件1班", "软件2班"])
-        
         assert user.username == "teacher1"
         assert user.name == "教师1"
         assert user.role == "teacher"
-        assert user.get_assigned_classes() == ["软件1班", "软件2班"]
-        # 原始值是JSON字符串
-        assert isinstance(user.assigned_classes, str)
         assert user.is_account_enabled is True
         assert user.login_fail_count == 0
     
@@ -68,9 +62,6 @@ class TestUserModel:
         )
         
         assert user.role == "teacher"
-        assert user.get_assigned_classes() == []
-        # 默认值是JSON字符串 '[]'
-        assert user.assigned_classes == '[]'
         assert user.is_account_enabled is True
         assert user.created_at is not None
 
@@ -85,12 +76,10 @@ class TestUserSchemas:
             password="password123",
             name="新用户",
             role="teacher",
-            assigned_classes=["班级1"]
-        )
+                    )
         
         assert data.username == "new_user"
-        assert data.assigned_classes == ["班级1"]
-    
+            
     def test_user_update(self):
         """测试更新用户请求"""
         data = UserUpdate(name="新名称")

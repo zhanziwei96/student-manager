@@ -4,7 +4,7 @@
 from datetime import datetime, date
 from typing import List, Optional
 from sqlmodel import Session, select, func
-from app.models import CheckinRecord, ScoreLog
+from app.models import CheckinRecord
 from app.core.class_cache import get_class_id_by_name
 from app.core.term import get_current_term, get_current_semester_id
 from app.core.transition_filters import class_filter, semester_filter
@@ -171,41 +171,6 @@ def count_checkins_by_session_id(session: Session, session_id: int) -> int:
     )
     result = session.exec(query)
     return result.one()
-
-
-def get_student_score_logs(
-    session: Session,
-    student_id: str,
-    limit: Optional[int] = None,
-    offset: int = 0,
-) -> List[ScoreLog]:
-    """获取学生当前学期分数日志（支持分页）
-
-    Args:
-        session: 数据库会话
-        student_id: 学号
-        limit: 返回数量限制（None=使用配置默认值；0=不限制）
-        offset: 偏移量（分页"加载更多"用）
-    """
-    query = (
-        select(ScoreLog)
-        .where(
-            ScoreLog.student_id == student_id,
-            semester_filter(
-                ScoreLog.semester_id, ScoreLog.semester,
-                get_current_semester_id(session), get_current_term(),
-            ),
-        )
-        .order_by(ScoreLog.created_at.desc())
-    )
-    if limit is None:
-        from app.core.config import get_settings
-        limit = get_settings().pagination.score_log_default_limit
-    if offset:
-        query = query.offset(offset)
-    if limit > 0:
-        query = query.limit(limit)
-    return list(session.exec(query).all())
 
 
 def is_device_checked_in_session(session: Session, device_id: str, session_id: int) -> bool:

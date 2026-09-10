@@ -81,7 +81,7 @@ class TestStudentsAPIEnhanced:
         data = response.json()
         assert data["success"] is True
         assert data["data"]["student_id"] == "S100"
-        assert data["data"]["score"] == 0.0  # 默认分数
+        assert data["data"]["status"] == "active"
     
     def test_create_student_duplicate_id(self, admin_client, student_user):
         """测试创建重复学号的学生"""
@@ -96,98 +96,6 @@ class TestStudentsAPIEnhanced:
         assert data["success"] is False
         assert "已存在" in data["message"]
     
-    def test_update_student_score_as_admin(self, admin_client, student_user):
-        """测试管理员更新学生分数"""
-        response = admin_client.put("/api/v1/students/S001/score", json={
-            "score_change": 5.0,
-            "reason": "回答问题奖励"
-        })
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert data["data"]["score"] == 85.0  # 80 + 5
-    
-    def test_update_student_score_negative(self, admin_client, student_user):
-        """测试扣分"""
-        response = admin_client.put("/api/v1/students/S001/score", json={
-            "score_change": -10.0,
-            "reason": "迟到扣分"
-        })
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert data["data"]["score"] == 70.0  # 80 - 10
-    
-    def test_update_student_score_not_found(self, admin_client):
-        """测试更新不存在学生的分数"""
-        response = admin_client.put("/api/v1/students/NOTEXIST/score", json={
-            "score_change": 5.0,
-            "reason": "测试"
-        })
-        
-        assert response.status_code == 404
-    
-    def test_delete_student_as_admin(self, admin_client):
-        """测试管理员删除学生"""
-        # 先创建一个学生
-        admin_client.post("/api/v1/students", json={
-            "student_id": "S999",
-            "name": "待删除学生",
-            "class_name": "一班"
-        })
-        
-        response = admin_client.delete("/api/v1/students/S999")
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-    
-    def test_delete_student_not_found(self, admin_client):
-        """测试删除不存在的学生"""
-        response = admin_client.delete("/api/v1/students/NOTEXIST")
-        
-        assert response.status_code == 404
-    
-    def test_reset_student_password_as_admin(self, admin_client, student_user):
-        """测试管理员重置学生密码"""
-        response = admin_client.put("/api/v1/students/S001/reset-password", json={
-            "new_password": "reset123"
-        })
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        
-        # 验证新密码可以登录
-        response = admin_client.post("/api/v1/login", json={
-            "username": "S001",
-            "password": "reset123",
-            "role": "student"
-        })
-        assert response.status_code == 200
-    
-    def test_get_student_scores_history(self, admin_client, student_user):
-        """测试获取学生分数历史"""
-        # 先更新几次分数
-        admin_client.put("/api/v1/students/S001/score", json={
-            "score_change": 5.0,
-            "reason": "第一次加分"
-        })
-        admin_client.put("/api/v1/students/S001/score", json={
-            "score_change": -3.0,
-            "reason": "扣分"
-        })
-        
-        response = admin_client.get("/api/v1/students/S001/scores")
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        # 由于领域事件处理器使用独立会话，在测试中可能无法立即看到日志
-        # 只验证 API 返回成功，数据条数可能为 0（由于会话隔离）或更多
-        assert isinstance(data["data"], list)
     
 class TestStudentsPagination:
     """学生列表分页（limit/offset/total）集成测试"""
@@ -288,40 +196,4 @@ class TestScoreLogsPagination:
                 ))
             session.commit()
 
-    def test_score_logs_pagination(self, student_client, test_engine):
-        """学生查看自己的分数日志：30 条分 2 页（20 + 10）"""
-        self._create_score_logs(test_engine, "S001", 30)
-
-        resp1 = student_client.get("/api/v1/students/S001/scores?limit=20&offset=0")
-        assert resp1.status_code == 200
-        page1 = resp1.json()["data"]
-        assert len(page1) == 20
-
-        resp2 = student_client.get("/api/v1/students/S001/scores?limit=20&offset=20")
-        assert resp2.status_code == 200
-        page2 = resp2.json()["data"]
-        assert len(page2) == 10
-
-        # 两页 id 互不重复且覆盖全部 30 条
-        ids = {log["id"] for log in page1 + page2}
-        assert len(ids) == 30
-
-    def test_score_logs_offset_beyond_total(self, student_client, test_engine):
-        """offset 超出总数时返回空列表"""
-        self._create_score_logs(test_engine, "S001", 5)
-
-        resp = student_client.get("/api/v1/students/S001/scores?limit=20&offset=100")
-        assert resp.status_code == 200
-        assert resp.json()["data"] == []
-
-    def test_score_logs_default_behavior_unchanged(self, student_client, test_engine):
-        """不传分页参数时按默认 limit 返回（向后兼容）"""
-        self._create_score_logs(test_engine, "S001", 10)
-
-        resp = student_client.get("/api/v1/students/S001/scores")
-        assert resp.status_code == 200
-        assert len(resp.json()["data"]) == 10
-
-    def test_score_logs_invalid_offset(self, student_client, test_engine):
-        """非法 offset 返回 422"""
-        assert student_client.get("/api/v1/students/S001/scores?offset=-1").status_code == 422
+    

@@ -50,13 +50,17 @@ def engine():
     """PG 测试引擎"""
     test_engine = create_engine(TEST_DATABASE_URL, poolclass=StaticPool)
     # 创建所有表
-    from app.models import Student, User, CheckinRecord, CourseSession, ScoreLog, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
+    from app.models import Student, User, CheckinRecord, CourseSession, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
     from app.models.question import Question, Answer  # noqa: F401
     # 先删废弃表（任务/互评已停用，旧测试库残留且 FK 引用 groups，阻止 drop_all）
     with test_engine.begin() as conn:
         conn.execute(text(
             "DROP TABLE IF EXISTS group_evaluation_scores, evaluation_assignments, "
             "group_task_dimensions, group_tasks CASCADE"
+        ))
+        conn.execute(text(
+            "DROP TABLE IF EXISTS student_subject_score_logs, student_subject_scores, "
+            "subjects, score_logs CASCADE"
         ))
     SQLModel.metadata.drop_all(test_engine)
     SQLModel.metadata.create_all(test_engine)
@@ -91,7 +95,6 @@ def test_student(session: Session):
         student_id="TEST001",
         name="测试学生",
         class_name="测试班级",
-        score=80.0,
         password_hash=password_hash,
         salt=salt
     )
@@ -115,7 +118,6 @@ def test_user(session: Session):
         password_hash=password_hash,
         salt=salt,
         role=UserRoleConst.TEACHER,
-        assigned_classes='["测试班级"]'
     )
     session.add(user)
     session.commit()
@@ -137,7 +139,6 @@ def test_admin(session: Session):
         password_hash=password_hash,
         salt=salt,
         role=UserRoleConst.ADMIN,
-        assigned_classes='[]'
     )
     session.add(user)
     session.commit()

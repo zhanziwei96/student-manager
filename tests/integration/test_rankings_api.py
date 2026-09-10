@@ -14,14 +14,18 @@ def seed_rankings(session, teacher_user):
     session.add(Class_(name="二班", cohort_year="2026"))
     session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
                          total_weeks=20, is_current=True))
-    math = Course(code="MATH1", name="高等数学")
-    eng = Course(code="ENG1", name="大学英语")
-    session.add(math)
-    session.add(eng)
+    math = session.exec(select(Course).where(Course.code == "MATH1")).first()
+    if math is None:
+        math = Course(code="MATH1", name="高等数学")
+        session.add(math)
+    eng = session.exec(select(Course).where(Course.code == "ENG1")).first()
+    if eng is None:
+        eng = Course(code="ENG1", name="大学英语")
+        session.add(eng)
     other = User(username="t2", name="李老师", password_hash="x", role="teacher")
     session.add(other)
     session.commit()
-    sem = session.exec(select(Semester)).one()
+    sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).one()
     t1 = teacher_user  # conftest fixture（teacher1）
     m1 = CourseOffering(course_id=math.id, semester_id=sem.id, teacher_id=t1.id,
                         teacher_name=t1.name, class_scope="一班", status="active")
@@ -131,7 +135,7 @@ def test_group_ranking(teacher_client, seed_rankings, session):
     """小组榜：按科目+班级取小组累计分排名，含成员名单"""
     from app.models import Group, GroupMember
 
-    sem = session.exec(select(Semester)).one()
+    sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).one()
     g1 = Group(name="第一组", class_name="一班", course_id=seed_rankings["math"].id,
                semester_id=sem.id, leader_student_id="S001", score=95.0, is_active=True)
     g2 = Group(name="第二组", class_name="一班", course_id=seed_rankings["math"].id,

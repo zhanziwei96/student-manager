@@ -128,7 +128,7 @@ def begin_course_session(
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级与课表不匹配")
         if data.course_name and schedule.course_name != data.course_name:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程名称与课表不匹配")
-        week_number = _get_current_week_number()
+        week_number = _get_current_week_number(session)
         classroom = schedule.classroom
         source_type = "scheduled"
         if not data.course_name:

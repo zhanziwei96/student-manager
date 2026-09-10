@@ -224,9 +224,8 @@ def get_checkin_list(
     """获取签到记录列表（admin 全量；教师限负责班级）"""
     class_names = None
     if user.get("role") != "admin":
-        from app.models import User
-        user_obj = session.get(User, int(user.get("sub", 0)))
-        class_names = user_obj.get_assigned_classes() if user_obj else []
+        from app.api.deps import get_teacher_accessible_classes
+        class_names = get_teacher_accessible_classes(user, session)
 
     checkins = get_all_checkins(session, limit=limit, class_names=class_names)
     return {

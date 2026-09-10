@@ -6,13 +6,11 @@ export interface CreateTeacherRequest {
   password: string
   name: string
   role: string
-  assigned_classes?: string[]
 }
 
 export interface UpdateTeacherRequest {
   name?: string
   role?: string
-  assigned_classes?: string[]
   is_account_enabled?: boolean
 }
 

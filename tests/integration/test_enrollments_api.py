@@ -17,7 +17,8 @@ def enrollment_chain(session, teacher_user, student_user):
     session.add(Cohort(year="2026"))
     session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
                          total_weeks=20, is_current=True))
-    session.add(Course(code="MATH1", name="高等数学"))
+    if session.exec(select(Course).where(Course.code == "MATH1")).first() is None:
+        session.add(Course(code="MATH1", name="高等数学"))
     session.flush()
     cls = Class_(name="一班", cohort_year="2026")
     session.add(cls)

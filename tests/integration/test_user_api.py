@@ -17,27 +17,7 @@ class TestUserListAPI:
         assert data["success"] is True
         assert len(data["data"]) == 2
     
-    def test_list_users_assigned_classes_format(self, admin_client, admin_user, teacher_user):
-        """验证 assigned_classes 返回格式为列表而非 JSON 字符串"""
-        response = admin_client.get("/api/v1/users")
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        
-        # 找到教师用户
-        teacher_data = None
-        for user in data["data"]:
-            if user["username"] == "teacher1":
-                teacher_data = user
-                break
-        
-        assert teacher_data is not None
-        # 关键验证：assigned_classes 必须是列表类型，不是字符串
-        assert isinstance(teacher_data["assigned_classes"], list)
-        assert "一班" in teacher_data["assigned_classes"]
-        assert "二班" in teacher_data["assigned_classes"]
-    
+
     def test_list_users_filter_by_role(self, admin_client, admin_user, teacher_user):
         """按角色筛选用户"""
         response = admin_client.get("/api/v1/users?role=teacher")
@@ -191,19 +171,34 @@ class TestResetPasswordAPI:
 class TestDeleteUserAPI:
     """删除用户 API 测试"""
     
-    def test_delete_user_success(self, admin_client, teacher_user):
-        """成功删除用户"""
-        response = admin_client.delete(f"/api/v1/users/{teacher_user.id}")
-        
+    def test_delete_user_success(self, admin_client, test_engine):
+        """成功删除无授课关系的用户"""
+        from sqlmodel import Session
+        from app.models import User
+        from app.core.security import generate_password_hash
+        from tests.integration.conftest import _test_engine
+
+        with Session(_test_engine) as session:
+            password_hash, salt = generate_password_hash("delete123")
+            user = User(username="to_delete", name="待删教师",
+                        password_hash=password_hash, salt=salt,
+                        role="teacher", is_active=True)
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            user_id = user.id
+
+        response = admin_client.delete(f"/api/v1/users/{user_id}")
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["message"] == "用户删除成功"
-        
+
         # 验证已删除
         list_response = admin_client.get("/api/v1/users")
         users = list_response.json()["data"]
-        assert not any(u["id"] == teacher_user.id for u in users)
+        assert not any(u["id"] == user_id for u in users)
     
     def test_delete_user_not_found(self, admin_client):
         """用户不存在"""

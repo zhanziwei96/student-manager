@@ -2,16 +2,22 @@
 课表调整 API 集成测试
 """
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 
 @pytest.fixture
 def create_test_schedule(test_engine, teacher_user):
-    """创建测试课表的 fixture"""
+    """创建测试课表的 fixture（含当前学期，周次校验依赖 semesters 表）"""
+    from datetime import date
     from app.models.course_schedule import CourseSchedule
+    from app.models import Semester
 
     def _create_schedule(**kwargs):
         with Session(test_engine) as session:
+            if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
+                session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                                     total_weeks=20, is_current=True))
+                session.commit()
             schedule = CourseSchedule(
                 course_name=kwargs.get("course_name", "测试课程"),
                 class_name=kwargs.get("class_name", "一班"),
@@ -46,7 +52,6 @@ def another_teacher_user(test_engine):
             password_hash=password_hash,
             salt=salt,
             role=UserRoleConst.TEACHER,
-            assigned_classes='["三班"]',
             is_active=True
         )
         session.add(user)

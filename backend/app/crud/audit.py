@@ -17,9 +17,17 @@ def create_audit_log(session: Session, **kwargs) -> AuditLog:
     return audit_log
 
 
-def get_audit_logs(session: Session, limit: int = 100, offset: int = 0) -> List[AuditLog]:
-    """获取审计日志列表"""
-    query = select(AuditLog).order_by(AuditLog.created_at.desc()).offset(offset).limit(limit)
+def get_audit_logs(
+    session: Session,
+    limit: int = 100,
+    offset: int = 0,
+    semester_id: Optional[int] = None,
+) -> List[AuditLog]:
+    """获取审计日志列表（可按学期过滤，ADM-13）"""
+    query = select(AuditLog).order_by(AuditLog.created_at.desc())
+    if semester_id is not None:
+        query = query.where(AuditLog.semester_id == semester_id)
+    query = query.offset(offset).limit(limit)
     return list(session.exec(query).all())
 
 

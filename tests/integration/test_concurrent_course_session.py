@@ -55,7 +55,6 @@ class TestConcurrentCourseSession:
                 password_hash=password_hash,
                 salt=salt,
                 role=UserRoleConst.TEACHER,
-                assigned_classes='["一班"]',
                 is_active=True
             ))
             session.commit()
@@ -109,7 +108,6 @@ class TestConcurrentCourseSession:
                 password_hash=password_hash,
                 salt=salt,
                 role=UserRoleConst.TEACHER,
-                assigned_classes='["一班"]',
                 is_active=True
             ))
             # 开课校验要求班级有启用学生

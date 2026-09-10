@@ -54,8 +54,11 @@ def create_schedule_adjustment(
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权调整此课程")
 
     # 周次范围验证
-    from app.core.term import get_term_total_weeks
-    total_weeks = get_term_total_weeks()
+    from app.core.term import get_current_semester
+    sem = get_current_semester(session)
+    if sem is None:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="当前学期未设置")
+    total_weeks = sem.total_weeks
     if data.week_number < 1 or data.week_number > total_weeks:
         raise HTTPException(
             status_code=HttpStatus.BAD_REQUEST,

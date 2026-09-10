@@ -71,7 +71,6 @@ const routes = [
         name: 'AdminSchedules',
         component: () => import('@/views/teacher/Schedules.vue'),
       },
-      { path: 'subjects', name: 'AdminSubjects', component: () => import('@/views/teacher/Subjects.vue') },
       { path: 'groups', name: 'AdminGroups', component: () => import('@/views/teacher/Groups.vue') },
       { path: 'lost-found', name: 'AdminLostFound', component: () => import('@/views/teacher/LostFound.vue') },
       { path: 'lost-found/create', name: 'AdminLostFoundCreate', component: () => import('@/views/teacher/LostFoundForm.vue') },
@@ -119,7 +118,6 @@ const routes = [
         name: 'TeacherSchedules',
         component: () => import('@/views/teacher/Schedules.vue'),
       },
-      { path: 'subjects', name: 'TeacherSubjects', component: () => import('@/views/teacher/Subjects.vue') },
       {
         path: 'sessions-history',
         name: 'TeacherSessionsHistory',

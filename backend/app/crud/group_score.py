@@ -5,7 +5,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, List, Dict, Any
 from sqlalchemy import and_, or_
 from sqlmodel import Session, select
-from app.models import Group, GroupScoreLog, Subject, Course
+from app.models import Group, GroupScoreLog, Course
 from app.core.term import get_current_term, get_current_semester_id
 from app.core.transition_filters import semester_filter
 from app.core.config import get_settings

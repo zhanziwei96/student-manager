@@ -36,7 +36,6 @@ export interface User {
   name: string                  // 姓名
   role: UserRole                // 角色
   class_name?: string           // 学生所属班级
-  assigned_classes?: string[]   // 负责班级列表（FE-004: 补充缺失字段）
   is_account_enabled: boolean   // 账户是否启用
   last_login?: string           // 最后登录时间（ISO格式）
   created_at?: string           // 创建时间（ISO格式）
@@ -52,7 +51,6 @@ export interface CreateUserRequest {
   password: string              // 密码
   name: string                  // 姓名
   role: UserRole                // 角色
-  assigned_classes?: string[]   // 负责班级列表（可选）
 }
 
 /**
@@ -63,7 +61,6 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   name?: string                 // 姓名（可选）
   role?: UserRole               // 角色（可选）
-  assigned_classes?: string[]   // 负责班级列表（可选）
   is_account_enabled?: boolean  // 账户是否启用（可选）
 }
 
@@ -98,7 +95,6 @@ export interface Student {
   student_id: string            // 学号（业务主键）
   name: string                  // 姓名
   class_name: string            // 班级
-  score: number                 // 分数
   status?: StudentStatus        // 学籍状态（active|suspended|withdrawn|graduated）
   is_account_enabled: boolean   // 账户是否启用
   checkin_status?: 'checked_in' | 'not_checked_in' // 课堂签到状态（API 动态返回）
@@ -118,7 +114,6 @@ export interface CreateStudentRequest {
   student_id: string            // 学号
   name: string                  // 姓名
   class_name: string            // 班级
-  score?: number                // 初始分数（可选，默认70）
 }
 
 /**
@@ -129,24 +124,7 @@ export interface CreateStudentRequest {
 export interface UpdateStudentRequest {
   name?: string                 // 姓名（可选）
   class_name?: string           // 班级（可选）
-  score?: number                // 分数（可选）
   // 注意：后端 StudentUpdate 不支持修改账户状态
-}
-
-export interface UpdateScoreRequest {
-  score_change: number
-  reason: string
-}
-
-export interface ScoreLog {
-  id: number
-  student_id: string
-  old_score: number | null
-  new_score: number | null
-  delta: number
-  reason: string | null
-  operator: string | null
-  created_at: string
 }
 
 // 统计类型
@@ -154,7 +132,6 @@ export interface StatsData {
   total_students: number
   active_students: number
   total_classes: number
-  average_score: number
 }
 
 export interface DashboardData {

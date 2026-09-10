@@ -56,11 +56,10 @@ async def require_admin_or_teacher(request: Request):
 
 
 def get_teacher_accessible_classes(user: dict, session: Session):
-    """教师可访问班级集合（过渡期兼容双路径，方案 9.7）
+    """教师可访问班级集合（唯一真源：course_offerings.teacher_id 的 class_scope 派生）
 
     - admin → None（表示不限范围）
-    - teacher → assigned_classes 旧路径优先；为空/未配置时从
-      course_offerings 派生（class_scope 逗号拆分，教师授课班级集合）
+    - teacher → 授课教学班 class_scope 逗号拆分的班级名集合
     - 其他角色/无效用户 → []（空集，任何班级都不可访问）
 
     供 verify_teacher_class_access 与排行榜/列表类端点复用。
@@ -78,11 +77,6 @@ def get_teacher_accessible_classes(user: dict, session: Session):
     if user_obj is None or role != "teacher":
         return []
 
-    assigned = user_obj.get_assigned_classes()
-    if assigned:
-        return assigned
-
-    # 派生路径：offerings.class_scope 逗号拆分
     offerings = session.exec(select(CourseOffering).where(
         CourseOffering.teacher_id == user_obj.id,
     )).all()
@@ -98,8 +92,7 @@ def get_teacher_accessible_classes(user: dict, session: Session):
 def verify_teacher_class_access(user: dict, class_name: str, session: Session) -> None:
     """校验教师是否有权操作指定班级（admin 放行，teacher 校验班级归属）
 
-    过渡期兼容双路径：assigned_classes 旧路径优先；
-    为空/未配置时从 course_offerings 派生（教师授课班级集合，方案 9.7）。
+    权限唯一真源：course_offerings.teacher_id 的 class_scope 派生。
 
     Args:
         user: get_current_user 返回的 JWT claims dict

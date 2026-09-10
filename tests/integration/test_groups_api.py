@@ -30,10 +30,12 @@ def course(test_engine):
     from app.models import Course
 
     with Session(test_engine) as session:
-        c = Course(code="MATH1", name="高等数学")
-        session.add(c)
-        session.commit()
-        session.refresh(c)
+        c = session.exec(select(Course).where(Course.code == "MATH1")).first()
+        if c is None:
+            c = Course(code="MATH1", name="高等数学")
+            session.add(c)
+            session.commit()
+            session.refresh(c)
         return c.id
 
 
@@ -191,10 +193,12 @@ def test_teacher_groups_returns_course_and_score(teacher_client: TestClient):
     from app.models import Course, Group
 
     with Session(_test_engine) as session:
-        course = Course(code="MATH1", name="高等数学")
-        session.add(course)
-        session.commit()
-        session.refresh(course)
+        course = session.exec(select(Course).where(Course.code == "MATH1")).first()
+        if course is None:
+            course = Course(code="MATH1", name="高等数学")
+            session.add(course)
+            session.commit()
+            session.refresh(course)
         course_id = course.id
 
         group = Group(
@@ -226,10 +230,12 @@ def test_student_create_group_with_course(student_client: TestClient):
     from app.models import Course, Group
 
     with Session(_test_engine) as session:
-        course = Course(code="MATH1", name="高等数学")
-        session.add(course)
-        session.commit()
-        session.refresh(course)
+        course = session.exec(select(Course).where(Course.code == "MATH1")).first()
+        if course is None:
+            course = Course(code="MATH1", name="高等数学")
+            session.add(course)
+            session.commit()
+            session.refresh(course)
 
     resp = student_client.post(
         "/api/v1/student/groups",
@@ -253,10 +259,14 @@ def test_student_can_join_multiple_course_groups(student_client: TestClient):
     from app.models import Course
 
     with Session(_test_engine) as session:
-        math = Course(code="MATH1", name="高等数学")
-        eng = Course(code="ENG1", name="大学英语")
-        session.add(math)
-        session.add(eng)
+        math = session.exec(select(Course).where(Course.code == "MATH1")).first()
+        if math is None:
+            math = Course(code="MATH1", name="高等数学")
+            session.add(math)
+        eng = session.exec(select(Course).where(Course.code == "ENG1")).first()
+        if eng is None:
+            eng = Course(code="ENG1", name="大学英语")
+            session.add(eng)
         session.commit()
         math_id, eng_id = math.id, eng.id
 
@@ -296,9 +306,11 @@ def test_teacher_creates_group(teacher_client: TestClient):
     from app.models import Course
 
     with Session(_test_engine) as session:
-        course = Course(code="MATH1", name="高等数学")
-        session.add(course)
-        session.commit()
+        course = session.exec(select(Course).where(Course.code == "MATH1")).first()
+        if course is None:
+            course = Course(code="MATH1", name="高等数学")
+            session.add(course)
+            session.commit()
         course_id = course.id
 
     resp = teacher_client.post(

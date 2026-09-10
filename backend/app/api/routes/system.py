@@ -40,7 +40,6 @@ class DashboardData(BaseModel):
     checked_in: int
     not_checked_in: int
     checkin_rate: float
-    score_ranking: list[dict]
 
 
 class HealthResponse(BaseModel):
@@ -298,24 +297,6 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
     # 获取班级列表（数据量小，保持原方式）
     classes = get_all_classes(session)
     
-    # 获取分数排行榜（需要完整对象，保持原方式）
-    students = get_students(session)
-    
-    # 分数排行榜（脱敏处理：隐藏姓名和学号，只显示分数和排名）
-    score_ranking = []
-    if students:
-        # 按分数排序，取前10
-        sorted_students = sorted(students, key=lambda s: s.score, reverse=True)[:10]
-        for rank, student in enumerate(sorted_students, 1):
-            score_ranking.append({
-                'rank': rank,
-                'score': student.score,
-                # 姓名脱敏：显示第一位和最后一位，中间用 * 代替
-                'name_mask': student.name[0] + '*' + student.name[-1] if len(student.name) >= 2 else (student.name if student.name else '*'),
-                # 学号脱敏：只显示后4位
-                'student_id_mask': '****' + student.student_id[-4:] if len(student.student_id) >= 4 else '****'
-            })
-    
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
@@ -325,6 +306,5 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
             'checked_in': checked_in,
             'not_checked_in': not_checked_in,
             'checkin_rate': checkin_rate,
-            'score_ranking': score_ranking
         }
     }

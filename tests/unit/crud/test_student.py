@@ -5,10 +5,10 @@ import pytest
 from sqlmodel import Session
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
-    create_student, update_student_score, delete_student, get_all_classes,
-    reset_student_password
+    create_student, delete_student, get_all_classes,
+    reset_student_password,
 )
-from app.models import Student, ScoreLog
+from app.models import Student
 
 
 class TestStudentCRUD:
@@ -20,15 +20,13 @@ class TestStudentCRUD:
             session,
             student_id="S001",
             name="张三",
-            class_name="软件1班",
-            score=85.0
+            class_name="软件1班"
         )
         
         assert student.student_id == "S001"
         assert student.name == "张三"
         assert student.class_name == "软件1班"
-        assert student.score == 85.0
-    
+            
     def test_get_student(self, session: Session):
         """测试获取学生"""
         # 先创建学生
@@ -61,34 +59,6 @@ class TestStudentCRUD:
         students = get_students_by_class(session, "软件1班")
         assert len(students) == 2
         assert all(s.class_name == "软件1班" for s in students)
-    
-    def test_update_student_score(self, session: Session):
-        """测试更新学生分数"""
-        student = create_student(session, "S008", "张三", "软件1班", 80.0)
-        
-        updated = update_student_score(
-            session, "S008", delta=5.0, reason="回答问题", operator="老师"
-        )
-        
-        assert updated is not None
-        assert updated.score == 85.0
-        
-        # 验证分数日志
-        from sqlmodel import select
-        logs = session.exec(select(ScoreLog).where(ScoreLog.student_id == "S008")).all()
-        assert len(logs) == 1
-        assert logs[0].delta == 5.0
-        assert logs[0].reason == "回答问题"
-    
-    def test_update_student_score_negative(self, session: Session):
-        """测试扣分"""
-        student = create_student(session, "S009", "张三", "软件1班", 80.0)
-        
-        updated = update_student_score(
-            session, "S009", delta=-5.0, reason="迟到", operator="老师"
-        )
-        
-        assert updated.score == 75.0
     
     def test_delete_student(self, session: Session):
         """测试删除学生"""
@@ -138,30 +108,6 @@ class TestStudentCRUD:
         
         assert result is None
     
-    def test_create_student_default_score(self, session: Session):
-        """测试创建学生时使用默认分数"""
-        student = create_student(
-            session,
-            student_id="S015",
-            name="张三",
-            class_name="软件1班"
-            # 不传入 score，使用默认值
-        )
-        
-        assert student.score == 0.0  # 默认分数
-    
-    def test_update_student_score_not_found(self, session: Session):
-        """测试更新不存在学生的分数"""
-        result = update_student_score(
-            session, "NOT_EXIST",
-            delta=5.0,
-            reason="测试",
-            operator="老师"
-        )
-        
-        assert result is None
-
-
 class TestStudentPagination:
     """学生列表分页（limit/offset）与总数统计"""
 

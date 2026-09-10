@@ -14,7 +14,6 @@ from sqlmodel import Session
 from app.models import Student
 
 
-@pytest.fixture
 def other_student_id(test_engine):
     """创建其他学生（非登录学生 S001，二班）并返回其学号"""
     with Session(test_engine) as session:
@@ -22,7 +21,6 @@ def other_student_id(test_engine):
             student_id="S002",
             name="其他学生",
             class_name="二班",
-            score=75.0,
         )
         student_id = student.student_id
         session.add(student)
@@ -38,30 +36,11 @@ def other_class_student_id(test_engine):
             student_id="S030",
             name="三班学生",
             class_name="三班",
-            score=70.0,
         )
         student_id = student.student_id
         session.add(student)
         session.commit()
     return student_id
-
-
-def test_student_cannot_update_score(student_client, other_student_id):
-    """学生不能修改任意学生（含他人）的分数"""
-    resp = student_client.put(
-        f"/api/v1/students/{other_student_id}/score",
-        json={"score_change": 10, "reason": "越权测试"},
-    )
-    assert resp.status_code == 403
-
-
-def test_student_cannot_update_own_score(student_client, student_user):
-    """学生也不能修改自己的分数"""
-    resp = student_client.put(
-        "/api/v1/students/S001/score",
-        json={"score_change": 10, "reason": "越权测试"},
-    )
-    assert resp.status_code == 403
 
 
 def test_student_cannot_add_student(student_client):
@@ -84,12 +63,6 @@ def test_student_detail_has_no_password_hash(admin_client, student_user):
     resp = admin_client.get("/api/v1/students/S001")
     assert resp.status_code == 200
     assert "password_hash" not in resp.json()["data"]
-
-
-def test_student_cannot_read_other_student_scores(student_client, other_student_id):
-    """学生不能查看他人分数历史"""
-    resp = student_client.get(f"/api/v1/students/{other_student_id}/scores")
-    assert resp.status_code == 403
 
 
 def test_student_cannot_list_students(student_client, student_user):
@@ -175,7 +148,7 @@ def test_active_course_sessions_requires_login(anon_client):
 
 @pytest.fixture
 def teacher_without_classes_client(test_engine):
-    """已登录且无负责班级的教师客户端（assigned_classes 用默认值 '[]'）
+    """已登录且无授课教学班的教师客户端（权限派生为空集）"
 
     同时造一条"一班"签到记录：若空班级列表被跳过过滤（旧 bug），
     该记录会泄漏给教师，本用例将失败——用于验证 fail-closed。
@@ -242,7 +215,6 @@ def teacher2_user(test_engine):
             password_hash=password_hash,
             salt=salt,
             role=UserRoleConst.TEACHER,
-            assigned_classes='["一班", "二班"]',
             is_active=True,
         )
         session.add(user)

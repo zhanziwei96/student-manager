@@ -62,7 +62,6 @@ vi.mock('@/api', () => ({
     updateStatus: vi.fn(),
     transferClass: vi.fn(),
     disableByClass: vi.fn(),
-    getSubjects: vi.fn(),
   },
 }))
 

@@ -20,7 +20,7 @@ from app.core.config import get_settings
 from sqlmodel import SQLModel
 from app.models.user import User
 from app.models.student import Student
-from app.models.checkin import CheckinRecord, ScoreLog
+from app.models.checkin import CheckinRecord
 from app.models.audit import AuditLog
 from app.models.course_schedule import CourseSchedule
 from app.models.course_session import CourseSession, ScheduleAdjustment

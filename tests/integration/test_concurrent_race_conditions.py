@@ -99,41 +99,4 @@ class TestOptimisticLock:
         # 验证 Student 模型有 version 字段
         assert hasattr(Student, 'version'), "Student 模型缺少 version 字段"
 
-    def test_update_score_increments_version(self, test_engine):
-        """测试更新分数会递增版本号"""
-        from app.crud.student import update_student_score
-        from app.models import Student
-
-        with Session(test_engine) as session:
-            # 创建测试学生
-            student = Student(
-                student_id="VERSION_TEST_001",
-                name="版本测试学生",
-                class_name="测试班级",
-                score=100.0,
-                version=1
-            )
-            session.add(student)
-            session.commit()
-            session.refresh(student)
-
-            initial_version = student.version
-
-            # 更新分数
-            result = update_student_score(
-                session=session,
-                student_id=student.student_id,
-                delta=10.0,
-                reason="测试乐观锁",
-                operator="测试"
-            )
-
-            # 重新查询验证版本号
-            if result:
-                session.refresh(student)
-                assert student.version > initial_version, \
-                    "更新后版本号应该递增"
-
-            # 清理
-            session.delete(student)
-            session.commit()
+    

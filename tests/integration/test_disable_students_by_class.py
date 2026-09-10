@@ -350,9 +350,11 @@ class TestDisabledClassContentCreation:
 
         from app.models import Course
         with Session(test_engine) as session:
-            math = Course(code="MATH1", name="高等数学")
-            session.add(math)
-            session.commit()
+            math = session.exec(select(Course).where(Course.code == "MATH1")).first()
+            if math is None:
+                math = Course(code="MATH1", name="高等数学")
+                session.add(math)
+                session.commit()
             math_id = math.id
 
         resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
@@ -391,9 +393,11 @@ class TestDisabledClassContentCreation:
 
         from app.models import Course
         with Session(test_engine) as session:
-            math = Course(code="MATH1", name="高等数学")
-            session.add(math)
-            session.commit()
+            math = session.exec(select(Course).where(Course.code == "MATH1")).first()
+            if math is None:
+                math = Course(code="MATH1", name="高等数学")
+                session.add(math)
+                session.commit()
             math_id = math.id
 
         resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={

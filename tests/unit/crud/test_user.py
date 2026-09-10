@@ -26,13 +26,11 @@ class TestUserCRUD:
             name="新教师",
             password_hash=password_hash,
             role="teacher",
-            assigned_classes=["软件1班"]
         )
         
         assert user.username == "new_teacher"
         assert user.name == "新教师"
         assert user.role == "teacher"
-        assert user.get_assigned_classes() == ["软件1班"]
     
     def test_get_user_by_id(self, session: Session):
         """测试根据ID获取用户"""
@@ -145,19 +143,16 @@ class TestUserCRUD:
             "教师9", 
             password_hash,
             role="teacher",
-            assigned_classes=["软件1班"]
         )
         
         # 修改用户信息
         user.name = "修改后的教师名"
         user.role = "admin"
-        user.set_assigned_classes(["软件1班", "软件2班"])
-        
+
         updated = update_user(session, user)
-        
+
         assert updated.name == "修改后的教师名"
         assert updated.role == "admin"
-        assert updated.get_assigned_classes() == ["软件1班", "软件2班"]
     
     def test_record_login_failure_not_locked(self, session: Session):
         """测试登录失败但未达到锁定阈值"""
@@ -182,7 +177,6 @@ class TestUserCRUD:
             "原始姓名", 
             password_hash,
             role="teacher",
-            assigned_classes=["软件1班"]
         )
         
         # 使用 update_user_info 更新用户信息
@@ -191,13 +185,11 @@ class TestUserCRUD:
             user=user,
             name="更新后的姓名",
             role="admin",
-            assigned_classes=["软件1班", "软件2班"],
             is_account_enabled=False
         )
         
         assert updated.name == "更新后的姓名"
         assert updated.role == "admin"
-        assert updated.get_assigned_classes() == ["软件1班", "软件2班"]
         assert updated.is_account_enabled is False
 
     def test_update_user_password(self, session: Session):
@@ -226,7 +218,6 @@ class TestUserCRUD:
             "原始姓名", 
             password_hash,
             role="teacher",
-            assigned_classes=["软件1班"]
         )
         original_role = user.role
         
@@ -236,13 +227,11 @@ class TestUserCRUD:
             user=user,
             name="仅更新姓名",
             role=None,  # 不更新
-            assigned_classes=None,  # 不更新
             is_account_enabled=None  # 不更新
         )
         
         assert updated.name == "仅更新姓名"
         assert updated.role == original_role  # 保持不变
-        assert updated.get_assigned_classes() == ["软件1班"]  # 保持不变
 
 
 class TestDeleteUserCascade:
