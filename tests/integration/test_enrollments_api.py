@@ -91,7 +91,7 @@ def test_teacher_sets_group_final_scores(teacher_client, enrollment_chain, sessi
     e2 = Enrollment(student_id="S002", offering_id=offering.id,
                     semester_id=offering.semester_id, status="enrolled", score=70.0)
     session.add(e2)
-    group = Group(class_name="一班", name="第一组", leader_student_id="S001",
+    group = Group(class_id=cls_id, name="第一组", leader_student_id="S001",
                   course_id=offering.course_id, semester_id=offering.semester_id)
     session.add(group)
     session.flush()

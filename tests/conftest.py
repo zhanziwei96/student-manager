@@ -32,8 +32,8 @@ TEST_DATABASE_URL = os.environ['DATABASE__URL']
 import pytest
 from typing import Generator
 from sqlalchemy import text
+from sqlalchemy.pool import NullPool
 from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
 
 
 def _truncate_all_tables(engine) -> None:
@@ -48,7 +48,9 @@ def _truncate_all_tables(engine) -> None:
 @pytest.fixture(scope="session")
 def engine():
     """PG 测试引擎"""
-    test_engine = create_engine(TEST_DATABASE_URL, poolclass=StaticPool)
+    # NullPool：每次会话独立连接，不跨线程共享（StaticPool 单连接会被 TestClient
+    # 应用线程与审计后台线程共享，造成间歇性丢写/refresh 失败），也不常驻连接
+    test_engine = create_engine(TEST_DATABASE_URL, poolclass=NullPool)
     # 创建所有表
     from app.models import Student, User, CheckinRecord, CourseSession, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
     from app.models.question import Question, Answer  # noqa: F401
@@ -82,6 +84,42 @@ def session(engine) -> Generator[Session, None, None]:
         yield session
         # 测试结束后回滚
         session.rollback()
+
+
+@pytest.fixture
+def seed_refs(engine):
+    """seed 班级（一班/二班/三班）与当前学期，返回引用 id 的 dict
+
+    业务表为纯 FK 锚点（class_id / semester_id 必填），单元测试构造业务对象
+    时从此 fixture 取 id。
+    """
+    from datetime import date
+    from sqlmodel import select
+    from app.models import Class_, Semester
+    from app.core.class_cache import invalidate_class_cache
+    from app.core.term import invalidate_semester_cache
+
+    with Session(engine) as session:
+        refs = {}
+        for name in ("一班", "二班", "三班"):
+            cls = session.exec(select(Class_).where(Class_.name == name)).first()
+            if cls is None:
+                cls = Class_(name=name, cohort_year="2026")
+                session.add(cls)
+                session.commit()
+                session.refresh(cls)
+            refs[name] = cls.id
+        sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).first()
+        if sem is None:
+            sem = Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                           total_weeks=20, is_current=True)
+            session.add(sem)
+            session.commit()
+            session.refresh(sem)
+        refs["semester_id"] = sem.id
+        invalidate_class_cache()
+        invalidate_semester_cache()
+        return refs
 
 
 @pytest.fixture

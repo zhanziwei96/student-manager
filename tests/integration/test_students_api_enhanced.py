@@ -102,17 +102,19 @@ class TestStudentsPagination:
 
     @staticmethod
     def _create_students(test_engine, class_name: str, count: int, id_prefix: str):
-        """批量创建测试学生"""
+        """批量创建测试学生（class_id 按班级名解析，未登记班级名则为 None）"""
         from sqlmodel import Session
         from app.models import Student
+        from app.core.class_cache import get_class_id_by_name
 
         with Session(test_engine) as session:
+            class_id = get_class_id_by_name(session, class_name)
             for i in range(1, count + 1):
                 session.add(Student(
                     student_id=f"{id_prefix}{i:04d}",
                     name=f"学生{i}",
                     class_name=class_name,
-                    score=60.0,
+                    class_id=class_id,
                 ))
             session.commit()
 
@@ -133,8 +135,8 @@ class TestStudentsPagination:
         # 各页不重复且覆盖全部
         assert len(set(ids)) == 150
 
-    def test_admin_pagination_with_class_filter(self, admin_client, test_engine):
-        """分页与班级筛选同时生效，total 为筛选后总数"""
+    def test_admin_pagination_with_class_filter(self, admin_client, test_engine, seed_refs):
+        """分页与班级筛选同时生效，total 为筛选后总数（班级按 FK 过滤）"""
         self._create_students(test_engine, "一班", 30, "CA")
         self._create_students(test_engine, "二班", 20, "CB")
 
@@ -145,7 +147,7 @@ class TestStudentsPagination:
         assert data["total"] == 30
         assert all(s["class_name"] == "一班" for s in data["data"])
 
-    def test_teacher_pagination(self, teacher_client, test_engine):
+    def test_teacher_pagination(self, teacher_client, test_engine, seed_refs):
         """教师分页：只看负责班级，total 为负责班级总数"""
         self._create_students(test_engine, "一班", 30, "TA")
         self._create_students(test_engine, "三班", 10, "TB")  # 教师不负责三班
@@ -173,27 +175,3 @@ class TestStudentsPagination:
         assert admin_client.get("/api/v1/students?limit=0").status_code == 422
         assert admin_client.get("/api/v1/students?limit=201").status_code == 422
         assert admin_client.get("/api/v1/students?offset=-1").status_code == 422
-
-
-class TestScoreLogsPagination:
-    """分数日志分页（limit/offset）集成测试"""
-
-    @staticmethod
-    def _create_score_logs(test_engine, student_id: str, count: int):
-        """直接插入分数日志（绕过事件会话隔离问题）"""
-        from sqlmodel import Session
-        from app.models import ScoreLog
-
-        with Session(test_engine) as session:
-            for i in range(count):
-                session.add(ScoreLog(
-                    student_id=student_id,
-                    old_score=80.0 + i,
-                    new_score=81.0 + i,
-                    delta=1.0,
-                    reason=f"加分{i + 1}",
-                    operator="老师",
-                ))
-            session.commit()
-
-    

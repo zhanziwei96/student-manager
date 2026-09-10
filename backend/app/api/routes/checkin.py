@@ -6,10 +6,11 @@ from datetime import datetime
 from fastapi import APIRouter, Body, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session
+from app.core.class_cache import get_class_name_by_id
+from app.core.term import get_current_semester_id
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.rate_limit import check_rate_limit
-from app.core.term import get_current_term
 from app.crud import (
     create_checkin, get_students_by_class
 )
@@ -154,8 +155,8 @@ async def do_checkin(
             if str(user.get("sub")) != data.student_id:
                 raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='只能为自己签到')
 
-        # 验证班级匹配
-        if student.class_name != cs.class_name:
+        # 验证班级匹配（FK 比较，跨届同名班不混淆）
+        if student.class_id != cs.class_id:
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='你不是该课堂的学生')
 
         # 设备绑定检查（在同一事务内完成，防止并发竞态）
@@ -169,7 +170,7 @@ async def do_checkin(
                 db_session,
                 data.student_id,
                 data.student_name or student.name,
-                cs.class_name,
+                cs.class_id,
                 cs.id,
                 device_id=data.device_id,
                 device_info=data.device_info,
@@ -190,7 +191,7 @@ async def do_checkin(
         if cs.teacher_id != int(user.get("sub", 0)) and user_role != "admin":
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权为该课堂签到')
         # 验证学生属于该课堂班级
-        if student.class_name != cs.class_name:
+        if student.class_id != cs.class_id:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='该学生不属于此课堂班级')
 
         try:
@@ -198,7 +199,7 @@ async def do_checkin(
                 db_session,
                 data.student_id,
                 data.student_name or student.name,
-                cs.class_name,
+                cs.class_id,
                 cs.id,
             )
         except DuplicateCheckinError as e:
@@ -207,10 +208,12 @@ async def do_checkin(
     else:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少验证码或教师权限')
 
+    checkin_data = checkin.model_dump()
+    checkin_data["class_name"] = get_class_name_by_id(db_session, checkin.class_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.CHECKIN_SUCCESS,
-        ApiResponseConst.DATA: checkin.model_dump()
+        ApiResponseConst.DATA: checkin_data
     }
 
 
@@ -222,15 +225,25 @@ def get_checkin_list(
     user: dict = Depends(require_admin_or_teacher)
 ):
     """获取签到记录列表（admin 全量；教师限负责班级）"""
-    class_names = None
+    class_ids = None
     if user.get("role") != "admin":
         from app.api.deps import get_teacher_accessible_classes
+        from app.core.class_cache import get_class_id_by_name
         class_names = get_teacher_accessible_classes(user, session)
+        class_ids = [cid for name in class_names
+                     if (cid := get_class_id_by_name(session, name)) is not None]
 
-    checkins = get_all_checkins(session, limit=limit, class_names=class_names)
+    checkins = get_all_checkins(session, limit=limit, class_ids=class_ids)
+    from app.core.class_cache import get_class_names
+    name_map = get_class_names(session, (c.class_id for c in checkins))
+    data = []
+    for c in checkins:
+        item = c.model_dump()
+        item["class_name"] = name_map.get(c.class_id)
+        data.append(item)
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [c.model_dump() for c in checkins]
+        ApiResponseConst.DATA: data
     }
 
 
@@ -245,12 +258,18 @@ def get_session_checkin_list(
     cs = get_course_session(db_session, session_id)
     if not cs:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课堂不存在")
-    verify_teacher_class_access(user, cs.class_name, db_session)
+    class_name = get_class_name_by_id(db_session, cs.class_id)
+    verify_teacher_class_access(user, class_name, db_session)
 
     checkins = get_checkins_by_session_id(db_session, session_id)
+    data = []
+    for c in checkins:
+        item = c.model_dump()
+        item["class_name"] = class_name
+        data.append(item)
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [c.model_dump() for c in checkins]
+        ApiResponseConst.DATA: data
     }
 
 
@@ -277,8 +296,9 @@ def get_checkin_stats(
                     'rate': 0
                 }
             }
-        verify_teacher_class_access(user, cs.class_name, db_session)
-        students = get_students_by_class(db_session, cs.class_name)
+        class_name = get_class_name_by_id(db_session, cs.class_id)
+        verify_teacher_class_access(user, class_name, db_session)
+        students = get_students_by_class(db_session, class_name)
         checkins = get_checkins_by_session_id(db_session, session_id)
         total = len(students)
         checked_in = len(checkins)
@@ -289,7 +309,7 @@ def get_checkin_stats(
             ApiResponseConst.DATA: {
                 'active': cs.status == "active",
                 'course_name': cs.course_name,
-                'class_name': cs.class_name,
+                'class_name': class_name,
                 'total': total,
                 'checked_in': checked_in,
                 'not_checked_in': not_checked_in,
@@ -314,7 +334,8 @@ def get_checkin_stats(
         }
 
     cs = course_sessions[0]
-    students = get_students_by_class(db_session, cs.class_name)
+    class_name = get_class_name_by_id(db_session, cs.class_id)
+    students = get_students_by_class(db_session, class_name)
     checkins = get_checkins_by_session_id(db_session, cs.id)
 
     total = len(students)
@@ -327,7 +348,7 @@ def get_checkin_stats(
         ApiResponseConst.DATA: {
             'active': True,
             'course_name': cs.course_name,
-            'class_name': cs.class_name,
+            'class_name': class_name,
             'total': total,
             'checked_in': checked_in,
             'not_checked_in': not_checked_in,
@@ -346,16 +367,18 @@ def get_active_course_sessions(
     from sqlmodel import select
     query = select(CourseSession).where(
         CourseSession.status == "active",
-        CourseSession.semester == get_current_term(),
+        CourseSession.semester_id == get_current_semester_id(session),
     )
     active_sessions = session.exec(query).all()
+    from app.core.class_cache import get_class_names
+    name_map = get_class_names(session, (s.class_id for s in active_sessions))
 
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [
             {
                 'course_name': s.course_name,
-                'class_name': s.class_name,
+                'class_name': name_map.get(s.class_id),
                 'teacher_id': s.teacher_id,
                 'teacher_name': s.teacher_name,
                 'start_time': s.start_time
@@ -383,7 +406,7 @@ async def get_course_session_for_student(
                 'session_code': cs.session_code,
                 'active': True,
                 'course_name': cs.course_name,
-                'class_name': cs.class_name,
+                'class_name': get_class_name_by_id(session, cs.class_id),
                 'teacher_name': cs.teacher_name,
                 'start_time': cs.start_time
             }

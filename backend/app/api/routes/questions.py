@@ -109,6 +109,8 @@ async def teacher_list_questions(
     teacher_id = int(user["sub"])
     questions = get_questions_by_teacher(session, teacher_id, class_name, status)
 
+    from app.core.class_cache import get_class_names
+    class_name_map = get_class_names(session, (q.class_id for q in questions))
     result = []
     for q in questions:
         teacher = get_user(session, q.teacher_id)
@@ -116,7 +118,7 @@ async def teacher_list_questions(
             id=q.id,
             teacher_id=q.teacher_id,
             teacher_name=teacher.name if teacher else None,
-            class_name=q.class_name,
+            class_name=class_name_map.get(q.class_id),
             content=q.content,
             status=q.status,
             is_realtime=q.is_realtime,
@@ -197,6 +199,9 @@ async def student_list_questions(
         raise HTTPException(status_code=400, detail="未设置班级")
 
     questions = get_questions_by_class(session, class_name, status="active")
+
+    from app.core.class_cache import get_class_names
+    class_name_map = get_class_names(session, (q.class_id for q in questions))
     result = []
     for q in questions:
         teacher = get_user(session, q.teacher_id)
@@ -204,7 +209,7 @@ async def student_list_questions(
             id=q.id,
             teacher_id=q.teacher_id,
             teacher_name=teacher.name if teacher else None,
-            class_name=q.class_name,
+            class_name=class_name_map.get(q.class_id),
             content=q.content,
             status=q.status,
             is_realtime=q.is_realtime,

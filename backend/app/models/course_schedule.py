@@ -5,21 +5,13 @@ from typing import Optional
 from datetime import time
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Index
-from app.core.term import get_current_term
 
 
 class CourseScheduleBase(SQLModel):
     """课表基础模型"""
     course_name: str = Field(..., description="课程名称", max_length=100)
-    class_name: str = Field(..., description="班级名称", max_length=100)
-    class_id: Optional[int] = Field(
-        default=None, foreign_key="classes.id", index=True,
-        description="班级ID（FK，双写过渡期可空）",
-    )
-    semester_id: Optional[int] = Field(
-        default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
-    )
+    class_id: int = Field(..., foreign_key="classes.id", index=True, description="班级ID")
+    semester_id: int = Field(..., foreign_key="semesters.id", index=True, description="学期ID")
     teacher_id: Optional[int] = Field(default=None, description="教师ID")
     teacher_name: Optional[str] = Field(default=None, description="教师姓名", max_length=50)
     day_of_week: int = Field(..., description="星期几 (1-7)", ge=1, le=7)
@@ -36,24 +28,18 @@ class CourseSchedule(CourseScheduleBase, table=True):
     __tablename__ = "course_schedules"
     __table_args__ = (
         Index('ix_course_schedules_teacher_id', 'teacher_id'),
-        Index('ix_course_schedules_class_name', 'class_name'),
         Index('ix_course_schedules_day_of_week', 'day_of_week'),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    semester: Optional[str] = Field(
-        default_factory=get_current_term,
-        description="学期标识（如 2026-2027-1）",
-        max_length=20,
-        index=True
-    )
     created_at: Optional[str] = Field(default=None, description="创建时间")
     updated_at: Optional[str] = Field(default=None, description="更新时间")
 
 
 class CourseScheduleResponse(CourseScheduleBase):
-    """课表响应模型"""
+    """课表响应模型（class_name 由 FK 运行时解析填充）"""
     id: int
+    class_name: Optional[str] = None
     created_at: Optional[str] = None
 
 

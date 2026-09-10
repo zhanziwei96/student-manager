@@ -9,11 +9,12 @@ from app.crud.course_session import start_course_session
 class TestTeacherAssignmentCascade:
     """测试教师分配级联更新"""
 
-    def test_teacher_assignment_cascade(self, session: Session):
+    def test_teacher_assignment_cascade(self, session: Session, seed_refs):
         """测试级联更新"""
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -25,7 +26,8 @@ class TestTeacherAssignmentCascade:
 
         course_session = CourseSession(
             session_code="TEST1234",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             course_name="测试课程",
             schedule_id=schedule.id,
@@ -38,13 +40,13 @@ class TestTeacherAssignmentCascade:
         assert course_session.teacher_id == 1
         assert course_session.teacher_name is None  # 初始未设置
 
-    def test_assign_teacher_updates_active_session(self, session: Session):
+    def test_assign_teacher_updates_active_session(self, session: Session, seed_refs):
         """测试分配教师后活跃课堂的 teacher_id 和 teacher_name 同步更新"""
         # 1. 创建课表（无教师）
         schedule = create_schedule(
             session=session,
             course_name="测试课程",
-            class_name="测试班级",
+            class_name="一班",
             teacher_id=None,
             teacher_name="",
             day_of_week=1,
@@ -58,7 +60,7 @@ class TestTeacherAssignmentCascade:
         # 2. 创建活跃课堂（模拟已开始上课）
         course_session = start_course_session(
             session=session,
-            class_name="测试班级",
+            class_name="一班",
             teacher_id=1,  # 临时教师开始上课
             teacher_name="临时教师",
             course_name="测试课程",
@@ -97,7 +99,7 @@ class TestTeacherAssignmentCascade:
         assert course_session.teacher_id == new_teacher_id
         assert course_session.teacher_name == new_teacher_name
 
-    def test_unassign_teacher_updates_active_session(self, session: Session):
+    def test_unassign_teacher_updates_active_session(self, session: Session, seed_refs):
         """测试取消教师分配后活跃课堂的 teacher_name 被清除，teacher_id 设为 0（占位）"""
         # 注意：CourseSession.teacher_id 有 NOT NULL 约束，不能直接设为 NULL
         # 实际业务中，取消教师分配后，课堂应由系统或临时账号接管
@@ -106,7 +108,7 @@ class TestTeacherAssignmentCascade:
         schedule = create_schedule(
             session=session,
             course_name="测试课程",
-            class_name="测试班级",
+            class_name="一班",
             teacher_id=1,
             teacher_name="原教师",
             day_of_week=1,
@@ -120,7 +122,7 @@ class TestTeacherAssignmentCascade:
         # 2. 创建活跃课堂
         course_session = start_course_session(
             session=session,
-            class_name="测试班级",
+            class_name="一班",
             teacher_id=1,
             teacher_name="原教师",
             course_name="测试课程",
@@ -153,13 +155,13 @@ class TestTeacherAssignmentCascade:
         assert course_session.teacher_id == 0  # 0 表示未分配
         assert course_session.teacher_name is None
 
-    def test_assign_teacher_only_updates_active_sessions(self, session: Session):
+    def test_assign_teacher_only_updates_active_sessions(self, session: Session, seed_refs):
         """测试分配教师只更新 active 状态的课堂，不更新 ended/cancelled"""
         # 1. 创建课表
         schedule = create_schedule(
             session=session,
             course_name="测试课程",
-            class_name="测试班级",
+            class_name="一班",
             teacher_id=None,
             teacher_name="",
             day_of_week=1,
@@ -173,7 +175,8 @@ class TestTeacherAssignmentCascade:
         # 2. 创建多个课堂：一个 active，一个 ended，一个 cancelled
         active_session = CourseSession(
             session_code="ACTIVE001",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="原教师",
             course_name="测试课程",
@@ -182,7 +185,8 @@ class TestTeacherAssignmentCascade:
         )
         ended_session = CourseSession(
             session_code="ENDED001",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="原教师",
             course_name="测试课程",
@@ -191,7 +195,8 @@ class TestTeacherAssignmentCascade:
         )
         cancelled_session = CourseSession(
             session_code="CANCELLED001",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="原教师",
             course_name="测试课程",

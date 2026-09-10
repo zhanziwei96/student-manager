@@ -100,7 +100,7 @@ def test_teacher_can_view_assigned_class_student_detail(teacher_client, student_
 # ========== 签到路由越权负向测试（Task 11） ==========
 
 @pytest.fixture
-def some_session_id(test_engine):
+def some_session_id(test_engine, seed_refs):
     """创建活跃课堂会话并返回其 id（签到越权测试数据）"""
     from app.crud.course_session import start_course_session
     with Session(test_engine) as session:

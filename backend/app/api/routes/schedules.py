@@ -13,9 +13,8 @@ from pydantic import BaseModel, Field
 
 from app.core.db import get_session
 from app.core.config import HttpStatus
-from app.core.class_cache import get_class_id_by_name
+from app.core.class_cache import get_class_ids_by_names
 from app.core.term import get_current_semester_id
-from app.core.transition_filters import class_filter, semester_filter
 from app.core.upload import (
     validate_filename,
     validate_extension,
@@ -33,7 +32,6 @@ from app.models.constants import (
 )
 # 周次计算收敛至 core/term.py 单一真源（以 _ 前缀别名导入，避免与本地函数名混淆）
 from app.core.term import (
-    get_current_term as _get_current_term,
     get_current_week_number as _get_current_week_number,
     get_week_number_for_date as _get_week_number_for_date,
 )
@@ -48,7 +46,10 @@ def _enrich_schedule_with_week_data(
     from app.crud.schedule_adjustment import get_adjustment
     from app.crud.course_session import get_course_sessions_by_schedule_and_week
 
+    from app.core.class_cache import get_class_name_by_id
+
     schedule_data = schedule.model_dump()
+    schedule_data["class_name"] = get_class_name_by_id(session, schedule.class_id)
     schedule_data["week_number"] = week_number
 
     week_type = getattr(schedule, "week_type", "all")
@@ -144,10 +145,9 @@ async def get_schedules(
     user: dict = Depends(get_current_user)
 ):
     """获取课表列表（包含调课/课堂状态）"""
-    query = select(CourseSchedule).where(semester_filter(
-        CourseSchedule.semester_id, CourseSchedule.semester,
-        get_current_semester_id(session), _get_current_term(),
-    ))
+    query = select(CourseSchedule).where(
+        CourseSchedule.semester_id == get_current_semester_id(session)
+    )
 
     # 教师只能查看自己的课表（除非有admin角色）
     if user.get("role") == "teacher":
@@ -156,10 +156,7 @@ async def get_schedules(
         query = query.where(CourseSchedule.teacher_id == teacher_id)
 
     if class_name:
-        query = query.where(class_filter(
-            CourseSchedule.class_id, CourseSchedule.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ))
+        query = query.where(CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
     if day_of_week:
         query = query.where(CourseSchedule.day_of_week == day_of_week)
     
@@ -318,10 +315,7 @@ async def get_today_schedules(
 
     query = select(CourseSchedule).where(
         CourseSchedule.day_of_week == today,
-        semester_filter(
-            CourseSchedule.semester_id, CourseSchedule.semester,
-            get_current_semester_id(session), _get_current_term(),
-        ),
+        CourseSchedule.semester_id == get_current_semester_id(session),
     )
 
     # 教师只能查看自己的课表

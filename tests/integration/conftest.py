@@ -17,13 +17,12 @@ if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
 # 关键：在导入任何应用模块前，先创建 PG 测试引擎
+from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, create_engine
-from sqlmodel.pool import StaticPool
 
-_test_engine = create_engine(
-    os.environ['DATABASE__URL'],
-    poolclass=StaticPool,
-)
+# NullPool：每次会话独立连接，不跨线程共享（StaticPool 单连接会被 TestClient
+# 应用线程与审计后台线程共享，造成间歇性丢写/refresh 失败），也不常驻连接
+_test_engine = create_engine(os.environ['DATABASE__URL'], poolclass=NullPool)
 
 # 现在导入 db 模块并替换引擎
 import app.core.db as db_module
@@ -85,6 +84,64 @@ def session(test_engine):
     避免与 root conftest 引擎双连接共库交错（间歇性 refresh 失败的根因）"""
     with Session(_test_engine) as s:
         yield s
+
+
+def ensure_class(engine, name: str) -> int:
+    """get-or-create 班级行并返回 class_id（供使用自有引擎的用例复用）"""
+    from sqlmodel import select
+    from app.models import Class_
+    from app.core.class_cache import invalidate_class_cache
+
+    with Session(engine) as session:
+        cls = session.exec(select(Class_).where(Class_.name == name)).first()
+        if cls is None:
+            cls = Class_(name=name, cohort_year="2026")
+            session.add(cls)
+            session.commit()
+            session.refresh(cls)
+        class_id = cls.id
+    invalidate_class_cache()
+    return class_id
+
+
+def ensure_current_semester(engine) -> int:
+    """get-or-create 当前学期并返回 semester_id"""
+    from datetime import date
+    from sqlmodel import select
+    from app.models import Semester
+    from app.core.term import invalidate_semester_cache
+
+    with Session(engine) as session:
+        sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).first()
+        if sem is None:
+            sem = Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                           total_weeks=20, is_current=True)
+            session.add(sem)
+            session.commit()
+            session.refresh(sem)
+        semester_id = sem.id
+    invalidate_semester_cache()
+    return semester_id
+
+
+def ensure_class_and_semester(engine, name: str = "一班") -> int:
+    """get-or-create 班级与当前学期（FK 锚点），返回 class_id"""
+    class_id = ensure_class(engine, name)
+    ensure_current_semester(engine)
+    return class_id
+
+
+@pytest.fixture
+def seed_refs(test_engine):
+    """seed 班级（一班/二班/三班）与当前学期，返回引用 id 的 dict
+
+    业务表已改为纯 FK 锚点（class_id / semester_id 必填），测试构造业务对象
+    时从此 fixture 取 id：
+        cs = CourseSession(..., class_id=seed_refs["一班"], semester_id=seed_refs["semester_id"])
+    """
+    refs = {name: ensure_class(test_engine, name) for name in ("一班", "二班", "三班")}
+    refs["semester_id"] = ensure_current_semester(test_engine)
+    return refs
 
 
 @pytest.fixture(scope="function")
@@ -181,15 +238,17 @@ def student_user(test_engine):
 
 
 @pytest.fixture
-def sample_students(test_engine):
-    """创建多个学生用于测试"""
+def sample_students(test_engine, seed_refs):
+    """创建多个学生用于测试（class_id 引用 seed_refs 锚定的班级）"""
     with Session(_test_engine) as session:
         students = []
         for i in range(1, 6):
+            class_name = "一班" if i <= 3 else "二班"
             student = Student(
                 student_id=f"S00{i}",
                 name=f"学生{i}",
-                class_name="一班" if i <= 3 else "二班",
+                class_name=class_name,
+                class_id=seed_refs[class_name],
             )
             session.add(student)
             students.append(student)
@@ -198,6 +257,7 @@ def sample_students(test_engine):
             student_id="S006",
             name="学生6",
             class_name="三班",
+            class_id=seed_refs["三班"],
         )
         session.add(student_s006)
         students.append(student_s006)

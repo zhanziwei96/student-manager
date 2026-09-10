@@ -10,13 +10,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from tests.integration.conftest import ensure_class_and_semester
+
 
 class TestConcurrentRaceConditions:
     """测试并发竞态条件"""
 
     def test_database_has_checkin_unique_constraint(self, test_engine):
         """测试数据库有签到唯一约束防止重复签到（C-04）"""
-        from app.crud.course_session import start_course_session
         from app.models import CheckinRecord
         from sqlalchemy import inspect
 
@@ -48,6 +49,7 @@ class TestConcurrentRaceConditions:
         from app.models import CourseSession
         from sqlalchemy.exc import IntegrityError
 
+        unique_class_id = ensure_class_and_semester(test_engine, name="唯一班级测试")
         with Session(test_engine) as session:
             # 创建第一个活跃课堂
             cs1 = start_course_session(
@@ -73,7 +75,7 @@ class TestConcurrentRaceConditions:
                 session.commit()
                 # 如果没有抛出异常，手动检查是否只有一个是 active
                 active_count = session.query(CourseSession).filter(
-                    CourseSession.class_name == "唯一班级测试",
+                    CourseSession.class_id == unique_class_id,
                     CourseSession.status == "active"
                 ).count()
                 assert active_count == 1, "同一班级不应有多个活跃课堂"
@@ -84,7 +86,7 @@ class TestConcurrentRaceConditions:
 
             # 清理
             session.query(CourseSession).filter(
-                CourseSession.class_name == "唯一班级测试"
+                CourseSession.class_id == unique_class_id
             ).delete()
             session.commit()
 

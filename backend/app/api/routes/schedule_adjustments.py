@@ -6,6 +6,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import Session
+from app.core.class_cache import get_class_name_by_id
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user
@@ -138,7 +139,7 @@ def create_schedule_adjustment(
 
         course_session = start_course_session(
             session=session,
-            class_name=schedule.class_name,
+            class_name=get_class_name_by_id(session, schedule.class_id),
             teacher_id=schedule.teacher_id or user_id,
             teacher_name=schedule.teacher_name,
             course_name=schedule.course_name,

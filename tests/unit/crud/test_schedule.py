@@ -2,7 +2,7 @@
 课表 CRUD 单元测试 - 架构分层修复
 """
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 from datetime import datetime
 from app.crud.schedule import (
     get_schedule, get_schedules, delete_schedule,
@@ -15,12 +15,27 @@ class TestScheduleCRUD:
     """测试课表 CRUD 操作"""
 
     @pytest.fixture(autouse=True)
-    def _seed_class_students(self, session: Session):
-        """课表导入校验要求班级有启用学生：为导入测试所用班级预置启用学生"""
-        from app.models import Student
-        for i, cls in enumerate(["导入班级1", "导入班级2", "班级1", "班级2"]):
+    def _seed_class_students(self, session: Session, seed_refs):
+        """课表写入依赖班级 FK（class_id 必填），导入校验还要求班级有启用学生：
+        预置本文件用到的班级，并为导入测试所用班级预置启用学生"""
+        from app.models import Class_, Student
+
+        import_classes = ["导入班级1", "导入班级2", "班级1", "班级2"]
+        other_classes = ["软件1班", "软件2班", "班级A", "班级B", "班级X", "班级Y", "班级Z"]
+        class_ids = {}
+        for name in import_classes + other_classes:
+            cls = session.exec(select(Class_).where(Class_.name == name)).first()
+            if cls is None:
+                cls = Class_(name=name, cohort_year="2026")
+                session.add(cls)
+                session.commit()
+                session.refresh(cls)
+            class_ids[name] = cls.id
+
+        for i, cls in enumerate(import_classes):
             session.add(Student(
-                student_id=f"TS{i:03d}", name=f"学生{i}", class_name=cls, score=60.0,
+                student_id=f"TS{i:03d}", name=f"学生{i}",
+                class_name=cls, class_id=class_ids[cls],
             ))
         session.commit()
 
@@ -39,9 +54,10 @@ class TestScheduleCRUD:
             week_start=1,
             week_end=20
         )
-        
+
         assert schedule.course_name == "计算机基础"
-        assert schedule.class_name == "软件1班"
+        from app.core.class_cache import get_class_name_by_id
+        assert get_class_name_by_id(session, schedule.class_id) == "软件1班"
         assert schedule.teacher_id == 1
         assert schedule.day_of_week == 1
 

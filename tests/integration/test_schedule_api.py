@@ -10,7 +10,7 @@ def test_schedule_data():
     """测试课表数据"""
     return {
         "course_name": "计算机基础",
-        "class_name": "2025康复治疗技术1班",
+        "class_name": "一班",
         "teacher_name": "张老师",
         "day_of_week": 1,
         "start_time": "08:00",
@@ -22,26 +22,17 @@ def test_schedule_data():
 
 
 @pytest.fixture
-def create_test_schedule(test_engine, teacher_user):
-    """创建测试课表的 fixture（含当前学期，周次数据依赖 semesters 表）"""
-    from datetime import date
+def create_test_schedule(test_engine, teacher_user, seed_refs):
+    """创建测试课表的 fixture（class_id/semester_id 为纯 FK 锚点，取自 seed_refs）"""
     from app.models.course_schedule import CourseSchedule
-    from app.models import Semester
-    from app.core.term import invalidate_semester_cache
 
     def _create_schedule(**kwargs):
         with Session(test_engine) as session:
-            sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).first()
-            if sem is None:
-                sem = Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
-                               total_weeks=20, is_current=True)
-                session.add(sem)
-                session.commit()
-                invalidate_semester_cache()
+            class_name = kwargs.get("class_name", "一班")
             schedule = CourseSchedule(
                 course_name=kwargs.get("course_name", "测试课程"),
-                semester_id=sem.id,
-                class_name=kwargs.get("class_name", "测试班级"),
+                semester_id=seed_refs["semester_id"],
+                class_id=seed_refs[class_name],
                 teacher_id=kwargs.get("teacher_id", teacher_user.id),
                 teacher_name=kwargs.get("teacher_name", teacher_user.name),
                 day_of_week=kwargs.get("day_of_week", 1),
@@ -76,11 +67,11 @@ def test_get_schedules_list(teacher_client, create_test_schedule):
 def test_get_schedules_with_filter(teacher_client, create_test_schedule):
     """测试按条件筛选课表"""
     # 创建不同班级的课程
-    create_test_schedule(course_name="康复课程", class_name="2025康复治疗技术1班", day_of_week=1)
-    create_test_schedule(course_name="中药课程", class_name="2025中药学1班", day_of_week=1)
-    
+    create_test_schedule(course_name="康复课程", class_name="一班", day_of_week=1)
+    create_test_schedule(course_name="中药课程", class_name="二班", day_of_week=1)
+
     # 按班级筛选
-    response = teacher_client.get("/api/v1/schedules?class_name=2025康复治疗技术1班")
+    response = teacher_client.get("/api/v1/schedules?class_name=一班")
     
     assert response.status_code == 200
     data = response.json()
@@ -123,23 +114,23 @@ def test_get_schedules_unauthorized(client):
     assert data["success"] is False
 
 
-def test_import_schedules_csv(admin_client, test_engine):
+def test_import_schedules_csv(admin_client, test_engine, seed_refs):
     """测试 CSV 导入课表"""
     import io
 
-    # 导入校验要求班级有启用学生
+    # 导入校验要求班级有启用学生（班级本身由 seed_refs 建好）
     from app.models import Student
     with Session(test_engine) as session:
         session.add(Student(
             student_id="IMP001", name="学生1",
-            class_name="2025康复治疗技术1班", score=60.0,
+            class_name="一班", class_id=seed_refs["一班"],
         ))
         session.commit()
 
     # 创建 CSV 内容
     csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间,教室,开始周,结束周
-计算机基础,2025康复治疗技术1班,管理员,1,08:00,09:40,A-101,1,20
-数据结构,2025康复治疗技术1班,管理员,2,10:00,11:40,B-202,1,20"""
+计算机基础,一班,管理员,1,08:00,09:40,A-101,1,20
+数据结构,一班,管理员,2,10:00,11:40,B-202,1,20"""
     
     file = io.BytesIO(csv_content.encode('utf-8'))
     
@@ -301,24 +292,31 @@ def test_get_schedules_default_week_uses_current(teacher_client, create_test_sch
     assert "session_status" in item
 
 
-def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine):
+def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine, seed_refs):
     """上学期同课程/教师/时段不应阻止新学期导入"""
-    from app.models import CourseSchedule, Student
-    from sqlmodel import Session, select
+    from datetime import date
+    from app.models import CourseSchedule, Semester, Student
 
     # 导入校验要求班级有启用学生
     with Session(test_engine) as session:
         session.add(Student(
-            student_id="IMP002", name="学生2", class_name="1班", score=60.0,
+            student_id="IMP002", name="学生2", class_name="一班",
+            class_id=seed_refs["一班"],
         ))
         session.commit()
 
-    # 先手工造一条上学期的同键课表
+    # 先手工造一条上学期的同键课表（旧学期用非当前学期的 semester_id 锚定）
     with Session(test_engine) as session:
+        old_sem = Semester(label="2025-2026-2", start_date=date(2025, 9, 1),
+                           total_weeks=20, is_current=False)
+        session.add(old_sem)
+        session.commit()
+        session.refresh(old_sem)
         session.add(CourseSchedule(
-            course_name="高等数学", class_name="1班", teacher_name="张老师",
+            course_name="高等数学", class_id=seed_refs["一班"], semester_id=old_sem.id,
+            teacher_name="张老师",
             day_of_week=1, start_time="08:00", end_time="09:40",
-            week_start=1, week_end=20, semester="2025-2026-2",
+            week_start=1, week_end=20,
         ))
         session.commit()
 
@@ -326,7 +324,7 @@ def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine
     import io
 
     csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间,开始周,结束周
-高等数学,1班,张老师,1,08:00,09:40,1,20"""
+高等数学,一班,张老师,1,08:00,09:40,1,20"""
 
     file = io.BytesIO(csv_content.encode('utf-8'))
 
@@ -342,17 +340,23 @@ def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine
     assert data["data"]["errors"] == []
 
 
-def test_get_schedules_excludes_previous_term_schedules(admin_client, test_engine):
+def test_get_schedules_excludes_previous_term_schedules(admin_client, test_engine, seed_refs):
     """学期隔离：上学期课表不得混入当前学期课表列表"""
-    from app.models import CourseSchedule
-    from sqlmodel import Session, select
+    from datetime import date
+    from app.models import CourseSchedule, Semester
 
     # 手工造一条上学期的课表（当前学期数据经 create_test_schedule 验证被列表返回）
     with Session(test_engine) as session:
+        old_sem = Semester(label="2025-2026-2", start_date=date(2025, 9, 1),
+                           total_weeks=20, is_current=False)
+        session.add(old_sem)
+        session.commit()
+        session.refresh(old_sem)
         old = CourseSchedule(
-            course_name="上学期遗留课", class_name="1班", teacher_name="张老师",
+            course_name="上学期遗留课", class_id=seed_refs["一班"], semester_id=old_sem.id,
+            teacher_name="张老师",
             day_of_week=1, start_time="08:00", end_time="09:40",
-            week_start=1, week_end=20, semester="2025-2026-2",
+            week_start=1, week_end=20,
         )
         session.add(old)
         session.commit()

@@ -6,21 +6,16 @@ from sqlmodel import Session, select
 
 
 @pytest.fixture
-def create_test_schedule(test_engine, teacher_user):
-    """创建测试课表的 fixture（含当前学期，周次校验依赖 semesters 表）"""
-    from datetime import date
+def create_test_schedule(test_engine, teacher_user, seed_refs):
+    """创建测试课表的 fixture（class_id/semester_id 为纯 FK 锚点，取自 seed_refs）"""
     from app.models.course_schedule import CourseSchedule
-    from app.models import Semester
 
     def _create_schedule(**kwargs):
         with Session(test_engine) as session:
-            if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
-                session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
-                                     total_weeks=20, is_current=True))
-                session.commit()
             schedule = CourseSchedule(
                 course_name=kwargs.get("course_name", "测试课程"),
-                class_name=kwargs.get("class_name", "一班"),
+                class_id=seed_refs[kwargs.get("class_name", "一班")],
+                semester_id=seed_refs["semester_id"],
                 teacher_id=kwargs.get("teacher_id", teacher_user.id),
                 teacher_name=kwargs.get("teacher_name", teacher_user.name),
                 day_of_week=kwargs.get("day_of_week", 1),

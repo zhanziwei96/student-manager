@@ -2,10 +2,8 @@
 课堂会话并发测试
 验证教师并发开始上课不会创建重复的活跃课堂
 
-注意：由于测试环境使用 StaticPool（单连接），FastAPI 的 def 路由在线程池中
-并发执行时会导致多个线程共享同一个 SQLite 连接，引发 sqlite3.InterfaceError。
-因此并发竞争测试直接调用 CRUD 函数并使用独立的多连接共享内存数据库；
-HTTP 层的 409 响应通过顺序请求 + mock 验证。
+并发竞争测试直接调用 CRUD 函数并使用独立 NullPool 引擎（每线程独立连接），
+以真实并发触发数据库唯一约束；HTTP 层的 409 响应通过顺序请求 + mock 验证。
 """
 import os
 import pytest
@@ -18,6 +16,7 @@ from app.models import User, UserRoleConst, CourseSession
 from app.core.security import generate_password_hash
 from app.crud.course_session import start_course_session
 from app.core.config import HttpStatus
+from tests.integration.conftest import ensure_class_and_semester
 
 
 pytestmark = pytest.mark.integration
@@ -59,6 +58,8 @@ class TestConcurrentCourseSession:
             ))
             session.commit()
 
+        seeded_class_id = ensure_class_and_semester(engine)
+
         def start_class():
             with Session(engine) as session:
                 return start_course_session(
@@ -88,7 +89,7 @@ class TestConcurrentCourseSession:
         with Session(engine) as session:
             active_list = session.exec(
                 select(CourseSession).where(
-                    CourseSession.class_name == "一班",
+                    CourseSession.class_id == seeded_class_id,
                     CourseSession.status == "active"
                 )
             ).all()
@@ -100,6 +101,7 @@ class TestConcurrentCourseSession:
         """
         顺序调用 API 验证路由层能把数据库冲突透传为 HTTP 409
         """
+        class_id = ensure_class_and_semester(test_engine)
         with Session(test_engine) as session:
             password_hash, salt = generate_password_hash("teacher123")
             session.add(User(
@@ -116,7 +118,7 @@ class TestConcurrentCourseSession:
                 student_id="CCS001",
                 name="学生1",
                 class_name="一班",
-                score=60.0,
+                class_id=class_id,
             ))
             session.commit()
 

@@ -3,7 +3,6 @@ from datetime import date, timedelta
 
 from app.models import Semester
 from app.core.term import (
-    get_current_term,
     get_current_semester,
     get_current_week_number,
     get_week_number_for_date,
@@ -17,13 +16,7 @@ def _seed_semester(session, start=date(2026, 9, 7), total_weeks=20):
     session.add(sem)
     session.commit()
     invalidate_semester_cache()
-    get_current_semester(session)  # 填充进程缓存（get_current_term 依赖）
     return sem
-
-
-def test_get_current_term(session):
-    _seed_semester(session)
-    assert get_current_term() == "2026-2027-1"
 
 
 def test_week_before_term_start_returns_0(session):

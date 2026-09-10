@@ -123,7 +123,7 @@ def test_set_final_scores_for_group(session):
     session.add(e2)
     # 小组：组员 S001/S002
     offering = session.get(CourseOffering, enrollment.offering_id)
-    group = Group(class_name="一班", name="第一组", leader_student_id="S001",
+    group = Group(class_id=s001.class_id, name="第一组", leader_student_id="S001",
                   course_id=offering.course_id, semester_id=enrollment.semester_id)
     session.add(group)
     session.flush()

@@ -10,11 +10,14 @@ def session(test_engine):
         yield s
 
 
-def test_update_group_score(teacher_client, session):
+def test_update_group_score(teacher_client, session, seed_refs):
     """教师给小组加减分"""
     from app.models import Group
 
-    group = Group(class_name="一班", name="第一组", leader_student_id="S001", score=0.0)
+    group = Group(
+        class_id=seed_refs["一班"], semester_id=seed_refs["semester_id"],
+        name="第一组", leader_student_id="S001", score=0.0,
+    )
     session.add(group)
     session.commit()
 
@@ -28,15 +31,20 @@ def test_update_group_score(teacher_client, session):
     assert group.score == 5.0
 
 
-def test_get_group_score_logs(teacher_client, session):
+def test_get_group_score_logs(teacher_client, session, seed_refs):
     """获取小组分数日志"""
     from app.models import Group, GroupScoreLog
 
-    group = Group(class_name="一班", name="第一组", leader_student_id="S001")
+    group = Group(
+        class_id=seed_refs["一班"], semester_id=seed_refs["semester_id"],
+        name="第一组", leader_student_id="S001",
+    )
     session.add(group)
     session.commit()
 
-    log = GroupScoreLog(group_id=group.id, old_score=0.0, new_score=5.0, delta=5.0, reason="课堂表现", operator="张老师", semester="2026-2027-1")
+    log = GroupScoreLog(group_id=group.id, old_score=0.0, new_score=5.0, delta=5.0,
+                        reason="课堂表现", operator="张老师",
+                        semester_id=seed_refs["semester_id"])
     session.add(log)
     session.commit()
 

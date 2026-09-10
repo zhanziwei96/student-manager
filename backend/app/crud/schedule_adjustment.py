@@ -31,8 +31,10 @@ def get_adjustments(
     if week_number is not None:
         query = query.where(ScheduleAdjustment.week_number == week_number)
     if class_name is not None:
+        from app.core.class_cache import get_class_ids_by_names
         from app.models import CourseSchedule
-        query = query.join(CourseSchedule).where(CourseSchedule.class_name == class_name)
+        query = query.join(CourseSchedule).where(
+            CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
     return list(session.exec(query.order_by(ScheduleAdjustment.created_at.desc())).all())
 
 
@@ -49,9 +51,13 @@ def create_adjustment(
     new_classroom: Optional[str] = None,
     generated_session_id: Optional[int] = None,
 ) -> ScheduleAdjustment:
-    """创建调整记录"""
+    """创建调整记录（semester_id 继承课表所属学期）"""
+    from app.models import CourseSchedule
+
+    schedule = session.get(CourseSchedule, schedule_id)
     adjustment = ScheduleAdjustment(
         schedule_id=schedule_id,
+        semester_id=schedule.semester_id,
         week_number=week_number,
         type=adjustment_type,
         reason=reason,

@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 
 @pytest.fixture(autouse=True)
-def seed_class_students(test_engine):
+def seed_class_students(test_engine, seed_refs):
     """提问校验要求班级有启用学生：为一班/二班各预置 1 个启用学生"""
     from app.models import Student
 
@@ -17,7 +17,7 @@ def seed_class_students(test_engine):
                 student_id=f"QA{i:03d}",
                 name=f"学生{i}",
                 class_name=cls,
-                score=60.0,
+                class_id=seed_refs[cls],
             ))
         session.commit()
 

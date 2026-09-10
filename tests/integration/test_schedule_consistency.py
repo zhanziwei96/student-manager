@@ -13,12 +13,13 @@ from app.core.timezone import get_now
 class TestScheduleConsistency:
     """测试调课一致性"""
 
-    def test_modify_adjustment_applies_classroom(self, session: Session):
+    def test_modify_adjustment_applies_classroom(self, session: Session, seed_refs):
         """测试 modify 调课后新课堂使用调整后的教室"""
         # 1. 创建课表
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -39,7 +40,8 @@ class TestScheduleConsistency:
             new_classroom="B202",
             new_start_time="14:00",
             new_end_time="15:40",
-            created_by=1
+            created_by=1,
+            semester_id=seed_refs["semester_id"]
         )
         session.add(adjustment)
         session.commit()
@@ -49,12 +51,13 @@ class TestScheduleConsistency:
         assert adjustment.new_start_time == "14:00"
         assert adjustment.new_end_time == "15:40"
 
-    def test_schedule_adjustment_unique_constraint(self, session: Session):
+    def test_schedule_adjustment_unique_constraint(self, session: Session, seed_refs):
         """测试同一课表同一周次只能有一条调整记录（唯一约束）"""
         # 1. 创建课表
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -73,7 +76,8 @@ class TestScheduleConsistency:
             type="modify",
             reason="第一次调课",
             new_classroom="B202",
-            created_by=1
+            created_by=1,
+            semester_id=seed_refs["semester_id"]
         )
         session.add(adjustment1)
         session.commit()
@@ -85,7 +89,8 @@ class TestScheduleConsistency:
             type="modify",
             reason="第二次调课",
             new_classroom="C303",
-            created_by=1
+            created_by=1,
+            semester_id=seed_refs["semester_id"]
         )
         session.add(adjustment2)
 
@@ -94,12 +99,13 @@ class TestScheduleConsistency:
         with pytest.raises(IntegrityError):
             session.commit()
 
-    def test_cancel_adjustment_cancels_scheduled_session(self, session: Session):
+    def test_cancel_adjustment_cancels_scheduled_session(self, session: Session, seed_refs):
         """测试 cancel 调课取消 scheduled 状态的课堂"""
         # 1. 创建课表
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -115,7 +121,7 @@ class TestScheduleConsistency:
         from app.crud.course_session import start_course_session
         course_session = start_course_session(
             session=session,
-            class_name=schedule.class_name,
+            class_name="一班",
             teacher_id=1,
             teacher_name="张老师",
             course_name=schedule.course_name,
@@ -137,7 +143,8 @@ class TestScheduleConsistency:
             week_number=10,
             type="cancel",
             reason="教师请假",
-            created_by=1
+            created_by=1,
+            semester_id=seed_refs["semester_id"]
         )
         session.add(adjustment)
         session.commit()
@@ -164,12 +171,13 @@ class TestScheduleConsistency:
 class TestModifyAdjustmentTimeCoverage:
     """测试 modify 调课时间覆盖"""
 
-    def test_modify_adjustment_time_parsed_correctly(self, session: Session):
+    def test_modify_adjustment_time_parsed_correctly(self, session: Session, seed_refs):
         """测试 modify 调课时间正确解析"""
         # 1. 创建课表
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -189,7 +197,8 @@ class TestModifyAdjustmentTimeCoverage:
             reason="时间变更",
             new_start_time="14:00",
             new_end_time="15:40",
-            created_by=1
+            created_by=1,
+            semester_id=seed_refs["semester_id"]
         )
         session.add(adjustment)
         session.commit()
@@ -208,12 +217,13 @@ class TestModifyAdjustmentTimeCoverage:
 class TestMakeupScheduledSession:
     """测试 makeup 调课创建 scheduled 状态课堂"""
 
-    def test_makeup_session_has_correct_start_time(self, session: Session):
+    def test_makeup_session_has_correct_start_time(self, session: Session, seed_refs):
         """测试 makeup 课堂使用正确的开始时间"""
         # 1. 创建课表
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -233,7 +243,7 @@ class TestMakeupScheduledSession:
         from app.crud.course_session import start_course_session
         course_session = start_course_session(
             session=session,
-            class_name=schedule.class_name,
+            class_name="一班",
             teacher_id=1,
             teacher_name="张老师",
             course_name=schedule.course_name,
@@ -276,13 +286,13 @@ class TestMakeupScheduledSession:
 class TestCheckinClassSnapshot:
     """测试签到班级名称快照"""
 
-    def test_checkin_uses_course_session_class_name(self, session: Session):
-        """测试签到记录使用 CourseSession 的班级名称作为快照"""
+    def test_checkin_uses_course_session_class_id(self, session: Session, seed_refs):
+        """测试签到记录使用 CourseSession 的班级 ID 作为快照"""
         # 1. 创建课程会话
         from app.crud.course_session import start_course_session
         course_session = start_course_session(
             session=session,
-            class_name="原班级",
+            class_name="一班",
             teacher_id=1,
             teacher_name="张老师",
             course_name="测试课程",
@@ -297,21 +307,21 @@ class TestCheckinClassSnapshot:
             session_id=course_session.id,
             student_id="S001",
             student_name="学生A",
-            class_name=course_session.class_name,  # 使用课堂班级作为快照
+            class_id=course_session.class_id,  # 使用课堂班级作为快照
             checkin_type="self"
         )
         session.add(checkin)
         session.commit()
         session.refresh(checkin)
 
-        # 3. 验证签到记录的班级名称
-        assert checkin.class_name == "原班级"
+        # 3. 验证签到记录的班级
+        assert checkin.class_id == seed_refs["一班"]
 
-        # 4. 模拟学生转班（修改 CourseSession 的班级名称）
-        course_session.class_name = "新班级"
+        # 4. 模拟学生转班（修改 CourseSession 的班级）
+        course_session.class_id = seed_refs["二班"]
         session.add(course_session)
         session.commit()
 
-        # 5. 验证签到记录的班级名称保持不变（快照机制）
+        # 5. 验证签到记录的班级保持不变（快照机制）
         session.refresh(checkin)
-        assert checkin.class_name == "原班级"  # 历史记录仍为原班级
+        assert checkin.class_id == seed_refs["一班"]  # 历史记录仍为原班级

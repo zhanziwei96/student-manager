@@ -6,9 +6,8 @@
 """
 from typing import List, Optional
 from sqlmodel import Session, select
-from app.core.class_cache import get_class_id_by_name
-from app.core.term import get_current_term, get_current_semester_id
-from app.core.transition_filters import class_filter, semester_filter
+from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
+from app.core.term import get_current_semester_id
 from app.models import CourseSchedule, User, Student
 
 
@@ -24,16 +23,10 @@ def get_schedules(
     teacher_id: Optional[int] = None
 ) -> List[CourseSchedule]:
     """获取课表列表"""
-    query = select(CourseSchedule).where(semester_filter(
-        CourseSchedule.semester_id, CourseSchedule.semester,
-        get_current_semester_id(session), get_current_term(),
-    ))
+    query = select(CourseSchedule).where(CourseSchedule.semester_id == get_current_semester_id(session))
 
     if class_name:
-        query = query.where(class_filter(
-            CourseSchedule.class_id, CourseSchedule.class_name,
-            get_class_id_by_name(session, class_name), class_name,
-        ))
+        query = query.where(CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
     if day_of_week:
         query = query.where(CourseSchedule.day_of_week == day_of_week)
     if teacher_id:
@@ -140,8 +133,8 @@ def create_schedule(
     schedule = CourseSchedule(
         course_name=course_name,
         class_name=class_name,
-        class_id=get_class_id_by_name(session, class_name),     # 双写：FK 列
-        semester_id=get_current_semester_id(session),           # 双写：FK 列
+        class_id=get_class_id_by_name(session, class_name),
+        semester_id=get_current_semester_id(session),
         teacher_id=teacher_id,
         teacher_name=teacher_name,
         day_of_week=day_of_week,
@@ -242,11 +235,11 @@ def import_schedules(
             existing = session.exec(
                 select(CourseSchedule).where(
                     CourseSchedule.course_name == course_name,
-                    CourseSchedule.class_name == class_name,
+                    CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])),
                     CourseSchedule.teacher_name == teacher_name,
                     CourseSchedule.day_of_week == day_of_week,
                     CourseSchedule.start_time == start_time,
-                    CourseSchedule.semester == get_current_term(),
+                    CourseSchedule.semester_id == get_current_semester_id(session),
                 )
             ).first()
             
@@ -259,9 +252,8 @@ def import_schedules(
             now = get_now().isoformat()
             schedule = CourseSchedule(
                 course_name=course_name,
-                class_name=class_name,
-                class_id=get_class_id_by_name(session, class_name),   # 双写：FK 列
-                semester_id=get_current_semester_id(session),         # 双写：FK 列
+                class_id=get_class_id_by_name(session, class_name),
+                semester_id=get_current_semester_id(session),
                 teacher_id=teacher.id if teacher else None,
                 teacher_name=teacher_name,
                 day_of_week=day_of_week,
