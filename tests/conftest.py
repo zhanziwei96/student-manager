@@ -32,8 +32,8 @@ TEST_DATABASE_URL = os.environ['DATABASE__URL']
 import pytest
 from typing import Generator
 from sqlalchemy import text
+from sqlalchemy.pool import NullPool
 from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
 
 
 def _truncate_all_tables(engine) -> None:
@@ -48,7 +48,9 @@ def _truncate_all_tables(engine) -> None:
 @pytest.fixture(scope="session")
 def engine():
     """PG 测试引擎"""
-    test_engine = create_engine(TEST_DATABASE_URL, poolclass=StaticPool)
+    # NullPool：每次会话独立连接，不跨线程共享（StaticPool 单连接会被 TestClient
+    # 应用线程与审计后台线程共享，造成间歇性丢写/refresh 失败），也不常驻连接
+    test_engine = create_engine(TEST_DATABASE_URL, poolclass=NullPool)
     # 创建所有表
     from app.models import Student, User, CheckinRecord, CourseSession, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
     from app.models.question import Question, Answer  # noqa: F401

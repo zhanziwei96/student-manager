@@ -17,13 +17,12 @@ if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
 # 关键：在导入任何应用模块前，先创建 PG 测试引擎
+from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, create_engine
-from sqlmodel.pool import StaticPool
 
-_test_engine = create_engine(
-    os.environ['DATABASE__URL'],
-    poolclass=StaticPool,
-)
+# NullPool：每次会话独立连接，不跨线程共享（StaticPool 单连接会被 TestClient
+# 应用线程与审计后台线程共享，造成间歇性丢写/refresh 失败），也不常驻连接
+_test_engine = create_engine(os.environ['DATABASE__URL'], poolclass=NullPool)
 
 # 现在导入 db 模块并替换引擎
 import app.core.db as db_module

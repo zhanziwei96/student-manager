@@ -2,10 +2,8 @@
 课堂会话并发测试
 验证教师并发开始上课不会创建重复的活跃课堂
 
-注意：由于测试环境使用 StaticPool（单连接），FastAPI 的 def 路由在线程池中
-并发执行时会导致多个线程共享同一个 SQLite 连接，引发 sqlite3.InterfaceError。
-因此并发竞争测试直接调用 CRUD 函数并使用独立的多连接共享内存数据库；
-HTTP 层的 409 响应通过顺序请求 + mock 验证。
+并发竞争测试直接调用 CRUD 函数并使用独立 NullPool 引擎（每线程独立连接），
+以真实并发触发数据库唯一约束；HTTP 层的 409 响应通过顺序请求 + mock 验证。
 """
 import os
 import pytest
