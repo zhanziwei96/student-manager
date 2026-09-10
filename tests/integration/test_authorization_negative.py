@@ -21,7 +21,6 @@ def other_student_id(test_engine):
             student_id="S002",
             name="其他学生",
             class_name="二班",
-            score=75.0,
         )
         student_id = student.student_id
         session.add(student)
@@ -149,7 +148,7 @@ def test_active_course_sessions_requires_login(anon_client):
 
 @pytest.fixture
 def teacher_without_classes_client(test_engine):
-    """已登录且无负责班级的教师客户端（assigned_classes 用默认值 '[]'）
+    """已登录且无授课教学班的教师客户端（权限派生为空集）"
 
     同时造一条"一班"签到记录：若空班级列表被跳过过滤（旧 bug），
     该记录会泄漏给教师，本用例将失败——用于验证 fail-closed。
@@ -216,7 +215,6 @@ def teacher2_user(test_engine):
             password_hash=password_hash,
             salt=salt,
             role=UserRoleConst.TEACHER,
-            assigned_classes='["一班", "二班"]',
             is_active=True,
         )
         session.add(user)

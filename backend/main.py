@@ -172,10 +172,10 @@ def create_app() -> FastAPI:
     # 注册API路由（必须在静态文件之前）
     from app.api.routes import (
         login_router, students_router, users_router,
-        checkin_router, system_router, schedules_router, leaderboard_router,
+        checkin_router, system_router, schedules_router,
         course_sessions_router, schedule_adjustments_router, groups_router,
-        questions_router, lost_found_router, term_router, subjects_router,
-        student_subject_scores_router, group_scores_router, teacher_classes_router,
+        questions_router, lost_found_router, term_router,
+        group_scores_router,
         enrollments_router, semesters_router, cohorts_router, classes_router,
         courses_router, course_offerings_router,
         rankings_router,
@@ -186,9 +186,6 @@ def create_app() -> FastAPI:
 
     app.include_router(login_router, prefix=API_V1_PREFIX)
     app.include_router(system_router, prefix=API_V1_PREFIX)
-    # 注意：leaderboard_router 必须在 students_router 之前注册
-    # 否则 /students/{student_id} 会匹配 /students/leaderboard
-    app.include_router(leaderboard_router, prefix=API_V1_PREFIX)
     app.include_router(students_router, prefix=API_V1_PREFIX)
     app.include_router(users_router, prefix=API_V1_PREFIX)
     app.include_router(checkin_router, prefix=API_V1_PREFIX)
@@ -199,10 +196,7 @@ def create_app() -> FastAPI:
     app.include_router(questions_router, prefix=API_V1_PREFIX)
     app.include_router(lost_found_router, prefix=API_V1_PREFIX)
     app.include_router(term_router, prefix=API_V1_PREFIX)
-    app.include_router(subjects_router, prefix=API_V1_PREFIX)
-    app.include_router(student_subject_scores_router, prefix=API_V1_PREFIX)
     app.include_router(group_scores_router, prefix=API_V1_PREFIX)
-    app.include_router(teacher_classes_router, prefix=API_V1_PREFIX)
     app.include_router(enrollments_router, prefix=API_V1_PREFIX)
     app.include_router(semesters_router, prefix=API_V1_PREFIX)
     app.include_router(cohorts_router, prefix=API_V1_PREFIX)

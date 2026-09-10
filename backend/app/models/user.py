@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Optional, List
 from sqlmodel import SQLModel, Field
 from pydantic import field_validator
-import json
 
 from app.models.constants import UserRole, UserRoleConst
 from app.core.timezone import get_now
@@ -16,7 +15,6 @@ class UserBase(SQLModel):
     username: str = Field(..., description="用户名", unique=True)
     name: str = Field(..., description="姓名")
     role: str = Field(default=UserRoleConst.TEACHER, description="角色")
-    assigned_classes: str = Field(default="[]", description="负责班级列表（JSON字符串）")
     is_account_enabled: bool = Field(default=True, description="账户是否启用")
     
     @field_validator("role")
@@ -26,23 +24,12 @@ class UserBase(SQLModel):
         if not UserRoleConst.is_valid(v):
             raise ValueError(f"无效的角色: {v}, 必须是 {UserRoleConst.all()}")
         return v.lower()
-    
-    def get_assigned_classes(self) -> List[str]:
-        """获取班级列表（从JSON解析）"""
-        try:
-            return json.loads(self.assigned_classes) if self.assigned_classes else []
-        except (json.JSONDecodeError, TypeError):
-            return []
-    
-    def set_assigned_classes(self, classes: List[str]) -> None:
-        """设置班级列表（转为JSON）"""
-        self.assigned_classes = json.dumps(classes, ensure_ascii=False) if classes else "[]"
 
 
 class User(UserBase, table=True):
     """用户表模型"""
     __tablename__ = "users"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     password_hash: str = Field(..., description="密码哈希 (bcrypt)")
     login_fail_count: int = Field(default=0, description="登录失败次数")
@@ -51,7 +38,7 @@ class User(UserBase, table=True):
     last_login: Optional[datetime] = Field(default=None, description="最后登录时间")
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
     version: int = Field(default=1, description="乐观锁版本号")
-    
+
     def is_admin(self) -> bool:
         """检查是否为管理员"""
         return self.role == UserRoleConst.ADMIN
@@ -67,14 +54,12 @@ class UserCreate(SQLModel):
     password: str
     name: str
     role: UserRole = UserRoleConst.TEACHER
-    assigned_classes: List[str] = []
 
 
 class UserUpdate(SQLModel):
     """更新用户请求"""
     name: Optional[str] = None
     role: Optional[UserRole] = None
-    assigned_classes: Optional[List[str]] = None
     is_account_enabled: Optional[bool] = None
 
 
@@ -84,7 +69,6 @@ class UserResponse(SQLModel):
     username: str
     name: str
     role: UserRole
-    assigned_classes: List[str]
     is_account_enabled: bool
     last_login: Optional[datetime] = None
     created_at: datetime

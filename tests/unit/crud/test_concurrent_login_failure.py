@@ -21,7 +21,6 @@ class TestConcurrentLoginFailure:
             name="并发测试教师",
             password_hash="fake_hash",
             role=UserRoleConst.TEACHER,
-            assigned_classes=["软件1班"]
         )
     
     def test_user_has_version_field(self, session, test_teacher):
@@ -99,7 +98,6 @@ class TestLoginFailureLockout:
             name="锁定测试教师",
             password_hash="fake_hash",
             role=UserRoleConst.TEACHER,
-            assigned_classes=["软件1班"]
         )
     
     def test_account_lockout_after_max_failures(self, session, test_teacher_lockout):
@@ -159,7 +157,6 @@ class TestOptimisticLockRetry:
             name="并发测试教师",
             password_hash="fake_hash",
             role=UserRoleConst.TEACHER,
-            assigned_classes=["软件1班"]
         )
     
     def test_login_failure_with_concurrent_access(self, session, test_teacher_concurrent):

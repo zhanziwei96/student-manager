@@ -44,8 +44,8 @@ class TestStudentPermissionArchitecture:
         # 验证 API 层有权限检查逻辑
         assert "is_admin = user.get(\"is_admin\", False)" in content, \
             "API 层应包含管理员权限检查"
-        assert "assigned_classes" in content, \
-            "API 层应包含班级权限检查"
+        assert "get_teacher_accessible_classes" in content, \
+            "API 层应包含授课班级权限检查"
         assert "get_students_by_permission" not in content, \
             "API 层不应再调用已删除的 CRUD 权限函数"
         assert "get_classes_by_permission" not in content, \

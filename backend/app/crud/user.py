@@ -27,16 +27,14 @@ def get_users(session: Session, role: Optional[str] = None) -> List[User]:
 
 
 def create_user(session: Session, username: str, name: str, password_hash: str,
-                role: str = UserRoleConst.TEACHER, assigned_classes: Optional[List[str]] = None) -> User:
+                role: str = UserRoleConst.TEACHER) -> User:
     """创建用户 - SEC-003: 移除 salt 参数"""
-    import json
     user = User(
         username=username,
         name=name,
         password_hash=password_hash,
         # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
         role=role,
-        assigned_classes=json.dumps(assigned_classes) if assigned_classes else "[]"
     )
     session.add(user)
     session.commit()
@@ -57,7 +55,6 @@ def update_user_info(
     user: User,
     name: Optional[str] = None,
     role: Optional[str] = None,
-    assigned_classes: Optional[List[str]] = None,
     is_account_enabled: Optional[bool] = None
 ) -> User:
     """
@@ -68,20 +65,16 @@ def update_user_info(
         user: 用户对象
         name: 姓名（可选）
         role: 角色（可选）
-        assigned_classes: 负责班级列表（可选）
         is_account_enabled: 是否启用账户（可选）
         
     Returns:
         更新后的用户对象
     """
-    import json
     
     if name is not None:
         user.name = name
     if role is not None:
         user.role = role
-    if assigned_classes is not None:
-        user.assigned_classes = json.dumps(assigned_classes, ensure_ascii=False)
     if is_account_enabled is not None:
         user.is_account_enabled = is_account_enabled
     

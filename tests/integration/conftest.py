@@ -125,7 +125,7 @@ def admin_user(test_engine):
 
 @pytest.fixture
 def teacher_user(test_engine):
-    """创建教师用户"""
+    """创建教师用户（授课关系从 course_offerings 派生，class_scope 覆盖一班/二班）"""
     with Session(_test_engine) as session:
         password_hash, salt = generate_password_hash("teacher123")
         user = User(
@@ -134,10 +134,29 @@ def teacher_user(test_engine):
             password_hash=password_hash,
             salt=salt,
             role=UserRoleConst.TEACHER,
-            assigned_classes='["一班", "二班"]',
             is_active=True
         )
         session.add(user)
+        session.commit()
+        session.refresh(user)
+        # 授课教学班（权限唯一真源）：semester_id FK 必填，用非当前学期占位
+        from datetime import date
+        from sqlmodel import select
+        from app.models import Course, CourseOffering, Semester
+        math = session.exec(select(Course).where(Course.code == "MATH1")).first()
+        if math is None:
+            math = Course(code="MATH1", name="高等数学")
+            session.add(math)
+        sem = session.exec(select(Semester).where(Semester.label == "TCH-SEED")).first()
+        if sem is None:
+            sem = Semester(label="TCH-SEED", start_date=date(2026, 1, 1),
+                           total_weeks=20, is_current=False)
+            session.add(sem)
+        session.commit()
+        session.add(CourseOffering(
+            course_id=math.id, semester_id=sem.id, teacher_id=user.id,
+            teacher_name=user.name, class_scope="一班,二班", status="active",
+        ))
         session.commit()
         session.refresh(user)
         return user
@@ -152,7 +171,6 @@ def student_user(test_engine):
             student_id="S001",
             name="学生1",
             class_name="一班",
-            score=80.0,
             password_hash=password_hash,
             salt=salt
         )
@@ -172,7 +190,6 @@ def sample_students(test_engine):
                 student_id=f"S00{i}",
                 name=f"学生{i}",
                 class_name="一班" if i <= 3 else "二班",
-                score=70.0 + i * 5
             )
             session.add(student)
             students.append(student)
@@ -181,7 +198,6 @@ def sample_students(test_engine):
             student_id="S006",
             name="学生6",
             class_name="三班",
-            score=80.0
         )
         session.add(student_s006)
         students.append(student_s006)

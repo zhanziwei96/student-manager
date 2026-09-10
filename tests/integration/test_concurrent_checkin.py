@@ -28,7 +28,6 @@ class TestConcurrentCheckin:
                 password_hash=password_hash,
                 salt=salt,
                 role=UserRoleConst.TEACHER,
-                assigned_classes='["一班"]',
                 is_active=True
             )
             session.add(user)
@@ -217,7 +216,6 @@ class TestConcurrentCheckin:
                 password_hash=password_hash,
                 salt=salt,
                 role=UserRoleConst.TEACHER,
-                assigned_classes='["一班"]',
                 is_active=True
             ))
             for i in range(1, 51):

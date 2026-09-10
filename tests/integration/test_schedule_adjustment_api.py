@@ -52,7 +52,6 @@ def another_teacher_user(test_engine):
             password_hash=password_hash,
             salt=salt,
             role=UserRoleConst.TEACHER,
-            assigned_classes='["三班"]',
             is_active=True
         )
         session.add(user)

@@ -26,13 +26,11 @@ class CreateUserRequest(BaseModel):
     password: str = Field(..., min_length=6, description="密码")
     name: str = Field(..., min_length=1, description="姓名")
     role: str = Field(default=UserRoleConst.TEACHER, description="角色")
-    assigned_classes: List[str] = Field(default=[], description="负责班级")
 
 
 class UpdateUserRequest(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
-    assigned_classes: Optional[List[str]] = None
     is_account_enabled: Optional[bool] = None
 
 
@@ -48,7 +46,6 @@ class UserData(BaseModel):
     name: str
     role: str
     is_account_enabled: bool
-    assigned_classes: list[str] = []
     created_at: Optional[str] = None
 
 
@@ -71,11 +68,9 @@ async def list_users(
 ):
     """获取用户列表"""
     users = get_users(session, role)
-    # 将 assigned_classes 从 JSON 字符串解析为列表
     result = []
     for u in users:
         user_data = u.model_dump()
-        user_data['assigned_classes'] = u.get_assigned_classes()
         # 将 datetime 转换为字符串
         if user_data.get('created_at') and hasattr(user_data['created_at'], 'isoformat'):
             user_data['created_at'] = user_data['created_at'].isoformat()
@@ -110,12 +105,9 @@ async def add_user(
         name=data.name,
         password_hash=password_hash,
         role=data.role,
-        assigned_classes=data.assigned_classes
     )
-    
-    # 将 assigned_classes 从 JSON 字符串解析为列表
+
     user_data = user_obj.model_dump()
-    user_data['assigned_classes'] = user_obj.get_assigned_classes()
     # 将 datetime 转换为字符串
     if user_data.get('created_at') and hasattr(user_data['created_at'], 'isoformat'):
         user_data['created_at'] = user_data['created_at'].isoformat()
@@ -147,13 +139,10 @@ async def update_user_info(
         user=user_obj,
         name=data.name,
         role=data.role,
-        assigned_classes=data.assigned_classes,
         is_account_enabled=data.is_account_enabled
     )
-    
-    # 将 assigned_classes 从 JSON 字符串解析为列表
+
     user_data = updated_user.model_dump()
-    user_data['assigned_classes'] = updated_user.get_assigned_classes()
     # 将 datetime 转换为字符串 - 使用 mode='json' 确保正确序列化
     from datetime import datetime
     for field in ['created_at', 'last_login', 'locked_until']:

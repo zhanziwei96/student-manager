@@ -100,8 +100,8 @@ async def get_students_list(
         if not user_id:
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无效的用户信息")
 
-        user_obj = session.get(User, int(user_id))
-        assigned_classes = user_obj.get_assigned_classes() if user_obj else []
+        from app.api.deps import get_teacher_accessible_classes
+        assigned_classes = get_teacher_accessible_classes(user, session)
 
         if class_name:
             # 如果指定了班级，检查权限
