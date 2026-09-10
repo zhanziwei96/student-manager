@@ -179,6 +179,7 @@ def create_app() -> FastAPI:
         enrollments_router, semesters_router, cohorts_router, classes_router,
         courses_router, course_offerings_router,
         rankings_router,
+        audit_router,
     )
 
     # API v1 版本前缀
@@ -204,6 +205,7 @@ def create_app() -> FastAPI:
     app.include_router(courses_router, prefix=API_V1_PREFIX)
     app.include_router(course_offerings_router, prefix=API_V1_PREFIX)
     app.include_router(rankings_router, prefix=API_V1_PREFIX)
+    app.include_router(audit_router, prefix=API_V1_PREFIX)
 
     # 挂载上传文件目录（必须在 catch-all 路由之前）
     uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
