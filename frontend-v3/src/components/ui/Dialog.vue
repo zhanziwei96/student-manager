@@ -99,7 +99,7 @@ const handleSubmit = (e: Event) => {
         :is="asForm ? 'form' : 'div'"
         :class="contentClasses"
         @click.stop
-        @submit="asForm ? handleSubmit : undefined"
+        @submit="handleSubmit"
       >
         <!-- Header -->
         <div
