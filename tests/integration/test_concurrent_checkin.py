@@ -36,14 +36,15 @@ class TestConcurrentCheckin:
             return user
 
     def _create_student(self, test_engine, student_id="S001"):
-        """创建并返回学生用户"""
+        """创建并返回学生用户（class_id 为 FK 锚点，签到校验依赖）"""
+        class_id = self._seed_class(test_engine)
         with Session(test_engine) as session:
             password_hash, salt = generate_password_hash("student123")
             student = Student(
                 student_id=student_id,
                 name=f"学生{student_id}",
                 class_name="一班",
-                score=80.0,
+                class_id=class_id,
                 password_hash=password_hash,
                 salt=salt
             )
@@ -52,8 +53,31 @@ class TestConcurrentCheckin:
             session.refresh(student)
             return student
 
+    def _seed_class(self, test_engine):
+        """seed 班级与当前学期（FK 锚点），返回 class_id"""
+        from datetime import date
+        from sqlmodel import select
+        from app.models import Class_, Semester
+        from app.core.class_cache import invalidate_class_cache
+        from app.core.term import invalidate_semester_cache
+        with Session(test_engine) as session:
+            cls = session.exec(select(Class_).where(Class_.name == "一班")).first()
+            if cls is None:
+                cls = Class_(name="一班", cohort_year="2026")
+                session.add(cls)
+                session.commit()
+                session.refresh(cls)
+            if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
+                session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                                     total_weeks=20, is_current=True))
+                session.commit()
+            invalidate_class_cache()
+            invalidate_semester_cache()
+            return cls.id
+
     def _start_class(self, test_engine):
         """直接通过 CRUD 创建活跃课堂"""
+        self._seed_class(test_engine)
         with Session(test_engine) as session:
             cs = start_course_session(
                 session=session,
@@ -132,6 +156,7 @@ class TestConcurrentCheckin:
         全班多个学生同时签到：所有学生都应成功，且互不冲突
         """
         self._create_teacher(test_engine)
+        class_id = self._seed_class(test_engine)
         students = []
         with Session(test_engine) as session:
             for i in range(1, 6):
@@ -140,7 +165,7 @@ class TestConcurrentCheckin:
                     student_id=f"S{i:03d}",
                     name=f"学生{i}",
                     class_name="一班",
-                    score=80.0,
+                    class_id=class_id,
                     password_hash=password_hash,
                     salt=salt
                 )
@@ -189,7 +214,7 @@ class TestConcurrentCheckin:
         """
         高并发 WAL 压力测试：50 名学生通过独立的数据库连接并发签到
         使用 NullPool + 共享内存数据库，直接调用 CRUD，绕过 HTTP 层线程池干扰，
-        专门验证 SQLite WAL 模式下大量并发写不会出现 DATABASE IS LOCKED 等异常。
+        专门验证 PG 大量并发写不出现约束/锁冲突异常。
         """
         import os
         from sqlalchemy import text
@@ -202,11 +227,16 @@ class TestConcurrentCheckin:
             poolclass=NullPool,
         )
         from sqlmodel import SQLModel
-        SQLModel.metadata.create_all(engine)
         with Session(engine) as s:
             s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
                            % ", ".join(SQLModel.metadata.tables.keys())))
             s.commit()
+
+        from datetime import date
+        from sqlmodel import select
+        from app.models import Class_, Semester
+        from app.core.class_cache import invalidate_class_cache
+        from app.core.term import invalidate_semester_cache
 
         with Session(engine) as session:
             password_hash, salt = generate_password_hash("teacher123")
@@ -218,13 +248,22 @@ class TestConcurrentCheckin:
                 role=UserRoleConst.TEACHER,
                 is_active=True
             ))
+            cls = Class_(name="一班", cohort_year="2026")
+            session.add(cls)
+            session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                                 total_weeks=20, is_current=True))
+            session.commit()
+            session.refresh(cls)
+            class_id = cls.id
+            invalidate_class_cache()
+            invalidate_semester_cache()
             for i in range(1, 51):
                 ph, s = generate_password_hash("student123")
                 session.add(Student(
                     student_id=f"W{i:03d}",
                     name=f"学生{i}",
                     class_name="一班",
-                    score=80.0,
+                    class_id=class_id,
                     password_hash=ph,
                     salt=s
                 ))
@@ -247,7 +286,7 @@ class TestConcurrentCheckin:
                         session,
                         student_id=student_id,
                         student_name=f"学生{student_id}",
-                        class_name="一班",
+                        class_id=class_id,
                         session_id=session_id
                     )
                     return True

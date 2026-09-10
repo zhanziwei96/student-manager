@@ -3,9 +3,12 @@ from app.models import Group, GroupScoreLog
 from app.crud.group_score import update_group_score
 
 
-def test_update_group_score(session):
+def test_update_group_score(session, seed_refs):
     """更新小组分数（乐观锁 + 日志）"""
-    group = Group(class_name="1班", name="第一组", leader_student_id="TEST001", score=0.0)
+    group = Group(
+        class_id=seed_refs["一班"], semester_id=seed_refs["semester_id"],
+        name="第一组", leader_student_id="TEST001", score=0.0,
+    )
     session.add(group)
     session.commit()
 

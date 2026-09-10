@@ -10,8 +10,10 @@ from app.models import Class_, Course, CourseOffering, Enrollment, Semester, Stu
 @pytest.fixture
 def seed_rankings(session, teacher_user):
     """届/班/学期/课程/教学班/选课基础数据（teacher1 授两个数学教学班）"""
-    session.add(Class_(name="一班", cohort_year="2026"))
-    session.add(Class_(name="二班", cohort_year="2026"))
+    cls1 = Class_(name="一班", cohort_year="2026")
+    cls2 = Class_(name="二班", cohort_year="2026")
+    session.add(cls1)
+    session.add(cls2)
     session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
                          total_weeks=20, is_current=True))
     math = session.exec(select(Course).where(Course.code == "MATH1")).first()
@@ -40,9 +42,10 @@ def seed_rankings(session, teacher_user):
     if s1 is None:
         s1 = Student(student_id="S001", name="学生1", class_name="一班")
         session.add(s1)
+    s1.class_id = cls1.id
     session.add_all([
-        Student(student_id="S002", name="学生2", class_name="一班"),
-        Student(student_id="S003", name="学生3", class_name="二班"),
+        Student(student_id="S002", name="学生2", class_name="一班", class_id=cls1.id),
+        Student(student_id="S003", name="学生3", class_name="二班", class_id=cls2.id),
     ])
     session.commit()
     session.add_all([
@@ -56,7 +59,7 @@ def seed_rankings(session, teacher_user):
                    score=70.0, status="enrolled"),
     ])
     session.commit()
-    return {"math": math, "m1": m1, "m2": m2, "e1": e1}
+    return {"math": math, "m1": m1, "m2": m2, "e1": e1, "class_1": cls1.id}
 
 
 def test_teacher_offerings_list_only_own(teacher_client, seed_rankings):
@@ -136,9 +139,9 @@ def test_group_ranking(teacher_client, seed_rankings, session):
     from app.models import Group, GroupMember
 
     sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).one()
-    g1 = Group(name="第一组", class_name="一班", course_id=seed_rankings["math"].id,
+    g1 = Group(name="第一组", class_id=seed_rankings["class_1"], course_id=seed_rankings["math"].id,
                semester_id=sem.id, leader_student_id="S001", score=95.0, is_active=True)
-    g2 = Group(name="第二组", class_name="一班", course_id=seed_rankings["math"].id,
+    g2 = Group(name="第二组", class_id=seed_rankings["class_1"], course_id=seed_rankings["math"].id,
                semester_id=sem.id, leader_student_id="S003", score=88.0, is_active=True)
     session.add_all([g1, g2])
     session.commit()

@@ -10,18 +10,22 @@
 """
 from sqlmodel import Session, select
 
+from tests.integration.conftest import ensure_class
+
+
 
 def _create_students(test_engine, class_name: str, count: int, id_prefix: str = "SA"):
     """批量创建测试学生（默认账号启用）"""
     from app.models import Student
 
+    class_id = ensure_class(test_engine, class_name)
     with Session(test_engine) as session:
         for i in range(1, count + 1):
             session.add(Student(
                 student_id=f"{id_prefix}{i:03d}",
                 name=f"学生{i}",
                 class_name=class_name,
-                score=60.0,
+                class_id=class_id,
             ))
         session.commit()
 
@@ -30,8 +34,8 @@ class TestDisableStudentsByClass:
     """按班级批量禁用学生账号"""
 
     def test_admin_can_disable_students_by_class(self, admin_client, test_engine):
-        """admin 可按班级批量禁用学生，且班级从列表消失"""
-        from app.crud import get_all_classes, get_students_by_class
+        """admin 可按班级批量禁用学生，且该班不再出现在学生列表派生选项中"""
+        from app.crud import get_students_by_class
 
         _create_students(test_engine, "旧班级", 3)
 
@@ -49,10 +53,8 @@ class TestDisableStudentsByClass:
             students = get_students_by_class(session, "旧班级", include_disabled=True)
             assert len(students) == 3
             assert all(s.is_account_enabled is False for s in students)
-            # 默认查询不返回已禁用学生
+            # 默认查询不返回已禁用学生 → 该班不再出现在 GET /students 派生的班级选项中
             assert len(get_students_by_class(session, "旧班级")) == 0
-            # 班级列表不再返回该班级
-            assert "旧班级" not in get_all_classes(session)
 
         # 重复禁用返回 0（幂等，不产生错误）
         resp = admin_client.post(
@@ -117,13 +119,14 @@ class TestDisableStudentsByClass:
         from app.core.security import generate_password_hash
         from app.models import Student
 
+        class_id = ensure_class(test_engine, "旧班级")
         with Session(test_engine) as session:
             password_hash, salt = generate_password_hash("student123")
             session.add(Student(
                 student_id="SB001",
                 name="旧班学生",
                 class_name="旧班级",
-                score=60.0,
+                class_id=class_id,
                 password_hash=password_hash,
                 salt=salt,
             ))
@@ -190,7 +193,7 @@ class TestDisableMultipleClasses:
 
     def test_admin_can_disable_multiple_classes(self, admin_client, test_engine):
         """admin 可一次禁用多个班级"""
-        from app.crud import get_all_classes, get_students_by_class
+        from app.crud import get_students_by_class
 
         _create_students(test_engine, "归档一班", 2, id_prefix="BA")
         _create_students(test_engine, "归档二班", 2, id_prefix="BB")
@@ -211,7 +214,8 @@ class TestDisableMultipleClasses:
                 students = get_students_by_class(session, cls, include_disabled=True)
                 assert len(students) == 2
                 assert all(s.is_account_enabled is False for s in students)
-                assert cls not in get_all_classes(session)
+                # 已无启用学生 → 该班不再出现在 GET /students 派生的班级选项中
+                assert len(get_students_by_class(session, cls)) == 0
             # 未选中的班级不受影响
             kept = get_students_by_class(session, "保留班级")
             assert len(kept) == 1
@@ -363,21 +367,9 @@ class TestDisabledClassContentCreation:
         })
         assert resp.status_code == 400
 
-    def test_auto_assign_excludes_disabled_students(self, teacher_client, test_engine):
+    def test_auto_assign_excludes_disabled_students(self, teacher_client, test_engine, seed_refs):
         """自动分组不包含禁用学生：2 个启用学生 + 1 个禁用学生 → 只分 2 个启用学生"""
-        from datetime import date
-        from app.models import Cohort, Class_, Semester, Student
-
-        # seed 届/班/当前学期（设置表复合主键依赖）
-        with Session(test_engine) as session:
-            if session.exec(select(Cohort).where(Cohort.year == "2026")).first() is None:
-                session.add(Cohort(year="2026"))
-            if session.exec(select(Class_).where(Class_.name == "一班")).first() is None:
-                session.add(Class_(name="一班", cohort_year="2026"))
-            if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
-                session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
-                                     total_weeks=20, is_current=True))
-            session.commit()
+        from app.models import Student
 
         _create_students(test_engine, "一班", 2, id_prefix="DJ")
         # 同班再加 1 个禁用学生
@@ -386,7 +378,7 @@ class TestDisabledClassContentCreation:
                 student_id="DJ900",
                 name="禁用学生",
                 class_name="一班",
-                score=60.0,
+                class_id=seed_refs["一班"],
                 is_account_enabled=False,
             ))
             session.commit()

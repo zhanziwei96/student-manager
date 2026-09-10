@@ -7,30 +7,46 @@ from sqlmodel import Session
 
 @pytest.fixture(autouse=True)
 def seed_class_students(test_engine):
-    """开课校验要求班级有启用学生：为本文件所用班级各预置 1 个启用学生"""
-    from app.models import Student
+    """开课校验要求班级有启用学生：为本文件所用班级建班级实体并各预置 1 个启用学生"""
+    from datetime import date
+    from sqlmodel import select
+    from app.models import Class_, Semester, Student
+    from app.core.class_cache import get_class_id_by_name, invalidate_class_cache
+    from app.core.term import invalidate_semester_cache
 
     with Session(test_engine) as session:
+        for i, cls in enumerate(["一班", "二班", "三班", "四班", "五班", "六班"]):
+            if session.exec(select(Class_).where(Class_.name == cls)).first() is None:
+                session.add(Class_(name=cls, cohort_year="2026"))
+        session.flush()
         for i, cls in enumerate(["一班", "二班", "三班", "四班", "五班", "六班"]):
             session.add(Student(
                 student_id=f"CS{i:03d}",
                 name=f"学生{i}",
                 class_name=cls,
-                score=60.0,
+                class_id=get_class_id_by_name(session, cls),
             ))
+        if session.exec(select(Semester).where(Semester.is_current.is_(True))).first() is None:
+            session.add(Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                                 total_weeks=20, is_current=True))
         session.commit()
+    invalidate_class_cache()
+    invalidate_semester_cache()
 
 
 @pytest.fixture
 def create_test_schedule(test_engine, teacher_user):
     """创建测试课表的 fixture"""
     from app.models.course_schedule import CourseSchedule
+    from app.core.class_cache import get_class_id_by_name
+    from app.core.term import get_current_semester_id
 
     def _create_schedule(**kwargs):
         with Session(test_engine) as session:
             schedule = CourseSchedule(
                 course_name=kwargs.get("course_name", "测试课程"),
-                class_name=kwargs.get("class_name", "测试班级"),
+                class_id=get_class_id_by_name(session, kwargs.get("class_name", "一班")),
+                semester_id=get_current_semester_id(session),
                 teacher_id=kwargs.get("teacher_id", teacher_user.id),
                 teacher_name=kwargs.get("teacher_name", teacher_user.name),
                 day_of_week=kwargs.get("day_of_week", 1),

@@ -85,6 +85,42 @@ def session(engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
+def seed_refs(engine):
+    """seed 班级（一班/二班/三班）与当前学期，返回引用 id 的 dict
+
+    业务表为纯 FK 锚点（class_id / semester_id 必填），单元测试构造业务对象
+    时从此 fixture 取 id。
+    """
+    from datetime import date
+    from sqlmodel import select
+    from app.models import Class_, Semester
+    from app.core.class_cache import invalidate_class_cache
+    from app.core.term import invalidate_semester_cache
+
+    with Session(engine) as session:
+        refs = {}
+        for name in ("一班", "二班", "三班"):
+            cls = session.exec(select(Class_).where(Class_.name == name)).first()
+            if cls is None:
+                cls = Class_(name=name, cohort_year="2026")
+                session.add(cls)
+                session.commit()
+                session.refresh(cls)
+            refs[name] = cls.id
+        sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).first()
+        if sem is None:
+            sem = Semester(label="2026-2027-1", start_date=date(2026, 9, 7),
+                           total_weeks=20, is_current=True)
+            session.add(sem)
+            session.commit()
+            session.refresh(sem)
+        refs["semester_id"] = sem.id
+        invalidate_class_cache()
+        invalidate_semester_cache()
+        return refs
+
+
+@pytest.fixture
 def test_student(session: Session):
     """创建测试学生"""
     from app.models import Student

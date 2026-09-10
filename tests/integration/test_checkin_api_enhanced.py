@@ -8,6 +8,28 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 
+@pytest.fixture
+def student_user(test_engine, seed_refs):
+    """学生（带 class_id）——签到路由按 FK 校验班级匹配，覆盖 conftest 同名 fixture"""
+    from app.core.security import generate_password_hash
+    from app.models import Student
+
+    with Session(test_engine) as session:
+        password_hash, salt = generate_password_hash("student123")
+        student = Student(
+            student_id="S001",
+            name="学生1",
+            class_name="一班",
+            class_id=seed_refs["一班"],
+            password_hash=password_hash,
+            salt=salt,
+        )
+        session.add(student)
+        session.commit()
+        session.refresh(student)
+        return student
+
+
 class TestCheckinAPIEnhanced:
     """签到管理 API 增强测试"""
 
@@ -24,7 +46,7 @@ class TestCheckinAPIEnhanced:
             )
             return cs
 
-    def test_student_checkin(self, client, test_engine, student_user):
+    def test_student_checkin(self, client, test_engine, student_user, seed_refs):
         """测试学生签到 - 需要教师先开始上课"""
         self._start_class_directly(test_engine, "一班")
 
@@ -74,7 +96,7 @@ class TestCheckinAPIEnhanced:
         data = response.json()
         assert "验证码" in data["message"] or "无效" in data["message"] or "过期" in data["message"] or "上课" in data["message"]
 
-    def test_get_checkin_list(self, teacher_client, test_engine):
+    def test_get_checkin_list(self, teacher_client, test_engine, seed_refs):
         """测试获取签到记录列表"""
         self._start_class_directly(test_engine, "一班")
 
@@ -85,7 +107,7 @@ class TestCheckinAPIEnhanced:
         assert data["success"] is True
         assert isinstance(data["data"], list)
 
-    def test_get_session_checkins(self, client, teacher_client, test_engine, student_user):
+    def test_get_session_checkins(self, client, teacher_client, test_engine, student_user, seed_refs):
         """测试按 session 获取签到列表（教师有权限，学生无权限）"""
         cs = self._start_class_directly(test_engine, "一班")
 
@@ -116,7 +138,7 @@ class TestCheckinAPIEnhanced:
         assert len(data["data"]) == 1
         assert data["data"][0]["student_id"] == "S001"
 
-    def test_get_checkin_stats(self, teacher_client, test_engine, sample_students):
+    def test_get_checkin_stats(self, teacher_client, test_engine, sample_students, seed_refs):
         """测试获取签到统计"""
         # 开始上课
         self._start_class_directly(test_engine, "一班")
@@ -129,7 +151,7 @@ class TestCheckinAPIEnhanced:
         # 统计信息
         assert "active" in data["data"]
 
-    def test_get_active_class_sessions(self, teacher_client, test_engine, sample_students):
+    def test_get_active_class_sessions(self, teacher_client, test_engine, sample_students, seed_refs):
         """测试获取所有活跃课堂（需登录，教师可访问）"""
         self._start_class_directly(test_engine, "一班")
 
@@ -140,7 +162,7 @@ class TestCheckinAPIEnhanced:
         assert data["success"] is True
         assert isinstance(data["data"], list)
 
-    def test_get_class_session_for_student(self, client, test_engine, student_user):
+    def test_get_class_session_for_student(self, client, test_engine, student_user, seed_refs):
         """测试学生获取班级课堂状态 - 需要登录"""
         self._start_class_directly(test_engine, "一班")
 
@@ -159,7 +181,7 @@ class TestCheckinAPIEnhanced:
         # 有活跃课堂
         assert data["data"]["active"] is True
 
-    def test_student_checkin_with_device(self, client, test_engine, student_user):
+    def test_student_checkin_with_device(self, client, test_engine, student_user, seed_refs):
         """测试学生签到（带设备信息）"""
         cs = self._start_class_directly(test_engine, "一班")
 
@@ -186,7 +208,7 @@ class TestCheckinAPIEnhanced:
         data = response.json()
         assert data["success"] is True
 
-    def test_device_cannot_checkin_twice(self, client, test_engine, student_user):
+    def test_device_cannot_checkin_twice(self, client, test_engine, student_user, seed_refs):
         """测试同一设备不能为多个学生签到"""
         cs = self._start_class_directly(test_engine, "一班")
 

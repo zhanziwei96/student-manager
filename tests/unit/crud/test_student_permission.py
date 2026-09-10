@@ -70,31 +70,35 @@ class TestStudentCRUDPureFunctions:
         assert len(students) == 1
         assert students[0].student_id == "S001"
 
-    def test_get_students_by_class_no_permission_check(self, session):
+    def test_get_students_by_class_no_permission_check(self, session, seed_refs):
         """验证 get_students_by_class 不做权限检查"""
         from app.models import Student
         from app.crud import get_students_by_class
-        
-        student1 = Student(student_id="S001", name="学生1", class_name="班级A", score=80)
-        student2 = Student(student_id="S002", name="学生2", class_name="班级B", score=85)
+
+        student1 = Student(student_id="S001", name="学生1",
+                           class_name="一班", class_id=seed_refs["一班"])
+        student2 = Student(student_id="S002", name="学生2",
+                           class_name="二班", class_id=seed_refs["二班"])
         session.add_all([student1, student2])
         session.commit()
-        
+
         # 直接调用应返回指定班级学生（无权限过滤）
-        students = get_students_by_class(session, "班级A")
+        students = get_students_by_class(session, "一班")
         assert len(students) == 1
         assert students[0].student_id == "S001"
 
-    def test_get_all_classes_no_permission_check(self, session):
+    def test_get_all_classes_no_permission_check(self, session, seed_refs):
         """验证 get_all_classes 不做权限检查"""
         from app.models import Student
         from app.crud import get_all_classes
-        
-        student1 = Student(student_id="S001", name="学生1", class_name="班级A", score=80)
-        student2 = Student(student_id="S002", name="学生2", class_name="班级B", score=85)
+
+        student1 = Student(student_id="S001", name="学生1",
+                           class_name="一班", class_id=seed_refs["一班"])
+        student2 = Student(student_id="S002", name="学生2",
+                           class_name="二班", class_id=seed_refs["二班"])
         session.add_all([student1, student2])
         session.commit()
-        
+
         # 直接调用应返回所有班级（无权限过滤）
         classes = get_all_classes(session)
-        assert set(classes) == {"班级A", "班级B"}
+        assert {"一班", "二班"} <= set(classes)

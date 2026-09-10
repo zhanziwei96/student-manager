@@ -237,7 +237,7 @@ class TestUserCRUD:
 class TestDeleteUserCascade:
     """测试删除用户级联处理（H-08 修复）"""
 
-    def test_delete_user_with_schedules_blocked(self, session: Session):
+    def test_delete_user_with_schedules_blocked(self, session: Session, seed_refs):
         """测试删除有关联课表的教师被阻止"""
         from app.crud.user import delete_user
         from app.models import CourseSchedule
@@ -256,7 +256,8 @@ class TestDeleteUserCascade:
         # 创建课表
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             teacher_id=user.id,
             teacher_name=user.name,
             day_of_week=1,

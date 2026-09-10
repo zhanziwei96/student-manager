@@ -22,9 +22,9 @@ class TestActiveClassSessionsAPI:
             )
             return cs
 
-    def test_get_active_class_sessions(self, student_client, test_engine):
+    def test_get_active_class_sessions(self, student_client, test_engine, seed_refs):
         """测试获取所有活跃课堂列表（已登录学生可访问）"""
-        self._start_class_directly(test_engine, "计算机1班", "高等数学")
+        self._start_class_directly(test_engine, "一班", "高等数学")
 
         response = student_client.get("/api/v1/course-sessions/active")
 
@@ -55,11 +55,11 @@ class TestActiveClassSessionsAPI:
         assert response.status_code == 200
         assert response.json()["success"] is True
 
-    def test_get_active_class_sessions_after_end(self, student_client, test_engine):
+    def test_get_active_class_sessions_after_end(self, student_client, test_engine, seed_refs):
         """测试结束上课后从活跃列表移除"""
         from app.crud.course_session import end_course_session
 
-        self._start_class_directly(test_engine, "计算机1班", "高等数学")
+        self._start_class_directly(test_engine, "一班", "高等数学")
 
         # 活跃列表中有该课堂
         response = student_client.get("/api/v1/course-sessions/active")
@@ -73,10 +73,10 @@ class TestActiveClassSessionsAPI:
         response = student_client.get("/api/v1/course-sessions/active")
         assert response.json()["data"] == []
 
-    def test_multiple_active_sessions(self, student_client, test_engine):
+    def test_multiple_active_sessions(self, student_client, test_engine, seed_refs):
         """测试多个活跃课堂同时存在"""
-        self._start_class_directly(test_engine, "计算机1班", "高等数学", teacher_id=1)
-        self._start_class_directly(test_engine, "软件工程班", "数据结构", teacher_id=2)
+        self._start_class_directly(test_engine, "一班", "高等数学", teacher_id=1)
+        self._start_class_directly(test_engine, "二班", "数据结构", teacher_id=2)
 
         response = student_client.get("/api/v1/course-sessions/active")
 
@@ -89,26 +89,34 @@ class TestActiveClassSessionsAPI:
         if course_names:
             assert "高等数学" in course_names or "数据结构" in course_names
 
-    def test_active_sessions_only_current_term(self, student_client, test_engine):
+    def test_active_sessions_only_current_term(self, student_client, test_engine, seed_refs):
         """学期隔离：上学期遗留的 active 课堂不得出现在当前学期活跃课堂列表"""
-        from app.models import CourseSession
-        from sqlmodel import Session
+        from datetime import date
+        from app.models import CourseSession, Semester
+        from sqlmodel import Session, select
 
         # 上学期遗留的 active 课堂（绕过 CRUD 的当前学期默认值直接造数）
         with Session(test_engine) as session:
+            old_sem = session.exec(select(Semester).where(Semester.label == "2025-2026-2")).first()
+            if old_sem is None:
+                old_sem = Semester(label="2025-2026-2", start_date=date(2025, 2, 17),
+                                   total_weeks=20, is_current=False)
+                session.add(old_sem)
+                session.commit()
+                session.refresh(old_sem)
             session.add(CourseSession(
                 session_code="OLDSESS01",
-                class_name="上学期遗留班",
+                class_id=seed_refs["三班"],
+                semester_id=old_sem.id,
                 teacher_id=1,
                 teacher_name="张老师",
                 course_name="上学期课程",
                 status="active",
-                semester="2025-2026-2",
             ))
             session.commit()
 
         # 当前学期 active 课堂（CRUD 默认填充当前学期）
-        self._start_class_directly(test_engine, "计算机1班", "高等数学", teacher_id=1)
+        self._start_class_directly(test_engine, "一班", "高等数学", teacher_id=1)
 
         response = student_client.get("/api/v1/course-sessions/active")
 
@@ -116,5 +124,5 @@ class TestActiveClassSessionsAPI:
         data = response.json()
         assert data["success"] is True
         assert len(data["data"]) == 1
-        assert data["data"][0]["class_name"] == "计算机1班"
+        assert data["data"][0]["class_name"] == "一班"
         assert data["data"][0]["course_name"] == "高等数学"

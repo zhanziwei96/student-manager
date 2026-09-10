@@ -16,9 +16,9 @@ from app.crud.course_session import start_course_session
 class TestDeviceBindCRUD:
     """测试设备绑定 CRUD"""
 
-    def test_create_device_bind(self, session: Session):
+    def test_create_device_bind(self, session: Session, seed_refs):
         """测试创建设备绑定"""
-        cs = start_course_session(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,
@@ -34,9 +34,9 @@ class TestDeviceBindCRUD:
         assert bind.created_at is not None
         assert bind.updated_at is not None
 
-    def test_get_device_bind_existing(self, session: Session):
+    def test_get_device_bind_existing(self, session: Session, seed_refs):
         """测试获取已存在的设备绑定"""
-        cs = start_course_session(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,
@@ -55,9 +55,9 @@ class TestDeviceBindCRUD:
         result = get_device_bind(session, 99999, "NOBODY")
         assert result is None
 
-    def test_update_device_bind(self, session: Session):
+    def test_update_device_bind(self, session: Session, seed_refs):
         """测试更新设备绑定"""
-        cs = start_course_session(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,
@@ -77,9 +77,9 @@ class TestDeviceBindCRUD:
         assert found is not None
         assert found.device_id == "device_new"
 
-    def test_delete_device_bind(self, session: Session):
+    def test_delete_device_bind(self, session: Session, seed_refs):
         """测试删除设备绑定"""
-        cs = start_course_session(session, "软件1班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,

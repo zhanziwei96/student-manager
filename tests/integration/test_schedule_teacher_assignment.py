@@ -9,12 +9,13 @@ from app.models.course_schedule import CourseSchedule
 
 
 @pytest.fixture
-def sample_schedule(test_engine):
-    """创建测试课程"""
+def sample_schedule(test_engine, seed_refs):
+    """创建测试课程（class_id/semester_id 为纯 FK 锚点，取自 seed_refs）"""
     with Session(test_engine) as session:
         schedule = CourseSchedule(
             course_name="测试课程",
-            class_name="测试班级",
+            class_id=seed_refs["一班"],
+            semester_id=seed_refs["semester_id"],
             day_of_week=1,
             start_time="08:00",
             end_time="09:40",

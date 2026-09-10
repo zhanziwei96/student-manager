@@ -49,6 +49,7 @@ class TestQRCheckinAPI:
 
     def _get_student_client(self, client, test_engine, student_id="S001", name="学生1", class_name="一班"):
         """创建学生并登录，返回 (client, student)"""
+        from app.core.class_cache import get_class_id_by_name
         from app.core.security import generate_password_hash
         from app.models import Student
         with Session(test_engine) as session:
@@ -57,7 +58,7 @@ class TestQRCheckinAPI:
                 student_id=student_id,
                 name=name,
                 class_name=class_name,
-                score=80.0,
+                class_id=get_class_id_by_name(session, class_name),
                 password_hash=password_hash,
                 salt=salt
             )
@@ -72,7 +73,7 @@ class TestQRCheckinAPI:
         assert response.status_code == 200
         return client, student
 
-    def test_get_verification_code_success(self, client, test_engine):
+    def test_get_verification_code_success(self, client, test_engine, seed_refs):
         """教师成功获取动态验证码"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
@@ -92,7 +93,7 @@ class TestQRCheckinAPI:
         response = client.get("/api/v1/course-sessions/99999/verification-code")
         assert response.status_code == 404
 
-    def test_get_verification_code_forbidden(self, client, test_engine):
+    def test_get_verification_code_forbidden(self, client, test_engine, seed_refs):
         """非创建教师获取验证码返回 403"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
@@ -122,7 +123,7 @@ class TestQRCheckinAPI:
         response = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
         assert response.status_code == 403
 
-    def test_checkin_with_valid_code(self, client, test_engine):
+    def test_checkin_with_valid_code(self, client, test_engine, seed_refs):
         """使用有效验证码签到成功"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
@@ -159,7 +160,7 @@ class TestQRCheckinAPI:
         assert data["success"] is True
         assert data["data"]["student_id"] == "S001"
 
-    def test_checkin_with_invalid_code(self, client, test_engine):
+    def test_checkin_with_invalid_code(self, client, test_engine, seed_refs):
         """使用无效验证码签到失败"""
         self._get_teacher_token(client, test_engine)
         self._start_class_directly(test_engine, "一班", teacher_id=1)
@@ -174,7 +175,7 @@ class TestQRCheckinAPI:
         data = response.json()
         assert "验证码" in data["message"] or "无效" in data["message"] or "过期" in data["message"]
 
-    def test_checkin_duplicate_with_code(self, client, test_engine):
+    def test_checkin_duplicate_with_code(self, client, test_engine, seed_refs):
         """同一学生重复验证码签到失败"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
@@ -210,7 +211,7 @@ class TestQRCheckinAPI:
         assert second.status_code == 409
         assert "签到" in second.json()["message"]
 
-    def test_checkin_device_bound_and_updated(self, client, test_engine):
+    def test_checkin_device_bound_and_updated(self, client, test_engine, seed_refs):
         """设备绑定创建和更新"""
         self._get_teacher_token(client, test_engine)
         cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
