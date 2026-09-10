@@ -1,4 +1,4 @@
-import { get, post, put, del, requestRaw } from '@/lib/api'
+import { get, post, put, del, api, requestRaw } from '@/lib/api'
 import type {
   Student,
   StudentStatus,
@@ -16,6 +16,14 @@ export interface StudentListParams {
 export interface StudentPage {
   items: Student[]
   total: number
+}
+
+/** 批量导入结果 - 对应后端 StudentImportResult */
+export interface StudentImportResult {
+  imported: number
+  skipped: number
+  skipped_rows: string[]
+  errors: string[]
 }
 
 /**
@@ -73,9 +81,14 @@ export const studentsApi = {
   transferClass: (studentId: string, classId: number): Promise<void> =>
     put(`/students/${studentId}/class`, { class_id: classId }),
 
-  import: (file: File): Promise<{ imported: number }> => {
+  /** 下载学生批量导入模板（xlsx，含填写说明页） */
+  downloadImportTemplate: (): Promise<Blob> =>
+    api('/students/import-template', { method: 'GET', responseType: 'blob' }),
+
+  /** 批量导入学生（Excel） */
+  import: (file: File): Promise<StudentImportResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    return post('/students/import', formData)
+    return post<StudentImportResult, FormData>('/students/import', formData)
   },
 }

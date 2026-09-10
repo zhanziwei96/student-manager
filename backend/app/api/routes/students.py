@@ -58,9 +58,18 @@ class StudentCreateResponse(ApiResponse[dict]):
     pass
 
 
+class StudentImportResult(BaseModel):
+    """学生导入结果"""
+    imported: int = Field(..., description="成功导入数")
+    skipped: int = Field(..., description="跳过数（学号已存在）")
+    skipped_rows: List[str] = Field(default_factory=list, description="跳过明细（含行号）")
+    errors: List[str] = Field(default_factory=list, description="失败明细（含行号）")
+
+
 class ImportResponse(ApiSuccessResponse):
-    """导入响应"""
-    pass
+    """批量导入响应"""
+    data: StudentImportResult
+    warning: Optional[str] = None
 
 
 @router.get("/students", response_model=StudentListResponse)
@@ -148,6 +157,140 @@ async def get_students_list(
         ApiResponseConst.DATA: students_with_checkin,
         "total": total,
     }
+
+
+@router.get("/students/import-template")
+def download_import_template():
+    """下载学生批量导入模板（xlsx，含填写说明页）"""
+    import pandas as pd
+    from io import BytesIO
+    from fastapi.responses import StreamingResponse
+    from urllib.parse import quote
+
+    columns = ["学号", "姓名", "所属届", "班级名"]
+    sample = pd.DataFrame([
+        {"学号": "2513010101", "姓名": "张三", "所属届": "2025", "班级名": "2025康复治疗技术1班"},
+        {"学号": "2513010102", "姓名": "李四", "所属届": "2025", "班级名": "2025康复治疗技术1班"},
+    ])
+    notes = pd.DataFrame([
+        {"列名": "学号", "说明": "必填，唯一。已存在的学号会被跳过（不会修改既有学生）"},
+        {"列名": "姓名", "说明": "必填"},
+        {"列名": "所属届", "说明": "班级不存在时用于自动建班（如 2025）；班级已存在可留空"},
+        {"列名": "班级名", "说明": "必填（留空则记为「未分班」）；不存在时会按「所属届 + 班名」自动创建"},
+        {"列名": "初始密码", "说明": "无需填写，导入后默认密码为学号"},
+    ])
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        sample.to_excel(writer, index=False, sheet_name="学生名单")
+        notes.to_excel(writer, index=False, sheet_name="填写说明")
+    output.seek(0)
+
+    filename = quote("学生导入模板.xlsx", safe="")
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename*=utf-8''{filename}"}
+    )
+
+
+@router.post("/students/import", response_model=ImportResponse)
+async def import_students(
+    request: Request,
+    file: UploadFile = File(..., description="Excel文件 (.xlsx)"),
+    session: Session = Depends(get_session),
+    user_id: str = Depends(require_admin)
+):
+    """导入学生（Excel，仅管理员）
+
+    列：学号 / 姓名 / 所属届 / 班级名。
+    班级不存在时按「所属届 + 班名」自动建班；学号重复则跳过并在结果中列出。
+    """
+    import pandas as pd
+    from io import BytesIO
+    from app.core.logging import logger
+    from app.core.upload import (
+        validate_filename, validate_extension, validate_content_type, validate_file_size,
+    )
+    from app.crud.student import import_students as crud_import_students
+
+    cleaned_filename = validate_filename(file.filename or "unnamed")
+    validate_extension(cleaned_filename, ['.xlsx'])
+    validate_content_type(file.content_type, [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  # .xlsx
+        'application/octet-stream',  # 部分客户端未带正确 MIME
+    ])
+
+    # 流式读取 + 大小限制（SEC-007：防止大文件内存耗尽）
+    max_size_bytes = 10 * 1024 * 1024  # 10MB
+    contents = bytearray()
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        contents.extend(chunk)
+        if len(contents) > max_size_bytes:
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST,
+                                detail="文件大小超过限制（最大 10MB）")
+    validate_file_size(len(contents), max_size_mb=10)
+
+    try:
+        df = pd.read_excel(BytesIO(contents))
+        MAX_ROWS = 2000
+        if len(df) > MAX_ROWS:
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST,
+                                detail=f"数据行数超过限制（最大 {MAX_ROWS} 行，当前 {len(df)} 行）")
+
+        required = {"学号", "姓名"}
+        missing = required - set(df.columns)
+        if missing:
+            raise HTTPException(
+                status_code=HttpStatus.BAD_REQUEST,
+                detail=f"缺少必需列: {', '.join(sorted(missing))}（请使用导入模板）",
+            )
+
+        def _cell(row, key) -> str:
+            """取单元格文本：空单元格/NaN → ""
+
+            pandas 把「数字列 + 任一空单元格」整列推断为 float64，
+            直接 str() 会得到 "2028.0"、"2513010101.0"，故整数浮点还原为整数。
+            """
+            value = row.get(key)
+            if pd.isna(value):
+                return ""
+            if isinstance(value, float) and value.is_integer():
+                return str(int(value))
+            return str(value).strip()
+
+        records = [{
+            "student_id": _cell(row, "学号"),
+            "name": _cell(row, "姓名"),
+            "cohort_year": _cell(row, "所属届"),
+            "class_name": _cell(row, "班级名"),
+        } for _, row in df.iterrows()]
+
+        result = crud_import_students(session, records)
+        logger.info(
+            f"学生导入完成: 导入 {result['imported']} 条，跳过 {result['skipped']} 条，"
+            f"失败 {len(result['errors'])} 条（上传者: {user_id}）"
+        )
+
+        response = {
+            ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.MESSAGE: f"成功导入 {result['imported']} 名学生",
+            ApiResponseConst.DATA: result,
+        }
+        if result["errors"] or result["skipped"]:
+            response["warning"] = (
+                f"{result['skipped']} 行跳过，{len(result['errors'])} 行导入失败"
+            )
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"学生导入失败: {e}")
+        raise HTTPException(status_code=HttpStatus.INTERNAL_ERROR, detail=f"导入失败: {str(e)}")
 
 
 @router.get("/students/{student_id}", response_model=StudentDetailResponse)
@@ -239,61 +382,6 @@ async def remove_student(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.STUDENT_DELETED
     }
-
-@router.post("/students/import", response_model=ImportResponse)
-async def import_students(
-    request: Request,
-    file: UploadFile = File(..., description="Excel文件 (.xlsx/.xls)"),
-    session: Session = Depends(get_session),
-    user_id: str = Depends(require_admin)
-):
-    """导入学生（Excel，仅管理员）- SEC-001: 安全文件上传"""
-    from app.core.upload import save_upload_file_securely, cleanup_file
-    from app.core.logging import logger
-    
-    settings = get_settings()
-    file_path = None
-    
-    try:
-        # SEC-001: 安全保存文件
-        # - 验证文件扩展名白名单
-        # - 验证MIME类型
-        # - 检查文件大小
-        # - 使用UUID重命名
-        file_path, original_filename = await save_upload_file_securely(
-            file,
-            allowed_extensions=settings.upload.allowed_extensions,
-            allowed_content_types=settings.upload.allowed_content_types,
-            max_size_mb=settings.upload.max_file_size_mb,
-            use_uuid=settings.upload.use_uuid_filename,
-            upload_directory=settings.upload.directory
-        )
-        
-        # TODO: 实现Excel解析和学生导入逻辑
-        # 这里应该调用导入服务解析Excel并导入学生数据
-        # 目前仅演示安全上传功能
-        
-        logger.info(f"学生导入文件已接收: {original_filename} (上传者: {user_id})")
-        
-        return {
-            ApiResponseConst.SUCCESS: True,
-            ApiResponseConst.MESSAGE: f"文件 '{original_filename}' 上传成功，导入功能开发中"
-        }
-        
-    except HTTPException:
-        # 重新抛出HTTP异常（来自save_upload_file_securely）
-        raise
-    except Exception as e:
-        logger.error(f"学生导入失败: {e}")
-        raise HTTPException(
-            status_code=HttpStatus.INTERNAL_ERROR,
-            detail=f"导入失败: {str(e)}"
-        )
-    finally:
-        # SEC-001: 清理临时文件
-        if file_path:
-            cleanup_file(file_path)
-
 
 class ResetStudentPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=1, description="新密码")
