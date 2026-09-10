@@ -6,7 +6,6 @@ from typing import Optional
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Index, text, UniqueConstraint
 from app.core.timezone import get_now
-from app.core.term import get_current_term
 
 
 class CourseSessionBase(SQLModel):
@@ -18,15 +17,8 @@ class CourseSessionBase(SQLModel):
     )
     session_code: str = Field(..., description="课堂唯一代码", max_length=16)
     course_name: Optional[str] = Field(default=None, description="课程名称", max_length=100)
-    class_name: str = Field(..., description="班级名称", max_length=100)
-    class_id: Optional[int] = Field(
-        default=None, foreign_key="classes.id", index=True,
-        description="班级ID（FK，双写过渡期可空）",
-    )
-    semester_id: Optional[int] = Field(
-        default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
-    )
+    class_id: int = Field(..., foreign_key="classes.id", index=True, description="班级ID")
+    semester_id: int = Field(..., foreign_key="semesters.id", index=True, description="学期ID")
     classroom: Optional[str] = Field(default=None, description="教室", max_length=50)
     teacher_id: int = Field(..., description="教师ID")
     teacher_name: Optional[str] = Field(default=None, description="教师姓名", max_length=50)
@@ -41,11 +33,11 @@ class CourseSession(CourseSessionBase, table=True):
     """课程会话数据库模型"""
     __tablename__ = "course_sessions"
     __table_args__ = (
-        # 同一班级同一学期在同一时间只能有一个活跃课堂（第二学期：加 semester 维度）
+        # 同一班级同一学期只能有一个活跃课堂（FK 维度，跨届同名班不混淆）
         Index(
             'uix_active_class_semester',
-            'class_name',
-            'semester',
+            'class_id',
+            'semester_id',
             unique=True,
             sqlite_where=text('status="active"'),
             postgresql_where=text("status='active'")
@@ -56,12 +48,6 @@ class CourseSession(CourseSessionBase, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    semester: Optional[str] = Field(
-        default_factory=get_current_term,
-        description="学期标识（如 2026-2027-1）",
-        max_length=20,
-        index=True
-    )
     updated_at: datetime = Field(default_factory=get_now, description="更新时间")
 
 
@@ -98,16 +84,7 @@ class ScheduleAdjustment(ScheduleAdjustmentBase, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    semester: Optional[str] = Field(
-        default_factory=get_current_term,
-        description="学期标识（如 2026-2027-1）",
-        max_length=20,
-        index=True
-    )
-    semester_id: Optional[int] = Field(
-        default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
-    )
+    semester_id: int = Field(..., foreign_key="semesters.id", index=True, description="学期ID")
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
 
 

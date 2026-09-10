@@ -7,7 +7,6 @@ from sqlmodel import SQLModel, Field, UniqueConstraint
 from sqlalchemy import Index, desc
 from app.models.constants import CheckinTypeConst
 from app.core.timezone import get_now
-from app.core.term import get_current_term
 
 
 class CheckinRecord(SQLModel, table=True):
@@ -20,12 +19,6 @@ class CheckinRecord(SQLModel, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    semester: Optional[str] = Field(
-        default_factory=get_current_term,
-        description="学期标识（如 2026-2027-1）",
-        max_length=20,
-        index=True
-    )
     session_id: Optional[int] = Field(
         default=None,
         foreign_key="course_sessions.id",
@@ -33,15 +26,14 @@ class CheckinRecord(SQLModel, table=True):
         index=True
     )
     student_id: str = Field(..., description="学号", index=True)
-    student_name: Optional[str] = Field(default=None, description="学生姓名")
-    class_name: Optional[str] = Field(default=None, description="班级", index=True)
+    student_name: Optional[str] = Field(default=None, description="学生姓名（展示快照）")
     class_id: Optional[int] = Field(
         default=None, foreign_key="classes.id", index=True,
-        description="班级ID（FK，双写过渡期可空）",
+        description="班级ID（FK；历史签到可空）",
     )
     semester_id: Optional[int] = Field(
         default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
+        description="学期ID（FK）",
     )
     checkin_type: str = Field(default=CheckinTypeConst.SELF, description="签到类型")
     checkin_time: datetime = Field(default_factory=get_now, description="签到时间")

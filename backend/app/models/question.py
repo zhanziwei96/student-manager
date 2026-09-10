@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from app.core.timezone import get_now
-from app.core.term import get_current_term
 
 
 class Question(SQLModel, table=True):
@@ -13,21 +12,14 @@ class Question(SQLModel, table=True):
     __tablename__ = "questions"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    semester: Optional[str] = Field(
-        default_factory=get_current_term,
-        description="学期标识（如 2026-2027-1）",
-        max_length=20,
-        index=True
-    )
     teacher_id: int = Field(..., foreign_key="users.id", description="提问老师ID", index=True)
-    class_name: Optional[str] = Field(default=None, description="目标班级，None表示所有班级可见", index=True)
     class_id: Optional[int] = Field(
         default=None, foreign_key="classes.id", index=True,
-        description="班级ID（FK，双写过渡期可空）",
+        description="目标班级ID（None 表示所有班级可见）",
     )
     semester_id: Optional[int] = Field(
         default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
+        description="学期ID（FK）",
     )
     content: str = Field(..., description="问题内容")
     status: str = Field(default="active", description="状态: active/closed")

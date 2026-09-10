@@ -6,7 +6,6 @@ from typing import Optional
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Index, desc
 from app.core.timezone import get_now
-from app.core.term import get_current_term
 
 
 class Group(SQLModel, table=True):
@@ -14,21 +13,8 @@ class Group(SQLModel, table=True):
     __tablename__ = "groups"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    semester: Optional[str] = Field(
-        default_factory=get_current_term,
-        description="学期标识（如 2026-2027-1）",
-        max_length=20,
-        index=True
-    )
-    class_name: str = Field(..., description="班级名称", max_length=100, index=True)
-    class_id: Optional[int] = Field(
-        default=None, foreign_key="classes.id", index=True,
-        description="班级ID（FK，双写过渡期可空）",
-    )
-    semester_id: Optional[int] = Field(
-        default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
-    )
+    class_id: int = Field(..., foreign_key="classes.id", index=True, description="班级ID")
+    semester_id: int = Field(..., foreign_key="semesters.id", index=True, description="学期ID")
     course_id: Optional[int] = Field(default=None, foreign_key="courses.id", description="课程ID（小组按科目划分）", index=True)
     name: str = Field(..., description="小组名称", max_length=100)
     leader_student_id: str = Field(..., description="组长学号", max_length=50, index=True)
@@ -74,12 +60,11 @@ class GroupDissolutionRequest(SQLModel, table=True):
 
 
 class ClassGroupSettings(SQLModel, table=True):
-    """班级小组设置表（复合主键 (class_id, semester_id)，class_name 为冗余快照）"""
+    """班级小组设置表（复合主键 (class_id, semester_id)）"""
     __tablename__ = "class_group_settings"
 
     class_id: int = Field(..., foreign_key="classes.id", primary_key=True, description="班级ID")
     semester_id: int = Field(..., foreign_key="semesters.id", primary_key=True, description="学期ID")
-    class_name: str = Field(default="", description="班级名称（冗余快照）", max_length=100)
     max_members_per_group: int = Field(default=5, description="每组上限人数")
     updated_at: datetime = Field(default_factory=get_now, description="最后修改时间")
 
@@ -98,9 +83,8 @@ class GroupScoreLog(SQLModel, table=True):
     delta: Optional[float] = Field(default=None, description="变化值")
     reason: Optional[str] = Field(default=None, description="原因")
     operator: Optional[str] = Field(default=None, description="操作人")
-    semester: str = Field(default_factory=get_current_term, description="学期标识", max_length=20)
     semester_id: Optional[int] = Field(
         default=None, foreign_key="semesters.id", index=True,
-        description="学期ID（FK，双写过渡期可空）",
+        description="学期ID（FK）",
     )
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
