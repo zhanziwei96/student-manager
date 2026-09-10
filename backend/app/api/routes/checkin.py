@@ -7,6 +7,7 @@ from fastapi import APIRouter, Body, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 from app.core.class_cache import get_class_name_by_id
+from app.core.term import get_current_semester_id
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.rate_limit import check_rate_limit
@@ -207,10 +208,12 @@ async def do_checkin(
     else:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少验证码或教师权限')
 
+    checkin_data = checkin.model_dump()
+    checkin_data["class_name"] = get_class_name_by_id(db_session, checkin.class_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.CHECKIN_SUCCESS,
-        ApiResponseConst.DATA: checkin.model_dump()
+        ApiResponseConst.DATA: checkin_data
     }
 
 
@@ -231,9 +234,16 @@ def get_checkin_list(
                      if (cid := get_class_id_by_name(session, name)) is not None]
 
     checkins = get_all_checkins(session, limit=limit, class_ids=class_ids)
+    from app.core.class_cache import get_class_names
+    name_map = get_class_names(session, (c.class_id for c in checkins))
+    data = []
+    for c in checkins:
+        item = c.model_dump()
+        item["class_name"] = name_map.get(c.class_id)
+        data.append(item)
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [c.model_dump() for c in checkins]
+        ApiResponseConst.DATA: data
     }
 
 
@@ -252,9 +262,14 @@ def get_session_checkin_list(
     verify_teacher_class_access(user, class_name, db_session)
 
     checkins = get_checkins_by_session_id(db_session, session_id)
+    data = []
+    for c in checkins:
+        item = c.model_dump()
+        item["class_name"] = class_name
+        data.append(item)
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.DATA: [c.model_dump() for c in checkins]
+        ApiResponseConst.DATA: data
     }
 
 

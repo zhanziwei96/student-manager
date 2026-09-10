@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
-from app.core.class_cache import get_class_names, get_class_id_by_name
+from app.core.class_cache import get_class_names, get_class_ids_by_names
 from app.models import CourseOffering, Enrollment, Group, GroupMember, Student
 
 
@@ -42,7 +42,7 @@ def get_individual_ranking(
         )
     )
     if scope == "class" and class_name:
-        query = query.where(Student.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(Student.class_id.in_(get_class_ids_by_names(session, [class_name])))
     rows = session.exec(query).all()
     entries = [
         {"student_id": sid, "name": name, "class_name": cls_name, "score": score}
@@ -66,7 +66,7 @@ def get_group_ranking(
         Group.is_active.is_(True),
     )
     if scope == "class" and class_name:
-        query = query.where(Group.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(Group.class_id.in_(get_class_ids_by_names(session, [class_name])))
     groups = session.exec(query).all()
     member_rows = session.exec(
         select(GroupMember.group_id, Student.name)

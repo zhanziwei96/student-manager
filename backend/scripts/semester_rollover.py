@@ -6,13 +6,12 @@
     python scripts/semester_rollover.py [--disable-graduates 名单.txt] [--old-term 2025-2026-2]
 
 流程:
-    1. 前置检查（当前学期配置、库内 semester 分布）
+    1. 前置检查（当前学期、库内旧学期数据）
     2. 快照备份（pg_dump 到 backups/）
     3. 收敛遗留课堂（旧学期 active/scheduled -> ended）
-    4. 收敛小组（is_active=False；遗留 evaluating 任务 -> closed）
-    5. 分数归档重置（每生写归档 score_log + score 置 0，单事务）
-    6. 可选软禁用毕业/退学学生
-    7. 输出验证报告
+    4. 收敛小组（is_active=False）
+    5. 可选软禁用毕业/退学学生
+    6. 输出验证报告
 """
 import argparse
 import os
@@ -28,23 +27,31 @@ from sqlmodel import Session, func, select, update
 
 from app.core.config import get_settings
 from app.core.db import engine
-from app.core.term import get_current_term
+from app.core.term import get_current_semester
 from app.models import (
     CourseSchedule,
     CourseSession,
     Group,
+    Semester,
     Student,
 )
 
 
+def _semester_id_by_label(session: Session, label: str) -> Optional[int]:
+    """按学期标识解析 semester_id（不存在返回 None）"""
+    sem = session.exec(select(Semester).where(Semester.label == label)).first()
+    return sem.id if sem else None
 
 
 def _close_legacy_sessions(session: Session, old_term: str) -> int:
     """旧学期遗留 active/scheduled 课堂 -> ended"""
+    semester_id = _semester_id_by_label(session, old_term)
+    if semester_id is None:
+        return 0
     result = session.exec(
         update(CourseSession)
         .where(
-            CourseSession.semester == old_term,
+            CourseSession.semester_id == semester_id,
             CourseSession.status.in_(["active", "scheduled"]),
         )
         .values(status="ended")
@@ -55,8 +62,11 @@ def _close_legacy_sessions(session: Session, old_term: str) -> int:
 
 def _close_legacy_groups(session: Session, old_term: str) -> int:
     """旧学期小组失效"""
+    semester_id = _semester_id_by_label(session, old_term)
+    if semester_id is None:
+        return 0
     groups_result = session.exec(
-        update(Group).where(Group.semester == old_term).values(is_active=False)
+        update(Group).where(Group.semester_id == semester_id).values(is_active=False)
     )
     session.commit()
     return groups_result.rowcount
@@ -108,13 +118,16 @@ def _validate_term_combination(session: Session, old_term: str, new_term: str) -
     """学期组合前置校验：old != new，且库内存在 old 学期数据（防打错学期号）"""
     if old_term == new_term:
         print(f"[错误] 旧学期不能等于当前学期（{old_term}）："
-              "请确认 TERM_CFG__LABEL 已更新为当前学期，或显式传 --old-term")
+              "请确认当前学期（semesters.is_current）已切换，或显式传 --old-term")
         sys.exit(1)
-    schedule_count = session.exec(
-        select(func.count())
-        .select_from(CourseSchedule)
-        .where(CourseSchedule.semester == old_term)
-    ).one()
+    semester_id = _semester_id_by_label(session, old_term)
+    schedule_count = 0
+    if semester_id is not None:
+        schedule_count = session.exec(
+            select(func.count())
+            .select_from(CourseSchedule)
+            .where(CourseSchedule.semester_id == semester_id)
+        ).one()
     if schedule_count == 0:
         print(f"[错误] 库中不存在学期 {old_term} 的课表数据，请核对 --old-term")
         sys.exit(1)
@@ -144,15 +157,20 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = get_settings()
-    new_term = get_current_term()
+    with Session(engine) as session:
+        current_sem = get_current_semester(session)
+        new_term = current_sem.label if current_sem else None
+    if new_term is None:
+        print("[错误] 库中不存在当前学期（semesters.is_current=true），请先创建学期")
+        sys.exit(1)
     old_term = args.old_term
     if old_term is None:
         old_term = _previous_term_label(new_term)
         if old_term is None:
-            print("[错误] 未传 --old-term 且无法从配置 TERM_CFG__LABEL 推导上一学期，"
+            print("[错误] 未传 --old-term 且无法从当前学期推导上一学期，"
                   "请显式传 --old-term")
             sys.exit(1)
-        print(f"[提示] 未传 --old-term，按配置推导旧学期: {old_term}")
+        print(f"[提示] 未传 --old-term，按当前学期推导旧学期: {old_term}")
 
     # 前置校验（fail-fast：全部在交互确认与任何写操作之前）
     with Session(engine) as session:
@@ -162,8 +180,6 @@ def main() -> None:
         print(f"[前置检查] 名单文件可读: {args.disable_graduates}（{line_count} 行）")
 
     print(f"[前置检查] 旧学期={old_term} 新学年={new_term}")
-    print(f"[前置检查] 配置 TERM_CFG__START_DATE={settings.term.start_date} "
-          f"TERM_CFG__TOTAL_WEEKS={settings.term.total_weeks}")
 
     # 交互确认（非交互环境用 --skip-backup 跳过）
     if not args.skip_backup:
@@ -184,7 +200,6 @@ def main() -> None:
         print("\n[验证报告]")
         print(f"  遗留课堂收敛: {sessions_closed}")
         print(f"  小组失效: {groups_closed}")
-        print(f"  分数归档: {archived}  跳过(幂等): {skipped}")
         print(f"  软禁用学生: {disabled}")
         print(f"  库内学生总数: {len(total_students)}")
         print("\n学期切换完成。")

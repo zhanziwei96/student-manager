@@ -5,7 +5,7 @@ from datetime import datetime, date
 from typing import List, Optional
 from sqlmodel import Session, select, func
 from app.models import CheckinRecord
-from app.core.class_cache import get_class_id_by_name
+from app.core.class_cache import get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 
@@ -47,7 +47,7 @@ def get_today_checkins(
         CheckinRecord.semester_id == get_current_semester_id(session),
     )
     if class_name:
-        query = query.where(CheckinRecord.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(CheckinRecord.class_id.in_(get_class_ids_by_names(session, [class_name])))
     return list(session.exec(query).all())
 
 
@@ -62,7 +62,7 @@ def count_today_checkins(session: Session, class_name: Optional[str] = None) -> 
         CheckinRecord.semester_id == get_current_semester_id(session),
     )
     if class_name:
-        query = query.where(CheckinRecord.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(CheckinRecord.class_id.in_(get_class_ids_by_names(session, [class_name])))
 
     result = session.exec(query)
     return result.one()
@@ -75,7 +75,7 @@ class DuplicateCheckinError(Exception):
 
 def create_checkin(
     session: Session, student_id: str, student_name: str,
-    class_name: str, session_id: int, checkin_type: Optional[str] = None,
+    class_id: Optional[int], session_id: int, checkin_type: Optional[str] = None,
     device_id: Optional[str] = None, device_info: Optional[str] = None,
     qr_signature: Optional[str] = None, device_bound: bool = False
 ) -> CheckinRecord:
@@ -96,7 +96,7 @@ def create_checkin(
         session_id=session_id,
         student_id=student_id,
         student_name=student_name,
-        class_id=get_class_id_by_name(session, class_name),
+        class_id=class_id,
         semester_id=get_current_semester_id(session),
         checkin_type=checkin_type,
         device_id=device_id,
@@ -140,7 +140,7 @@ def has_checked_in_today(
         CheckinRecord.checkin_time >= query_start
     )
     if class_name:
-        query = query.where(CheckinRecord.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(CheckinRecord.class_id.in_(get_class_ids_by_names(session, [class_name])))
     return session.exec(query).first() is not None
 
 

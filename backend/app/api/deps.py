@@ -125,11 +125,12 @@ def verify_class_has_active_students(class_name: str, session: Session) -> None:
     Raises:
         HTTPException 400: 班级不存在或所有学生已禁用
     """
+    from app.core.class_cache import get_class_ids_by_names
     from app.models import Student
 
     count = session.exec(
         select(func.count()).select_from(Student).where(
-            Student.class_name == class_name,
+            Student.class_id.in_(get_class_ids_by_names(session, [class_name])),
             Student.is_account_enabled.is_(True)
         )
     ).one()

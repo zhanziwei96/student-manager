@@ -2,7 +2,7 @@
 from typing import List, Optional
 import random
 from sqlmodel import Session, select
-from app.core.class_cache import get_class_id_by_name, get_class_name_by_id
+from app.core.class_cache import get_class_name_by_id, get_class_id_by_name, get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 from app.models.group import (
@@ -23,7 +23,7 @@ def get_groups_by_class(
 ) -> List[Group]:
     """获取某班当前学期所有活跃小组（可按课程过滤）"""
     query = select(Group).where(
-        Group.class_id == get_class_id_by_name(session, class_name),
+        Group.class_id.in_(get_class_ids_by_names(session, [class_name])),
         Group.is_active.is_(True),
         Group.semester_id == get_current_semester_id(session),
     )
@@ -44,7 +44,7 @@ def get_student_active_group(
         .join(GroupMember, GroupMember.group_id == Group.id)
         .where(
             GroupMember.student_id == student_id,
-            Group.class_id == get_class_id_by_name(session, class_name),
+            Group.class_id.in_(get_class_ids_by_names(session, [class_name])),
             Group.is_active.is_(True),
             Group.semester_id == get_current_semester_id(session),
         )
@@ -61,7 +61,7 @@ def get_student_groups(session: Session, student_id: str, class_name: str) -> Li
         .join(GroupMember, GroupMember.group_id == Group.id)
         .where(
             GroupMember.student_id == student_id,
-            Group.class_id == get_class_id_by_name(session, class_name),
+            Group.class_id.in_(get_class_ids_by_names(session, [class_name])),
             Group.is_active.is_(True),
             Group.semester_id == get_current_semester_id(session),
         )
@@ -259,7 +259,7 @@ def auto_assign_unassigned_students(
     # 找出该班所有启用学生（禁用学生不参与自动分组）
     all_students = session.exec(
         select(Student).where(
-            Student.class_id == get_class_id_by_name(session, class_name),
+            Student.class_id.in_(get_class_ids_by_names(session, [class_name])),
             Student.is_account_enabled.is_(True),
         )
     ).all()

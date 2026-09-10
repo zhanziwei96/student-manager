@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from app.core.db import get_session
 from app.core.config import HttpStatus
-from app.core.class_cache import get_class_id_by_name
+from app.core.class_cache import get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.core.upload import (
     validate_filename,
@@ -156,7 +156,7 @@ async def get_schedules(
         query = query.where(CourseSchedule.teacher_id == teacher_id)
 
     if class_name:
-        query = query.where(CourseSchedule.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
     if day_of_week:
         query = query.where(CourseSchedule.day_of_week == day_of_week)
     

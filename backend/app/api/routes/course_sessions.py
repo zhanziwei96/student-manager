@@ -6,6 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
+from app.core.class_cache import get_class_id_by_name, get_class_names
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user

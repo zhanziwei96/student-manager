@@ -5,7 +5,7 @@
 session 生命周期的 detached 属性刷新问题，与 term.py 缓存策略一致）。
 班级 CRUD 变更后调用 invalidate_class_cache 清除。
 """
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, List, Optional
 
 from sqlmodel import Session, col, select
 
@@ -43,7 +43,7 @@ def get_class_names(
 
 
 def get_class_id_by_name(session: Session, class_name: Optional[str]) -> Optional[int]:
-    """按班级名解析 class_id（未分班/不存在返回 None）"""
+    """按班级名解析 class_id（不存在返回 None）"""
     if not class_name:
         return None
     if class_name in _class_id_by_name:
@@ -55,6 +55,20 @@ def get_class_id_by_name(session: Session, class_name: Optional[str]) -> Optiona
         _class_id_by_name[cls.name] = cls.id
         return cls.id
     return None
+
+
+def get_class_ids_by_names(
+    session: Session, class_names: Iterable[str],
+) -> List[int]:
+    """批量按班级名解析 class_id（命中缓存跳过；未命中的一次查询回填；不存在的名称忽略）"""
+    names = {n for n in class_names if n}
+    missing = [n for n in names if n not in _class_id_by_name]
+    if missing:
+        from app.models import Class_
+        for cls in session.exec(select(Class_).where(col(Class_.name).in_(missing))).all():
+            _class_name_by_id[cls.id] = cls.name
+            _class_id_by_name[cls.name] = cls.id
+    return [i for i in (_class_id_by_name.get(n) for n in names) if i is not None]
 
 
 def invalidate_class_cache() -> None:

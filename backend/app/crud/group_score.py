@@ -66,7 +66,7 @@ def update_group_score(
         delta=delta,
         reason=reason,
         operator=operator,
-        semester_id=get_current_semester_id(session),   # 双写：FK 列
+        semester_id=get_current_semester_id(session),
     )
     session.add(log)
     session.commit()

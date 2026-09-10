@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import List, Optional
 from sqlmodel import Session, select
 from sqlalchemy import event as sa_event
-from app.core.class_cache import get_class_id_by_name
+from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
 from app.models import Student
 from app.core.events import ScoreUpdated, event_bus
 
@@ -39,7 +39,7 @@ def get_students(
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if class_name:
-        query = query.where(Student.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(Student.class_id.in_(get_class_ids_by_names(session, [class_name])))
     if offset:
         query = query.offset(offset)
     if limit:
@@ -66,9 +66,9 @@ def count_students_filtered(
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if class_name:
-        query = query.where(Student.class_name == class_name)
+        query = query.where(Student.class_id.in_(get_class_ids_by_names(session, [class_name])))
     elif class_names is not None:
-        query = query.where(Student.class_name.in_(class_names))
+        query = query.where(Student.class_id.in_(get_class_ids_by_names(session, class_names)))
     return session.exec(query).one()
 
 
@@ -88,7 +88,7 @@ def get_students_by_class(
         limit: 返回数量限制（None=全部）
         offset: 偏移量（分页用）
     """
-    query = select(Student).where(Student.class_id == get_class_id_by_name(session, class_name)).order_by(Student.student_id)
+    query = select(Student).where(Student.class_id.in_(get_class_ids_by_names(session, [class_name]))).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if offset:
@@ -128,7 +128,7 @@ def get_students_by_classes(
         return []
 
     # 使用 IN 查询一次性获取所有班级学生
-    query = select(Student).where(Student.class_name.in_(class_names)).order_by(Student.student_id)
+    query = select(Student).where(Student.class_id.in_(get_class_ids_by_names(session, class_names))).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if offset:
@@ -149,6 +149,7 @@ def create_student(session: Session, student_id: str, name: str, class_name: str
         student_id=student_id,
         name=name,
         class_name=class_name,
+        class_id=get_class_id_by_name(session, class_name),
         password_hash=password_hash
         # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     )
@@ -169,8 +170,7 @@ def delete_student(session: Session, student_id: str) -> bool:
 
 
 def get_all_classes(session: Session) -> List[str]:
-    """获取所有班级列表：classes 表 ∪ 启用学生的 class_name（过渡期合并，
-    Phase 4 删除 students 部分后只保留 classes）"""
+    """获取所有班级列表：classes 表 ∪ 启用学生的 class_name（含未分班学生的历史班名）"""
     from app.models import Class_
     class_names = set(session.exec(select(Class_.name)).all())
     student_names = set(session.exec(
@@ -198,7 +198,7 @@ def disable_students_by_class(session: Session, class_name: str) -> int:
     result = session.exec(
         update(Student)
         .where(
-            Student.class_id == get_class_id_by_name(session, class_name),
+            Student.class_id.in_(get_class_ids_by_names(session, [class_name])),
             Student.is_account_enabled.is_(True),
         )
         .values(is_account_enabled=False)

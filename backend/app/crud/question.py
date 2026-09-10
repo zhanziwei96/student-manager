@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import and_, or_
 from sqlmodel import Session, select, func
 from app.models.question import Question, Answer
-from app.core.class_cache import get_class_id_by_name
+from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 
@@ -21,7 +21,7 @@ def create_question(
     question = Question(
         teacher_id=teacher_id,
         class_id=get_class_id_by_name(session, class_name) if class_name else None,
-        semester_id=get_current_semester_id(session),                                # 双写：FK 列
+        semester_id=get_current_semester_id(session),
         content=content,
         status="active",
         is_realtime=is_realtime,
@@ -49,7 +49,7 @@ def get_questions_by_teacher(
         Question.semester_id == get_current_semester_id(session),
     )
     if class_name:
-        query = query.where(Question.class_id == get_class_id_by_name(session, class_name))
+        query = query.where(Question.class_id.in_(get_class_ids_by_names(session, [class_name])))
     if status:
         query = query.where(Question.status == status)
     query = query.order_by(Question.created_at.desc())
@@ -64,7 +64,7 @@ def get_questions_by_class(
     """获取班级当前学期的问题列表（含所有班级可见的问题）"""
     query = select(Question).where(
         or_(
-            Question.class_id == get_class_id_by_name(session, class_name),
+            Question.class_id.in_(get_class_ids_by_names(session, [class_name])),
             Question.class_id.is_(None),
         ),
         Question.semester_id == get_current_semester_id(session),
