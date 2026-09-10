@@ -51,7 +51,9 @@ def engine():
     # NullPool：每次会话独立连接，不跨线程共享（StaticPool 单连接会被 TestClient
     # 应用线程与审计后台线程共享，造成间歇性丢写/refresh 失败），也不常驻连接
     test_engine = create_engine(TEST_DATABASE_URL, poolclass=NullPool)
-    # 创建所有表
+    # 创建所有表：先导入全部模型，确保 metadata 完整（否则 drop/create 会跳过未导入的表，
+    # 长期存在的测试库保留旧 schema）
+    import app.models  # noqa: F401
     from app.models import Student, User, CheckinRecord, CourseSession, AuditLog, SecurityAlert, CourseSchedule, DeviceBind
     from app.models.question import Question, Answer  # noqa: F401
     # 先删废弃表（任务/互评已停用，旧测试库残留且 FK 引用 groups，阻止 drop_all）

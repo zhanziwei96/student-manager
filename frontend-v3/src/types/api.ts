@@ -189,6 +189,7 @@ export interface AdminClass {
   cohort_year: string           // 所属届
   display_name: string          // 显示名（届+专业+班）
   student_count: number         // 学生数
+  status: 'active' | 'archived' // 状态（归档保留历史）
 }
 
 /**

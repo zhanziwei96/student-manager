@@ -12,6 +12,7 @@ export interface CreateClassRequest {
 export interface UpdateClassRequest {
   name?: string
   major?: string
+  status?: 'active' | 'archived'
 }
 
 /**
@@ -20,9 +21,12 @@ export interface UpdateClassRequest {
  * 后端路由: backend/app/api/routes/classes.py
  */
 export const classesApi = {
-  /** 班级列表（可按届过滤，含学生数） */
-  list: (cohortYear?: string): Promise<AdminClass[]> =>
-    get('/classes', cohortYear ? { cohort_year: cohortYear } : undefined),
+  /** 班级列表（可按届过滤，含学生数；默认只返回在用班级） */
+  list: (cohortYear?: string, includeArchived = false): Promise<AdminClass[]> =>
+    get('/classes', {
+      ...(cohortYear ? { cohort_year: cohortYear } : {}),
+      ...(includeArchived ? { include_archived: true } : {}),
+    }),
 
   create: (data: CreateClassRequest): Promise<AdminClass> =>
     post('/classes', data),

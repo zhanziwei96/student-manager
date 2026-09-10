@@ -42,6 +42,7 @@ class CreateClassRequest(BaseModel):
 class UpdateClassRequest(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     major: Optional[str] = Field(default=None, max_length=50)
+    status: Optional[str] = Field(default=None, description="状态: active|archived")
 
 
 def _class_dict(cls: Class_, student_count: int = 0) -> dict:
@@ -52,19 +53,23 @@ def _class_dict(cls: Class_, student_count: int = 0) -> dict:
         "cohort_year": cls.cohort_year,
         "display_name": f"{cls.cohort_year}届{cls.major}{cls.name}",
         "student_count": student_count,
+        "status": cls.status,
     }
 
 
 @router.get("/classes", response_model=ApiResponse[list])
 def list_classes(
     cohort_year: Optional[str] = Query(None, description="按届过滤"),
+    include_archived: bool = Query(False, description="是否包含已归档班级"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
-    """班级列表（可按届过滤，含学生数）"""
+    """班级列表（默认只返回在用班级；可按届过滤，含学生数）"""
     query = select(Class_).order_by(Class_.cohort_year, Class_.name)
     if cohort_year:
         query = query.where(Class_.cohort_year == cohort_year)
+    if not include_archived:
+        query = query.where(Class_.status == "active")
     classes = session.exec(query).all()
     counts = {
         row[0]: row[1] for row in session.exec(
@@ -117,6 +122,10 @@ def update_class(
         cls.name = body.name
     if body.major is not None:
         cls.major = body.major
+    if body.status is not None:
+        if body.status not in ("active", "archived"):
+            raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="无效状态")
+        cls.status = body.status
     session.add(cls)
     session.commit()
     session.refresh(cls)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { Card, Button, Input, Select, Dialog } from '@/components/ui'
-import { Plus, Loader2, Pencil, Trash2, School } from 'lucide-vue-next'
+import { Card, Button, Badge, Input, Select, Dialog } from '@/components/ui'
+import { Plus, Loader2, Pencil, Trash2, School, Archive, RotateCcw } from 'lucide-vue-next'
 import { classesApi, type CreateClassRequest, type UpdateClassRequest } from '@/api/classes'
 import { cohortsApi } from '@/api/cohorts'
 import { useToast } from '@/composables/useToast'
@@ -23,11 +23,16 @@ const cohortOptions = computed(() => [
   ...cohorts.value.map((c) => ({ value: c.year, label: c.label })),
 ])
 
-// 班级列表（按届筛选）
+// 班级列表（按届筛选；默认只看在用班级，可切换为含已归档）
 const cohortFilter = ref('')
+const scopeFilter = ref('active')
+const scopeOptions = [
+  { value: 'active', label: '在用班级' },
+  { value: 'all', label: '含已归档' },
+]
 const { data: classesData, isPending } = useQuery({
-  queryKey: ['classes', cohortFilter],
-  queryFn: () => classesApi.list(cohortFilter.value || undefined),
+  queryKey: ['classes', cohortFilter, scopeFilter],
+  queryFn: () => classesApi.list(cohortFilter.value || undefined, scopeFilter.value === 'all'),
 })
 const classes = computed(() => classesData.value ?? [])
 
@@ -121,6 +126,34 @@ const { mutateAsync: deleteClass, isPending: isDeleting } = useMutation({
   },
   onError: (error) => showToast(getErrorMessage(error) || '删除失败', 'error'),
 })
+
+// 归档 / 恢复（归档后不再出现在在用列表与下拉中，历史课堂/签到保留）
+const showArchiveDialog = ref(false)
+const archivingClass = ref<AdminClass | null>(null)
+
+const openArchiveDialog = (cls: AdminClass) => {
+  archivingClass.value = cls
+  showArchiveDialog.value = true
+}
+
+const { mutateAsync: archiveClass, isPending: isArchiving } = useMutation({
+  mutationFn: () => classesApi.update(archivingClass.value!.id, { status: 'archived' }),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['classes'] })
+    showToast(`${archivingClass.value?.display_name} 已归档`, 'success')
+    showArchiveDialog.value = false
+  },
+  onError: (error) => showToast(getErrorMessage(error) || '归档失败', 'error'),
+})
+
+const { mutateAsync: restoreClass, isPending: isRestoring } = useMutation({
+  mutationFn: (id: number) => classesApi.update(id, { status: 'active' }),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['classes'] })
+    showToast('班级已恢复', 'success')
+  },
+  onError: (error) => showToast(getErrorMessage(error) || '恢复失败', 'error'),
+})
 </script>
 
 <template>
@@ -141,13 +174,22 @@ const { mutateAsync: deleteClass, isPending: isDeleting } = useMutation({
       </Button>
     </div>
 
-    <!-- 届筛选 -->
-    <div class="mb-5 w-full sm:w-48">
-      <Select
-        v-model="cohortFilter"
-        :options="cohortOptions"
-        placeholder="选择届"
-      />
+    <!-- 届 / 状态筛选 -->
+    <div class="mb-5 flex flex-col gap-3 sm:flex-row">
+      <div class="w-full sm:w-48">
+        <Select
+          v-model="cohortFilter"
+          :options="cohortOptions"
+          placeholder="选择届"
+        />
+      </div>
+      <div class="w-full sm:w-40">
+        <Select
+          v-model="scopeFilter"
+          :options="scopeOptions"
+          placeholder="显示范围"
+        />
+      </div>
     </div>
 
     <!-- 班级列表 -->
@@ -174,6 +216,9 @@ const { mutateAsync: deleteClass, isPending: isDeleting } = useMutation({
             <th class="px-4 py-3 text-left font-medium">
               所属届
             </th>
+            <th class="px-4 py-3 text-left font-medium">
+              状态
+            </th>
             <th class="px-4 py-3 text-right font-medium">
               学生数
             </th>
@@ -197,6 +242,11 @@ const { mutateAsync: deleteClass, isPending: isDeleting } = useMutation({
             <td class="px-4 py-3">
               {{ cls.cohort_year }}届
             </td>
+            <td class="px-4 py-3">
+              <Badge :variant="cls.status === 'active' ? 'default' : 'secondary'">
+                {{ cls.status === 'active' ? '在用' : '已归档' }}
+              </Badge>
+            </td>
             <td class="px-4 py-3 text-right">
               {{ cls.student_count }}
             </td>
@@ -209,6 +259,25 @@ const { mutateAsync: deleteClass, isPending: isDeleting } = useMutation({
                   @click="openEditDialog(cls)"
                 >
                   <Pencil class="h-4 w-4" />
+                </Button>
+                <Button
+                  v-if="cls.status === 'active'"
+                  variant="outline"
+                  size="sm"
+                  class="hover:bg-[#fafafa]"
+                  @click="openArchiveDialog(cls)"
+                >
+                  <Archive class="h-4 w-4" />
+                </Button>
+                <Button
+                  v-else
+                  variant="outline"
+                  size="sm"
+                  class="hover:bg-[#fafafa]"
+                  :disabled="isRestoring"
+                  @click="restoreClass(cls.id)"
+                >
+                  <RotateCcw class="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
@@ -369,6 +438,32 @@ const { mutateAsync: deleteClass, isPending: isDeleting } = useMutation({
             class="mr-2 h-4 w-4 animate-spin"
           />
           删除
+        </Button>
+      </template>
+    </Dialog>
+
+    <!-- Archive Dialog -->
+    <Dialog
+      v-model:open="showArchiveDialog"
+      title="归档班级"
+      :description="`确定要归档 '${archivingClass?.display_name}' 吗？归档后不再出现在班级列表与下拉中，历史课堂、签到与成绩完整保留，可随时恢复。`"
+    >
+      <template #footer>
+        <Button
+          variant="outline"
+          @click="showArchiveDialog = false"
+        >
+          取消
+        </Button>
+        <Button
+          :disabled="isArchiving"
+          @click="archiveClass()"
+        >
+          <Loader2
+            v-if="isArchiving"
+            class="mr-2 h-4 w-4 animate-spin"
+          />
+          归档
         </Button>
       </template>
     </Dialog>
