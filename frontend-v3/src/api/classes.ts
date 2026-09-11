@@ -4,8 +4,22 @@ import type { AdminClass } from '@/types'
 /** 创建班级请求 - 对应后端 CreateClassRequest */
 export interface CreateClassRequest {
   name: string
-  major?: string
+  major: string
   cohort_year: string
+}
+
+/** 批量创建班级请求 - 对应后端 BatchCreateClassRequest */
+export interface BatchCreateClassRequest {
+  cohort_year: string
+  major: string
+  names: string[]
+}
+
+/** 批量创建结果 */
+export interface BatchCreateResult {
+  created_count: number
+  created: AdminClass[]
+  skipped: string[]
 }
 
 /** 更新班级请求 - 对应后端 UpdateClassRequest */
@@ -30,6 +44,10 @@ export const classesApi = {
 
   create: (data: CreateClassRequest): Promise<AdminClass> =>
     post('/classes', data),
+
+  /** 批量创建班级（同一届、同一专业的多个班级） */
+  batchCreate: (data: BatchCreateClassRequest): Promise<BatchCreateResult> =>
+    post('/classes/batch', data),
 
   update: (id: number, data: UpdateClassRequest): Promise<AdminClass> =>
     put(`/classes/${id}`, data),

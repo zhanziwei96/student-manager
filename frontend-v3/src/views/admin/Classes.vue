@@ -3,10 +3,11 @@ import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { Card, Button, Badge, Input, Select, Dialog } from '@/components/ui'
 import { Plus, Loader2, Pencil, Trash2, School, Archive, RotateCcw } from 'lucide-vue-next'
-import { classesApi, type CreateClassRequest, type UpdateClassRequest } from '@/api/classes'
+import { classesApi, type BatchCreateClassRequest, type UpdateClassRequest } from '@/api/classes'
 import { cohortsApi } from '@/api/cohorts'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/error'
+import { parseClassNames } from '@/lib/classNames'
 import type { AdminClass } from '@/types'
 
 const { showToast } = useToast()
@@ -36,7 +37,7 @@ const { data: classesData, isPending } = useQuery({
 })
 const classes = computed(() => classesData.value ?? [])
 
-// 创建
+// 创建（支持一次创建同一届、同一专业的多个班级）
 const showCreateDialog = ref(false)
 const createForm = ref({ name: '', major: '', cohort_year: '' })
 const createError = ref('')
@@ -47,30 +48,55 @@ const openCreateDialog = () => {
   showCreateDialog.value = true
 }
 
+/** 班级名输入解析结果（范围/枚举混写） */
+const createNames = computed(() => parseClassNames(createForm.value.name))
+
+/** 完整班级名预览：{届}届{专业}{班级名}，最多展示前 5 个 */
+const createPreview = computed(() => {
+  const names = createNames.value
+  if (names.length === 0) return ''
+  const prefix = `${createForm.value.cohort_year}届${createForm.value.major.trim()}`
+  const full = names.map((name) => `${prefix}${name}`)
+  const head = full.slice(0, 5).join('、')
+  return full.length > 5 ? `将创建：${head} 等 ${full.length} 个` : `将创建：${head}`
+})
+
 const { mutateAsync: createClass, isPending: isCreating } = useMutation({
-  mutationFn: (data: CreateClassRequest) => classesApi.create(data),
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['classes'] })
-    showToast('班级创建成功', 'success')
+  mutationFn: (data: BatchCreateClassRequest) => classesApi.batchCreate(data),
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ queryKey: ['classes'] })
     showCreateDialog.value = false
   },
   onError: (error) => showToast(getErrorMessage(error) || '创建失败', 'error'),
 })
 
 const handleCreate = async () => {
-  if (!createForm.value.name.trim()) {
-    createError.value = '请输入班级名'
+  if (!createForm.value.major.trim()) {
+    createError.value = '请输入专业'
     return
   }
   if (!createForm.value.cohort_year) {
     createError.value = '请选择所属届'
     return
   }
-  await createClass({
-    name: createForm.value.name.trim(),
-    major: createForm.value.major.trim(),
+  const names = createNames.value
+  if (names.length === 0) {
+    createError.value = '请输入班级名'
+    return
+  }
+  createError.value = ''
+  const result = await createClass({
     cohort_year: createForm.value.cohort_year,
+    major: createForm.value.major.trim(),
+    names,
   })
+  // 先刷新（onSuccess 中 await invalidateQueries）后提示
+  showToast(
+    result.skipped.length > 0
+      ? `已创建 ${result.created_count} 个班级，跳过 ${result.skipped.length} 个已存在`
+      : `已创建 ${result.created_count} 个班级`,
+    'success'
+  )
 }
 
 // 编辑
@@ -323,20 +349,29 @@ const { mutateAsync: restoreClass, isPending: isRestoring } = useMutation({
           />
         </div>
         <div>
-          <label class="text-sm text-[#737373]">班级名</label>
+          <label class="text-sm text-[#737373]">专业</label>
           <Input
-            v-model="createForm.name"
-            placeholder="如：1班"
+            v-model="createForm.major"
+            placeholder="如：计算机科学与技术"
             class="mt-1"
           />
         </div>
         <div>
-          <label class="text-sm text-[#737373]">专业</label>
+          <label class="text-sm text-[#737373]">班级名</label>
           <Input
-            v-model="createForm.major"
-            placeholder="如：计算机科学与技术（可留空）"
+            v-model="createForm.name"
+            placeholder="如：1班 或 1-5 或 1班,3班"
             class="mt-1"
           />
+          <p class="mt-1 text-xs text-[#a3a3a3]">
+            支持范围写法 1-5，也支持 1班,3班 枚举；多个用逗号分隔
+          </p>
+          <p
+            v-if="createPreview"
+            class="mt-1 text-xs text-[#3b82f6]"
+          >
+            {{ createPreview }}
+          </p>
         </div>
         <p
           v-if="createError"
