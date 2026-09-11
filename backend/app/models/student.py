@@ -37,8 +37,6 @@ class Student(StudentBase, table=True):
     login_fail_count: int = Field(default=0, description="登录失败次数")
     locked_until: Optional[datetime] = Field(default=None, description="锁定截止时间")
     version: int = Field(default=1, description="乐观锁版本号")
-    
-
 
 
 class StudentCreate(StudentBase):
