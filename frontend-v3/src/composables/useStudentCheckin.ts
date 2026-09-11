@@ -9,9 +9,8 @@ import type { CheckinRecord } from '@/types'
 /**
  * 学生签到 - 获取所在班级的活跃课堂状态 - FE-003 修复后
  *
- * 注意：Phase 6 起 `/course-sessions/class/{class_id}` 只接受行政班 ID，
- * 而学生端当前拿不到自己的 class_id（登录响应/JWT/学生详情均只下发 class_name），
- * 故必须由调用方显式传入 classId，见报告 NEEDS_CONTEXT。
+ * Phase 6 起 `/course-sessions/class/{class_id}` 只接受行政班 ID，
+ * 由调用方传入学生的 class_id（来自学生详情响应 `class_id` 字段，未分班为 null）。
  */
 export function useStudentCourseSession(classId?: MaybeRefOrGetter<number | undefined>) {
   const targetClassId = computed(() => toValue(classId))

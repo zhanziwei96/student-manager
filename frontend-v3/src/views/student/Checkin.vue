@@ -9,7 +9,9 @@ import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, Calendar
 
 
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
-const { data: classSession, isPending: isLoadingSession, error: sessionError, refetch: refetchSession, hasActiveSession } = useStudentCourseSession()
+const { data: classSession, isPending: isLoadingSession, error: sessionError, refetch: refetchSession, hasActiveSession } = useStudentCourseSession(
+  computed(() => studentProfile.value?.class_id ?? undefined)
+)
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
 const { hasCheckedIn, sessionCheckin, isPending: isLoadingCheckinStatus } = useHasCheckedInSession(computed(() => classSession.value?.id))
 

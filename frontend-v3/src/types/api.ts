@@ -94,7 +94,8 @@ export interface Student {
   id?: number                   // 内部ID（后端可能返回 null 或不存在此字段）
   student_id: string            // 学号（业务主键）
   name: string                  // 姓名
-  class_name: string            // 班级
+  class_id?: number | null      // 班级 ID（未分班为 null）
+  class_name: string            // 班级展示名（如 2026届软件工程1班；未分班为"未分班"）
   status?: StudentStatus        // 学籍状态（active|suspended|withdrawn|graduated）
   is_account_enabled: boolean   // 账户是否启用
   checkin_status?: 'checked_in' | 'not_checked_in' // 课堂签到状态（API 动态返回）

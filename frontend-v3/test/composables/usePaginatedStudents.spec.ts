@@ -85,7 +85,7 @@ describe('usePaginatedStudents', () => {
 
     // 默认选中第一个班级后按该班级请求
     expect(mockedGetPaginated).toHaveBeenCalledWith({
-      class_name: '一班',
+      class_id: 1,
       limit: 50,
       offset: 0,
     })
@@ -101,7 +101,7 @@ describe('usePaginatedStudents', () => {
     await flushPromises()
 
     expect(mockedGetPaginated).toHaveBeenCalledWith({
-      class_name: '一班',
+      class_id: 1,
       limit: 50,
       offset: 100,
     })
@@ -125,12 +125,12 @@ describe('usePaginatedStudents', () => {
     await nextTick()
     mockedGetPaginated.mockClear()
 
-    result.setClassFilter('二班')
+    result.setClassFilter('2')
     await flushPromises()
 
     expect(result.page.value).toBe(1)
     expect(mockedGetPaginated).toHaveBeenCalledWith({
-      class_name: '二班',
+      class_id: 2,
       limit: 50,
       offset: 0,
     })
@@ -155,7 +155,7 @@ describe('usePaginatedStudents', () => {
 
     // 搜索请求不带分页参数
     expect(mockedGetPaginated).toHaveBeenCalledWith({
-      class_name: '一班',
+      class_id: 1,
       limit: undefined,
       offset: undefined,
     })
@@ -186,7 +186,13 @@ describe('usePaginatedStudents', () => {
     await flushPromises()
 
     expect(mockedGetClasses).toHaveBeenCalled()
-    expect(result.classOptions.value.map((o) => o.value)).toEqual(['', '一班', '二班'])
+    // value 为班级 ID（数值转字符串），label 为后端返回的完整显示名
+    expect(result.classOptions.value.map((o) => o.value)).toEqual(['', '1', '2'])
+    expect(result.classOptions.value.map((o) => o.label)).toEqual([
+      '全部班级',
+      '2026届一班',
+      '2026届二班',
+    ])
     unmount()
   })
 })
