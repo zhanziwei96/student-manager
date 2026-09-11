@@ -134,7 +134,9 @@ def rollover_semester(
     from sqlalchemy import literal
     from sqlalchemy.dialects.postgresql import insert
     from sqlalchemy.orm import aliased
-    from app.models import CourseOffering, Enrollment, Student, StudentClassSemester
+    from app.models import (
+        CourseOffering, CourseOfferingClass, Enrollment, Student, StudentClassSemester,
+    )
 
     current = get_current_semester(session)
     if current is None:
@@ -165,14 +167,13 @@ def rollover_semester(
 
     # 2. 开课计划
     session.execute(insert(CourseOffering).from_select(
-        ["course_id", "semester_id", "teacher_id", "teacher_name", "class_scope",
+        ["course_id", "semester_id", "teacher_id", "teacher_name",
          "capacity", "status", "created_at"],
         select(
             CourseOffering.course_id,
             literal(current.id),
             CourseOffering.teacher_id,
             CourseOffering.teacher_name,
-            CourseOffering.class_scope,
             CourseOffering.capacity,
             literal("active"),
             literal(get_now()),
@@ -181,6 +182,26 @@ def rollover_semester(
             CourseOffering.status == "active",
         ),
     ))
+
+    # 2.5 教学班-班级关联（权限真源）：按 (course_id, teacher_id) 映射新旧教学班后复制关联行
+    src_offerings = session.exec(select(CourseOffering).where(
+        CourseOffering.semester_id == previous.id,
+        CourseOffering.status == "active",
+    )).all()
+    new_offering_ids = {
+        (o.course_id, o.teacher_id): o.id
+        for o in session.exec(select(CourseOffering).where(
+            CourseOffering.semester_id == current.id,
+        )).all()
+    }
+    for src in src_offerings:
+        new_id = new_offering_ids.get((src.course_id, src.teacher_id))
+        if new_id is None:
+            continue
+        for cid in session.exec(select(CourseOfferingClass.class_id).where(
+            CourseOfferingClass.offering_id == src.id,
+        )).all():
+            session.add(CourseOfferingClass(offering_id=new_id, class_id=cid))
     session.commit()
 
     # 3. 选课名单（新旧教学班按 course_id + teacher_id 映射）

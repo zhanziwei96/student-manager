@@ -4,12 +4,14 @@ from datetime import date
 import pytest
 from sqlmodel import select
 
-from app.models import Class_, Course, CourseOffering, Enrollment, Semester, Student, User
+from app.models import (
+    Class_, Course, CourseOffering, CourseOfferingClass, Enrollment, Semester, Student, User,
+)
 
 
 @pytest.fixture
 def seed_rankings(session, teacher_user):
-    """届/班/学期/课程/教学班/选课基础数据（teacher1 授两个数学教学班）"""
+    """届/班/学期/课程/教学班/选课基础数据（teacher1 的数学教学班关联一班+二班）"""
     # 班级可能已由 conftest 的 student_user fixture 创建，get-or-create
     cls1 = session.exec(select(Class_).where(Class_.name == "一班")).first()
     if cls1 is None:
@@ -34,13 +36,19 @@ def seed_rankings(session, teacher_user):
     session.commit()
     sem = session.exec(select(Semester).where(Semester.is_current.is_(True))).one()
     t1 = teacher_user  # conftest fixture（teacher1）
+    # uix_offering=(course,semester,teacher)：同一教师同课同学期只能一个教学班，
+    # 跨班范围由 course_offering_classes 关联行表达（m 关联一班+二班）
     m1 = CourseOffering(course_id=math.id, semester_id=sem.id, teacher_id=t1.id,
-                        teacher_name=t1.name, class_scope="一班", status="active")
-    m2 = CourseOffering(course_id=math.id, semester_id=sem.id, teacher_id=t1.id,
-                        teacher_name=t1.name, class_scope="二班", status="active")
+                        teacher_name=t1.name, status="active")
     e1 = CourseOffering(course_id=eng.id, semester_id=sem.id, teacher_id=other.id,
-                        teacher_name="李老师", class_scope="一班", status="active")
-    session.add_all([m1, m2, e1])
+                        teacher_name="李老师", status="active")
+    session.add_all([m1, e1])
+    session.flush()
+    session.add_all([
+        CourseOfferingClass(offering_id=m1.id, class_id=cls1.id),
+        CourseOfferingClass(offering_id=m1.id, class_id=cls2.id),
+        CourseOfferingClass(offering_id=e1.id, class_id=cls1.id),
+    ])
     session.commit()
     # S001 可能已由 conftest 的 student_user fixture 创建（学生视角用例），get-or-create
     s1 = session.get(Student, "S001")
@@ -58,13 +66,13 @@ def seed_rankings(session, teacher_user):
                    score=90.0, status="enrolled"),
         Enrollment(student_id="S002", offering_id=m1.id, semester_id=sem.id,
                    score=80.0, status="enrolled"),
-        Enrollment(student_id="S003", offering_id=m2.id, semester_id=sem.id,
+        Enrollment(student_id="S003", offering_id=m1.id, semester_id=sem.id,
                    score=85.0, status="enrolled"),
         Enrollment(student_id="S001", offering_id=e1.id, semester_id=sem.id,
                    score=70.0, status="enrolled"),
     ])
     session.commit()
-    return {"math": math, "m1": m1, "m2": m2, "e1": e1, "class_1": cls1.id}
+    return {"math": math, "m1": m1, "e1": e1, "class_1": cls1.id}
 
 
 def test_teacher_offerings_list_only_own(teacher_client, seed_rankings):
@@ -72,11 +80,10 @@ def test_teacher_offerings_list_only_own(teacher_client, seed_rankings):
     resp = teacher_client.get("/api/v1/teacher/offerings")
     assert resp.status_code == 200
     data = resp.json()["data"]
-    assert len(data) == 2  # teacher1 的两个数学教学班（李老师的英语班不在内）
-    assert all(o["course_code"] == "MATH1" for o in data)
-    by_scope = {o["class_scope"]: o for o in data}
-    assert by_scope["一班"]["enrolled_count"] == 2
-    assert by_scope["二班"]["enrolled_count"] == 1
+    assert len(data) == 1  # teacher1 的数学教学班（李老师的英语班不在内）
+    assert data[0]["course_code"] == "MATH1"
+    assert data[0]["class_scope"] == "2026届一班、2026届二班"  # 关联表 display_name 拼装
+    assert data[0]["enrolled_count"] == 3
 
 
 def test_teacher_cannot_list_other_teacher_enrollments(teacher_client, seed_rankings):
@@ -89,19 +96,19 @@ def test_teacher_can_list_own_enrollments(teacher_client, seed_rankings):
     """教师可查看自己教学班名单 → 200"""
     resp = teacher_client.get(f"/api/v1/offerings/{seed_rankings['m1'].id}/enrollments")
     assert resp.status_code == 200
-    assert len(resp.json()["data"]) == 2
+    assert len(resp.json()["data"]) == 3
 
 
 def test_individual_ranking_class_scope(teacher_client, seed_rankings):
     """个人榜·班内：按行政班过滤并按分数降序排名"""
     resp = teacher_client.get("/api/v1/rankings", params={
         "type": "individual", "course_id": seed_rankings["math"].id,
-        "scope": "class", "class_name": "一班",
+        "scope": "class", "class_id": seed_rankings["class_1"],
     })
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["course_name"] == "高等数学"
-    assert data["classes"] == ["一班"]
+    assert data["classes"] == ["2026届一班"]  # 班级展示名
     assert [e["student_id"] for e in data["entries"]] == ["S001", "S002"]
     assert data["entries"][0]["score"] == 90.0
     assert data["entries"][0]["rank"] == 1
@@ -115,7 +122,7 @@ def test_individual_ranking_all_scope(teacher_client, seed_rankings):
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert [e["student_id"] for e in data["entries"]] == ["S001", "S003", "S002"]
-    assert sorted(data["classes"]) == ["一班", "二班"]
+    assert sorted(data["classes"]) == ["2026届一班", "2026届二班"]
 
 
 def test_ranking_teacher_cannot_query_other_course(teacher_client, seed_rankings):
@@ -158,7 +165,7 @@ def test_group_ranking(teacher_client, seed_rankings, session):
 
     resp = teacher_client.get("/api/v1/rankings", params={
         "type": "group", "course_id": seed_rankings["math"].id,
-        "scope": "class", "class_name": "一班",
+        "scope": "class", "class_id": seed_rankings["class_1"],
     })
     assert resp.status_code == 200
     data = resp.json()["data"]

@@ -397,7 +397,7 @@ async def import_schedules(
             )
         
         # 检查必需的列
-        required_columns = ['课程名称', '班级', '教师姓名', '星期', '开始时间', '结束时间']
+        required_columns = ['课程名称', '所属届', '专业', '班级名', '教师姓名', '星期', '开始时间', '结束时间']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             raise HTTPException(
@@ -405,13 +405,24 @@ async def import_schedules(
                 detail=f"缺少必需的列: {', '.join(missing_columns)}"
             )
         
+        # 单元格取值：NaN 视为空串，整数型浮点去小数（与学生导入 _cell 对齐）
+        def _cell(row, key) -> str:
+            value = row.get(key)
+            if pd.isna(value):
+                return ""
+            if isinstance(value, float) and value.is_integer():
+                return str(int(value))
+            return str(value).strip()
+
         # 准备数据并调用CRUD层函数（架构分层修复）
         # 将DataFrame转换为字典列表，业务逻辑移到CRUD层
         records = []
         for _, row in df.iterrows():
             records.append({
                 'course_name': row.get('课程名称'),
-                'class_name': row.get('班级'),
+                'cohort_year': _cell(row, '所属届'),
+                'major': _cell(row, '专业'),
+                'class_name': _cell(row, '班级名'),
                 'teacher_name': row.get('教师姓名'),
                 'day_of_week': row.get('星期'),
                 'start_time': row.get('开始时间'),
@@ -551,10 +562,12 @@ async def unassign_teacher_from_schedule(
 @router.get("/schedules/template")
 def download_template():
     """下载导入模板"""
-    # 创建示例数据（使用系统中实际的班级名称）
+    # 创建示例数据（班级按「所属届+专业+班级名」三元组填写，与学生导入模板对齐）
     data = {
         '课程名称': ['计算机应用基础', '计算机应用基础', '计算机应用基础'],
-        '班级': ['2025康复治疗技术1班', '2025中药制药1班', '2025中医康复治疗1班'],
+        '所属届': ['2025', '2025', '2025'],
+        '专业': ['康复治疗技术', '中药制药', '中医康复治疗'],
+        '班级名': ['1班', '1班', '1班'],
         '教师姓名': ['张老师', '李老师', '王老师'],
         '星期': [1, 3, 5],
         '开始时间': ['08:00', '10:00', '14:00'],

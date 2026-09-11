@@ -11,10 +11,12 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlmodel import Session, select
 
+from app.core.class_cache import get_class_display_names
 from app.core.config import get_settings, HttpStatus
 from app.core.term import get_current_semester_id
 from app.models import (
-    Course, CourseOffering, Enrollment, EnrollmentScoreLog, GroupMember,
+    Course, CourseOffering, CourseOfferingClass, Enrollment, EnrollmentScoreLog,
+    GroupMember,
 )
 
 
@@ -139,7 +141,11 @@ def get_student_enrollments(
     student_id: str,
     semester_id: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
-    """我的成绩：当前学期选课列表（课程名/教师名/范围/score/final_score/status）"""
+    """我的成绩：当前学期选课列表（课程名/教师名/范围/score/final_score/status）
+
+    class_scope 响应键由 course_offering_classes 关联表运行时拼装
+    （教学班无关联行 = 面向全部班级 → "所有班级"）。
+    """
     if semester_id is None:
         semester_id = get_current_semester_id(session)
 
@@ -149,7 +155,6 @@ def get_student_enrollments(
             Course.id,
             Course.name,
             CourseOffering.teacher_name,
-            CourseOffering.class_scope,
         )
         .join(CourseOffering, Enrollment.offering_id == CourseOffering.id)
         .join(Course, CourseOffering.course_id == Course.id)
@@ -159,16 +164,41 @@ def get_student_enrollments(
         )
         .order_by(Course.name)
     )
+    rows = session.exec(query).all()
+
+    # 批量拼装教学班范围展示串
+    scope_by_offering = resolve_offering_scopes(
+        session, [e.offering_id for e, _, _, _ in rows])
     return [
         {
             "enrollment_id": e.id,
             "course_id": course_id,
             "course_name": course_name,
             "teacher_name": teacher_name,
-            "class_scope": class_scope,
+            "class_scope": scope_by_offering.get(e.offering_id, "所有班级"),
             "score": e.score,
             "final_score": e.final_score,
             "status": e.status,
         }
-        for e, course_id, course_name, teacher_name, class_scope in session.exec(query).all()
+        for e, course_id, course_name, teacher_name in rows
     ]
+
+
+def resolve_offering_scopes(
+    session: Session, offering_ids: List[int],
+) -> Dict[int, str]:
+    """批量拼装教学班范围展示串（无关联行 = 通配 → "所有班级"）"""
+    scopes: Dict[int, str] = {oid: "所有班级" for oid in offering_ids}
+    if not offering_ids:
+        return scopes
+    assoc = session.exec(select(CourseOfferingClass).where(
+        CourseOfferingClass.offering_id.in_(offering_ids),
+    )).all()
+    class_ids_by_offering: Dict[int, List[int]] = {}
+    for a in assoc:
+        class_ids_by_offering.setdefault(a.offering_id, []).append(a.class_id)
+    names = get_class_display_names(
+        session, [cid for cids in class_ids_by_offering.values() for cid in cids])
+    for oid, cids in class_ids_by_offering.items():
+        scopes[oid] = "、".join(names[c] for c in sorted(cids) if c in names)
+    return scopes

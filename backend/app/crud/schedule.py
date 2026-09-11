@@ -7,15 +7,8 @@
 from typing import List, Optional
 from sqlmodel import Session, select
 from app.core.term import get_current_semester_id
-from app.models import Class_, CourseSchedule, User
-
-
-def _class_ids_by_name(session: Session, class_name: str) -> List[int]:
-    """按裸班级名查 classes 表 ID 列表（可能跨专业/跨届多个，仅作过渡期解析）
-
-    TODO(Task 6): 课表导入改按「届+专业+班级名」三元组定位后删除此辅助函数。
-    """
-    return list(session.exec(select(Class_.id).where(Class_.name == class_name)).all())
+from app.crud.student import ensure_class
+from app.models import CourseSchedule, User
 
 
 def get_schedule(session: Session, schedule_id: int) -> Optional[CourseSchedule]:
@@ -174,7 +167,9 @@ def import_schedules(
         session: 数据库会话
         records: 课表记录列表，每个记录为字典，包含：
                 - course_name: 课程名称
-                - class_name: 班级名称
+                - cohort_year: 所属届（如 2026）
+                - major: 专业
+                - class_name: 班级名（仅班名，不含届/专业）
                 - teacher_name: 教师姓名
                 - day_of_week: 星期（1-7）
                 - start_time: 开始时间
@@ -182,37 +177,38 @@ def import_schedules(
                 - classroom: 教室（可选）
                 - week_start: 开始周（可选，默认1）
                 - week_end: 结束周（可选，默认20）
-        
+
     Returns:
         tuple: (导入成功数量, 错误列表)
     """
     imported_count = 0
     errors = []
 
-    # 有启用学生的班级集合（学期归档后，禁用/不存在班级不可导入新课表）
-    # TODO(Task 6): 课表导入改按「届+专业+班级名」三元组定位，此处暂按裸名匹配 classes 表
-    active_classes = {
-        str(row) for row in session.exec(select(Class_.name)).all() if row
-    }
-
     for index, record in enumerate(records):
         try:
             # 数据校验
             course_name = str(record.get('course_name', '')).strip()
             class_name = str(record.get('class_name', '')).strip()
+            cohort_year = str(record.get('cohort_year', '') or '').strip()
+            major = str(record.get('major', '') or '').strip()
             teacher_name = str(record.get('teacher_name', '')).strip()
             day_of_week = record.get('day_of_week')
             start_time = str(record.get('start_time', '')).strip()
             end_time = str(record.get('end_time', '')).strip()
-            
+
             # teacher_name 可选，其他字段必填
             if not all([course_name, class_name, start_time, end_time]):
                 errors.append(f"第 {index + 2} 行: 存在空值")
                 continue
 
-            # 班级必须存在且有启用学生（归档班级不可创建新课表）
-            if class_name not in active_classes:
-                errors.append(f"第 {index + 2} 行: 班级不存在或所有学生已禁用")
+            # 按「届+专业+班级名」三元组定位班级，不存在则自动建班（与学生导入对齐）
+            try:
+                class_id = ensure_class(session, class_name, cohort_year, major)
+            except ValueError as e:
+                errors.append(f"第 {index + 2} 行: {e}")
+                continue
+            if class_id is None:
+                errors.append(f"第 {index + 2} 行: 班级名无效")
                 continue
 
             # 星期范围校验
@@ -237,11 +233,10 @@ def import_schedules(
             ).first()
             
             # 查重检查（仅当前学期内查重，允许新学期导入与上学期相同的课程）
-            class_ids = _class_ids_by_name(session, class_name)
             existing = session.exec(
                 select(CourseSchedule).where(
                     CourseSchedule.course_name == course_name,
-                    CourseSchedule.class_id.in_(class_ids),
+                    CourseSchedule.class_id == class_id,
                     CourseSchedule.teacher_name == teacher_name,
                     CourseSchedule.day_of_week == day_of_week,
                     CourseSchedule.start_time == start_time,
@@ -258,7 +253,7 @@ def import_schedules(
             now = get_now().isoformat()
             schedule = CourseSchedule(
                 course_name=course_name,
-                class_id=class_ids[0],
+                class_id=class_id,
                 semester_id=get_current_semester_id(session),
                 teacher_id=teacher.id if teacher else None,
                 teacher_name=teacher_name,

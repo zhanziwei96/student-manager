@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlmodel import select
 
 from app.models import (
-    Cohort, Class_, Semester, Course, CourseOffering, Enrollment,
+    Cohort, Class_, CourseOfferingClass, Semester, Course, CourseOffering, Enrollment,
     EnrollmentScoreLog, Group, GroupMember, Student, User,
 )
 
@@ -28,10 +28,12 @@ def _seed_enrollment(session, score=80.0, version=1):
     session.flush()
     offering = CourseOffering(
         course_id=course.id, semester_id=sem.id, teacher_id=1,
-        teacher_name="张老师", class_scope="一班",
+        teacher_name="张老师",
     )
     session.add(offering)
     session.flush()
+    # 权限真源：教学班关联一班（class_scope 响应键由关联表拼装）
+    session.add(CourseOfferingClass(offering_id=offering.id, class_id=cls.id))
     session.add(Student(student_id="S001", name="学生1", class_name="一班", class_id=cls.id, cohort_year="2026"))
     session.commit()
     enrollment = Enrollment(
@@ -162,7 +164,7 @@ def test_get_student_enrollments(session):
     assert len(rows) == 1
     assert rows[0]["course_name"] == "高等数学"
     assert rows[0]["teacher_name"] == "张老师"
-    assert rows[0]["class_scope"] == "一班"
+    assert rows[0]["class_scope"] == "2026届一班"  # 关联表 display_name 拼装
     assert rows[0]["score"] == 80.0
     assert rows[0]["final_score"] is None
     assert rows[0]["status"] == "enrolled"

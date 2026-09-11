@@ -5,7 +5,7 @@ import pytest
 from sqlmodel import Session, select
 
 from app.models import (
-    Cohort, Class_, Semester, Course, CourseOffering, Enrollment,
+    Cohort, Class_, CourseOfferingClass, Semester, Course, CourseOffering, Enrollment,
     Group, GroupMember, Student, User,
 )
 
@@ -31,10 +31,12 @@ def enrollment_chain(session, teacher_user, student_user):
     offering = CourseOffering(
         course_id=session.exec(select(Course).where(Course.code == "MATH1")).one().id,
         semester_id=session.exec(select(Semester).where(Semester.label == "2026-2027-1")).one().id,
-        teacher_id=teacher_user.id, teacher_name=teacher_user.name, class_scope="一班",
+        teacher_id=teacher_user.id, teacher_name=teacher_user.name,
     )
     session.add(offering)
     session.flush()
+    # 权限真源：教学班关联一班
+    session.add(CourseOfferingClass(offering_id=offering.id, class_id=cls.id))
     enrollment = Enrollment(
         student_id=student_user.student_id, offering_id=offering.id,
         semester_id=offering.semester_id, status="enrolled", score=80.0,
