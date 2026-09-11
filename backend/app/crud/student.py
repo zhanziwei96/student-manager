@@ -138,18 +138,29 @@ def get_students_by_classes(
     return session.exec(query).all()
 
 
-def create_student(session: Session, student_id: str, name: str, class_name: str) -> Student:
-    """创建学生 - SEC-003: 使用简化密码哈希接口"""
+def create_student(
+    session: Session,
+    student_id: str,
+    name: str,
+    class_name: str,
+    class_id: Optional[int] = None,
+) -> Student:
+    """创建学生 - SEC-003: 使用简化密码哈希接口
+
+    Args:
+        class_id: 显式指定班级 ID（多专业同名时按裸名解析会有歧义，导入等场景应显式传入）；
+                  为 None 时回退按班级名解析（兼容既有调用方）
+    """
     from app.core.security import hash_password
 
     # 使用学号作为默认密码
     password_hash = hash_password(student_id)
-    
+
     student = Student(
         student_id=student_id,
         name=name,
         class_name=class_name,
-        class_id=get_class_id_by_name(session, class_name),
+        class_id=class_id if class_id is not None else get_class_id_by_name(session, class_name),
         password_hash=password_hash
         # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     )
@@ -323,29 +334,51 @@ def reset_student_login_lock(session: Session, student: Student) -> None:
     session.commit()
 
 
-def ensure_class(session: Session, class_name: str, cohort_year: str = "") -> None:
-    """确保班级存在：不存在则按「所属届 + 班名」创建（届不存在时一并创建）
+def ensure_class(
+    session: Session, class_name: str, cohort_year: str = "", major: str = "",
+) -> Optional[int]:
+    """确保班级存在：按「届 + 专业 + 班名」定位，不存在则创建（届不存在时一并创建）
 
     用于批量导入名册：班级是学生的 FK 锚点，缺失时按导入信息补齐。
+    同名不同专业是不同班级，故必须按三元组精确定位（裸名解析有歧义）。
+
+    Returns:
+        Optional[int]: 班级 ID；班级名为空/未分班时返回 None
     """
     from app.models import Class_, Cohort
     from app.core.class_cache import invalidate_class_cache
 
     class_name = (class_name or "").strip()
     if not class_name or class_name == "未分班":
-        return
-    if get_class_id_by_name(session, class_name) is not None:
-        return
+        return None
 
     year = (cohort_year or "").strip()
+    major = (major or "").strip()
+
+    # 按三元组精确定位（同名不同专业是不同班级）
+    existing = session.exec(
+        select(Class_).where(
+            Class_.name == class_name,
+            Class_.major == major,
+            Class_.cohort_year == year,
+        )
+    ).first()
+    if existing is not None:
+        return existing.id
+
     if not year:
-        raise ValueError(f"班级 '{class_name}' 不存在且未填写所属届")
+        raise ValueError(f"班级「{major}{class_name}」不存在且未填写所属届")
+
     if session.get(Cohort, year) is None:
         session.add(Cohort(year=year, label=f"{year}届"))
         session.commit()
-    session.add(Class_(name=class_name, major="", cohort_year=year))
+
+    cls = Class_(name=class_name, major=major, cohort_year=year)
+    session.add(cls)
     session.commit()
+    session.refresh(cls)
     invalidate_class_cache()
+    return cls.id
 
 
 def import_students(session: Session, records: List[dict]) -> dict:
@@ -353,12 +386,12 @@ def import_students(session: Session, records: List[dict]) -> dict:
 
     规则：
     - 学号已存在 → 跳过，不改动既有学生（幂等，可重复导入补齐名单）
-    - 班级不存在 → 按「所属届 + 班名」自动建班（见 ensure_class）
+    - 班级不存在 → 按「届 + 专业 + 班名」自动建班（见 ensure_class）
     - 默认密码为学号（复用 create_student）
 
     Args:
         session: 数据库会话
-        records: 学生记录列表，每项为字典：student_id / name / class_name / cohort_year
+        records: 学生记录列表，每项为字典：student_id / name / class_name / cohort_year / major
 
     Returns:
         dict: imported（导入数）、skipped（跳过数）、skipped_rows（跳过明细，含行号）、
@@ -373,6 +406,7 @@ def import_students(session: Session, records: List[dict]) -> dict:
         name = str(row.get("name") or "").strip()
         class_name = str(row.get("class_name") or "").strip()
         cohort_year = str(row.get("cohort_year") or "").strip()
+        major = str(row.get("major") or "").strip()
 
         if not student_id or not name:
             errors.append(f"第 {index} 行: 学号与姓名不能为空")
@@ -382,8 +416,9 @@ def import_students(session: Session, records: List[dict]) -> dict:
             continue
 
         try:
-            ensure_class(session, class_name, cohort_year)
-            create_student(session, student_id, name, class_name or "未分班")
+            # 按三元组解析出的 class_id 显式传入，避免多专业同名时按裸名误挂
+            class_id = ensure_class(session, class_name, cohort_year, major)
+            create_student(session, student_id, name, class_name or "未分班", class_id=class_id)
             imported += 1
         except Exception as exc:  # noqa: BLE001 - 单行失败不影响整批
             session.rollback()
