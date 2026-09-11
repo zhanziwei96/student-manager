@@ -35,8 +35,14 @@ _CLASS_REFERENCES = (
 
 class CreateClassRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="班级名（如 1班）")
-    major: str = Field(default="", max_length=50, description="专业")
+    major: str = Field(..., min_length=1, max_length=50, description="专业")
     cohort_year: str = Field(..., min_length=4, max_length=10, description="所属届")
+
+
+class BatchCreateClassRequest(BaseModel):
+    cohort_year: str = Field(..., min_length=4, max_length=10, description="所属届")
+    major: str = Field(..., min_length=1, max_length=50, description="专业")
+    names: list[str] = Field(..., min_length=1, max_length=100, description="班级名列表（如 ['1班','2班']）")
 
 
 class UpdateClassRequest(BaseModel):
@@ -105,6 +111,62 @@ def create_class(
     invalidate_class_cache()
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: _class_dict(cls),
             ApiResponseConst.MESSAGE: "班级创建成功"}
+
+
+@router.post("/classes/batch", response_model=ApiResponse[dict])
+def batch_create_classes(
+    body: BatchCreateClassRequest,
+    session: Session = Depends(get_session),
+    user: dict = Depends(require_admin),
+):
+    """批量创建班级（同届同专业，多个班级名一起创建）
+
+    - 已存在的 (name, major, cohort_year) 跳过，不报错
+    - 返回创建成功与跳过的名单
+    """
+    if session.get(Cohort, body.cohort_year) is None:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="届不存在，请先创建届")
+
+    # 去重并保持顺序（避免同一次请求里重复创建）
+    names = list(dict.fromkeys(n.strip() for n in body.names if n.strip()))
+    if not names:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级名不能为空")
+
+    # 一次查出已存在的，避免逐条查询
+    existing = set(session.exec(
+        select(Class_.name).where(
+            Class_.cohort_year == body.cohort_year,
+            Class_.major == body.major,
+            Class_.name.in_(names),
+        )
+    ).all())
+
+    created = []
+    skipped = []
+    for name in names:
+        if name in existing:
+            skipped.append(name)
+            continue
+        cls = Class_(name=name, major=body.major, cohort_year=body.cohort_year)
+        session.add(cls)
+        created.append(cls)
+
+    session.commit()
+    for cls in created:
+        session.refresh(cls)
+    if created:
+        invalidate_class_cache()
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: {
+            "created_count": len(created),
+            "created": [_class_dict(c) for c in created],
+            "skipped": skipped,
+        },
+        ApiResponseConst.MESSAGE: f"已创建 {len(created)} 个班级"
+        + (f"，跳过 {len(skipped)} 个已存在" if skipped else ""),
+    }
 
 
 @router.put("/classes/{class_id}", response_model=ApiResponse[dict])

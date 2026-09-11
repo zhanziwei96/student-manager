@@ -135,12 +135,69 @@ def test_delete_class_blocked_by_schedule_but_empty_deletable(
     assert "学生 1 人" in message
 
     resp = admin_client.post("/api/v1/classes", json={
-        "name": "空班", "major": "", "cohort_year": "2026",
+        "name": "空班", "major": "测试专业", "cohort_year": "2026",
     })
     assert resp.status_code == 200
     resp = admin_client.delete(f"/api/v1/classes/{resp.json()['data']['id']}")
     assert resp.status_code == 200
     assert resp.json()["message"] == "班级已删除"
+
+
+def test_create_class_requires_major(admin_client, seed_basics):
+    """专业必填（缺省或空串 → 422）"""
+    resp = admin_client.post("/api/v1/classes", json={
+        "name": "9班", "cohort_year": "2026",
+    })
+    assert resp.status_code == 422
+
+    resp = admin_client.post("/api/v1/classes", json={
+        "name": "9班", "major": "", "cohort_year": "2026",
+    })
+    assert resp.status_code == 422
+
+
+def test_batch_create_classes(admin_client, seed_basics):
+    """批量创建同专业多个班级"""
+    resp = admin_client.post("/api/v1/classes/batch", json={
+        "cohort_year": "2026",
+        "major": "计算机科学与技术",
+        "names": ["1班", "2班", "3班"],
+    })
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["created_count"] == 3
+    assert data["skipped"] == []
+    names = [c["name"] for c in data["created"]]
+    assert names == ["1班", "2班", "3班"]
+    # display_name 由 届+专业+班级名 拼成
+    assert data["created"][0]["display_name"] == "2026届计算机科学与技术1班"
+
+
+def test_batch_create_skips_existing(admin_client, seed_basics):
+    """已存在的班级跳过，不报错"""
+    payload = {
+        "cohort_year": "2026",
+        "major": "软件工程",
+        "names": ["1班", "2班"],
+    }
+    admin_client.post("/api/v1/classes/batch", json=payload)
+
+    # 再来一次，其中 2班 已存在，3班 是新的
+    resp = admin_client.post("/api/v1/classes/batch", json={
+        **payload, "names": ["2班", "3班"],
+    })
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["created_count"] == 1
+    assert data["skipped"] == ["2班"]
+
+
+def test_batch_create_requires_cohort(admin_client):
+    """届不存在 → 400"""
+    resp = admin_client.post("/api/v1/classes/batch", json={
+        "cohort_year": "1999", "major": "测试", "names": ["1班"],
+    })
+    assert resp.status_code == 400
 
 
 def test_courses_crud(admin_client, seed_basics):
