@@ -51,14 +51,20 @@ const openCreateDialog = () => {
 /** 班级名输入解析结果（范围/枚举混写） */
 const createNames = computed(() => parseClassNames(createForm.value.name))
 
-/** 完整班级名预览：{届}届{专业}{班级名}，最多展示前 5 个 */
+/** 创建预览：届+专业都已填时展示完整班级名，否则只展示解析出的班级名 */
 const createPreview = computed(() => {
   const names = createNames.value
   if (names.length === 0) return ''
-  const prefix = `${createForm.value.cohort_year}届${createForm.value.major.trim()}`
-  const full = names.map((name) => `${prefix}${name}`)
-  const head = full.slice(0, 5).join('、')
-  return full.length > 5 ? `将创建：${head} 等 ${full.length} 个` : `将创建：${head}`
+
+  const cohort = createForm.value.cohort_year
+  const major = createForm.value.major.trim()
+  // 届与专业齐备才拼完整班级名，避免出现 "届1班" 这类残缺预览
+  const labels = cohort && major ? names.map((name) => `${cohort}届${major}${name}`) : names
+
+  const head = labels.slice(0, 5).join('、')
+  return labels.length > 5
+    ? `将创建：${head} 等 ${labels.length} 个`
+    : `将创建：${head}`
 })
 
 const { mutateAsync: createClass, isPending: isCreating } = useMutation({

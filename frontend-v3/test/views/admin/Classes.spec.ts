@@ -153,4 +153,22 @@ describe('Admin Classes - 创建班级弹窗', () => {
     await fillForm(dialog, { name: '1-6' })
     expect(dialog.text()).toContain('将创建：2026届计算机科学与技术1班、2026届计算机科学与技术2班、2026届计算机科学与技术3班、2026届计算机科学与技术4班、2026届计算机科学与技术5班 等 6 个')
   })
+
+  it('届或专业未填时预览只展示班级名（不出现残缺的完整名）', async () => {
+    const wrapper = createWrapper()
+    const dialog = await openDialog(wrapper)
+
+    // 只填班级名：预览展示解析结果，不含 "届"
+    await fillForm(dialog, { name: '1-3' })
+    expect(dialog.text()).toContain('将创建：1班、2班、3班')
+    expect(dialog.text()).not.toContain('届1班')
+
+    // 只补届、缺专业：仍不拼完整名
+    await fillForm(dialog, { cohort: '2026' })
+    expect(dialog.text()).toContain('将创建：1班、2班、3班')
+
+    // 补齐专业后才显示完整班级名
+    await fillForm(dialog, { major: '软件工程' })
+    expect(dialog.text()).toContain('将创建：2026届软件工程1班、2026届软件工程2班、2026届软件工程3班')
+  })
 })
