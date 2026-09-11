@@ -61,7 +61,10 @@ def get_enrollments(
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="学生不存在")
 
     if role == "teacher":
-        verify_teacher_class_access(user, student.class_name, session)
+        # 未分班学生（class_id=None）任何教师都无权按班级查看其成绩
+        if student.class_id is None:
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看未分班学生的成绩")
+        verify_teacher_class_access(user, student.class_id, session)
 
     data = get_student_enrollments(session, student_id, get_current_semester_id(session))
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: data}
