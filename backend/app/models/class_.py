@@ -22,7 +22,7 @@ class Class_(ClassBase, table=True):
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    # display_name（如 2026届1班）由响应层拼接 cohort_year + name，不做 PG 生成列
+    # display_name（如 2026届软件工程1班）由 class_cache.build_class_display_name 运行时拼装，不做 PG 生成列
 
 
 class ClassCreate(SQLModel):
@@ -43,4 +43,4 @@ class ClassUpdate(SQLModel):
 class ClassResponse(ClassBase):
     """班级响应"""
     id: int
-    display_name: str = ""  # 响应层拼接 "2026届1班"
+    display_name: str = ""  # 运行时拼装，如 "2026届软件工程1班"

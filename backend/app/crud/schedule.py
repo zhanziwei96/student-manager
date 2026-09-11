@@ -5,10 +5,10 @@
 保持 API 层只负责 HTTP 处理和参数验证。
 """
 from typing import List, Optional
+from sqlalchemy import func
 from sqlmodel import Session, select
 from app.core.term import get_current_semester_id
-from app.crud.student import ensure_class
-from app.models import CourseSchedule, User
+from app.models import Class_, CourseSchedule, Student, User
 
 
 def get_schedule(session: Session, schedule_id: int) -> Optional[CourseSchedule]:
@@ -201,15 +201,26 @@ def import_schedules(
                 errors.append(f"第 {index + 2} 行: 存在空值")
                 continue
 
-            # 按「届+专业+班级名」三元组定位班级，不存在则自动建班（与学生导入对齐）
-            try:
-                class_id = ensure_class(session, class_name, cohort_year, major)
-            except ValueError as e:
-                errors.append(f"第 {index + 2} 行: {e}")
+            # 按「届+专业+班级名」三元组定位班级（不自动建班：课表须挂在已存在的班上，
+            # 凭拼错的班名建班只会产生垃圾班级与届）
+            cls = session.exec(
+                select(Class_).where(
+                    Class_.name == class_name,
+                    Class_.major == major,
+                    Class_.cohort_year == cohort_year,
+                )
+            ).first()
+            # 班级必须存在且有启用学生（归档班级不可导入新课表）
+            enabled_count = 0 if cls is None else session.exec(
+                select(func.count()).select_from(Student).where(
+                    Student.class_id == cls.id,
+                    Student.is_account_enabled.is_(True),
+                )
+            ).one()
+            if enabled_count == 0:
+                errors.append(f"第 {index + 2} 行: 班级不存在或所有学生已禁用")
                 continue
-            if class_id is None:
-                errors.append(f"第 {index + 2} 行: 班级名无效")
-                continue
+            class_id = cls.id
 
             # 星期范围校验
             try:

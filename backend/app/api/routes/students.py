@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 from app.core.db import get_session
 from app.core.config import HttpStatus, get_settings
 from app.core.jwt import require_admin, get_current_user
+from app.core.class_cache import build_class_display_name
 from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
 from app.crud import (
     get_student, get_students, get_students_by_class, get_students_by_classes,
@@ -339,6 +340,7 @@ async def get_student_info(
         ApiResponseConst.DATA: {
             'student_id': student.student_id,
             'name': student.name,
+            'class_id': student.class_id,
             'class_name': get_class_display_name_by_id(session, student.class_id) or "未分班",
             'status': student.status,
             'is_account_enabled': student.is_account_enabled,
@@ -374,6 +376,7 @@ async def add_student(
         ApiResponseConst.DATA: {
             'student_id': student.student_id,
             'name': student.name,
+            'class_id': student.class_id,
             'class_name': get_class_display_name_by_id(session, student.class_id) or "未分班",
             'status': student.status,
             'is_account_enabled': student.is_account_enabled,
@@ -548,5 +551,5 @@ def transfer_student_class(
     invalidate_class_cache()
     return {
         ApiResponseConst.SUCCESS: True,
-        ApiResponseConst.MESSAGE: f"已转入 {target.cohort_year}届 {target.name}",
+        ApiResponseConst.MESSAGE: f"已转入 {build_class_display_name(target)}",
     }
