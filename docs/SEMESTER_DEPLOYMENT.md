@@ -151,6 +151,14 @@ A: 第 1 周（2026-09-07 为第 1 周周一）。系统自动计算，无需配
 - 生产环境启动时会自动 create_all（缺失的表/列会自动创建）
 - 若需确认：`docker exec classhub-backend alembic current` 应返回 head
 
+**迁移 20260911c 前置检查（uix_offering 重建）**：
+- 该迁移将 course_offerings 唯一约束重建为 `(course_id, semester_id, teacher_id)` 并回填 course_offering_classes 关联表
+- 执行前先确认无重复 `(course_id, semester_id, teacher_id)`，否则约束重建会失败：
+  ```sql
+  SELECT course_id, semester_id, teacher_id FROM course_offerings GROUP BY 1,2,3 HAVING count(*)>1;
+  ```
+- 若有返回行，先合并/删除重复教学班再跑迁移
+
 **为什么不需要手动备份**：
 - 生产环境有 pg_backup 容器（每日 02:00 自动备份，保留 14 天）
 - 备份位置：`./backups/postgres/classhub_*.sql.gz`

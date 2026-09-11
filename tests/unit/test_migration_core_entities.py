@@ -19,7 +19,8 @@ PRE_HEAD = '20260907_add_group_subject_score'
 
 @pytest.fixture(scope="module")
 def migrated_db():
-    """清空迁移库 → 跑到 PRE_HEAD → 插入回填验证学生 → 跑到 head"""
+    """清空迁移库 → 跑到 PRE_HEAD → 插入回填验证学生 → 跑到 20260911c 之前
+    → 插入 class_scope 回填验证数据 → 跑到 head"""
     engine = create_engine(MIGRATION_TEST_URL)
     # 清库用 DROP SCHEMA（历史迁移的 downgrade 不完整，downgrade base 不可靠）
     with engine.begin() as conn:
@@ -54,6 +55,34 @@ def migrated_db():
             " is_account_enabled, version, created_at)"
             " VALUES ('MIG001', '迁移学生', '迁移测试班', 80.0, true, 1,"
             " '2025-09-01 08:00:00')"
+        ))
+    # 20260911c 回填验证：class_scope 列在 20260911c 才删除，须在其前插入
+    # - '实验3班'：裸名唯一 → 链接
+    # - '1班'：跨届/跨专业同名（2 行）→ 歧义不链接
+    # - '所有专业'：无匹配 → 不链接（通配语义覆盖）
+    run_alembic('20260911b_drop_students_class_name')
+    with engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO cohorts (year, label) VALUES ('2096', '2096届'), ('2097', '2097届')"
+        ))
+        conn.execute(text(
+            "INSERT INTO classes (name, major, cohort_year) VALUES"
+            " ('1班', '计算机', '2096'), ('1班', '软件', '2097'), ('实验3班', '计算机', '2096')"
+        ))
+        conn.execute(text(
+            "INSERT INTO courses (code, name, created_at)"
+            " VALUES ('MIGC1', '迁移课程', '2026-09-01 08:00:00')"
+        ))
+        conn.execute(text(
+            "INSERT INTO semesters (label, start_date, total_weeks)"
+            " VALUES ('2096-2097-1', '2096-09-01', 20)"
+        ))
+        conn.execute(text(
+            "INSERT INTO course_offerings (course_id, semester_id, teacher_id, class_scope, created_at)"
+            " SELECT c.id, s.id, NULL, scope, '2026-09-01 08:00:00'"
+            " FROM courses c, semesters s,"
+            "      (VALUES ('实验3班'), ('1班'), ('所有专业')) AS v(scope)"
+            " WHERE c.code = 'MIGC1' AND s.label = '2096-2097-1'"
         ))
     run_alembic('head')
 
@@ -147,6 +176,24 @@ def test_class_group_settings_composite_pk(migrated_db):
             " WHERE i.indrelid = 'class_group_settings'::regclass AND i.indisprimary"
         )).all()
     assert {r[0] for r in pk_cols} == {'class_id', 'semester_id'}
+
+
+def test_backfill_course_offering_classes(migrated_db):
+    """20260911c 回填：唯一裸名 token 链接；歧义（同名多行）/无匹配 token 不链接
+
+    fixture 在 20260911c 之前插入 3 个教学班：class_scope 分别为
+    '实验3班'（唯一）、'1班'（跨届/跨专业同名 2 行）、'所有专业'（无匹配，通配覆盖）。
+    """
+    with migrated_db.connect() as conn:
+        offerings = conn.execute(text(
+            "SELECT count(*) FROM course_offerings"
+        )).scalar_one()
+        links = conn.execute(text(
+            "SELECT c.name, c.major, c.cohort_year FROM course_offering_classes oc"
+            " JOIN classes c ON c.id = oc.class_id"
+        )).all()
+    assert offerings == 3  # 3 个教学班均保留
+    assert [(r[0], r[1], r[2]) for r in links] == [('实验3班', '计算机', '2096')]
 
 
 def test_backfill_cohort_class_student_by_import_year(migrated_db):
