@@ -10,7 +10,7 @@ from sqlmodel import Session, func, select
 from app.api.deps import require_admin, require_admin_or_teacher
 from app.core.config import HttpStatus
 from app.core.db import get_session
-from app.crud.enrollment import resolve_offering_scopes
+from app.crud.enrollment import resolve_offering_class_ids, resolve_offering_scopes
 from app.models import (
     Class_, Course, CourseOffering, CourseOfferingClass, Enrollment, Semester, Student,
 )
@@ -49,7 +49,7 @@ def _validate_class_ids(session: Session, class_ids: List[int]) -> None:
                             detail=f"班级不存在: {invalid}")
 
 
-def _offering_dict(o: CourseOffering, class_scope: str) -> dict:
+def _offering_dict(o: CourseOffering, class_scope: str, class_ids: List[int]) -> dict:
     return {
         "id": o.id,
         "course_id": o.course_id,
@@ -57,6 +57,7 @@ def _offering_dict(o: CourseOffering, class_scope: str) -> dict:
         "teacher_id": o.teacher_id,
         "teacher_name": o.teacher_name,
         "class_scope": class_scope,
+        "class_ids": class_ids,
         "capacity": o.capacity,
         "status": o.status,
     }
@@ -77,8 +78,10 @@ def list_offerings(
         query = query.where(CourseOffering.semester_id == semester_id)
     offerings = session.exec(query).all()
     scopes = resolve_offering_scopes(session, [o.id for o in offerings])
+    class_ids = resolve_offering_class_ids(session, [o.id for o in offerings])
     return {ApiResponseConst.SUCCESS: True,
-            ApiResponseConst.DATA: [_offering_dict(o, scopes[o.id]) for o in offerings]}
+            ApiResponseConst.DATA: [
+                _offering_dict(o, scopes[o.id], class_ids[o.id]) for o in offerings]}
 
 
 @router.post("/offerings", response_model=ApiResponse[dict])
@@ -112,7 +115,9 @@ def create_offering(
     session.commit()
     session.refresh(offering)
     scope = resolve_offering_scopes(session, [offering.id])[offering.id]
-    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: _offering_dict(offering, scope),
+    class_ids = resolve_offering_class_ids(session, [offering.id])[offering.id]
+    return {ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.DATA: _offering_dict(offering, scope, class_ids),
             ApiResponseConst.MESSAGE: "教学班创建成功"}
 
 
@@ -153,7 +158,9 @@ def update_offering(
     session.commit()
     session.refresh(offering)
     scope = resolve_offering_scopes(session, [offering.id])[offering.id]
-    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: _offering_dict(offering, scope),
+    class_ids = resolve_offering_class_ids(session, [offering.id])[offering.id]
+    return {ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.DATA: _offering_dict(offering, scope, class_ids),
             ApiResponseConst.MESSAGE: "教学班更新成功"}
 
 
@@ -180,11 +187,13 @@ def list_teacher_offerings(
         query = query.where(CourseOffering.semester_id == semester_id)
     rows = session.exec(query.order_by(Course.name)).all()
     scopes = resolve_offering_scopes(session, [o.id for o, _, _ in rows])
+    class_ids = resolve_offering_class_ids(session, [o.id for o, _, _ in rows])
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: [
         {
             "id": o.id, "course_id": o.course_id, "course_name": c.name,
             "course_code": c.code, "teacher_name": o.teacher_name,
-            "class_scope": scopes.get(o.id, "所有班级"), "capacity": o.capacity,
+            "class_scope": scopes.get(o.id, "所有班级"),
+            "class_ids": class_ids.get(o.id, []), "capacity": o.capacity,
             "status": o.status, "enrolled_count": cnt,
         }
         for o, c, cnt in rows

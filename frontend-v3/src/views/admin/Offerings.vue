@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { Card, Button, Badge, Input, Select, Dialog } from '@/components/ui'
+import { Card, Button, Badge, Input, Select, Dialog, Checkbox } from '@/components/ui'
 import { Plus, Loader2, Pencil, Users, Presentation } from 'lucide-vue-next'
 import { offeringsApi } from '@/api/offerings'
+import { classesApi } from '@/api/classes'
 import { coursesApi } from '@/api/courses'
 import { semestersApi } from '@/api/semesters'
 import { usersApi } from '@/api/users'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/error'
-import type { CourseOffering, EnrollmentRow } from '@/types'
+import type { AdminClass, CourseOffering, EnrollmentRow } from '@/types'
 
 const { showToast } = useToast()
 const queryClient = useQueryClient()
@@ -32,6 +33,39 @@ const { data: teachersData } = useQuery({
   queryFn: () => usersApi.getTeachers(),
 })
 const teachers = computed(() => teachersData.value ?? [])
+
+// 班级多选数据源（空选 = 全部班级通配）
+const { data: classesData } = useQuery({
+  queryKey: ['classes'],
+  queryFn: () => classesApi.list(),
+})
+const classes = computed(() => classesData.value ?? [])
+
+/** 班级选项按「届 · 专业」分组，组内保持后端的届/班级名顺序 */
+const classGroups = computed(() => {
+  const groups = new Map<string, { label: string; items: AdminClass[] }>()
+  for (const cls of classes.value) {
+    const label = `${cls.cohort_year}届 · ${cls.major}`
+    const group = groups.get(label) ?? { label, items: [] }
+    group.items.push(cls)
+    groups.set(label, group)
+  }
+  return [...groups.values()].sort((a, b) => b.label.localeCompare(a.label, 'zh-Hans-CN'))
+})
+
+const toggleClassId = (ids: number[], classId: number, checked: boolean) => {
+  if (checked) {
+    if (!ids.includes(classId)) ids.push(classId)
+    return
+  }
+  const index = ids.indexOf(classId)
+  if (index >= 0) ids.splice(index, 1)
+}
+
+const toggleAllClassIds = (ids: number[]) => {
+  if (ids.length === classes.value.length) ids.length = 0
+  else ids.splice(0, ids.length, ...classes.value.map((c) => c.id))
+}
 
 // 学期筛选（缺省当前学期）
 const { data: currentSemester } = useQuery({
@@ -58,7 +92,7 @@ const semesterLabel = (semesterId: number) => semesters.value.find((s) => s.id =
 
 // 创建
 const showCreateDialog = ref(false)
-const createForm = ref({ course_id: '', semester_id: '', teacher_id: '', class_scope: '', capacity: '' })
+const createForm = ref({ course_id: '', semester_id: '', teacher_id: '', class_ids: [] as number[], capacity: '' })
 const createError = ref('')
 
 const openCreateDialog = () => {
@@ -66,7 +100,7 @@ const openCreateDialog = () => {
     course_id: '',
     semester_id: effectiveSemesterId.value ? String(effectiveSemesterId.value) : '',
     teacher_id: '',
-    class_scope: '',
+    class_ids: [],
     capacity: '',
   }
   createError.value = ''
@@ -78,8 +112,7 @@ const { mutateAsync: createOffering, isPending: isCreating } = useMutation({
     course_id: Number(createForm.value.course_id),
     semester_id: Number(createForm.value.semester_id),
     teacher_id: createForm.value.teacher_id ? Number(createForm.value.teacher_id) : null,
-    // TODO(Task 14): 面向范围多选落地后由班级多选提供；空数组 = 所有班级
-    class_ids: [],
+    class_ids: createForm.value.class_ids,  // 空数组 = 全部班级
     capacity: createForm.value.capacity ? Number(createForm.value.capacity) : null,
   }),
   onSuccess: () => {
@@ -99,24 +132,20 @@ const handleCreate = async () => {
     createError.value = '请选择学期'
     return
   }
-  if (!createForm.value.class_scope.trim()) {
-    createError.value = '请输入面向范围'
-    return
-  }
+  // 面向范围不校验：不选班级 = 全部班级
   await createOffering()
-  // 注意：面向范围（class_ids）待 Task 14 多选落地，当前创建结果为「所有班级」
 }
 
 // 编辑
 const showEditDialog = ref(false)
 const editingOffering = ref<CourseOffering | null>(null)
-const editForm = ref({ teacher_id: '', class_scope: '', capacity: '' })
+const editForm = ref({ teacher_id: '', class_ids: [] as number[], capacity: '' })
 
 const openEditDialog = (offering: CourseOffering) => {
   editingOffering.value = offering
   editForm.value = {
     teacher_id: offering.teacher_id ? String(offering.teacher_id) : '',
-    class_scope: offering.class_scope,
+    class_ids: [...(offering.class_ids ?? [])],
     capacity: offering.capacity ? String(offering.capacity) : '',
   }
   showEditDialog.value = true
@@ -125,7 +154,7 @@ const openEditDialog = (offering: CourseOffering) => {
 const { mutateAsync: updateOffering, isPending: isUpdating } = useMutation({
   mutationFn: () => offeringsApi.update(editingOffering.value!.id, {
     teacher_id: editForm.value.teacher_id ? Number(editForm.value.teacher_id) : null,
-    // TODO(Task 14): 面向范围多选落地后由班级多选提供；不传 = 保持原范围不变
+    class_ids: editForm.value.class_ids,  // 空数组 = 全部班级（整体替换关联行）
     capacity: editForm.value.capacity ? Number(editForm.value.capacity) : null,
   }),
   onSuccess: () => {
@@ -286,6 +315,7 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
                   variant="outline"
                   size="sm"
                   class="hover:bg-[#fafafa]"
+                  data-testid="edit-offering-btn"
                   @click="openEditDialog(offering)"
                 >
                   <Pencil class="h-4 w-4" />
@@ -344,15 +374,53 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
           />
         </div>
         <div>
-          <label class="text-sm text-[#737373]">面向范围</label>
-          <Input
-            v-model="createForm.class_scope"
-            placeholder="如：计科1-2班"
-            disabled
-            class="mt-1"
-          />
-          <p class="mt-1 text-xs text-[#a3a3a3]">
-            班级多选待改造，当前创建为「所有班级」
+          <div class="flex items-center justify-between">
+            <label class="text-sm text-[#737373]">面向范围</label>
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="create-select-all-classes"
+              @click="toggleAllClassIds(createForm.class_ids)"
+            >
+              {{ createForm.class_ids.length === classes.length && classes.length > 0 ? '清空' : '全选' }}
+            </Button>
+          </div>
+          <div class="mt-1 max-h-56 space-y-3 overflow-y-auto rounded-xl border border-[#e5e5e5] p-3">
+            <div
+              v-for="group in classGroups"
+              :key="group.label"
+            >
+              <p class="mb-1 text-xs font-medium text-[#a3a3a3]">
+                {{ group.label }}
+              </p>
+              <div class="space-y-1.5">
+                <div
+                  v-for="cls in group.items"
+                  :key="cls.id"
+                  class="flex items-center gap-2"
+                >
+                  <Checkbox
+                    :checked="createForm.class_ids.includes(cls.id)"
+                    @update:checked="(checked) => toggleClassId(createForm.class_ids, cls.id, checked)"
+                  />
+                  <span class="text-sm text-black">{{ cls.name }}</span>
+                </div>
+              </div>
+            </div>
+            <p
+              v-if="classGroups.length === 0"
+              class="text-xs text-[#a3a3a3]"
+            >
+              暂无班级
+            </p>
+          </div>
+          <p
+            class="mt-1 text-xs"
+            :class="createForm.class_ids.length === 0 ? 'text-[#737373]' : 'text-[#a3a3a3]'"
+          >
+            {{ createForm.class_ids.length === 0
+              ? '未选择班级 = 面向全部班级（通配）'
+              : `已选 ${createForm.class_ids.length} 个班级` }}
           </p>
         </div>
         <div>
@@ -409,15 +477,53 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
           />
         </div>
         <div>
-          <label class="text-sm text-[#737373]">面向范围</label>
-          <Input
-            v-model="editForm.class_scope"
-            placeholder="如：计科1-2班"
-            disabled
-            class="mt-1"
-          />
-          <p class="mt-1 text-xs text-[#a3a3a3]">
-            班级多选待改造，保存不修改面向范围
+          <div class="flex items-center justify-between">
+            <label class="text-sm text-[#737373]">面向范围</label>
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="edit-select-all-classes"
+              @click="toggleAllClassIds(editForm.class_ids)"
+            >
+              {{ editForm.class_ids.length === classes.length && classes.length > 0 ? '清空' : '全选' }}
+            </Button>
+          </div>
+          <div class="mt-1 max-h-56 space-y-3 overflow-y-auto rounded-xl border border-[#e5e5e5] p-3">
+            <div
+              v-for="group in classGroups"
+              :key="group.label"
+            >
+              <p class="mb-1 text-xs font-medium text-[#a3a3a3]">
+                {{ group.label }}
+              </p>
+              <div class="space-y-1.5">
+                <div
+                  v-for="cls in group.items"
+                  :key="cls.id"
+                  class="flex items-center gap-2"
+                >
+                  <Checkbox
+                    :checked="editForm.class_ids.includes(cls.id)"
+                    @update:checked="(checked) => toggleClassId(editForm.class_ids, cls.id, checked)"
+                  />
+                  <span class="text-sm text-black">{{ cls.name }}</span>
+                </div>
+              </div>
+            </div>
+            <p
+              v-if="classGroups.length === 0"
+              class="text-xs text-[#a3a3a3]"
+            >
+              暂无班级
+            </p>
+          </div>
+          <p
+            class="mt-1 text-xs"
+            :class="editForm.class_ids.length === 0 ? 'text-[#737373]' : 'text-[#a3a3a3]'"
+          >
+            {{ editForm.class_ids.length === 0
+              ? '未选择班级 = 面向全部班级（通配）'
+              : `已选 ${editForm.class_ids.length} 个班级` }}
           </p>
         </div>
         <div>

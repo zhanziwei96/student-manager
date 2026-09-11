@@ -243,7 +243,8 @@ export interface CourseOffering {
   semester_id: number           // 学期ID
   teacher_id: number | null     // 教师ID（可空：先排课后定教师）
   teacher_name: string          // 教师姓名
-  class_scope: string           // 面向范围（如 计科1-2班）
+  class_scope: string           // 面向范围展示串（如 计科1-2班；无关联行 = 所有班级）
+  class_ids: number[]           // 面向班级ID列表（空数组 = 全部班级通配）
   capacity: number | null       // 容量
   status: 'active' | 'ended'    // 状态
 }

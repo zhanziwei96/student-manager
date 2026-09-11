@@ -31,6 +31,7 @@ export interface TeacherOffering {
   course_code: string
   teacher_name: string
   class_scope: string
+  class_ids: number[]
   capacity: number | null
   status: 'active' | 'ended'
   enrolled_count: number

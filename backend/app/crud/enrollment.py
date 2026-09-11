@@ -184,21 +184,37 @@ def get_student_enrollments(
     ]
 
 
+def _class_ids_by_offering(
+    session: Session, offering_ids: List[int],
+) -> Dict[int, List[int]]:
+    """批量查教学班关联的班级 ID（无关联行的教学班不出现在结果中）"""
+    if not offering_ids:
+        return {}
+    assoc = session.exec(select(CourseOfferingClass).where(
+        CourseOfferingClass.offering_id.in_(offering_ids),
+    )).all()
+    grouped: Dict[int, List[int]] = {}
+    for a in assoc:
+        grouped.setdefault(a.offering_id, []).append(a.class_id)
+    return grouped
+
+
 def resolve_offering_scopes(
     session: Session, offering_ids: List[int],
 ) -> Dict[int, str]:
     """批量拼装教学班范围展示串（无关联行 = 通配 → "所有班级"）"""
     scopes: Dict[int, str] = {oid: "所有班级" for oid in offering_ids}
-    if not offering_ids:
-        return scopes
-    assoc = session.exec(select(CourseOfferingClass).where(
-        CourseOfferingClass.offering_id.in_(offering_ids),
-    )).all()
-    class_ids_by_offering: Dict[int, List[int]] = {}
-    for a in assoc:
-        class_ids_by_offering.setdefault(a.offering_id, []).append(a.class_id)
+    class_ids_by_offering = _class_ids_by_offering(session, offering_ids)
     names = get_class_display_names(
         session, [cid for cids in class_ids_by_offering.values() for cid in cids])
     for oid, cids in class_ids_by_offering.items():
         scopes[oid] = "、".join(names[c] for c in sorted(cids) if c in names)
     return scopes
+
+
+def resolve_offering_class_ids(
+    session: Session, offering_ids: List[int],
+) -> Dict[int, List[int]]:
+    """批量解析教学班关联的班级 ID（无关联行 = 通配，返回空列表）"""
+    grouped = _class_ids_by_offering(session, offering_ids)
+    return {oid: sorted(grouped.get(oid, [])) for oid in offering_ids}
