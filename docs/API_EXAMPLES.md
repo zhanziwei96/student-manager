@@ -581,40 +581,58 @@ curl -X POST http://localhost:8000/api/v1/teacher-checkin \
 
 ---
 
-### 获取签到记录
+### 获取签到记录列表
 
-**接口**: `GET /api/v1/checkin/records`
+**接口**: `GET /api/v1/checkins`
+
+**说明**: 管理员返回全量；教师仅返回负责班级的签到记录（范围由教学班关联表派生）。无班级/日期查询参数——需要按课堂筛选请用下方「获取指定课堂的签到列表」。
 
 **查询参数**:
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| student_id | string | 否 | 学号筛选 |
-| class_id | int | 否 | 班级 ID 筛选 |
-| date | string | 否 | 日期 (YYYY-MM-DD) |
+| limit | int | 否 | 返回条数限制（1-1000，默认 200） |
 
 #### cURL 示例
 
 ```bash
-# 获取今日签到记录
-curl "http://localhost:8000/api/v1/checkin/records?date=2026-04-05" \
+curl "http://localhost:8000/api/v1/checkins?limit=100" \
   -b cookies.txt
+```
 
-# 获取某学生签到记录
-curl "http://localhost:8000/api/v1/checkin/records?student_id=2024001" \
-  -b cookies.txt
+**成功响应**:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "session_id": 3,
+      "student_id": "2024001",
+      "student_name": "张三",
+      "class_id": 1,
+      "class_name": "2026届软件工程1班",
+      "checkin_time": "2026-04-05T08:05:12",
+      "checkin_type": "web"
+    }
+  ],
+  "message": "获取成功"
+}
 ```
 
 ---
 
-### 获取今日签到列表
+### 获取指定课堂的签到列表
 
-**接口**: `GET /api/v1/checkins/today`
+**接口**: `GET /api/v1/checkins/session/{session_id}`
+
+**说明**: 管理员或负责该班的教师可访问。
 
 #### cURL 示例
 
 ```bash
-curl http://localhost:8000/api/v1/checkins/today \
+curl http://localhost:8000/api/v1/checkins/session/3 \
   -b cookies.txt
 ```
 
@@ -623,6 +641,12 @@ curl http://localhost:8000/api/v1/checkins/today \
 ### 获取签到统计
 
 **接口**: `GET /api/v1/checkins/stats`
+
+**查询参数**:
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| session_id | int | 否 | 指定课堂会话统计；缺省为今日全量 |
 
 #### cURL 示例
 
@@ -719,14 +743,16 @@ curl -X PUT http://localhost:8000/api/v1/admin/users/2/reset-password \
 
 ## 课堂管理
 
-### 获取课堂状态
+### 获取班级当前课堂状态
 
-**接口**: `GET /api/v1/class-session`
+**接口**: `GET /api/v1/course-sessions/class/{class_id}`
+
+**说明**: 学生端使用——查询自己（或指定行政班）当前是否有进行中的课堂。无进行中课堂时 `data.active` 为 `false`。
 
 #### cURL 示例
 
 ```bash
-curl http://localhost:8000/api/v1/class-session \
+curl http://localhost:8000/api/v1/course-sessions/class/1 \
   -b cookies.txt
 ```
 
@@ -736,10 +762,13 @@ curl http://localhost:8000/api/v1/class-session \
 {
   "success": true,
   "data": {
+    "id": 3,
+    "session_code": "A1B2C3",
     "active": true,
+    "course_name": "计算机应用基础",
     "class_name": "2026届软件工程1班",
-    "start_time": "2026-04-05T08:00:00",
-    "teacher_name": "张老师"
+    "teacher_name": "张老师",
+    "start_time": "2026-04-05T08:00:00"
   },
   "message": "获取成功"
 }
@@ -749,22 +778,24 @@ curl http://localhost:8000/api/v1/class-session \
 
 ### 开始上课
 
-**接口**: `POST /api/v1/class-session/start`
+**接口**: `POST /api/v1/course-sessions/start`
 
 **请求参数**:
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | class_id | int | 是 | 班级 ID |
+| course_name | string | 是 | 课程名称 |
 
 #### cURL 示例
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/class-session/start \
+curl -X POST http://localhost:8000/api/v1/course-sessions/start \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{
-    "class_id": 1
+    "class_id": 1,
+    "course_name": "计算机应用基础"
   }'
 ```
 
@@ -772,12 +803,14 @@ curl -X POST http://localhost:8000/api/v1/class-session/start \
 
 ### 结束上课
 
-**接口**: `POST /api/v1/class-session/end`
+**接口**: `POST /api/v1/course-sessions/{session_id}/end`
+
+**说明**: 仅该课堂的授课教师本人可结束。
 
 #### cURL 示例
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/class-session/end \
+curl -X POST http://localhost:8000/api/v1/course-sessions/3/end \
   -b cookies.txt
 ```
 
@@ -786,30 +819,32 @@ curl -X POST http://localhost:8000/api/v1/class-session/end \
 ```python
 # 开始上课
 response = session.post(
-    "http://localhost:8000/api/v1/class-session/start",
-    json={"class_id": 1}
+    "http://localhost:8000/api/v1/course-sessions/start",
+    json={"class_id": 1, "course_name": "计算机应用基础"}
 )
-print(response.json())
+session_id = response.json()["data"]["id"]
 
 # 结束上课
-response = session.post("http://localhost:8000/api/v1/class-session/end")
+response = session.post(
+    f"http://localhost:8000/api/v1/course-sessions/{session_id}/end"
+)
 print(response.json())
 ```
 
 #### TypeScript 示例
 
 ```typescript
-const startClass = async (classId: number) => {
-  const response = await ofetch('/api/v1/class-session/start', {
+const startClass = async (classId: number, courseName: string) => {
+  const response = await ofetch('/api/v1/course-sessions/start', {
     method: 'POST',
-    body: { class_id: classId },
+    body: { class_id: classId, course_name: courseName },
     credentials: 'include'
   })
   return response.data
 }
 
-const endClass = async () => {
-  const response = await ofetch('/api/v1/class-session/end', {
+const endClass = async (sessionId: number) => {
+  const response = await ofetch(`/api/v1/course-sessions/${sessionId}/end`, {
     method: 'POST',
     credentials: 'include'
   })
@@ -966,36 +1001,14 @@ curl "http://localhost:8000/api/v1/schedules?class_id=1" \
 
 ### 创建课程 (管理员)
 
-**接口**: `POST /api/v1/schedules`
-
-**请求参数**:
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| course_name | string | 是 | 课程名称 |
-| class_id | int | 是 | 班级 ID |
-| teacher_id | number | 是 | 教师ID |
-| day_of_week | string | 是 | 星期 (1-7) |
-| start_time | string | 是 | 开始时间 (HH:MM) |
-| end_time | string | 是 | 结束时间 (HH:MM) |
-| classroom | string | 否 | 教室 |
-
-#### cURL 示例
-
-```bash
-curl -X POST http://localhost:8000/api/v1/schedules \
-  -H "Content-Type: application/json" \
-  -b cookies.txt \
-  -d '{
-    "course_name": "计算机应用基础",
-    "class_id": 1,
-    "teacher_id": 2,
-    "day_of_week": "3",
-    "start_time": "08:00",
-    "end_time": "09:40",
-    "classroom": "A101"
-  }'
-```
+> ⚠️ **无单条创建接口**。课表统一通过下方 `POST /api/v1/schedules/import` 批量导入创建；已导入的课表可再调整：
+>
+> | 操作 | 接口 |
+> |------|------|
+> | 分配/更换授课教师 | `PUT /api/v1/schedules/{schedule_id}/assign` |
+> | 取消分配 | `PUT /api/v1/schedules/{schedule_id}/unassign` |
+> | 删除课表 | `DELETE /api/v1/schedules/{schedule_id}` |
+> | 下载导入模板 | `GET /api/v1/schedules/template` |
 
 ---
 
@@ -1005,7 +1018,9 @@ curl -X POST http://localhost:8000/api/v1/schedules \
 
 **Content-Type**: `multipart/form-data`
 
-**模板列**: `课程名称` / `所属届` / `专业` / `班级名` / `教师姓名` / `星期` / `开始时间` / `结束时间`（原单一「班级」列已拆为「所属届 + 专业 + 班级名」三列，班级不存在则自动建班）
+**模板列**: `课程名称` / `所属届` / `专业` / `班级名` / `教师姓名` / `星期` / `开始时间` / `结束时间`（原单一「班级」列已拆为「所属届 + 专业 + 班级名」三列）
+
+**说明**: 班级须**已存在且有启用学生**（导入不会自动建班；班级不存在或学生全部被禁用时该行被拒并记入 `errors`）。
 
 #### cURL 示例
 
