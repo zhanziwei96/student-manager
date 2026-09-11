@@ -13,6 +13,7 @@ vi.mock('@/api/offerings', () => ({
     update: vi.fn(),
     listEnrollments: vi.fn(),
     importEnrollments: vi.fn(),
+    enrollByClass: vi.fn(),
     dropEnrollment: vi.fn(),
   },
 }))
@@ -305,5 +306,35 @@ describe('Offerings 教学班管理', () => {
     expect(wrapper.text()).toContain('S001')
     expect(wrapper.text()).toContain('学生1')
     expect(wrapper.text()).toContain('退课')
+  })
+
+  it('名单弹窗可按班级一键加入名单', async () => {
+    const mockedEnrollByClass = vi.mocked(offeringsApi.enrollByClass)
+    mockedEnrollByClass.mockResolvedValue({ imported: 28, skipped: 0 })
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    const rosterButton = wrapper.findAll('button').find((b) => b.text().includes('名单'))
+    await rosterButton!.trigger('click')
+    await flushPromises()
+
+    // 未选班级时按钮禁用
+    const enrollBtn = wrapper.find('[data-testid="enroll-by-class"]')
+    expect(enrollBtn.exists()).toBe(true)
+    expect(enrollBtn.attributes('disabled')).toBeDefined()
+
+    // 选择班级（display_name 作为选项文案）后点击 → 调用 API
+    const classSelect = wrapper
+      .findAll('select')
+      .find((el) => el.findAll('option').some((o) => o.text().includes('2025届软件工程1班')))
+    expect(classSelect).toBeTruthy()
+    await classSelect!.setValue('3')
+    await flushPromises()
+
+    await wrapper.find('[data-testid="enroll-by-class"]').trigger('click')
+    await flushPromises()
+
+    expect(mockedEnrollByClass).toHaveBeenCalledWith(1, [3])
   })
 })

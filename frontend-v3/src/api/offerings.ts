@@ -61,9 +61,13 @@ export const offeringsApi = {
   listEnrollments: (offeringId: number): Promise<EnrollmentRow[]> =>
     get(`/offerings/${offeringId}/enrollments`),
 
-  /** 批量导入选课名单 */
+  /** 批量导入选课名单（逐个学号） */
   importEnrollments: (offeringId: number, studentIds: string[]): Promise<{ imported: number; skipped: number }> =>
     post(`/offerings/${offeringId}/enrollments`, { student_ids: studentIds }),
+
+  /** 按班级加入名单（该班全部在读学生） */
+  enrollByClass: (offeringId: number, classIds: number[]): Promise<{ imported: number; skipped: number }> =>
+    post(`/offerings/${offeringId}/enrollments`, { class_ids: classIds }),
 
   /** 退课标记（保留历史） */
   dropEnrollment: (enrollmentId: number): Promise<void> =>

@@ -35,7 +35,9 @@ class UpdateOfferingRequest(BaseModel):
 
 
 class ImportEnrollmentsRequest(BaseModel):
-    student_ids: List[str] = Field(..., description="学号列表（批量导入选课）")
+    student_ids: List[str] = Field(default_factory=list, description="学号列表（批量导入选课）")
+    class_ids: List[int] = Field(default_factory=list,
+                                 description="班级ID列表（该班全部在读学生一并加入）")
 
 
 def _validate_class_ids(session: Session, class_ids: List[int]) -> None:
@@ -241,13 +243,31 @@ def import_enrollments(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin),
 ):
-    """批量导入选课名单"""
+    """批量导入选课名单
+
+    两种来源可单用或并用：student_ids（逐个学号）、class_ids（按班收全班在读学生）。
+    """
     offering = session.get(CourseOffering, offering_id)
     if offering is None:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="教学班不存在")
 
+    if not body.student_ids and not body.class_ids:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST,
+                            detail="student_ids 与 class_ids 至少提供一个")
+
+    student_ids = list(dict.fromkeys(body.student_ids))  # 去重且保序
+    if body.class_ids:
+        _validate_class_ids(session, body.class_ids)
+        class_students = session.exec(
+            select(Student.student_id).where(
+                Student.class_id.in_(body.class_ids),
+                Student.is_account_enabled.is_(True),
+            )
+        ).all()
+        student_ids.extend(sid for sid in class_students if sid not in student_ids)
+
     imported, skipped = 0, 0
-    for student_id in body.student_ids:
+    for student_id in student_ids:
         if session.get(Student, student_id) is None:
             skipped += 1
             continue
