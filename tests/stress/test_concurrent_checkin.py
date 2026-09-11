@@ -41,13 +41,13 @@ def setup_course_session(test_engine, seed_refs, teacher_user):
     with Session(test_engine) as session:
         for sid in STUDENT_IDS:
             session.add(Student(
-                student_id=sid, name=f"压测学生{sid}", class_name=CLASS_NAME,
+                student_id=sid, name=f"压测学生{sid}",
                 class_id=class_id,
             ))
         session.commit()
         cs = start_course_session(
             session=session,
-            class_name=CLASS_NAME,
+            class_id=class_id,
             teacher_id=teacher_user.id,
             teacher_name=teacher_user.name,
             course_name=COURSE_NAME,

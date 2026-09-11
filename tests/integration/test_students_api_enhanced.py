@@ -27,28 +27,28 @@ class TestStudentsAPIEnhanced:
         # 教师只能看到一班和二班的学生
         assert len(data["data"]) == 5  # 3个一班 + 2个二班
     
-    def test_get_students_by_class_as_admin(self, admin_client, sample_students):
+    def test_get_students_by_class_as_admin(self, admin_client, sample_students, seed_refs):
         """测试管理员按班级筛选学生"""
-        response = admin_client.get("/api/v1/students?class_name=一班")
-        
+        response = admin_client.get(f"/api/v1/students?class_id={seed_refs['一班']}")
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert len(data["data"]) == 3
-    
-    def test_get_students_by_class_as_teacher_authorized(self, teacher_client, sample_students):
+
+    def test_get_students_by_class_as_teacher_authorized(self, teacher_client, sample_students, seed_refs):
         """测试教师获取有权限的班级学生"""
-        response = teacher_client.get("/api/v1/students?class_name=一班")
-        
+        response = teacher_client.get(f"/api/v1/students?class_id={seed_refs['一班']}")
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert len(data["data"]) == 3
-    
-    def test_get_students_by_class_as_teacher_unauthorized(self, teacher_client, sample_students):
+
+    def test_get_students_by_class_as_teacher_unauthorized(self, teacher_client, sample_students, seed_refs):
         """测试教师获取无权限的班级学生"""
-        response = teacher_client.get("/api/v1/students?class_name=三班")
-        
+        response = teacher_client.get(f"/api/v1/students?class_id={seed_refs['三班']}")
+
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
@@ -69,26 +69,26 @@ class TestStudentsAPIEnhanced:
         
         assert response.status_code == 404
     
-    def test_create_student_as_admin(self, admin_client):
+    def test_create_student_as_admin(self, admin_client, seed_refs):
         """测试管理员创建学生"""
         response = admin_client.post("/api/v1/students", json={
             "student_id": "S100",
             "name": "新学生",
-            "class_name": "一班"
+            "class_id": seed_refs["一班"]
         })
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["data"]["student_id"] == "S100"
         assert data["data"]["status"] == "active"
-    
-    def test_create_student_duplicate_id(self, admin_client, student_user):
+
+    def test_create_student_duplicate_id(self, admin_client, student_user, seed_refs):
         """测试创建重复学号的学生"""
         response = admin_client.post("/api/v1/students", json={
             "student_id": "S001",  # 已存在
             "name": "重复学生",
-            "class_name": "一班"
+            "class_id": seed_refs["一班"]
         })
         
         assert response.status_code == 409
@@ -101,19 +101,18 @@ class TestStudentsPagination:
     """学生列表分页（limit/offset/total）集成测试"""
 
     @staticmethod
-    def _create_students(test_engine, class_name: str, count: int, id_prefix: str):
-        """批量创建测试学生（class_id 按班级名解析，未登记班级名则为 None）"""
+    def _create_students(test_engine, name: str, count: int, id_prefix: str):
+        """批量创建测试学生（class_id 由班级名 get-or-create 解析）"""
         from sqlmodel import Session
         from app.models import Student
-        from app.core.class_cache import get_class_id_by_name
+        from tests.integration.conftest import ensure_class
 
+        class_id = ensure_class(test_engine, name)
         with Session(test_engine) as session:
-            class_id = get_class_id_by_name(session, class_name)
             for i in range(1, count + 1):
                 session.add(Student(
                     student_id=f"{id_prefix}{i:04d}",
                     name=f"学生{i}",
-                    class_name=class_name,
                     class_id=class_id,
                 ))
             session.commit()
@@ -140,12 +139,14 @@ class TestStudentsPagination:
         self._create_students(test_engine, "一班", 30, "CA")
         self._create_students(test_engine, "二班", 20, "CB")
 
-        resp = admin_client.get("/api/v1/students?class_name=一班&limit=10&offset=25")
+        resp = admin_client.get(
+            f"/api/v1/students?class_id={seed_refs['一班']}&limit=10&offset=25"
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["data"]) == 5
         assert data["total"] == 30
-        assert all(s["class_name"] == "一班" for s in data["data"])
+        assert all(s["class_name"] == "2026届一班" for s in data["data"])
 
     def test_teacher_pagination(self, teacher_client, test_engine, seed_refs):
         """教师分页：只看负责班级，total 为负责班级总数"""
@@ -158,7 +159,7 @@ class TestStudentsPagination:
         assert len(data["data"]) == 20
         # 教师负责一班和二班，只有一班有 30 个学生
         assert data["total"] == 30
-        assert all(s["class_name"] in ("一班", "二班") for s in data["data"])
+        assert all(s["class_name"] in ("2026届一班", "2026届二班") for s in data["data"])
 
     def test_no_limit_returns_all_without_total(self, admin_client, test_engine):
         """不传 limit 时返回全部且不带 total（向后兼容）"""

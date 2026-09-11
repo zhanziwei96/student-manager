@@ -19,7 +19,7 @@ class TestStartCourseSession:
         """测试开始上课时传入 course_name 正确保存"""
         cs = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
@@ -37,7 +37,7 @@ class TestStartCourseSession:
         """测试开始上课时不传 course_name 默认为 None"""
         cs = start_course_session(
             session=session,
-            class_name="二班",
+            class_id=seed_refs["二班"],
             teacher_id=2,
             teacher_name="李老师"
         )
@@ -50,7 +50,7 @@ class TestStartCourseSession:
         """测试教师可以同时开始多个班级的课程（多班级并行功能）"""
         old_session = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="旧课程"
@@ -58,7 +58,7 @@ class TestStartCourseSession:
 
         new_session = start_course_session(
             session=session,
-            class_name="二班",
+            class_id=seed_refs["二班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="新课程"
@@ -78,7 +78,7 @@ class TestGetCourseSession:
         """测试获取课堂状态返回 course_name"""
         started = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
@@ -103,7 +103,7 @@ class TestGetCourseSession:
         """测试只返回活跃状态的课堂"""
         start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="已结束课程"
@@ -122,7 +122,7 @@ class TestEndCourseSession:
         """测试结束带 course_name 的课堂"""
         started = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"

@@ -16,7 +16,6 @@ def seed_class_students(test_engine, seed_refs):
             session.add(Student(
                 student_id=f"QA{i:03d}",
                 name=f"学生{i}",
-                class_name=cls,
                 class_id=seed_refs[cls],
             ))
         session.commit()
@@ -24,10 +23,10 @@ def seed_class_students(test_engine, seed_refs):
 
 # ============== 教师端测试 ==============
 
-def test_teacher_create_question(teacher_client: TestClient):
+def test_teacher_create_question(teacher_client: TestClient, seed_refs):
     resp = teacher_client.post("/api/v1/teacher/questions", json={
         "content": "什么是递归？",
-        "class_name": "一班",
+        "class_id": seed_refs["一班"],
         "is_realtime": True,
     })
     assert resp.status_code == 200
@@ -45,9 +44,9 @@ def test_teacher_create_question_all_classes(teacher_client: TestClient):
     assert data["success"] is True
 
 
-def test_teacher_list_questions(teacher_client: TestClient):
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_name": "一班"})
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q2", "class_name": "二班"})
+def test_teacher_list_questions(teacher_client: TestClient, seed_refs):
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q2", "class_id": seed_refs["二班"]})
 
     resp = teacher_client.get("/api/v1/teacher/questions")
     assert resp.status_code == 200
@@ -68,9 +67,9 @@ def test_teacher_close_question(teacher_client: TestClient):
     assert len(resp.json()["data"]) == 1
 
 
-def test_teacher_reply_and_star(teacher_client: TestClient, student_client: TestClient):
+def test_teacher_reply_and_star(teacher_client: TestClient, student_client: TestClient, seed_refs):
     # 老师创建问题
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_name": "一班"})
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
     qid = resp.json()["data"]["question_id"]
 
     # 学生回答
@@ -101,10 +100,10 @@ def test_teacher_reply_and_star(teacher_client: TestClient, student_client: Test
 
 # ============== 学生端测试 ==============
 
-def test_student_list_questions(student_client: TestClient, teacher_client: TestClient):
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "班级Q", "class_name": "一班"})
+def test_student_list_questions(student_client: TestClient, teacher_client: TestClient, seed_refs):
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "班级Q", "class_id": seed_refs["一班"]})
     teacher_client.post("/api/v1/teacher/questions", json={"content": "通用Q"})
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "其他班Q", "class_name": "二班"})
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "其他班Q", "class_id": seed_refs["二班"]})
 
     resp = student_client.get("/api/v1/student/questions")
     assert resp.status_code == 200
@@ -113,8 +112,8 @@ def test_student_list_questions(student_client: TestClient, teacher_client: Test
     assert len(data) == 2
 
 
-def test_student_create_answer(student_client: TestClient, teacher_client: TestClient):
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_name": "一班"})
+def test_student_create_answer(student_client: TestClient, teacher_client: TestClient, seed_refs):
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
     qid = resp.json()["data"]["question_id"]
 
     resp = student_client.post("/api/v1/student/answers", json={
@@ -126,8 +125,8 @@ def test_student_create_answer(student_client: TestClient, teacher_client: TestC
     assert resp.json()["success"] is True
 
 
-def test_student_cannot_answer_closed_question(student_client: TestClient, teacher_client: TestClient):
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_name": "一班"})
+def test_student_cannot_answer_closed_question(student_client: TestClient, teacher_client: TestClient, seed_refs):
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
     qid = resp.json()["data"]["question_id"]
     teacher_client.put(f"/api/v1/teacher/questions/{qid}/close")
 
@@ -138,8 +137,8 @@ def test_student_cannot_answer_closed_question(student_client: TestClient, teach
     assert resp.status_code == 400
 
 
-def test_student_update_own_answer(student_client: TestClient, teacher_client: TestClient):
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_name": "一班"})
+def test_student_update_own_answer(student_client: TestClient, teacher_client: TestClient, seed_refs):
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
     qid = resp.json()["data"]["question_id"]
     resp = student_client.post("/api/v1/student/answers", json={
         "question_id": qid, "content": "原始内容",
@@ -153,9 +152,9 @@ def test_student_update_own_answer(student_client: TestClient, teacher_client: T
     assert resp.json()["data"][0]["content"] == "修改后"
 
 
-def test_anonymous_answer_visibility(student_client: TestClient, teacher_client: TestClient):
+def test_anonymous_answer_visibility(student_client: TestClient, teacher_client: TestClient, seed_refs):
     """测试匿名回答：老师能看到姓名和 student_id，其他学生看不到"""
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_name": "一班"})
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
     qid = resp.json()["data"]["question_id"]
 
     student_client.post("/api/v1/student/answers", json={

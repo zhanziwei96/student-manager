@@ -101,13 +101,13 @@ def test_checkins_filtered_by_current_term(two_term_data):
 
 
 
-def test_groups_filtered_by_current_term(two_term_data):
-    groups = get_groups_by_class(two_term_data, "一班")
+def test_groups_filtered_by_current_term(two_term_data, seed_refs):
+    groups = get_groups_by_class(two_term_data, seed_refs["一班"])
     assert len(groups) == 1
     assert groups[0].semester_id == get_current_semester_id(two_term_data)
 
 
-def test_questions_filtered_by_current_term(two_term_data):
-    questions = get_questions_by_class(two_term_data, "一班")
+def test_questions_filtered_by_current_term(two_term_data, seed_refs):
+    questions = get_questions_by_class(two_term_data, seed_refs["一班"])
     assert len(questions) == 1
     assert questions[0].semester_id == get_current_semester_id(two_term_data)

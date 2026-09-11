@@ -19,11 +19,11 @@ class TestScheduleAdjustmentCRUD:
     """测试 ScheduleAdjustment CRUD 操作"""
 
     def _create_schedule(self, session: Session, refs: dict, course_name: str = "测试课程",
-                         class_name: str = "一班", teacher_id: int = 1) -> CourseSchedule:
+                         class_key: str = "一班", teacher_id: int = 1) -> CourseSchedule:
         """辅助方法：创建课表记录（class_id/semester_id 为纯 FK 锚点，取自 seed_refs）"""
         schedule = CourseSchedule(
             course_name=course_name,
-            class_id=refs[class_name],
+            class_id=refs[class_key],
             semester_id=refs["semester_id"],
             teacher_id=teacher_id,
             teacher_name="张老师",
@@ -105,7 +105,7 @@ class TestScheduleAdjustmentCRUD:
     def test_get_adjustments_by_schedule_id(self, session: Session, seed_refs):
         """测试按条件查询调整记录列表（按 schedule_id）"""
         schedule1 = self._create_schedule(session, seed_refs, course_name="课程A")
-        schedule2 = self._create_schedule(session, seed_refs, course_name="课程B", class_name="二班")
+        schedule2 = self._create_schedule(session, seed_refs, course_name="课程B", class_key="二班")
         create_adjustment(session, schedule_id=schedule1.id, week_number=2, adjustment_type="cancel", created_by=1)
         create_adjustment(session, schedule_id=schedule1.id, week_number=3, adjustment_type="modify", created_by=1)
         create_adjustment(session, schedule_id=schedule2.id, week_number=2, adjustment_type="makeup", created_by=1)
@@ -125,14 +125,14 @@ class TestScheduleAdjustmentCRUD:
         assert len(results) == 1
         assert results[0].type == "modify"
 
-    def test_get_adjustments_by_class_name(self, session: Session, seed_refs):
-        """测试按班级名称过滤调整记录"""
-        schedule_a = self._create_schedule(session, seed_refs, class_name="一班")
-        schedule_b = self._create_schedule(session, seed_refs, class_name="二班")
+    def test_get_adjustments_by_class_id(self, session: Session, seed_refs):
+        """测试按班级 ID 过滤调整记录"""
+        schedule_a = self._create_schedule(session, seed_refs, class_key="一班")
+        schedule_b = self._create_schedule(session, seed_refs, class_key="二班")
         create_adjustment(session, schedule_id=schedule_a.id, week_number=2, adjustment_type="cancel", created_by=1)
         create_adjustment(session, schedule_id=schedule_b.id, week_number=2, adjustment_type="makeup", created_by=1)
 
-        results = get_adjustments(session, class_name="一班")
+        results = get_adjustments(session, class_id=seed_refs["一班"])
         assert len(results) == 1
         assert results[0].schedule_id == schedule_a.id
 
@@ -141,7 +141,7 @@ class TestScheduleAdjustmentCRUD:
         schedule = self._create_schedule(session, seed_refs)
         start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=schedule.teacher_id,
             teacher_name=schedule.teacher_name,
             schedule_id=schedule.id,
@@ -155,13 +155,13 @@ class TestScheduleAdjustmentCRUD:
         schedule = self._create_schedule(session, seed_refs)
         start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=schedule.teacher_id,
             teacher_name=schedule.teacher_name,
             schedule_id=schedule.id,
             week_number=2
         )
-        end_course_session(session, teacher_id=schedule.teacher_id, class_name="一班")
+        end_course_session(session, teacher_id=schedule.teacher_id, class_id=seed_refs["一班"])
 
         assert has_active_session(session, schedule.id, 2) is False
         assert has_active_session(session, schedule.id, 3) is False  # 不同周次
@@ -171,13 +171,13 @@ class TestScheduleAdjustmentCRUD:
         schedule = self._create_schedule(session, seed_refs)
         start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=schedule.teacher_id,
             teacher_name=schedule.teacher_name,
             schedule_id=schedule.id,
             week_number=4
         )
-        end_course_session(session, teacher_id=schedule.teacher_id, class_name="一班")
+        end_course_session(session, teacher_id=schedule.teacher_id, class_id=seed_refs["一班"])
 
         assert has_ended_session(session, schedule.id, 4) is True
 
@@ -190,7 +190,7 @@ class TestScheduleAdjustmentCRUD:
         # 活跃中不算 ended
         start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=schedule.teacher_id,
             teacher_name=schedule.teacher_name,
             schedule_id=schedule.id,

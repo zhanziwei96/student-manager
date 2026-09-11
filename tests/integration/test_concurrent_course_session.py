@@ -64,7 +64,7 @@ class TestConcurrentCourseSession:
             with Session(engine) as session:
                 return start_course_session(
                     session=session,
-                    class_name="一班",
+                    class_id=seeded_class_id,
                     teacher_id=1,
                     teacher_name="教师1",
                     course_name="数学"
@@ -117,7 +117,6 @@ class TestConcurrentCourseSession:
             session.add(Student(
                 student_id="CCS001",
                 name="学生1",
-                class_name="一班",
                 class_id=class_id,
             ))
             session.commit()
@@ -132,7 +131,7 @@ class TestConcurrentCourseSession:
 
         # 先正常开始一次课堂
         response1 = client.post("/api/v1/course-sessions/start", json={
-            "class_name": "一班",
+            "class_id": class_id,
             "course_name": "数学"
         }, cookies=cookies)
         assert response1.status_code == 200, f"首次开始上课应成功: {response1.json()}"
@@ -144,7 +143,7 @@ class TestConcurrentCourseSession:
             side_effect=IntegrityError("INSERT INTO course_sessions ...", None, None)
         ):
             response2 = client.post("/api/v1/course-sessions/start", json={
-                "class_name": "一班",
+                "class_id": class_id,
                 "course_name": "数学"
             }, cookies=cookies)
 

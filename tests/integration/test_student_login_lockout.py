@@ -136,7 +136,7 @@ class TestStudentManualUnlock:
     """学生手动解锁机制测试（管理员/教师运维途径）"""
 
     @pytest.fixture
-    def locked_student_id(self, test_engine):
+    def locked_student_id(self, test_engine, seed_refs):
         """创建一名已锁定的学生（一班，密码 student123，便于教师班级权限测试）"""
         from app.core.security import generate_password_hash
         from app.models import Student
@@ -146,7 +146,7 @@ class TestStudentManualUnlock:
             student = Student(
                 student_id="SLOCK",
                 name="锁定学生",
-                class_name="一班",
+                class_id=seed_refs["一班"],
                 score=0.0,
                 password_hash=password_hash,
                 salt=salt,

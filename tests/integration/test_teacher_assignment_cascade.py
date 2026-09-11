@@ -46,7 +46,7 @@ class TestTeacherAssignmentCascade:
         schedule = create_schedule(
             session=session,
             course_name="测试课程",
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=None,
             teacher_name="",
             day_of_week=1,
@@ -60,7 +60,7 @@ class TestTeacherAssignmentCascade:
         # 2. 创建活跃课堂（模拟已开始上课）
         course_session = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,  # 临时教师开始上课
             teacher_name="临时教师",
             course_name="测试课程",
@@ -108,7 +108,7 @@ class TestTeacherAssignmentCascade:
         schedule = create_schedule(
             session=session,
             course_name="测试课程",
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="原教师",
             day_of_week=1,
@@ -122,7 +122,7 @@ class TestTeacherAssignmentCascade:
         # 2. 创建活跃课堂
         course_session = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="原教师",
             course_name="测试课程",
@@ -161,7 +161,7 @@ class TestTeacherAssignmentCascade:
         schedule = create_schedule(
             session=session,
             course_name="测试课程",
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=None,
             teacher_name="",
             day_of_week=1,

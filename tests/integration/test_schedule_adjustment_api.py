@@ -14,7 +14,7 @@ def create_test_schedule(test_engine, teacher_user, seed_refs):
         with Session(test_engine) as session:
             schedule = CourseSchedule(
                 course_name=kwargs.get("course_name", "测试课程"),
-                class_id=seed_refs[kwargs.get("class_name", "一班")],
+                class_id=seed_refs[kwargs.get("class_key", "一班")],
                 semester_id=seed_refs["semester_id"],
                 teacher_id=kwargs.get("teacher_id", teacher_user.id),
                 teacher_name=kwargs.get("teacher_name", teacher_user.name),
@@ -72,7 +72,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_create_cancel_adjustment_success(self, teacher_client, create_test_schedule):
         """教师成功创建停课记录"""
-        schedule = create_test_schedule(course_name="数学", class_name="一班")
+        schedule = create_test_schedule(course_name="数学", class_key="一班")
 
         response = teacher_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
@@ -87,7 +87,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_create_modify_adjustment_success(self, teacher_client, create_test_schedule):
         """教师成功创建调课记录"""
-        schedule = create_test_schedule(course_name="英语", class_name="一班")
+        schedule = create_test_schedule(course_name="英语", class_key="一班")
 
         response = teacher_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
@@ -105,7 +105,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_create_makeup_adjustment_success(self, teacher_client, create_test_schedule):
         """教师成功创建补课记录"""
-        schedule = create_test_schedule(course_name="物理", class_name="一班")
+        schedule = create_test_schedule(course_name="物理", class_key="一班")
 
         response = teacher_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
@@ -123,17 +123,17 @@ class TestScheduleAdjustmentAPI:
         # 补课应生成 course_session
         assert "调整记录已创建" in data.get("message", "")
 
-    def test_cancel_with_active_session_auto_ends(self, teacher_client, create_test_schedule, test_engine):
+    def test_cancel_with_active_session_auto_ends(self, teacher_client, create_test_schedule, test_engine, seed_refs):
         """进行中的课程取消时自动结束课堂"""
         from app.crud.course_session import start_course_session
 
-        schedule = create_test_schedule(course_name="化学", class_name="一班")
+        schedule = create_test_schedule(course_name="化学", class_key="一班")
 
         # 先开始该课程的课堂
         with Session(test_engine) as session:
             start_course_session(
                 session=session,
-                class_name="一班",
+                class_id=seed_refs["一班"],
                 teacher_id=1,
                 teacher_name="教师1",
                 course_name="化学",
@@ -151,23 +151,23 @@ class TestScheduleAdjustmentAPI:
         assert response.status_code == 200
         assert response.json()["success"] is True
 
-    def test_modify_with_ended_session_fails(self, teacher_client, create_test_schedule, test_engine):
+    def test_modify_with_ended_session_fails(self, teacher_client, create_test_schedule, test_engine, seed_refs):
         """已结束的课程不能调课"""
         from app.crud.course_session import start_course_session, end_course_session
 
-        schedule = create_test_schedule(course_name="生物", class_name="一班")
+        schedule = create_test_schedule(course_name="生物", class_key="一班")
 
         with Session(test_engine) as session:
             cs = start_course_session(
                 session=session,
-                class_name="一班",
+                class_id=seed_refs["一班"],
                 teacher_id=1,
                 teacher_name="教师1",
                 course_name="生物",
                 schedule_id=schedule.id,
                 week_number=6
             )
-            end_course_session(session, teacher_id=1, class_name="一班")
+            end_course_session(session, teacher_id=1, class_id=seed_refs["一班"])
 
         response = teacher_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
@@ -180,7 +180,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_create_adjustment_unauthorized_teacher(self, unauthorized_teacher_client, create_test_schedule, teacher_user):
         """无权限教师不能调课"""
-        schedule = create_test_schedule(course_name="地理", class_name="一班", teacher_id=teacher_user.id)
+        schedule = create_test_schedule(course_name="地理", class_key="一班", teacher_id=teacher_user.id)
 
         response = unauthorized_teacher_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
@@ -193,7 +193,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_list_adjustments(self, teacher_client, create_test_schedule):
         """查询调整记录"""
-        schedule = create_test_schedule(course_name="历史", class_name="一班")
+        schedule = create_test_schedule(course_name="历史", class_key="一班")
 
         # 先创建两条调整记录
         teacher_client.post("/api/v1/schedule-adjustments", json={
@@ -228,7 +228,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_student_cannot_create_adjustment(self, student_client, create_test_schedule):
         """学生不能创建调整记录"""
-        schedule = create_test_schedule(course_name="音乐", class_name="一班")
+        schedule = create_test_schedule(course_name="音乐", class_key="一班")
 
         response = student_client.post("/api/v1/schedule-adjustments", json={
             "schedule_id": schedule.id,
@@ -240,7 +240,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_create_adjustment_invalid_week_number(self, teacher_client, create_test_schedule):
         """创建调课时周次必须在 1-20 范围内"""
-        schedule = create_test_schedule(course_name="语文", class_name="一班")
+        schedule = create_test_schedule(course_name="语文", class_key="一班")
 
         # 周次为 0
         response = teacher_client.post("/api/v1/schedule-adjustments", json={
@@ -264,7 +264,7 @@ class TestScheduleAdjustmentAPI:
 
     def test_create_duplicate_adjustment_returns_409(self, teacher_client, create_test_schedule):
         """同一课表同一周次重复创建调课应返回 409 并包含已有记录"""
-        schedule = create_test_schedule(course_name="美术", class_name="一班")
+        schedule = create_test_schedule(course_name="美术", class_key="一班")
 
         # 第一次创建成功
         response = teacher_client.post("/api/v1/schedule-adjustments", json={

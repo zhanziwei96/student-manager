@@ -16,12 +16,14 @@ class TestScheduleCRUD:
 
     @pytest.fixture(autouse=True)
     def _seed_classes(self, session: Session, seed_refs):
-        """课表写入依赖班级 FK（class_id 必填）：按「届+专业+班名」三元组
-        预置本文件用到的班级，id 经 self.class_ids 暴露给各用例"""
-        from app.models import Class_
+        """课表写入依赖班级 FK（class_id 必填），导入校验还要求班级有启用学生：
+        预置本文件用到的班级，并为导入测试所用班级预置启用学生，
+        id 经 self.class_ids 暴露给各用例"""
+        from app.models import Class_, Student
 
         names = ["导入班级1", "导入班级2", "班级1", "班级2",
                  "软件1班", "软件2班", "班级A", "班级B", "班级X", "班级Y", "班级Z"]
+        import_classes = ["导入班级1", "导入班级2", "班级1", "班级2"]
         self.class_ids = {}
         for name in names:
             cls = session.exec(select(Class_).where(Class_.name == name)).first()
@@ -31,6 +33,14 @@ class TestScheduleCRUD:
                 session.commit()
                 session.refresh(cls)
             self.class_ids[name] = cls.id
+
+        # 导入校验要求班级有启用学生，否则整行被拒
+        for i, name in enumerate(import_classes):
+            session.add(Student(
+                student_id=f"TS{i:03d}", name=f"学生{i}",
+                class_id=self.class_ids[name],
+            ))
+        session.commit()
 
     def test_create_schedule(self, session: Session):
         """测试创建课表"""

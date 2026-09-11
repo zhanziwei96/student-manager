@@ -18,7 +18,7 @@ class TestDeviceBindCRUD:
 
     def test_create_device_bind(self, session: Session, seed_refs):
         """测试创建设备绑定"""
-        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, seed_refs["一班"], teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,
@@ -36,7 +36,7 @@ class TestDeviceBindCRUD:
 
     def test_get_device_bind_existing(self, session: Session, seed_refs):
         """测试获取已存在的设备绑定"""
-        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, seed_refs["一班"], teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,
@@ -57,7 +57,7 @@ class TestDeviceBindCRUD:
 
     def test_update_device_bind(self, session: Session, seed_refs):
         """测试更新设备绑定"""
-        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, seed_refs["一班"], teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,
@@ -79,7 +79,7 @@ class TestDeviceBindCRUD:
 
     def test_delete_device_bind(self, session: Session, seed_refs):
         """测试删除设备绑定"""
-        cs = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
+        cs = start_course_session(session, seed_refs["一班"], teacher_id=1, teacher_name="张老师")
 
         bind_data = DeviceBindCreate(
             session_id=cs.id,

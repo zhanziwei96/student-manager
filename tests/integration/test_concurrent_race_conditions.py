@@ -54,7 +54,7 @@ class TestConcurrentRaceConditions:
             # 创建第一个活跃课堂
             cs1 = start_course_session(
                 session=session,
-                class_name="唯一班级测试",
+                class_id=unique_class_id,
                 teacher_id=1,
                 teacher_name="张老师",
                 course_name="测试课程1",
@@ -66,7 +66,7 @@ class TestConcurrentRaceConditions:
             try:
                 cs2 = start_course_session(
                     session=session,
-                    class_name="唯一班级测试",  # 相同班级
+                    class_id=unique_class_id,  # 相同班级
                     teacher_id=2,
                     teacher_name="李老师",
                     course_name="测试课程2",

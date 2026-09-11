@@ -31,7 +31,7 @@ class TestQuestionCRUD:
     def test_create_question(self, session: Session, seed_refs):
         q = create_question(
             session, teacher_id=1, content="什么是Python？",
-            class_name="一班", is_realtime=True,
+            class_id=seed_refs["一班"], is_realtime=True,
         )
         assert q.teacher_id == 1
         assert q.content == "什么是Python？"
@@ -45,16 +45,16 @@ class TestQuestionCRUD:
         assert q.class_id is None
 
     def test_get_questions_by_teacher(self, session: Session, seed_refs):
-        create_question(session, teacher_id=1, content="Q1", class_name="一班")
-        create_question(session, teacher_id=1, content="Q2", class_name="二班")
-        create_question(session, teacher_id=2, content="Q3", class_name="一班")
+        create_question(session, teacher_id=1, content="Q1", class_id=seed_refs["一班"])
+        create_question(session, teacher_id=1, content="Q2", class_id=seed_refs["二班"])
+        create_question(session, teacher_id=2, content="Q3", class_id=seed_refs["一班"])
 
         questions = get_questions_by_teacher(session, teacher_id=1)
         assert len(questions) == 2
 
     def test_get_questions_by_teacher_with_filter(self, session: Session, seed_refs):
-        create_question(session, teacher_id=1, content="Q1", class_name="一班")
-        q2 = create_question(session, teacher_id=1, content="Q2", class_name="一班")
+        create_question(session, teacher_id=1, content="Q1", class_id=seed_refs["一班"])
+        q2 = create_question(session, teacher_id=1, content="Q2", class_id=seed_refs["一班"])
         close_question(session, q2.id)
 
         active = get_questions_by_teacher(session, teacher_id=1, status="active")
@@ -62,11 +62,11 @@ class TestQuestionCRUD:
         assert active[0].content == "Q1"
 
     def test_get_questions_by_class(self, session: Session, seed_refs):
-        create_question(session, teacher_id=1, content="班级问题", class_name="一班")
+        create_question(session, teacher_id=1, content="班级问题", class_id=seed_refs["一班"])
         create_question(session, teacher_id=1, content="通用问题")
-        create_question(session, teacher_id=1, content="其他班级", class_name="二班")
+        create_question(session, teacher_id=1, content="其他班级", class_id=seed_refs["二班"])
 
-        questions = get_questions_by_class(session, "一班")
+        questions = get_questions_by_class(session, seed_refs["一班"])
         assert len(questions) == 2
         contents = {q.content for q in questions}
         assert "班级问题" in contents
