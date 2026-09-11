@@ -162,7 +162,6 @@ student-manager/
 | [.agents/CONFIG_GUIDE.md](../.agents/CONFIG_GUIDE.md) | 配置管理 | ⭐⭐⭐⭐ |
 | [migrations/README.md](../migrations/README.md) | 数据库迁移指南 | ⭐⭐⭐⭐ |
 | [docs/SEMESTER_DEPLOYMENT.md](./SEMESTER_DEPLOYMENT.md) | 学期部署与 rollover | ⭐⭐⭐⭐ |
-| [docs/PHASE6_VERIFICATION.md](./PHASE6_VERIFICATION.md) | Phase 6 端到端验证与上线验收方案（class_id 锚点化） | ⭐⭐⭐⭐⭐ |
 
 ### 项目规划
 
