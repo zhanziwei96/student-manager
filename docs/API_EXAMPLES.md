@@ -2,15 +2,17 @@
 
 ---
 
-**文档版本**: v1.1  
-**最后更新**: 2026-04-13  
-**适用版本**: v3.0.0+  
+**文档版本**: v1.2  
+**最后更新**: 2026-09-11  
+**适用版本**: v3.1.0+  
 **API 前缀**: `/api/v1`  
 **状态**: ✅ 已同步代码
 
 ---
 
 本文档提供 ClassHub API 的详细使用示例，包括 cURL、Python 和 TypeScript 调用方式。
+
+> ⚠️ **v3.1.0 破坏性变更**：班级维度参数已由 `class_name`（裸班级名）改为 `class_id`（行政班 ID），班级 ID 可通过 `GET /api/v1/classes` 获取。响应中的 `class_name` 键保留，值改为完整展示名（如 `2026届软件工程1班`），不可用于逻辑判断或回传。详见 `docs/API_CHANGELOG.md` v3.1.0。
 
 ## 目录
 
@@ -208,7 +210,7 @@ curl -X POST http://localhost:8000/api/v1/change-password \
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| class_name | string | 否 | 班级名称筛选 |
+| class_id | int | 否 | 班级 ID 筛选 |
 | keyword | string | 否 | 姓名/学号搜索 |
 
 #### cURL 示例
@@ -218,8 +220,8 @@ curl -X POST http://localhost:8000/api/v1/change-password \
 curl http://localhost:8000/api/v1/students \
   -b cookies.txt
 
-# 按班级筛选
-curl "http://localhost:8000/api/v1/students?class_name=软件1班" \
+# 按班级筛选（班级 ID 由 GET /api/v1/classes 获取）
+curl "http://localhost:8000/api/v1/students?class_id=1" \
   -b cookies.txt
 
 # 搜索学生
@@ -237,7 +239,7 @@ students = response.json()["data"]
 # 带参数查询
 response = session.get(
     "http://localhost:8000/api/v1/students",
-    params={"class_name": "软件1班", "keyword": "张三"}
+    params={"class_id": 1, "keyword": "张三"}
 )
 ```
 
@@ -251,7 +253,8 @@ response = session.get(
       "id": 1,
       "student_id": "2024001",
       "name": "张三",
-      "class_name": "软件1班",
+      "class_id": 1,
+      "class_name": "2026届软件工程1班",
       "score": 85.5,
       "version": 1
     }
@@ -272,7 +275,7 @@ response = session.get(
 |------|------|------|------|
 | student_id | string | 是 | 学号 |
 | name | string | 是 | 姓名 |
-| class_name | string | 是 | 班级 |
+| class_id | int | 否 | 班级 ID（未分班可不传） |
 | score | number | 否 | 初始分数 (默认70) |
 
 #### cURL 示例
@@ -284,7 +287,7 @@ curl -X POST http://localhost:8000/api/v1/students \
   -d '{
     "student_id": "2024002",
     "name": "李四",
-    "class_name": "软件1班",
+    "class_id": 1,
     "score": 80
   }'
 ```
@@ -295,7 +298,7 @@ curl -X POST http://localhost:8000/api/v1/students \
 const createStudent = async (studentData: {
   student_id: string
   name: string
-  class_name: string
+  class_id?: number
   score?: number
 }) => {
   const response = await ofetch('/api/v1/students', {
@@ -384,6 +387,8 @@ curl -X DELETE http://localhost:8000/api/v1/students/2024001 \
 
 **Content-Type**: `multipart/form-data`
 
+**模板列**: `学号` / `姓名` / `所属届` / `专业` / `班级名`（班级按「所属届 + 专业 + 班级名」三元组定位：已存在则复用，不存在则自动建班）
+
 #### cURL 示例
 
 ```bash
@@ -443,6 +448,8 @@ curl http://localhost:8000/api/v1/students/2024001/scores \
 
 **接口**: `GET /api/v1/classes`
 
+**说明**: 响应中的 `id` 即其它接口所需的 `class_id`；`display_name` 为完整展示名。班级唯一键为 `(name, major, cohort_year)`，裸班名（如 `1班`）可跨专业/跨届重复，**不可**作为接口参数。
+
 #### cURL 示例
 
 ```bash
@@ -456,8 +463,22 @@ curl http://localhost:8000/api/v1/classes \
 {
   "success": true,
   "data": [
-    { "name": "软件1班", "student_count": 50 },
-    { "name": "软件2班", "student_count": 48 }
+    {
+      "id": 1,
+      "name": "1班",
+      "major": "软件工程",
+      "cohort_year": "2026",
+      "display_name": "2026届软件工程1班",
+      "student_count": 50
+    },
+    {
+      "id": 2,
+      "name": "2班",
+      "major": "软件工程",
+      "cohort_year": "2026",
+      "display_name": "2026届软件工程2班",
+      "student_count": 48
+    }
   ],
   "message": "获取成功"
 }
@@ -569,7 +590,7 @@ curl -X POST http://localhost:8000/api/v1/teacher-checkin \
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | student_id | string | 否 | 学号筛选 |
-| class_name | string | 否 | 班级筛选 |
+| class_id | int | 否 | 班级 ID 筛选 |
 | date | string | 否 | 日期 (YYYY-MM-DD) |
 
 #### cURL 示例
@@ -716,7 +737,7 @@ curl http://localhost:8000/api/v1/class-session \
   "success": true,
   "data": {
     "active": true,
-    "class_name": "软件1班",
+    "class_name": "2026届软件工程1班",
     "start_time": "2026-04-05T08:00:00",
     "teacher_name": "张老师"
   },
@@ -734,7 +755,7 @@ curl http://localhost:8000/api/v1/class-session \
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| class_name | string | 是 | 班级名称 |
+| class_id | int | 是 | 班级 ID |
 
 #### cURL 示例
 
@@ -743,7 +764,7 @@ curl -X POST http://localhost:8000/api/v1/class-session/start \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{
-    "class_name": "软件1班"
+    "class_id": 1
   }'
 ```
 
@@ -766,7 +787,7 @@ curl -X POST http://localhost:8000/api/v1/class-session/end \
 # 开始上课
 response = session.post(
     "http://localhost:8000/api/v1/class-session/start",
-    json={"class_name": "软件1班"}
+    json={"class_id": 1}
 )
 print(response.json())
 
@@ -778,10 +799,10 @@ print(response.json())
 #### TypeScript 示例
 
 ```typescript
-const startClass = async (className: string) => {
+const startClass = async (classId: number) => {
   const response = await ofetch('/api/v1/class-session/start', {
     method: 'POST',
-    body: { class_name: className },
+    body: { class_id: classId },
     credentials: 'include'
   })
   return response.data
@@ -931,13 +952,13 @@ curl "http://localhost:8000/api/v1/audit/logs?limit=10" \
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| class_name | string | 否 | 班级筛选 |
+| class_id | int | 否 | 班级 ID 筛选 |
 | teacher_id | number | 否 | 教师筛选 |
 
 #### cURL 示例
 
 ```bash
-curl "http://localhost:8000/api/v1/schedules?class_name=软件1班" \
+curl "http://localhost:8000/api/v1/schedules?class_id=1" \
   -b cookies.txt
 ```
 
@@ -952,7 +973,7 @@ curl "http://localhost:8000/api/v1/schedules?class_name=软件1班" \
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | course_name | string | 是 | 课程名称 |
-| class_name | string | 是 | 班级 |
+| class_id | int | 是 | 班级 ID |
 | teacher_id | number | 是 | 教师ID |
 | day_of_week | string | 是 | 星期 (1-7) |
 | start_time | string | 是 | 开始时间 (HH:MM) |
@@ -967,7 +988,7 @@ curl -X POST http://localhost:8000/api/v1/schedules \
   -b cookies.txt \
   -d '{
     "course_name": "计算机应用基础",
-    "class_name": "软件1班",
+    "class_id": 1,
     "teacher_id": 2,
     "day_of_week": "3",
     "start_time": "08:00",
@@ -983,6 +1004,8 @@ curl -X POST http://localhost:8000/api/v1/schedules \
 **接口**: `POST /api/v1/schedules/import`
 
 **Content-Type**: `multipart/form-data`
+
+**模板列**: `课程名称` / `所属届` / `专业` / `班级名` / `教师姓名` / `星期` / `开始时间` / `结束时间`（原单一「班级」列已拆为「所属届 + 专业 + 班级名」三列，班级不存在则自动建班）
 
 #### cURL 示例
 
@@ -1014,7 +1037,8 @@ curl http://localhost:8000/api/v1/schedules/today \
     {
       "id": 1,
       "course_name": "计算机应用基础",
-      "class_name": "软件1班",
+      "class_id": 1,
+      "class_name": "2026届软件工程1班",
       "teacher_name": "张老师",
       "day_of_week": 1,
       "start_time": "08:00",
