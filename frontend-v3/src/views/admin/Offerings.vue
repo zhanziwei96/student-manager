@@ -183,6 +183,23 @@ const openRosterDialog = (offering: CourseOffering) => {
   showRosterDialog.value = true
 }
 
+// 按班级加入名单（该班全部在读学生）
+const rosterClassId = ref('')
+const rosterClassOptions = computed(() => [
+  { value: '', label: '选择班级' },
+  ...classes.value.map((c) => ({ value: String(c.id), label: c.display_name })),
+])
+
+const { mutateAsync: enrollByClass, isPending: isEnrollingByClass } = useMutation({
+  mutationFn: () => offeringsApi.enrollByClass(rosterOffering.value!.id, [Number(rosterClassId.value)]),
+  onSuccess: (result) => {
+    refetchRoster()
+    showToast(`按班级加入 ${result.imported} 人，跳过 ${result.skipped} 人`, 'success')
+    rosterClassId.value = ''
+  },
+  onError: (error) => showToast(getErrorMessage(error) || '加入失败', 'error'),
+})
+
 const { mutateAsync: importEnrollments, isPending: isImporting } = useMutation({
   mutationFn: () => offeringsApi.importEnrollments(
     rosterOffering.value!.id,
@@ -564,6 +581,33 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
       description="批量导入学号（每行一个），退课保留历史记录"
     >
       <div class="space-y-4">
+        <div>
+          <label class="text-sm text-[#737373]">按班级加入名单</label>
+          <div class="mt-1 flex gap-2">
+            <Select
+              v-model="rosterClassId"
+              :options="rosterClassOptions"
+              placeholder="选择班级"
+              class="flex-1"
+            />
+            <Button
+              variant="outline"
+              :disabled="!rosterClassId || isEnrollingByClass"
+              data-testid="enroll-by-class"
+              @click="enrollByClass()"
+            >
+              <Loader2
+                v-if="isEnrollingByClass"
+                class="mr-1 h-4 w-4 animate-spin"
+              />
+              加入名单
+            </Button>
+          </div>
+          <p class="mt-1 text-xs text-[#a3a3a3]">
+            加入所选班级的全部在读学生（已在名单中的会保留）
+          </p>
+        </div>
+
         <div>
           <label class="text-sm text-[#737373]">批量导入学号</label>
           <textarea

@@ -255,12 +255,65 @@ def test_offerings_and_enrollments(admin_client, seed_basics, session):
     resp = admin_client.get(f"/api/v1/offerings/{offering_id}/enrollments")
     assert resp.status_code == 200
     assert len(resp.json()["data"]) == 1
-    assert resp.json()["data"][0]["student_id"] == "S001"
+
+    enrollment_id = resp.json()["data"][0]["enrollment_id"]
 
     # 退课
-    enrollment_id = resp.json()["data"][0]["enrollment_id"]
     resp = admin_client.put(f"/api/v1/enrollments/{enrollment_id}/drop")
     assert resp.status_code == 200
+
+
+def test_enroll_by_class(admin_client, seed_basics, session):
+    """按班级加入名单：该班全部在读学生入名单；禁用学生与退课学生不受影响"""
+    courses = admin_client.get("/api/v1/courses").json()["data"]
+    sems = admin_client.get("/api/v1/semesters").json()["data"]
+    teacher = session.exec(select(User).where(User.username == "t1")).one()
+    cls = session.exec(select(Class_).where(Class_.name == "一班")).one()
+
+    # 一班再加两名学生：一名在读、一名已禁用
+    session.add(Student(student_id="S002", name="学生2", class_id=cls.id, cohort_year="2026"))
+    session.add(Student(student_id="S003", name="学生3", class_id=cls.id,
+                        cohort_year="2026", is_account_enabled=False))
+    session.commit()
+
+    resp = admin_client.post("/api/v1/offerings", json={
+        "course_id": courses[0]["id"], "semester_id": sems[0]["id"],
+        "teacher_id": teacher.id, "class_ids": [cls.id],
+    })
+    offering_id = resp.json()["data"]["id"]
+
+    # 按班级加入：S001/S002 入名单（S003 已禁用不计入）
+    resp = admin_client.post(f"/api/v1/offerings/{offering_id}/enrollments", json={
+        "class_ids": [cls.id],
+    })
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["data"] == {"imported": 2, "skipped": 0}
+
+    roster = admin_client.get(f"/api/v1/offerings/{offering_id}/enrollments").json()["data"]
+    assert {r["student_id"] for r in roster} == {"S001", "S002"}
+
+    # 重复加入：已在名单中的学生保持 enrolled（幂等，不报错）
+    resp = admin_client.post(f"/api/v1/offerings/{offering_id}/enrollments", json={
+        "class_ids": [cls.id],
+    })
+    assert resp.status_code == 200
+    assert resp.json()["data"]["imported"] == 2
+    assert len(admin_client.get(f"/api/v1/offerings/{offering_id}/enrollments").json()["data"]) == 2
+
+    # 两种来源并用且互相去重：student_ids 里的 S001 已在名单，按班加入仍为 2 人
+    resp = admin_client.post(f"/api/v1/offerings/{offering_id}/enrollments", json={
+        "student_ids": ["S001"], "class_ids": [cls.id],
+    })
+    assert resp.status_code == 200
+    assert resp.json()["data"]["imported"] == 2
+
+    # 两者都不给 → 400；班级不存在 → 400
+    resp = admin_client.post(f"/api/v1/offerings/{offering_id}/enrollments", json={})
+    assert resp.status_code == 400
+    resp = admin_client.post(f"/api/v1/offerings/{offering_id}/enrollments", json={
+        "class_ids": [99999],
+    })
+    assert resp.status_code == 400
 
 
 def test_student_status_and_transfer(admin_client, seed_basics, session):
