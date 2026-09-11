@@ -37,10 +37,14 @@ from sqlmodel import Session, SQLModel, create_engine
 
 
 def _truncate_all_tables(engine) -> None:
-    """清空测试库所有表（PG TRUNCATE，比逐表 DELETE 可靠且自动覆盖新表）"""
+    """清空测试库脏表（只清非空表：全量 TRUNCATE 约 300ms，按需约 20ms）"""
+    tables = list(SQLModel.metadata.tables.keys())
     with Session(engine) as s:
-        s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE"
-                       % ", ".join(SQLModel.metadata.tables.keys())))
+        probe = " UNION ALL ".join(
+            f"SELECT '{t}' AS t WHERE EXISTS (SELECT 1 FROM {t})" for t in tables)
+        nonempty = [row[0] for row in s.execute(text(probe)).all()]
+        if nonempty:
+            s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE" % ", ".join(nonempty)))
         s.commit()
 
 

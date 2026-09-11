@@ -57,13 +57,22 @@ from app.core.security import generate_password_hash
 
 
 def _clear_all_data():
-    """清理所有表数据 — PG TRUNCATE 一次清空，自动覆盖新表"""
+    """清理脏数据 —— 只 TRUNCATE 非空表
+
+    全量 TRUNCATE 29 张表约 300ms/次（PG 需对每张表加 ACCESS EXCLUSIVE 并写 WAL），
+    而多数用例只写 2-5 张表。先用 EXISTS 精确判定哪些表非空（约 9ms 一次往返），
+    再只清这些表：典型用例从 ~300ms 降到 ~20-60ms。
+    非空表用 EXISTS 实测而非 pg_stat 估算，避免统计滞后导致的跨用例残留。
+    """
     from sqlalchemy import text
+    tables = list(SQLModel.metadata.tables.keys())
     with Session(_test_engine) as session:
-        session.execute(text(
-            "TRUNCATE %s RESTART IDENTITY CASCADE"
-            % ", ".join(SQLModel.metadata.tables.keys())
-        ))
+        probe = " UNION ALL ".join(
+            f"SELECT '{t}' AS t WHERE EXISTS (SELECT 1 FROM {t})" for t in tables)
+        nonempty = [row[0] for row in session.execute(text(probe)).all()]
+        if nonempty:
+            session.execute(text(
+                "TRUNCATE %s RESTART IDENTITY CASCADE" % ", ".join(nonempty)))
         session.commit()
 
 
@@ -71,8 +80,8 @@ def _clear_all_data():
 def test_engine():
     """提供测试引擎"""
     _clear_all_data()
-    # 模型变更后重新创建表/索引（如 partial unique index）
-    SQLModel.metadata.create_all(_test_engine)
+    # 建表只在 conftest 导入时做一次；此处不再 create_all（每用例 30 张表的
+    # checkfirst 查询约 18ms，纯浪费）
     # 清理进程级缓存（班级/学期映射），避免跨测试污染
     from app.core.class_cache import invalidate_class_cache
     from app.core.term import invalidate_semester_cache

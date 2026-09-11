@@ -120,17 +120,44 @@ tests/
 
 ## 运行测试
 
+### 0. 前置：并行分库（首次在新机器上跑必做）
+
+`pytest.ini` 默认 `-n 8`（xdist 8 个 worker），每个 worker 用**独立库**避免互相清表：
+
+| 用途 | 库名 | 数量 |
+|---|---|---|
+| 常规测试 | `classhub_test_0..7` | 8 |
+| 迁移链测试 | `classhub_migration_test_0..7` | 8 |
+
+缺库会报 `database "classhub_test_N" does not exist`；迁移库还要求 `public` schema 属主是 `classhub`（否则 `DROP SCHEMA public` 报权限错误）。一次性创建：
+
+```bash
+for i in $(seq 0 7); do
+  sudo -u postgres createdb -O classhub classhub_test_$i
+  sudo -u postgres createdb -O classhub classhub_migration_test_$i
+  sudo -u postgres psql -d classhub_migration_test_$i -c "ALTER SCHEMA public OWNER TO classhub;"
+done
+# 降低测试库的 fsync 开销（不影响开发库）
+for i in $(seq 0 7); do
+  psql -h localhost -U classhub -d postgres -c "ALTER DATABASE classhub_test_$i SET synchronous_commit = off;"
+  psql -h localhost -U classhub -d postgres -c "ALTER DATABASE classhub_migration_test_$i SET synchronous_commit = off;"
+done
+```
+
 ### 1. 运行全部测试
 
 ```bash
 # 激活环境
 conda activate student-manage
 
-# 运行全部测试
+# 运行全部测试（默认 -n 8，约 80s / 792 用例）
 pytest tests/ -v
 
 # 快速模式（无详细回溯）
 pytest tests/ -q
+
+# 固定到单个分库串行（多代理并行时避免抢库）
+PYTEST_XDIST_WORKER=gw3 pytest tests/integration -q -n 0
 ```
 
 ### 2. 按层级运行
