@@ -10,6 +10,7 @@ import type { TodayScheduleItem } from '@/types'
 export interface CourseSchedule {
   id: number
   course_name: string
+  class_id: number
   class_name: string
   teacher_id?: number
   teacher_name?: string
@@ -49,7 +50,7 @@ export const schedulesApi = {
    * 返回类型: CourseSchedule[]（已自动提取 data）
    */
   getList: (params?: {
-    class_name?: string
+    class_id?: number
     teacher_id?: number
     day_of_week?: number
     week_number?: number

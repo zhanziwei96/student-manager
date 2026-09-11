@@ -16,7 +16,7 @@ export function createQuestion(data: CreateQuestionRequest): Promise<{ question_
 }
 
 /** 老师获取问题列表 */
-export function getTeacherQuestions(params?: { class_name?: string; status?: string }): Promise<Question[]> {
+export function getTeacherQuestions(params?: { class_id?: number; status?: string }): Promise<Question[]> {
   return get('/teacher/questions', params)
 }
 

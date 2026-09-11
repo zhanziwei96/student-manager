@@ -113,7 +113,7 @@ export type StudentStatus = 'active' | 'suspended' | 'withdrawn' | 'graduated'
 export interface CreateStudentRequest {
   student_id: string            // 学号
   name: string                  // 姓名
-  class_name: string            // 班级
+  class_id: number              // 班级ID（未分班传 null）
 }
 
 /**
@@ -123,7 +123,7 @@ export interface CreateStudentRequest {
  */
 export interface UpdateStudentRequest {
   name?: string                 // 姓名（可选）
-  class_name?: string           // 班级（可选）
+  class_id?: number             // 班级ID（可选）
   // 注意：后端 StudentUpdate 不支持修改账户状态
 }
 
@@ -300,7 +300,7 @@ export interface CourseSession {
 }
 
 export interface StartCourseSessionRequest {
-  class_name: string
+  class_id: number
   course_name?: string
   schedule_id?: number
 }
@@ -336,6 +336,7 @@ export interface CreateScheduleAdjustmentRequest {
 export interface TodayScheduleItem {
   id: number
   course_name: string
+  class_id: number
   class_name: string
   teacher_id?: number
   teacher_name?: string

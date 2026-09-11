@@ -54,7 +54,7 @@ export function useCourseSessionByClassName(className: string | Ref<string>) {
 }
 
 export interface StartCourseSessionParams {
-  className: string
+  classId: number
   courseName?: string
   scheduleId?: number
 }
@@ -64,7 +64,7 @@ export function useCourseSessionStart() {
   const { mutateAsync, isPending, error } = useMutation({
     mutationFn: async (params: StartCourseSessionParams) => {
       return await courseSessionApi.start({
-        class_name: params.className,
+        class_id: params.classId,
         course_name: params.courseName,
         schedule_id: params.scheduleId,
       })

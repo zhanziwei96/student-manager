@@ -15,7 +15,7 @@ import { Users, GraduationCap, UserRound, ChevronLeft, ChevronRight } from 'luci
 const {
   page,
   searchQuery,
-  className,
+  classId,
   isSearching,
   classOptions,
   filteredStudents,
@@ -92,7 +92,7 @@ const STATUS_LABEL: Record<string, string> = {
     <StudentFilters
       class="mb-5"
       v-model:search-query="searchQuery"
-      v-model:selected-class="className"
+      v-model:selected-class="classId"
       :class-options="classOptions"
       @update:search-query="setSearchQuery"
       @update:selected-class="setClassFilter"

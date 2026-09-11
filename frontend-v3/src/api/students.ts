@@ -7,7 +7,7 @@ import type {
 
 /** 学生列表分页参数 */
 export interface StudentListParams {
-  class_name?: string
+  class_id?: number
   limit?: number
   offset?: number
 }
@@ -56,9 +56,9 @@ export const studentsApi = {
   getByStudentId: (studentId: string): Promise<Student> =>
     get(`/students/${studentId}`),
 
-  /** 按班级名获取学生列表 */
-  getStudentsByClass: (className: string): Promise<Student[]> =>
-    get('/students', { class_name: className }),
+  /** 按班级 ID 获取学生列表 */
+  getStudentsByClass: (classId: number): Promise<Student[]> =>
+    get('/students', { class_id: classId }),
 
   create: (data: CreateStudentRequest): Promise<Student> =>
     post('/students', data),
@@ -70,8 +70,8 @@ export const studentsApi = {
     put(`/students/${id}/reset-password`, { new_password: newPassword }),
 
   /** 按班级批量禁用学生账号（学期归档，admin 或负责该班的教师），支持一次传多个班级 */
-  disableByClass: (classNames: string[]): Promise<{ disabled_count: number; class_names: string[] }> =>
-    post('/students/disable-by-class', { class_names: classNames }),
+  disableByClass: (classIds: number[]): Promise<{ disabled_count: number; class_ids: number[] }> =>
+    post('/students/disable-by-class', { class_ids: classIds }),
 
   /** 学籍状态管理（在读/休学/退学/毕业，仅管理员） */
   updateStatus: (studentId: string, status: StudentStatus): Promise<void> =>

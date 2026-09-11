@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { computed, type Ref, ref } from 'vue'
+import { computed, type Ref, ref, toValue, type MaybeRefOrGetter } from 'vue'
 import { checkinApi } from '@/api/checkin'
 import { useStudentProfile } from './useStudentProfile'
 import { useSessionCheckins } from './useCheckins'
@@ -8,25 +8,24 @@ import type { CheckinRecord } from '@/types'
 
 /**
  * 学生签到 - 获取所在班级的活跃课堂状态 - FE-003 修复后
+ *
+ * 注意：Phase 6 起 `/course-sessions/class/{class_id}` 只接受行政班 ID，
+ * 而学生端当前拿不到自己的 class_id（登录响应/JWT/学生详情均只下发 class_name），
+ * 故必须由调用方显式传入 classId，见报告 NEEDS_CONTEXT。
  */
-export function useStudentCourseSession(className?: string | Ref<string>) {
-  const { data: studentProfile } = useStudentProfile()
-
-  const targetClassName = computed(() => {
-    if (className) return typeof className === 'string' ? className : className.value
-    return studentProfile.value?.class_name
-  })
+export function useStudentCourseSession(classId?: MaybeRefOrGetter<number | undefined>) {
+  const targetClassId = computed(() => toValue(classId))
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['student-course-session', targetClassName],
+    queryKey: ['student-course-session', targetClassId],
     queryFn: async () => {
-      const classNameValue = targetClassName.value
-      if (!classNameValue) return null
+      const classIdValue = targetClassId.value
+      if (!classIdValue) return null
 
       // FE-003: 直接获取数据，错误自动抛出
-      return await checkinApi.getCourseSessionForClass(classNameValue)
+      return await checkinApi.getCourseSessionForClass(classIdValue)
     },
-    enabled: computed(() => !!targetClassName.value),
+    enabled: computed(() => !!targetClassId.value),
     staleTime: 5000, // 5秒内不重复请求，避免组件快速切换时堆积
     refetchInterval: 10000,
     refetchOnWindowFocus: false, // 签到页面不需要窗口聚焦时刷新
@@ -44,7 +43,7 @@ export function useStudentCourseSession(className?: string | Ref<string>) {
     isPending,
     error,
     refetch,
-    className: targetClassName,
+    classId: targetClassId,
     hasActiveSession: computed(() => data.value?.active || false),
   }
 }

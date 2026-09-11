@@ -5,14 +5,23 @@ import { useAnswers } from '@/features/question/composables/useAnswers'
 import QuestionCard from '@/features/question/components/QuestionCard.vue'
 import AnswerList from '@/features/question/components/AnswerList.vue'
 import AnswerInput from '@/features/question/components/AnswerInput.vue'
+import { Select } from '@/components/ui'
+import { useClasses } from '@/composables'
 import type { Question } from '@/types/question'
 
 const statusFilter = ref('')
 const selectedQuestion = ref<Question | null>(null)
 const showCreateForm = ref(false)
 const newQuestionContent = ref('')
-const newQuestionClass = ref('')
+const newQuestionClassId = ref<number | ''>('')
 const newQuestionRealtime = ref(false)
+
+// 目标班级选项（value 为 class_id，'' = 所有班级）
+const { data: classes } = useClasses()
+const classOptions = computed(() => [
+  { value: '' as const, label: '所有班级' },
+  ...(classes.value ?? []).map((c) => ({ value: c.id, label: c.display_name })),
+])
 
 const { questions, isLoading, createQuestion, closeQuestion } = useTeacherQuestions({
   status: statusFilter,
@@ -33,12 +42,12 @@ async function handleCreate() {
   if (!newQuestionContent.value.trim()) return
   await createQuestion({
     content: newQuestionContent.value.trim(),
-    class_name: newQuestionClass.value || undefined,
+    class_id: newQuestionClassId.value === '' ? undefined : newQuestionClassId.value,
     is_realtime: newQuestionRealtime.value,
   })
   showCreateForm.value = false
   newQuestionContent.value = ''
-  newQuestionClass.value = ''
+  newQuestionClassId.value = ''
   newQuestionRealtime.value = false
 }
 
@@ -86,10 +95,11 @@ function formatDate(iso: string): string {
         class="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <div class="flex gap-4 mt-3 items-center">
-        <input
-          v-model="newQuestionClass"
-          placeholder="目标班级（留空表示所有班级）"
-          class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        <Select
+          v-model="newQuestionClassId"
+          class="w-56"
+          placeholder="目标班级"
+          :options="classOptions"
         />
         <label class="flex items-center gap-2 cursor-pointer">
           <input v-model="newQuestionRealtime" type="checkbox" class="w-4 h-4" />

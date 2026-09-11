@@ -57,15 +57,15 @@ export interface DissolutionRequest {
  */
 export const groupsApi = {
   // 教师
-  getTeacherGroups: (className: string, courseId?: number): Promise<Group[]> =>
-    get('/teacher/groups', courseId ? { class_name: className, course_id: courseId } : { class_name: className }),
-  createTeacherGroup: (data: { class_name: string; name: string; course_id: number }): Promise<{ group_id: number; name: string }> =>
+  getTeacherGroups: (classId: number, courseId?: number): Promise<Group[]> =>
+    get('/teacher/groups', courseId ? { class_id: classId, course_id: courseId } : { class_id: classId }),
+  createTeacherGroup: (data: { class_id: number; name: string; course_id: number }): Promise<{ group_id: number; name: string }> =>
     post('/teacher/groups', data),
-  autoAssign: (className: string, courseId: number): Promise<Group[]> =>
-    post('/teacher/groups/auto-assign', { class_name: className, course_id: courseId }),
-  getClassGroupSettings: (className: string): Promise<{ class_name: string; max_members_per_group: number }> =>
-    get('/teacher/class-group-settings', { class_name: className }),
-  updateClassGroupSettings: (data: { class_name: string; max_members_per_group: number }): Promise<{ class_name: string; max_members_per_group: number }> =>
+  autoAssign: (classId: number, courseId: number): Promise<Group[]> =>
+    post('/teacher/groups/auto-assign', { class_id: classId, course_id: courseId }),
+  getClassGroupSettings: (classId: number): Promise<{ class_name: string; max_members_per_group: number }> =>
+    get('/teacher/class-group-settings', { class_id: classId }),
+  updateClassGroupSettings: (data: { class_id: number; max_members_per_group: number }): Promise<{ class_name: string; max_members_per_group: number }> =>
     put('/teacher/class-group-settings', data),
   transferLeader: (groupId: number, newLeaderId: string): Promise<{ leader_student_id: string }> =>
     post(`/teacher/groups/${groupId}/transfer-leader`, { new_leader_id: newLeaderId }),

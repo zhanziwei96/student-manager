@@ -36,7 +36,7 @@ export interface Answer {
 /** 创建问题请求 */
 export interface CreateQuestionRequest {
   content: string
-  class_name?: string
+  class_id?: number
   is_realtime?: boolean
 }
 

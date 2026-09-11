@@ -78,7 +78,8 @@ const { mutateAsync: createOffering, isPending: isCreating } = useMutation({
     course_id: Number(createForm.value.course_id),
     semester_id: Number(createForm.value.semester_id),
     teacher_id: createForm.value.teacher_id ? Number(createForm.value.teacher_id) : null,
-    class_scope: createForm.value.class_scope.trim(),
+    // TODO(Task 14): 面向范围多选落地后由班级多选提供；空数组 = 所有班级
+    class_ids: [],
     capacity: createForm.value.capacity ? Number(createForm.value.capacity) : null,
   }),
   onSuccess: () => {
@@ -103,6 +104,7 @@ const handleCreate = async () => {
     return
   }
   await createOffering()
+  // 注意：面向范围（class_ids）待 Task 14 多选落地，当前创建结果为「所有班级」
 }
 
 // 编辑
@@ -123,7 +125,7 @@ const openEditDialog = (offering: CourseOffering) => {
 const { mutateAsync: updateOffering, isPending: isUpdating } = useMutation({
   mutationFn: () => offeringsApi.update(editingOffering.value!.id, {
     teacher_id: editForm.value.teacher_id ? Number(editForm.value.teacher_id) : null,
-    class_scope: editForm.value.class_scope.trim(),
+    // TODO(Task 14): 面向范围多选落地后由班级多选提供；不传 = 保持原范围不变
     capacity: editForm.value.capacity ? Number(editForm.value.capacity) : null,
   }),
   onSuccess: () => {
@@ -346,8 +348,12 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
           <Input
             v-model="createForm.class_scope"
             placeholder="如：计科1-2班"
+            disabled
             class="mt-1"
           />
+          <p class="mt-1 text-xs text-[#a3a3a3]">
+            班级多选待改造，当前创建为「所有班级」
+          </p>
         </div>
         <div>
           <label class="text-sm text-[#737373]">容量</label>
@@ -407,8 +413,12 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
           <Input
             v-model="editForm.class_scope"
             placeholder="如：计科1-2班"
+            disabled
             class="mt-1"
           />
+          <p class="mt-1 text-xs text-[#a3a3a3]">
+            班级多选待改造，保存不修改面向范围
+          </p>
         </div>
         <div>
           <label class="text-sm text-[#737373]">容量</label>

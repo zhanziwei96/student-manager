@@ -70,7 +70,7 @@ const isAdmin = computed(() => authStore.isAdmin)
 const currentUser = computed(() => authStore.user)
 
 // 查询条件
-const selectedClass = ref('')
+const selectedClassId = ref<number | ''>('')
 const selectedDay = ref<number | undefined>(undefined)
 const selectedWeek = ref<number | undefined>(undefined)
 
@@ -82,7 +82,7 @@ const { data: termInfo } = useTermInfo()
 
 // 查询参数 - 使用 ref 存储筛选条件
 const queryParams = computed(() => ({
-  class_name: selectedClass.value || undefined,
+  class_id: selectedClassId.value === '' ? undefined : selectedClassId.value,
   day_of_week: selectedDay.value,
   week_number: selectedWeek.value || undefined,
   // 教师只看到自己的课程，管理员看到所有
@@ -107,8 +107,8 @@ const weekPickerOptions = computed(() => {
 // 为 MobilePicker 准备的班级选项
 const classPickerOptions = computed(() => {
   return (classes.value || []).map(cls => ({
-    value: cls.name,
-    label: cls.name
+    value: cls.id,
+    label: cls.display_name
   }))
 })
 
@@ -569,7 +569,7 @@ const handleBatchDelete = async () => {
         <div class="w-full sm:w-48">
           <label class="mb-1 block text-sm text-[#737373]">班级</label>
           <MobilePicker
-            v-model="selectedClass"
+            v-model="selectedClassId"
             title="选择班级"
             placeholder="全部班级"
             clearable
