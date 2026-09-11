@@ -57,7 +57,6 @@ class CourseOfferingBase(SQLModel):
         description="教师ID（可空：先排课后定教师）",
     )
     teacher_name: str = Field(default="", description="教师姓名（冗余快照，免 JOIN 显示）", max_length=50)
-    class_scope: str = Field(..., description="面向范围（如 计科1-2班，展示用）", max_length=100)
     capacity: Optional[int] = Field(default=None, description="容量")
     status: str = Field(default="active", description="状态: active|ended", max_length=20)
 
@@ -66,7 +65,7 @@ class CourseOffering(CourseOfferingBase, table=True):
     """教学班表模型 — 某学期某教师上某课程的一个班"""
     __tablename__ = "course_offerings"
     __table_args__ = (
-        UniqueConstraint('course_id', 'semester_id', 'teacher_id', 'class_scope',
+        UniqueConstraint('course_id', 'semester_id', 'teacher_id',
                          name='uix_offering'),
     )
 
@@ -80,7 +79,6 @@ class CourseOfferingCreate(SQLModel):
     semester_id: int
     teacher_id: Optional[int] = None
     teacher_name: str = ""
-    class_scope: str
     capacity: Optional[int] = None
 
 
@@ -88,7 +86,6 @@ class CourseOfferingUpdate(SQLModel):
     """更新教学班请求（全部 Optional）"""
     teacher_id: Optional[int] = None
     teacher_name: Optional[str] = None
-    class_scope: Optional[str] = None
     capacity: Optional[int] = None
     status: Optional[str] = None
 
@@ -96,6 +93,17 @@ class CourseOfferingUpdate(SQLModel):
 class CourseOfferingResponse(CourseOfferingBase):
     """教学班响应"""
     id: int
+    class_scope: str = ""  # 响应字段：Task 7 由 course_offering_classes 关联表拼装
+
+
+class CourseOfferingClass(SQLModel, table=True):
+    """教学班-班级关联表（替代 class_scope 自由文本，权限真源）
+
+    复合主键 (offering_id, class_id)。offering 无关联行 = 面向全部班级（通配，见 Phase 6 决策）。
+    """
+    __tablename__ = "course_offering_classes"
+    offering_id: int = Field(..., foreign_key="course_offerings.id", primary_key=True, description="教学班ID")
+    class_id: int = Field(..., foreign_key="classes.id", primary_key=True, description="班级ID")
 
 
 class EnrollmentBase(SQLModel):
