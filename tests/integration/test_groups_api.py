@@ -12,13 +12,11 @@ def seed_class_students(seed_refs, test_engine):
         session.add(Student(
             student_id="GT000",
             name="种子学生",
-            class_name="一班",
             class_id=seed_refs["一班"],
         ))
         session.add(Student(
             student_id="GT001",
             name="种子学生二",
-            class_name="二班",
             class_id=seed_refs["二班"],
         ))
         session.commit()
@@ -47,7 +45,7 @@ def test_student_my_group_unauthenticated(client: TestClient):
 def test_student_create_and_view_group(student_client: TestClient, course, seed_refs):
     # 创建小组
     resp = student_client.post("/api/v1/student/groups", json={
-        "class_name": "一班",
+        "class_id": seed_refs["一班"],
         "name": "先锋组",
         "course_id": course,
     })
@@ -68,7 +66,7 @@ def test_student_create_and_view_group(student_client: TestClient, course, seed_
 def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient, seed_refs, course):
     # 自动分配（前提是班级有未分组学生）
     resp = teacher_client.post("/api/v1/teacher/groups/auto-assign", json={
-        "class_name": "一班",
+        "class_id": seed_refs["一班"],
         "course_id": course,
     })
     assert resp.status_code == 200
@@ -76,7 +74,7 @@ def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient, seed_re
     assert data["success"] is True
 
     # 列出班级小组
-    resp = teacher_client.get("/api/v1/teacher/groups?class_name=一班")
+    resp = teacher_client.get("/api/v1/teacher/groups", params={"class_id": seed_refs["一班"]})
     assert resp.status_code == 200
     data = resp.json()
     assert data["success"] is True
@@ -86,7 +84,7 @@ def test_teacher_auto_assign_and_list_groups(teacher_client: TestClient, seed_re
 def test_teacher_dissolution_requests(teacher_client: TestClient, student_client: TestClient, course, seed_refs):
     # 学生先创建小组
     student_client.post("/api/v1/student/groups", json={
-        "class_name": "一班",
+        "class_id": seed_refs["一班"],
         "name": "解散测试组",
         "course_id": course,
     })
@@ -113,7 +111,7 @@ def test_teacher_dissolution_requests(teacher_client: TestClient, student_client
 
 
 def test_teacher_get_class_group_settings_default(teacher_client: TestClient, seed_refs):
-    resp = teacher_client.get("/api/v1/teacher/class-group-settings?class_name=一班")
+    resp = teacher_client.get("/api/v1/teacher/class-group-settings", params={"class_id": seed_refs["一班"]})
     assert resp.status_code == 200
     data = resp.json()
     assert data["success"] is True
@@ -122,7 +120,7 @@ def test_teacher_get_class_group_settings_default(teacher_client: TestClient, se
 
 def test_teacher_update_class_group_settings(teacher_client: TestClient, seed_refs):
     resp = teacher_client.put("/api/v1/teacher/class-group-settings", json={
-        "class_name": "一班",
+        "class_id": seed_refs["一班"],
         "max_members_per_group": 6,
     })
     assert resp.status_code == 200
@@ -135,12 +133,12 @@ def test_student_cannot_join_full_group(teacher_client: TestClient, seed_refs):
     """教师设置上限后，设置端点返回正确值"""
     # 教师设置上限为 2
     resp = teacher_client.put("/api/v1/teacher/class-group-settings", json={
-        "class_name": "一班",
+        "class_id": seed_refs["一班"],
         "max_members_per_group": 2,
     })
     assert resp.status_code == 200
     # 验证设置端点返回正确值
-    resp = teacher_client.get("/api/v1/teacher/class-group-settings?class_name=一班")
+    resp = teacher_client.get("/api/v1/teacher/class-group-settings", params={"class_id": seed_refs["一班"]})
     assert resp.json()["data"]["max_members_per_group"] == 2
 
 
@@ -148,13 +146,13 @@ def test_student_groups_returns_max_members_and_is_full(student_client: TestClie
     """学生小组列表应返回 max_members 和 is_full 字段"""
     # 学生创建小组
     resp = student_client.post("/api/v1/student/groups", json={
-        "class_name": "一班",
+        "class_id": seed_refs["一班"],
         "name": "测试组",
         "course_id": course,
     })
     assert resp.status_code == 200
     # 获取小组列表
-    resp = student_client.get("/api/v1/student/groups?class_name=一班")
+    resp = student_client.get("/api/v1/student/groups", params={"class_id": seed_refs["一班"]})
     assert resp.status_code == 200
     data = resp.json()
     assert data["success"] is True
@@ -195,13 +193,14 @@ def test_teacher_groups_returns_course_and_score(teacher_client: TestClient, see
         session.refresh(group)
         group_id = group.id
 
-    resp = teacher_client.get("/api/v1/teacher/groups?class_name=一班")
+    resp = teacher_client.get("/api/v1/teacher/groups", params={"class_id": seed_refs["一班"]})
     assert resp.status_code == 200
     data = resp.json()["data"]
     target = next((g for g in data if g["id"] == group_id), None)
     assert target is not None
     assert target["course_id"] == course_id
     assert target["course_name"] == "高等数学"
+    assert target["class_name"] == "2026届一班"
     assert target["score"] == 5.0
 
 
@@ -221,7 +220,7 @@ def test_student_create_group_with_course(student_client: TestClient, seed_refs)
 
     resp = student_client.post(
         "/api/v1/student/groups",
-        json={"class_name": "一班", "name": "数学第一组", "course_id": course.id},
+        json={"class_id": seed_refs["一班"], "name": "数学第一组", "course_id": course.id},
     )
     assert resp.status_code == 200
 
@@ -254,21 +253,21 @@ def test_student_can_join_multiple_course_groups(student_client: TestClient, see
 
     resp = student_client.post(
         "/api/v1/student/groups",
-        json={"class_name": "一班", "name": "数学一组", "course_id": math_id},
+        json={"class_id": seed_refs["一班"], "name": "数学一组", "course_id": math_id},
     )
     assert resp.status_code == 200
 
     # 同科目重复建组被拒
     resp = student_client.post(
         "/api/v1/student/groups",
-        json={"class_name": "一班", "name": "数学二组", "course_id": math_id},
+        json={"class_id": seed_refs["一班"], "name": "数学二组", "course_id": math_id},
     )
     assert resp.status_code == 400
 
     # 不同科目可再建组
     resp = student_client.post(
         "/api/v1/student/groups",
-        json={"class_name": "一班", "name": "英语一组", "course_id": eng_id},
+        json={"class_id": seed_refs["一班"], "name": "英语一组", "course_id": eng_id},
     )
     assert resp.status_code == 200
 
@@ -297,13 +296,13 @@ def test_teacher_creates_group(teacher_client: TestClient, seed_refs):
 
     resp = teacher_client.post(
         "/api/v1/teacher/groups",
-        json={"class_name": "一班", "name": "数学A组", "course_id": course_id},
+        json={"class_id": seed_refs["一班"], "name": "数学A组", "course_id": course_id},
     )
     assert resp.status_code == 200
     assert resp.json()["data"]["group_id"] > 0
 
     resp = teacher_client.get("/api/v1/teacher/groups", params={
-        "class_name": "一班", "course_id": course_id,
+        "class_id": seed_refs["一班"], "course_id": course_id,
     })
     assert resp.status_code == 200
     data = resp.json()["data"]

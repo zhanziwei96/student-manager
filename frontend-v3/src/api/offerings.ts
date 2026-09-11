@@ -6,14 +6,14 @@ export interface CreateOfferingRequest {
   course_id: number
   semester_id: number
   teacher_id?: number | null
-  class_scope: string
+  class_ids: number[]
   capacity?: number | null
 }
 
 /** 更新教学班请求 - 对应后端 UpdateOfferingRequest */
 export interface UpdateOfferingRequest {
   teacher_id?: number | null
-  class_scope?: string
+  class_ids?: number[]
   capacity?: number | null
   status?: 'active' | 'ended'
 }
@@ -31,6 +31,7 @@ export interface TeacherOffering {
   course_code: string
   teacher_name: string
   class_scope: string
+  class_ids: number[]
   capacity: number | null
   status: 'active' | 'ended'
   enrolled_count: number

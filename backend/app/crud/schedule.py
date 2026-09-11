@@ -5,10 +5,10 @@
 保持 API 层只负责 HTTP 处理和参数验证。
 """
 from typing import List, Optional
+from sqlalchemy import func
 from sqlmodel import Session, select
-from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
 from app.core.term import get_current_semester_id
-from app.models import CourseSchedule, User, Student
+from app.models import Class_, CourseSchedule, Student, User
 
 
 def get_schedule(session: Session, schedule_id: int) -> Optional[CourseSchedule]:
@@ -18,15 +18,15 @@ def get_schedule(session: Session, schedule_id: int) -> Optional[CourseSchedule]
 
 def get_schedules(
     session: Session,
-    class_name: Optional[str] = None,
+    class_id: Optional[int] = None,
     day_of_week: Optional[int] = None,
     teacher_id: Optional[int] = None
 ) -> List[CourseSchedule]:
     """获取课表列表"""
     query = select(CourseSchedule).where(CourseSchedule.semester_id == get_current_semester_id(session))
 
-    if class_name:
-        query = query.where(CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(CourseSchedule.class_id == class_id)
     if day_of_week:
         query = query.where(CourseSchedule.day_of_week == day_of_week)
     if teacher_id:
@@ -96,7 +96,7 @@ def delete_schedule(session: Session, schedule_id: int) -> bool:
 def create_schedule(
     session: Session,
     course_name: str,
-    class_name: str,
+    class_id: int,
     teacher_id: Optional[int],
     teacher_name: str,
     day_of_week: int,
@@ -109,11 +109,11 @@ def create_schedule(
 ) -> CourseSchedule:
     """
     创建课表
-    
+
     Args:
         session: 数据库会话
         course_name: 课程名称
-        class_name: 班级名称
+        class_id: 班级 ID
         teacher_id: 教师ID（可选）
         teacher_name: 教师姓名
         day_of_week: 星期几（1-7）
@@ -132,8 +132,7 @@ def create_schedule(
     now = get_now().isoformat()
     schedule = CourseSchedule(
         course_name=course_name,
-        class_name=class_name,
-        class_id=get_class_id_by_name(session, class_name),
+        class_id=class_id,
         semester_id=get_current_semester_id(session),
         teacher_id=teacher_id,
         teacher_name=teacher_name,
@@ -168,7 +167,9 @@ def import_schedules(
         session: 数据库会话
         records: 课表记录列表，每个记录为字典，包含：
                 - course_name: 课程名称
-                - class_name: 班级名称
+                - cohort_year: 所属届（如 2026）
+                - major: 专业
+                - class_name: 班级名（仅班名，不含届/专业）
                 - teacher_name: 教师姓名
                 - day_of_week: 星期（1-7）
                 - start_time: 开始时间
@@ -176,39 +177,50 @@ def import_schedules(
                 - classroom: 教室（可选）
                 - week_start: 开始周（可选，默认1）
                 - week_end: 结束周（可选，默认20）
-        
+
     Returns:
         tuple: (导入成功数量, 错误列表)
     """
     imported_count = 0
     errors = []
 
-    # 有启用学生的班级集合（学期归档后，禁用/不存在班级不可导入新课表）
-    active_classes = {
-        str(row) for row in session.exec(
-            select(Student.class_name).where(Student.is_account_enabled.is_(True)).distinct()
-        ).all() if row
-    }
-
     for index, record in enumerate(records):
         try:
             # 数据校验
             course_name = str(record.get('course_name', '')).strip()
             class_name = str(record.get('class_name', '')).strip()
+            cohort_year = str(record.get('cohort_year', '') or '').strip()
+            major = str(record.get('major', '') or '').strip()
             teacher_name = str(record.get('teacher_name', '')).strip()
             day_of_week = record.get('day_of_week')
             start_time = str(record.get('start_time', '')).strip()
             end_time = str(record.get('end_time', '')).strip()
-            
+
             # teacher_name 可选，其他字段必填
             if not all([course_name, class_name, start_time, end_time]):
                 errors.append(f"第 {index + 2} 行: 存在空值")
                 continue
 
-            # 班级必须存在且有启用学生（归档班级不可创建新课表）
-            if class_name not in active_classes:
+            # 按「届+专业+班级名」三元组定位班级（不自动建班：课表须挂在已存在的班上，
+            # 凭拼错的班名建班只会产生垃圾班级与届）
+            cls = session.exec(
+                select(Class_).where(
+                    Class_.name == class_name,
+                    Class_.major == major,
+                    Class_.cohort_year == cohort_year,
+                )
+            ).first()
+            # 班级必须存在且有启用学生（归档班级不可导入新课表）
+            enabled_count = 0 if cls is None else session.exec(
+                select(func.count()).select_from(Student).where(
+                    Student.class_id == cls.id,
+                    Student.is_account_enabled.is_(True),
+                )
+            ).one()
+            if enabled_count == 0:
                 errors.append(f"第 {index + 2} 行: 班级不存在或所有学生已禁用")
                 continue
+            class_id = cls.id
 
             # 星期范围校验
             try:
@@ -235,7 +247,7 @@ def import_schedules(
             existing = session.exec(
                 select(CourseSchedule).where(
                     CourseSchedule.course_name == course_name,
-                    CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])),
+                    CourseSchedule.class_id == class_id,
                     CourseSchedule.teacher_name == teacher_name,
                     CourseSchedule.day_of_week == day_of_week,
                     CourseSchedule.start_time == start_time,
@@ -252,7 +264,7 @@ def import_schedules(
             now = get_now().isoformat()
             schedule = CourseSchedule(
                 course_name=course_name,
-                class_id=get_class_id_by_name(session, class_name),
+                class_id=class_id,
                 semester_id=get_current_semester_id(session),
                 teacher_id=teacher.id if teacher else None,
                 teacher_name=teacher_name,

@@ -2,6 +2,8 @@
 安全相关工具 - 使用 bcrypt 替代 SHA256
 SEC-003: 密码盐值冗余存储修复
 """
+import os
+
 import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
@@ -9,29 +11,34 @@ from typing import Optional, Tuple
 from app.core.timezone import get_now
 
 
+# bcrypt 计算轮数：测试环境降到 4（rounds=12 单次约 330ms，测试库每次建学生/登录都要算，
+# 是测试套件的主要耗时项；测试不需要真实密码强度）。生产/开发保持 12。
+_BCRYPT_ROUNDS = 4 if os.environ.get("ENV") == "testing" else 12
+
+
 # ========== SEC-003: 新的简化接口 ==========
 
 def hash_password(password: str) -> str:
     """生成密码哈希（bcrypt，自动处理盐值）
-    
+
     SEC-003: 简化接口，bcrypt 自动处理盐值，无需单独存储
-    
+
     Args:
         password: 明文密码
-        
+
     Returns:
         str: bcrypt 哈希字符串（包含内置盐值）
-        
+
     Note:
         bcrypt 有 72 字节长度限制，超长密码会被截断
     """
     # bcrypt 有 72 字节长度限制
     password_bytes = password.encode('utf-8')[:72]
-    
+
     # bcrypt 自动生成随机盐并包含在哈希中
     return bcrypt.hashpw(
-        password_bytes, 
-        bcrypt.gensalt(rounds=12)  # 12轮是平衡安全性和性能的推荐值
+        password_bytes,
+        bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)  # 12轮是平衡安全性和性能的推荐值
     ).decode('utf-8')
 
 

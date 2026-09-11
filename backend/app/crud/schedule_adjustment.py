@@ -22,7 +22,7 @@ def get_adjustments(
     session: Session,
     schedule_id: Optional[int] = None,
     week_number: Optional[int] = None,
-    class_name: Optional[str] = None,
+    class_id: Optional[int] = None,
 ) -> List[ScheduleAdjustment]:
     """查询调整记录列表"""
     query = select(ScheduleAdjustment)
@@ -30,11 +30,10 @@ def get_adjustments(
         query = query.where(ScheduleAdjustment.schedule_id == schedule_id)
     if week_number is not None:
         query = query.where(ScheduleAdjustment.week_number == week_number)
-    if class_name is not None:
-        from app.core.class_cache import get_class_ids_by_names
+    if class_id is not None:
         from app.models import CourseSchedule
         query = query.join(CourseSchedule).where(
-            CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
+            CourseSchedule.class_id == class_id)
     return list(session.exec(query.order_by(ScheduleAdjustment.created_at.desc())).all())
 
 

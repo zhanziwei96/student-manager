@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, func, select
 
 from app.api.deps import require_admin, require_admin_or_teacher
-from app.core.class_cache import invalidate_class_cache
+from app.core.class_cache import build_class_display_name, invalidate_class_cache
 from app.core.config import HttpStatus
 from app.core.db import get_session
 from app.models import (
@@ -57,7 +57,7 @@ def _class_dict(cls: Class_, student_count: int = 0) -> dict:
         "name": cls.name,
         "major": cls.major,
         "cohort_year": cls.cohort_year,
-        "display_name": f"{cls.cohort_year}届{cls.major}{cls.name}",
+        "display_name": build_class_display_name(cls),
         "student_count": student_count,
         "status": cls.status,
     }

@@ -64,14 +64,14 @@ def test_get_schedules_list(teacher_client, create_test_schedule):
     assert len(data["data"]) >= 2
 
 
-def test_get_schedules_with_filter(teacher_client, create_test_schedule):
+def test_get_schedules_with_filter(teacher_client, create_test_schedule, seed_refs):
     """测试按条件筛选课表"""
     # 创建不同班级的课程
     create_test_schedule(course_name="康复课程", class_name="一班", day_of_week=1)
     create_test_schedule(course_name="中药课程", class_name="二班", day_of_week=1)
 
     # 按班级筛选
-    response = teacher_client.get("/api/v1/schedules?class_name=一班")
+    response = teacher_client.get(f"/api/v1/schedules?class_id={seed_refs['一班']}")
     
     assert response.status_code == 200
     data = response.json()
@@ -123,14 +123,14 @@ def test_import_schedules_csv(admin_client, test_engine, seed_refs):
     with Session(test_engine) as session:
         session.add(Student(
             student_id="IMP001", name="学生1",
-            class_name="一班", class_id=seed_refs["一班"],
+            class_id=seed_refs["一班"],
         ))
         session.commit()
 
-    # 创建 CSV 内容
-    csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间,教室,开始周,结束周
-计算机基础,一班,管理员,1,08:00,09:40,A-101,1,20
-数据结构,一班,管理员,2,10:00,11:40,B-202,1,20"""
+    # 创建 CSV 内容（班级按「所属届+专业+班级名」三元组定位，与学生导入对齐）
+    csv_content = """课程名称,所属届,专业,班级名,教师姓名,星期,开始时间,结束时间,教室,开始周,结束周
+计算机基础,2026,,一班,管理员,1,08:00,09:40,A-101,1,20
+数据结构,2026,,一班,管理员,2,10:00,11:40,B-202,1,20"""
     
     file = io.BytesIO(csv_content.encode('utf-8'))
     
@@ -166,8 +166,8 @@ def test_import_schedules_missing_columns(admin_client):
     import io
     
     # 缺少"星期"列
-    csv_content = """课程名称,班级,教师姓名,开始时间,结束时间
-计算机基础,2025康复治疗技术1班,张老师,08:00,09:40"""
+    csv_content = """课程名称,所属届,专业,班级名,教师姓名,开始时间,结束时间
+计算机基础,2025,康复治疗技术,1班,张老师,08:00,09:40"""
     
     file = io.BytesIO(csv_content.encode('utf-8'))
     
@@ -215,8 +215,8 @@ def test_teacher_cannot_import(teacher_client):
     """测试教师无权导入课表（仅管理员可导入）"""
     import io
     
-    csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间
-测试课程,2025康复治疗技术1班,教师1,1,08:00,09:40"""
+    csv_content = """课程名称,所属届,专业,班级名,教师姓名,星期,开始时间,结束时间
+测试课程,2025,康复治疗技术,1班,教师1,1,08:00,09:40"""
     
     file = io.BytesIO(csv_content.encode('utf-8'))
     
@@ -297,10 +297,10 @@ def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine
     from datetime import date
     from app.models import CourseSchedule, Semester, Student
 
-    # 导入校验要求班级有启用学生
+    # 导入校验要求班级有启用学生（班级本身由 seed_refs 建好）
     with Session(test_engine) as session:
         session.add(Student(
-            student_id="IMP002", name="学生2", class_name="一班",
+            student_id="IMP002", name="学生2",
             class_id=seed_refs["一班"],
         ))
         session.commit()
@@ -323,8 +323,8 @@ def test_import_schedule_dup_key_ignores_previous_term(admin_client, test_engine
     # 新学期导入同键课表（应成功而非"课程已存在"）
     import io
 
-    csv_content = """课程名称,班级,教师姓名,星期,开始时间,结束时间,开始周,结束周
-高等数学,一班,张老师,1,08:00,09:40,1,20"""
+    csv_content = """课程名称,所属届,专业,班级名,教师姓名,星期,开始时间,结束时间,开始周,结束周
+高等数学,2026,,一班,张老师,1,08:00,09:40,1,20"""
 
     file = io.BytesIO(csv_content.encode('utf-8'))
 

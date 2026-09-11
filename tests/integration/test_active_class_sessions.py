@@ -9,13 +9,13 @@ from sqlmodel import Session
 class TestActiveClassSessionsAPI:
     """测试活跃课堂相关 API"""
 
-    def _start_class_directly(self, test_engine, class_name, course_name=None, teacher_id=1, teacher_name="张老师"):
+    def _start_class_directly(self, test_engine, class_id, course_name=None, teacher_id=1, teacher_name="张老师"):
         """直接通过 CRUD 创建活跃课堂用于测试"""
         from app.crud.course_session import start_course_session
         with Session(test_engine) as session:
             cs = start_course_session(
                 session=session,
-                class_name=class_name,
+                class_id=class_id,
                 teacher_id=teacher_id,
                 teacher_name=teacher_name,
                 course_name=course_name
@@ -24,7 +24,7 @@ class TestActiveClassSessionsAPI:
 
     def test_get_active_class_sessions(self, student_client, test_engine, seed_refs):
         """测试获取所有活跃课堂列表（已登录学生可访问）"""
-        self._start_class_directly(test_engine, "一班", "高等数学")
+        self._start_class_directly(test_engine, seed_refs["一班"], "高等数学")
 
         response = student_client.get("/api/v1/course-sessions/active")
 
@@ -59,7 +59,7 @@ class TestActiveClassSessionsAPI:
         """测试结束上课后从活跃列表移除"""
         from app.crud.course_session import end_course_session
 
-        self._start_class_directly(test_engine, "一班", "高等数学")
+        self._start_class_directly(test_engine, seed_refs["一班"], "高等数学")
 
         # 活跃列表中有该课堂
         response = student_client.get("/api/v1/course-sessions/active")
@@ -75,8 +75,8 @@ class TestActiveClassSessionsAPI:
 
     def test_multiple_active_sessions(self, student_client, test_engine, seed_refs):
         """测试多个活跃课堂同时存在"""
-        self._start_class_directly(test_engine, "一班", "高等数学", teacher_id=1)
-        self._start_class_directly(test_engine, "二班", "数据结构", teacher_id=2)
+        self._start_class_directly(test_engine, seed_refs["一班"], "高等数学", teacher_id=1)
+        self._start_class_directly(test_engine, seed_refs["二班"], "数据结构", teacher_id=2)
 
         response = student_client.get("/api/v1/course-sessions/active")
 
@@ -116,7 +116,7 @@ class TestActiveClassSessionsAPI:
             session.commit()
 
         # 当前学期 active 课堂（CRUD 默认填充当前学期）
-        self._start_class_directly(test_engine, "一班", "高等数学", teacher_id=1)
+        self._start_class_directly(test_engine, seed_refs["一班"], "高等数学", teacher_id=1)
 
         response = student_client.get("/api/v1/course-sessions/active")
 
@@ -124,5 +124,5 @@ class TestActiveClassSessionsAPI:
         data = response.json()
         assert data["success"] is True
         assert len(data["data"]) == 1
-        assert data["data"][0]["class_name"] == "一班"
+        assert data["data"][0]["class_name"] == "2026届一班"
         assert data["data"][0]["course_name"] == "高等数学"

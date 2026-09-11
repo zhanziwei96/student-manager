@@ -15,6 +15,7 @@ from app.core.jwt import (
     get_current_user
 )
 from app.crud import get_user_by_username, record_login_success, record_login_failure
+from app.core.class_cache import get_class_display_name_by_id
 from app.models import UserRoleConst
 from app.models.constants import (
     ApiResponseConst, MessageConst,
@@ -109,6 +110,9 @@ async def login(
         # 登录成功：重置失败计数与锁定状态
         reset_student_login_lock(session, student)
 
+        # 班级展示名（class_id 运行时解析，未分班为"未分班"）
+        class_display = get_class_display_name_by_id(session, student.class_id) or "未分班"
+
         # 生成 JWT Token
         token_data = {
             "sub": str(student.student_id),
@@ -116,13 +120,13 @@ async def login(
             "name": student.name,
             "role": UserRoleConst.STUDENT,
             "is_admin": False,
-            "class_name": student.class_name,
+            "class_name": class_display,
         }
         access_token = create_access_token(token_data)
         set_token_cookie(response, access_token)
-        
+
         logger.info(f"学生登录成功: {student.student_id}")
-        
+
         return {
             ApiResponseConst.SUCCESS: True,
             ApiResponseConst.MESSAGE: MessageConst.LOGIN_SUCCESS,
@@ -131,7 +135,7 @@ async def login(
                 'username': str(student.student_id),
                 'name': student.name,
                 'role': UserRoleConst.STUDENT,
-                'class_name': student.class_name
+                'class_name': class_display
             }
         }
     

@@ -270,7 +270,6 @@ def get_stats(
     无可见班级时统计为 0（fail-closed）。
     """
     from app.api.deps import get_teacher_accessible_classes
-    from app.core.class_cache import get_class_ids_by_names
     from app.crud import count_students, count_students_filtered, get_all_classes
     from app.crud.checkin import count_today_checkins
 
@@ -281,13 +280,21 @@ def get_stats(
         today_checkins = count_today_checkins(session)
     else:
         if role == "teacher":
-            class_names = sorted(get_teacher_accessible_classes(user, session) or [])
+            # int 列表 / None（通配）/ []（空集）
+            class_ids = get_teacher_accessible_classes(user, session)
         else:
-            class_names = [user["class_name"]] if user.get("class_name") else []
-        total_students = count_students_filtered(session, class_names=class_names)
-        total_classes = len(class_names)
-        today_checkins = count_today_checkins(
-            session, class_ids=get_class_ids_by_names(session, class_names))
+            from app.models import Student
+            stu = session.get(Student, user.get("sub"))
+            class_ids = [stu.class_id] if stu and stu.class_id is not None else []
+        if class_ids is None:
+            # 通配：面向全部班级，统计与 admin 同口径
+            total_students = count_students(session)
+            total_classes = len(get_all_classes(session))
+            today_checkins = count_today_checkins(session)
+        else:
+            total_students = count_students_filtered(session, class_ids=class_ids)
+            total_classes = len(class_ids)
+            today_checkins = count_today_checkins(session, class_ids=class_ids)
 
     return {
         ApiResponseConst.SUCCESS: True,

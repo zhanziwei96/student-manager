@@ -9,13 +9,13 @@ from sqlmodel import Session
 class TestQRCheckinAPI:
     """动态验证码签到接口测试"""
 
-    def _start_class_directly(self, test_engine, class_name, course_name=None, teacher_id=1, teacher_name="张老师"):
+    def _start_class_directly(self, test_engine, class_id, course_name=None, teacher_id=1, teacher_name="张老师"):
         """直接通过 CRUD 创建活跃课堂用于测试"""
         from app.crud.course_session import start_course_session
         with Session(test_engine) as session:
             cs = start_course_session(
                 session=session,
-                class_name=class_name,
+                class_id=class_id,
                 teacher_id=teacher_id,
                 teacher_name=teacher_name,
                 course_name=course_name
@@ -47,9 +47,8 @@ class TestQRCheckinAPI:
         assert response.status_code == 200
         return user
 
-    def _get_student_client(self, client, test_engine, student_id="S001", name="学生1", class_name="一班"):
+    def _get_student_client(self, client, test_engine, student_id="S001", name="学生1", class_id=None):
         """创建学生并登录，返回 (client, student)"""
-        from app.core.class_cache import get_class_id_by_name
         from app.core.security import generate_password_hash
         from app.models import Student
         with Session(test_engine) as session:
@@ -57,8 +56,7 @@ class TestQRCheckinAPI:
             student = Student(
                 student_id=student_id,
                 name=name,
-                class_name=class_name,
-                class_id=get_class_id_by_name(session, class_name),
+                class_id=class_id,
                 password_hash=password_hash,
                 salt=salt
             )
@@ -76,7 +74,7 @@ class TestQRCheckinAPI:
     def test_get_verification_code_success(self, client, test_engine, seed_refs):
         """教师成功获取动态验证码"""
         self._get_teacher_token(client, test_engine)
-        cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
+        cs = self._start_class_directly(test_engine, seed_refs["一班"], teacher_id=1)
 
         response = client.get(f"/api/v1/course-sessions/{cs.id}/verification-code")
         assert response.status_code == 200
@@ -96,7 +94,7 @@ class TestQRCheckinAPI:
     def test_get_verification_code_forbidden(self, client, test_engine, seed_refs):
         """非创建教师获取验证码返回 403"""
         self._get_teacher_token(client, test_engine)
-        cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
+        cs = self._start_class_directly(test_engine, seed_refs["一班"], teacher_id=1)
 
         # 登录另一个教师
         from app.core.security import generate_password_hash
@@ -126,8 +124,8 @@ class TestQRCheckinAPI:
     def test_checkin_with_valid_code(self, client, test_engine, seed_refs):
         """使用有效验证码签到成功"""
         self._get_teacher_token(client, test_engine)
-        cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
-        self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
+        cs = self._start_class_directly(test_engine, seed_refs["一班"], teacher_id=1)
+        self._get_student_client(client, test_engine, student_id="S001", class_id=seed_refs["一班"])
 
         # 重新登录教师，确保调用 /verification-code 是教师身份
         client.post("/api/v1/login", json={
@@ -163,8 +161,8 @@ class TestQRCheckinAPI:
     def test_checkin_with_invalid_code(self, client, test_engine, seed_refs):
         """使用无效验证码签到失败"""
         self._get_teacher_token(client, test_engine)
-        self._start_class_directly(test_engine, "一班", teacher_id=1)
-        self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
+        self._start_class_directly(test_engine, seed_refs["一班"], teacher_id=1)
+        self._get_student_client(client, test_engine, student_id="S001", class_id=seed_refs["一班"])
 
         response = client.post("/api/v1/checkin", json={
             "student_id": "S001",
@@ -178,8 +176,8 @@ class TestQRCheckinAPI:
     def test_checkin_duplicate_with_code(self, client, test_engine, seed_refs):
         """同一学生重复验证码签到失败"""
         self._get_teacher_token(client, test_engine)
-        cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
-        self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
+        cs = self._start_class_directly(test_engine, seed_refs["一班"], teacher_id=1)
+        self._get_student_client(client, test_engine, student_id="S001", class_id=seed_refs["一班"])
 
         # 教师登录获取验证码
         client.post("/api/v1/login", json={
@@ -214,8 +212,8 @@ class TestQRCheckinAPI:
     def test_checkin_device_bound_and_updated(self, client, test_engine, seed_refs):
         """设备绑定创建和更新"""
         self._get_teacher_token(client, test_engine)
-        cs = self._start_class_directly(test_engine, "一班", teacher_id=1)
-        self._get_student_client(client, test_engine, student_id="S001", class_name="一班")
+        cs = self._start_class_directly(test_engine, seed_refs["一班"], teacher_id=1)
+        self._get_student_client(client, test_engine, student_id="S001", class_id=seed_refs["一班"])
 
         # 教师登录获取验证码
         client.post("/api/v1/login", json={

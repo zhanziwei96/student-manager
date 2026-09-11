@@ -104,7 +104,7 @@ const formatDuration = (startTime: string): string => {
 }
 
 // ===== 状态定义 =====
-const className = ref('')
+const classId = ref<number | ''>('')
 const courseName = ref('')
 const studentCode = ref('')
 const searchQuery = ref('')
@@ -161,11 +161,15 @@ const selectedSession = computed<CourseSession | null>(() => {
   return activeSessions.value.find((s: CourseSession) => s.id === activeTab.value) || activeSessions.value[0]
 })
 
-// 当前选中课堂的班级名称和ID
-const selectedClassName = computed(() => selectedSession.value?.class_name || '')
+// 当前选中课堂的班级ID（课堂响应只带 class_name 展示名，需按 display_name 反查 id）
+const selectedClassId = computed(() => {
+  const displayName = selectedSession.value?.class_name
+  if (!displayName) return undefined
+  return (classList.value ?? []).find((c) => c.display_name === displayName)?.id
+})
 const selectedSessionId = computed(() => selectedSession.value?.id)
 
-const { data: classStudents, isPending: isLoadingStudents } = useClassStudents(selectedClassName)
+const { data: classStudents, isPending: isLoadingStudents } = useClassStudents(selectedClassId)
 const { data: sessionCheckins, refetch: refetchCheckins } = useSessionCheckins(selectedSessionId)
 
 const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn(selectedSessionId)
@@ -200,7 +204,7 @@ const otherOccupiedClasses = computed(() => {
   return allActiveSessions.value.filter((s: any) => s.teacher_id !== currentUserId)
 })
 
-// 班级选项
+// 班级选项（value 为 class_id；占用状态按 class_name 展示名比对）
 const availableClassOptions = computed(() => {
   if (!classList.value) return []
   const occupiedMap = new Map(
@@ -208,10 +212,10 @@ const availableClassOptions = computed(() => {
   )
 
   return classList.value.map(cls => {
-    const teacherName = occupiedMap.get(cls.name)
+    const teacherName = occupiedMap.get(cls.display_name)
     return {
-      value: cls.name,
-      label: teacherName ? `${cls.name} (已被 ${teacherName} 老师占用)` : cls.name,
+      value: cls.id,
+      label: teacherName ? `${cls.display_name} (已被 ${teacherName} 老师占用)` : cls.display_name,
       disabled: !!teacherName
     }
   })
@@ -264,7 +268,7 @@ const handleTabChange = (sessionId: number) => {
 const handleQuickStart = async (schedule: any) => {
   try {
     await startSession({
-      className: schedule.class_name,
+      classId: schedule.class_id,
       courseName: schedule.course_name,
       scheduleId: schedule.id,
     })
@@ -276,7 +280,7 @@ const handleQuickStart = async (schedule: any) => {
 
 // ===== 事件处理 =====
 const handleStartSession = async () => {
-  if (!className.value) {
+  if (classId.value === '') {
     showErrorToast('请选择班级')
     return
   }
@@ -289,13 +293,13 @@ const handleStartSession = async () => {
 
   try {
     await startSession({
-      className: className.value,
+      classId: classId.value,
       courseName: courseName.value || undefined,
       scheduleId: undefined,
     })
     showSuccessToast('课堂已开始！')
     activeTab.value = 0
-    className.value = ''
+    classId.value = ''
     courseName.value = ''
     showStartForm.value = false
     softLimitWarning.value = false
@@ -637,7 +641,7 @@ const getSourceTypeBadge = (sourceType: string) => {
             clearable
           />
           <Select
-            v-model="className"
+            v-model="classId"
             class="w-full"
             placeholder="请选择班级"
             :options="availableClassOptions"
@@ -645,7 +649,7 @@ const getSourceTypeBadge = (sourceType: string) => {
         </div>
         <Button
           :loading="isStartingSession"
-          :disabled="!className"
+          :disabled="classId === ''"
           class="w-full min-h-[48px] md:min-h-[44px] text-base md:text-sm"
           @click="handleStartSession"
         >
@@ -783,7 +787,7 @@ const getSourceTypeBadge = (sourceType: string) => {
           clearable
         />
         <Select
-          v-model="className"
+          v-model="classId"
           class="w-full"
           placeholder="请选择班级"
           :options="availableClassOptions"
@@ -792,7 +796,7 @@ const getSourceTypeBadge = (sourceType: string) => {
       <div class="flex gap-2">
         <Button
           :loading="isStartingSession"
-          :disabled="!className"
+          :disabled="classId === ''"
           class="flex-1 min-h-[44px]"
           @click="handleStartSession"
         >

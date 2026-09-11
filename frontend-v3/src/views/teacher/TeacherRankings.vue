@@ -6,6 +6,7 @@ import { Card, Button, Select } from '@/components/ui'
 import { Loader2, Trophy, Users, UserRound } from 'lucide-vue-next'
 import { rankingsApi, type RankingEntry, type RankingGroupEntry, type RankingStudentEntry } from '@/api/rankings'
 import { offeringsApi } from '@/api/offerings'
+import { classesApi } from '@/api/classes'
 
 const route = useRoute()
 
@@ -24,14 +25,14 @@ const courseOptions = computed(() => {
 const courseId = ref<string>(route.query.course_id ? String(route.query.course_id) : '')
 const type = ref<'individual' | 'group'>('individual')
 const scope = ref<'class' | 'all'>('class')
-const className = ref('')
+const selectedClassId = ref<number | ''>('')
 
 const params = computed(() =>
   courseId.value === '' ? null : {
     type: type.value,
     course_id: Number(courseId.value),
     scope: scope.value,
-    class_name: scope.value === 'class' && className.value ? className.value : undefined,
+    class_id: scope.value === 'class' && selectedClassId.value !== '' ? selectedClassId.value : undefined,
   },
 )
 
@@ -41,11 +42,21 @@ const { data, isPending } = useQuery({
   enabled: () => params.value !== null,
 })
 
-// 班内榜班级下拉：响应 classes；未选中时自动选第一个
-const classes = computed(() => data.value?.classes ?? [])
-watch(classes, (list) => {
-  if (list.length > 0 && !list.includes(className.value)) {
-    className.value = list[0]
+// 班内榜班级下拉：响应 classes 为展示名，按 display_name 反查 class_id
+const { data: allClasses } = useQuery({
+  queryKey: ['classes'],
+  queryFn: () => classesApi.list(),
+})
+const classOptions = computed(() =>
+  (data.value?.classes ?? []).flatMap((name) => {
+    const cls = (allClasses.value ?? []).find((c) => c.display_name === name)
+    return cls ? [{ value: cls.id, label: name }] : []
+  }),
+)
+// 未选中时自动选第一个
+watch(classOptions, (list) => {
+  if (list.length > 0 && !list.some((o) => o.value === selectedClassId.value)) {
+    selectedClassId.value = list[0].value
   }
 })
 
@@ -138,12 +149,12 @@ const switchScope = (next: 'class' | 'all') => {
 
         <!-- 班内榜班级选择 -->
         <div
-          v-if="scope === 'class' && classes.length > 0"
+          v-if="scope === 'class' && classOptions.length > 0"
           class="w-full sm:w-48"
         >
           <Select
-            v-model="className"
-            :options="classes.map((c) => ({ value: c, label: c }))"
+            v-model="selectedClassId"
+            :options="classOptions"
             placeholder="选择班级"
           />
         </div>

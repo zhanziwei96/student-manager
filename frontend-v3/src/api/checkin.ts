@@ -55,8 +55,8 @@ export const checkinApi = {
   /**
    * 获取班级活跃课堂状态（学生端使用）
    */
-  getCourseSessionForClass: (className: string): Promise<CourseSessionStatus> =>
-    get(`/course-sessions/class/${encodeURIComponent(className)}`),
+  getCourseSessionForClass: (classId: number): Promise<CourseSessionStatus> =>
+    get(`/course-sessions/class/${classId}`),
 
   /**
    * 获取所有活跃课堂列表（管理员Dashboard使用）

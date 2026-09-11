@@ -13,6 +13,7 @@ from app.models import (
     CheckinRecord, CourseSchedule, CourseSession, Group,
     ScheduleAdjustment, Semester, Student,
 )
+from app.models.student import StudentResponse
 from app.models.question import Question
 
 # 已删除 semester 字符串列的业务表（改用 semester_id FK 锚定）
@@ -27,10 +28,10 @@ def test_semester_string_column_removed(model):
 
 
 def test_retained_snapshot_columns_keep_defaults():
-    """保留列不受影响：students.class_name 仍为字符串快照（默认『未分班』）"""
+    """保留列不受影响：students.class_id 可空（未分班），class_name 改为响应层运行时解析"""
     student = Student(student_id="TEST001", name="测试学生")
-    assert student.class_name == "未分班"
     assert student.class_id is None
+    assert StudentResponse.model_fields["class_name"].default is None
 
 
 def test_group_requires_semester_id(session: Session, seed_refs):

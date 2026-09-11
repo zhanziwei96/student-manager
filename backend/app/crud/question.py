@@ -5,7 +5,6 @@ from typing import List, Optional
 from sqlalchemy import and_, or_
 from sqlmodel import Session, select, func
 from app.models.question import Question, Answer
-from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 
@@ -14,13 +13,13 @@ def create_question(
     session: Session,
     teacher_id: int,
     content: str,
-    class_name: Optional[str] = None,
+    class_id: Optional[int] = None,
     is_realtime: bool = False,
 ) -> Question:
     """创建问题"""
     question = Question(
         teacher_id=teacher_id,
-        class_id=get_class_id_by_name(session, class_name) if class_name else None,
+        class_id=class_id,
         semester_id=get_current_semester_id(session),
         content=content,
         status="active",
@@ -40,7 +39,7 @@ def get_question(session: Session, question_id: int) -> Optional[Question]:
 def get_questions_by_teacher(
     session: Session,
     teacher_id: int,
-    class_name: Optional[str] = None,
+    class_id: Optional[int] = None,
     status: Optional[str] = None,
 ) -> List[Question]:
     """获取老师当前学期的问题列表"""
@@ -48,8 +47,8 @@ def get_questions_by_teacher(
         Question.teacher_id == teacher_id,
         Question.semester_id == get_current_semester_id(session),
     )
-    if class_name:
-        query = query.where(Question.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(Question.class_id == class_id)
     if status:
         query = query.where(Question.status == status)
     query = query.order_by(Question.created_at.desc())
@@ -58,13 +57,13 @@ def get_questions_by_teacher(
 
 def get_questions_by_class(
     session: Session,
-    class_name: str,
+    class_id: int,
     status: Optional[str] = "active",
 ) -> List[Question]:
     """获取班级当前学期的问题列表（含所有班级可见的问题）"""
     query = select(Question).where(
         or_(
-            Question.class_id.in_(get_class_ids_by_names(session, [class_name])),
+            Question.class_id == class_id,
             Question.class_id.is_(None),
         ),
         Question.semester_id == get_current_semester_id(session),

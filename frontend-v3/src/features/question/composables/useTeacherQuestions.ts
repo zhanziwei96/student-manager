@@ -9,19 +9,19 @@ import type { CreateQuestionRequest } from '@/types/question'
 
 const TEACHER_QUESTIONS_KEY = 'teacher-questions'
 
-export function useTeacherQuestions(filters?: { class_name?: string; status?: Ref<string> }) {
+export function useTeacherQuestions(filters?: { class_id?: number; status?: Ref<string> }) {
   const queryClient = useQueryClient()
 
   const queryKey = computed(() => [
     TEACHER_QUESTIONS_KEY,
-    filters?.class_name,
+    filters?.class_id,
     filters?.status?.value,
   ])
 
   const { data: questions, isLoading, error } = useQuery({
     queryKey,
     queryFn: () => getTeacherQuestions({
-      class_name: filters?.class_name,
+      class_id: filters?.class_id,
       status: filters?.status?.value || undefined,
     }),
   })

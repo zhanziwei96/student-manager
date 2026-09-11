@@ -76,9 +76,9 @@ const filteredSchedules = computed(() => {
   
   let result = allSchedules.value
   
-  // 按班级筛选
+  // 按班级筛选（class_id）
   if (selectedClass.value) {
-    result = result.filter(s => s.class_name === selectedClass.value)
+    result = result.filter(s => s.class_id === Number(selectedClass.value))
   }
   
   // 按搜索词筛选
@@ -247,10 +247,10 @@ const handleClose = () => {
               </option>
               <option
                 v-for="cls in allClasses"
-                :key="cls.name"
-                :value="cls.name"
+                :key="cls.id"
+                :value="cls.id"
               >
-                {{ cls.name }}
+                {{ cls.display_name }}
               </option>
             </select>
           </div>

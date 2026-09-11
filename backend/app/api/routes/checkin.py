@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Body, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session
-from app.core.class_cache import get_class_name_by_id
+from app.core.class_cache import get_class_display_name_by_id, get_class_display_names
 from app.core.term import get_current_semester_id
 from app.core.db import get_session
 from app.core.config import HttpStatus
@@ -18,7 +18,7 @@ from app.crud.checkin import (
     get_checkins_by_session_id, get_all_checkins
 )
 from app.crud.course_session import (
-    get_active_course_session_by_class_name,
+    get_active_course_session_by_class_id,
     get_teacher_active_course_sessions,
     get_course_session,
 )
@@ -141,9 +141,9 @@ async def do_checkin(
         # 先通过 session_id 查找课堂（学生端已知 session_id）
         from app.crud.course_session import get_course_session_by_session_code
         # 由于验证码本身不携带 session_code，我们需要先找到该学生班级的活跃课堂
-        # 实际场景中学生端已经通过 /course-sessions/class/{class_name} 获取了 session_code
+        # 实际场景中学生端已经通过 /course-sessions/class/{class_id} 获取了 session_code
         # 这里复用该接口返回的 session_code 来验证
-        cs = get_active_course_session_by_class_name(db_session, student.class_name)
+        cs = get_active_course_session_by_class_id(db_session, student.class_id)
         if not cs or cs.status != "active":
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='当前未在上课')
 
@@ -209,7 +209,7 @@ async def do_checkin(
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail='缺少验证码或教师权限')
 
     checkin_data = checkin.model_dump()
-    checkin_data["class_name"] = get_class_name_by_id(db_session, checkin.class_id)
+    checkin_data["class_name"] = get_class_display_name_by_id(db_session, checkin.class_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.CHECKIN_SUCCESS,
@@ -228,14 +228,11 @@ def get_checkin_list(
     class_ids = None
     if user.get("role") != "admin":
         from app.api.deps import get_teacher_accessible_classes
-        from app.core.class_cache import get_class_id_by_name
-        class_names = get_teacher_accessible_classes(user, session)
-        class_ids = [cid for name in class_names
-                     if (cid := get_class_id_by_name(session, name)) is not None]
+        # 返回 int 列表 / None（通配）/ []（空集，fail-closed），直接透传
+        class_ids = get_teacher_accessible_classes(user, session)
 
     checkins = get_all_checkins(session, limit=limit, class_ids=class_ids)
-    from app.core.class_cache import get_class_names
-    name_map = get_class_names(session, (c.class_id for c in checkins))
+    name_map = get_class_display_names(session, (c.class_id for c in checkins))
     data = []
     for c in checkins:
         item = c.model_dump()
@@ -258,8 +255,8 @@ def get_session_checkin_list(
     cs = get_course_session(db_session, session_id)
     if not cs:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课堂不存在")
-    class_name = get_class_name_by_id(db_session, cs.class_id)
-    verify_teacher_class_access(user, class_name, db_session)
+    class_name = get_class_display_name_by_id(db_session, cs.class_id)
+    verify_teacher_class_access(user, cs.class_id, db_session)
 
     checkins = get_checkins_by_session_id(db_session, session_id)
     data = []
@@ -296,9 +293,9 @@ def get_checkin_stats(
                     'rate': 0
                 }
             }
-        class_name = get_class_name_by_id(db_session, cs.class_id)
-        verify_teacher_class_access(user, class_name, db_session)
-        students = get_students_by_class(db_session, class_name)
+        class_name = get_class_display_name_by_id(db_session, cs.class_id)
+        verify_teacher_class_access(user, cs.class_id, db_session)
+        students = get_students_by_class(db_session, cs.class_id)
         checkins = get_checkins_by_session_id(db_session, session_id)
         total = len(students)
         checked_in = len(checkins)
@@ -334,8 +331,8 @@ def get_checkin_stats(
         }
 
     cs = course_sessions[0]
-    class_name = get_class_name_by_id(db_session, cs.class_id)
-    students = get_students_by_class(db_session, class_name)
+    class_name = get_class_display_name_by_id(db_session, cs.class_id)
+    students = get_students_by_class(db_session, cs.class_id)
     checkins = get_checkins_by_session_id(db_session, cs.id)
 
     total = len(students)
@@ -370,8 +367,7 @@ def get_active_course_sessions(
         CourseSession.semester_id == get_current_semester_id(session),
     )
     active_sessions = session.exec(query).all()
-    from app.core.class_cache import get_class_names
-    name_map = get_class_names(session, (s.class_id for s in active_sessions))
+    name_map = get_class_display_names(session, (s.class_id for s in active_sessions))
 
     return {
         ApiResponseConst.SUCCESS: True,
@@ -388,15 +384,15 @@ def get_active_course_sessions(
     }
 
 
-@router.get("/course-sessions/class/{class_name}", response_model=StudentSessionResponse)
+@router.get("/course-sessions/class/{class_id}", response_model=StudentSessionResponse)
 async def get_course_session_for_student(
-    class_name: str,
+    class_id: int,
     request: Request,
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
     """获取指定班级的活跃课堂状态（学生端使用）"""
-    cs = get_active_course_session_by_class_name(session, class_name)
+    cs = get_active_course_session_by_class_id(session, class_id)
 
     if cs and cs.status == "active":
         return {
@@ -406,7 +402,7 @@ async def get_course_session_for_student(
                 'session_code': cs.session_code,
                 'active': True,
                 'course_name': cs.course_name,
-                'class_name': get_class_name_by_id(session, cs.class_id),
+                'class_name': get_class_display_name_by_id(session, cs.class_id),
                 'teacher_name': cs.teacher_name,
                 'start_time': cs.start_time
             }

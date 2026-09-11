@@ -185,7 +185,7 @@ def admin_user(test_engine):
 
 @pytest.fixture
 def teacher_user(test_engine):
-    """创建教师用户（授课关系从 course_offerings 派生，class_scope 覆盖一班/二班）"""
+    """创建教师用户（授课关系从 course_offering_classes 派生：关联一班/二班）"""
     with Session(_test_engine) as session:
         password_hash, salt = generate_password_hash("teacher123")
         user = User(
@@ -202,7 +202,7 @@ def teacher_user(test_engine):
         # 授课教学班（权限唯一真源）：semester_id FK 必填，用非当前学期占位
         from datetime import date
         from sqlmodel import select
-        from app.models import Course, CourseOffering, Semester
+        from app.models import Course, CourseOffering, CourseOfferingClass, Semester
         math = session.exec(select(Course).where(Course.code == "MATH1")).first()
         if math is None:
             math = Course(code="MATH1", name="高等数学")
@@ -213,10 +213,17 @@ def teacher_user(test_engine):
                            total_weeks=20, is_current=False)
             session.add(sem)
         session.commit()
-        session.add(CourseOffering(
+        offering = CourseOffering(
             course_id=math.id, semester_id=sem.id, teacher_id=user.id,
-            teacher_name=user.name, class_scope="一班,二班", status="active",
-        ))
+            teacher_name=user.name, status="active",
+        )
+        session.add(offering)
+        session.flush()
+        # 权限真源：关联一班/二班（替代原 class_scope 自由文本）
+        for cls_name in ("一班", "二班"):
+            session.add(CourseOfferingClass(
+                offering_id=offering.id, class_id=ensure_class(test_engine, cls_name),
+            ))
         session.commit()
         session.refresh(user)
         return user

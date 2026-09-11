@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
-from app.core.class_cache import get_class_id_by_name, get_class_names
+from app.core.class_cache import get_class_display_name_by_id, get_class_display_names
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user
@@ -17,7 +17,7 @@ from app.models import CourseSession, CourseSchedule
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse, ApiSuccessResponse
 from app.crud.course_session import (
     get_teacher_active_course_sessions,
-    get_active_course_session_by_class_name,
+    get_active_course_session_by_class_id,
     start_course_session,
     get_teacher_course_sessions,
     get_course_session,
@@ -30,7 +30,7 @@ router = APIRouter(tags=["course_sessions"])
 
 
 class StartCourseSessionRequest(BaseModel):
-    class_name: str
+    class_id: int
     course_name: Optional[str] = None
     schedule_id: Optional[int] = None
 
@@ -70,8 +70,7 @@ def get_course_sessions(
     else:
         sessions = get_teacher_active_course_sessions(session, teacher_id)
 
-    from app.core.class_cache import get_class_id_by_name, get_class_names
-    name_map = get_class_names(session, (cs.class_id for cs in sessions))
+    name_map = get_class_display_names(session, (cs.class_id for cs in sessions))
 
     data = []
     for cs in sessions:
@@ -104,9 +103,9 @@ def begin_course_session(
 ):
     """开始上课"""
     # 学期归档后，禁用/不存在班级不可开课
-    verify_class_has_active_students(data.class_name, session)
+    verify_class_has_active_students(data.class_id, session)
 
-    existing = get_active_course_session_by_class_name(session, data.class_name)
+    existing = get_active_course_session_by_class_id(session, data.class_id)
     if existing:
         teacher_name = existing.teacher_name or "其他教师"
         raise HTTPException(
@@ -128,7 +127,7 @@ def begin_course_session(
         schedule = session.get(CourseSchedule, schedule_id)
         if not schedule:
             raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课表不存在")
-        if schedule.class_id != get_class_id_by_name(session, data.class_name):
+        if schedule.class_id != data.class_id:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="班级与课表不匹配")
         if data.course_name and schedule.course_name != data.course_name:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程名称与课表不匹配")
@@ -157,7 +156,7 @@ def begin_course_session(
     try:
         course_session = start_course_session(
             session=session,
-            class_name=data.class_name,
+            class_id=data.class_id,
             teacher_id=teacher_id,
             teacher_name=teacher_name,
             course_name=data.course_name,
@@ -204,7 +203,7 @@ def begin_course_session(
             "id": course_session.id,
             "active": True,
             "course_name": course_session.course_name,
-            "class_name": data.class_name,
+            "class_name": get_class_display_name_by_id(session, data.class_id),
             "start_time": course_session.start_time,
             "status": course_session.status,
             "session_code": course_session.session_code,

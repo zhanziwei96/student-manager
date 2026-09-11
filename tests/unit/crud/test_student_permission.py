@@ -55,13 +55,14 @@ class TestStudentPermissionArchitecture:
 class TestStudentCRUDPureFunctions:
     """测试 CRUD 层纯粹函数"""
 
-    def test_get_students_no_permission_check(self, session):
+    def test_get_students_no_permission_check(self, session, seed_refs):
         """验证 get_students 不做权限检查"""
         from app.models import Student
         from app.crud import get_students
-        
+
         # 创建测试学生
-        student = Student(student_id="S001", name="学生1", class_name="班级A", score=80)
+        student = Student(student_id="S001", name="学生1",
+                          class_id=seed_refs["一班"], score=80)
         session.add(student)
         session.commit()
         
@@ -76,14 +77,14 @@ class TestStudentCRUDPureFunctions:
         from app.crud import get_students_by_class
 
         student1 = Student(student_id="S001", name="学生1",
-                           class_name="一班", class_id=seed_refs["一班"])
+                           class_id=seed_refs["一班"])
         student2 = Student(student_id="S002", name="学生2",
-                           class_name="二班", class_id=seed_refs["二班"])
+                           class_id=seed_refs["二班"])
         session.add_all([student1, student2])
         session.commit()
 
         # 直接调用应返回指定班级学生（无权限过滤）
-        students = get_students_by_class(session, "一班")
+        students = get_students_by_class(session, seed_refs["一班"])
         assert len(students) == 1
         assert students[0].student_id == "S001"
 
@@ -93,9 +94,9 @@ class TestStudentCRUDPureFunctions:
         from app.crud import get_all_classes
 
         student1 = Student(student_id="S001", name="学生1",
-                           class_name="一班", class_id=seed_refs["一班"])
+                           class_id=seed_refs["一班"])
         student2 = Student(student_id="S002", name="学生2",
-                           class_name="二班", class_id=seed_refs["二班"])
+                           class_id=seed_refs["二班"])
         session.add_all([student1, student2])
         session.commit()
 

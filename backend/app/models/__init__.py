@@ -28,6 +28,7 @@ from app.models.class_ import Class_, ClassCreate, ClassUpdate, ClassResponse
 from app.models.course import (
     Course, CourseCreate, CourseUpdate, CourseResponse,
     CourseOffering, CourseOfferingCreate, CourseOfferingUpdate, CourseOfferingResponse,
+    CourseOfferingClass,
     Enrollment, EnrollmentResponse, EnrollmentScoreLog,
 )
 from app.models.student_class_semester import StudentClassSemester, StudentClassSemesterResponse
@@ -69,6 +70,7 @@ __all__ = [
     # Course Line
     "Course", "CourseCreate", "CourseUpdate", "CourseResponse",
     "CourseOffering", "CourseOfferingCreate", "CourseOfferingUpdate", "CourseOfferingResponse",
+    "CourseOfferingClass",
     "Enrollment", "EnrollmentResponse", "EnrollmentScoreLog",
     # Student-Class-Semester Bridge
     "StudentClassSemester", "StudentClassSemesterResponse",

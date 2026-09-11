@@ -28,10 +28,10 @@ vi.mock('@/api/schedules', () => ({
 
 // Mock useSchedules composable
 const mockSchedules = ref([
-  { id: 1, course_name: '计算机应用基础', class_name: '一班', day_of_week: 1, start_time: '08:00', end_time: '09:40', teacher_id: 2, teacher_name: '张老师' },
-  { id: 2, course_name: '数据结构', class_name: '一班', day_of_week: 1, start_time: '10:00', end_time: '11:40', teacher_id: null, teacher_name: null },
-  { id: 3, course_name: '计算机网络', class_name: '二班', day_of_week: 2, start_time: '14:00', end_time: '15:40', teacher_id: 3, teacher_name: '李老师' },
-  { id: 4, course_name: '操作系统', class_name: '二班', day_of_week: 2, start_time: '16:00', end_time: '17:40', teacher_id: null, teacher_name: null },
+  { id: 1, course_name: '计算机应用基础', class_id: 1, class_name: '一班', day_of_week: 1, start_time: '08:00', end_time: '09:40', teacher_id: 2, teacher_name: '张老师' },
+  { id: 2, course_name: '数据结构', class_id: 1, class_name: '一班', day_of_week: 1, start_time: '10:00', end_time: '11:40', teacher_id: null, teacher_name: null },
+  { id: 3, course_name: '计算机网络', class_id: 2, class_name: '二班', day_of_week: 2, start_time: '14:00', end_time: '15:40', teacher_id: 3, teacher_name: '李老师' },
+  { id: 4, course_name: '操作系统', class_id: 2, class_name: '二班', day_of_week: 2, start_time: '16:00', end_time: '17:40', teacher_id: null, teacher_name: null },
 ])
 
 vi.mock('@/composables/useSchedules', () => ({
@@ -45,8 +45,8 @@ vi.mock('@/composables/useSchedules', () => ({
 vi.mock('@/composables/useClasses', () => ({
   useClasses: () => ({
     data: ref([
-      { name: '一班', status: 'active' },
-      { name: '二班', status: 'active' }
+      { id: 1, name: '一班', major: '', cohort_year: '2026', display_name: '2026届一班', student_count: 0, status: 'active' },
+      { id: 2, name: '二班', major: '', cohort_year: '2026', display_name: '2026届二班', student_count: 0, status: 'active' }
     ]),
     isPending: ref(false)
   })
@@ -114,10 +114,10 @@ describe('ManageSchedulesDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSchedules.value = [
-      { id: 1, course_name: '计算机应用基础', class_name: '一班', day_of_week: 1, start_time: '08:00', end_time: '09:40', teacher_id: 2, teacher_name: '张老师' },
-      { id: 2, course_name: '数据结构', class_name: '一班', day_of_week: 1, start_time: '10:00', end_time: '11:40', teacher_id: null, teacher_name: null },
-      { id: 3, course_name: '计算机网络', class_name: '二班', day_of_week: 2, start_time: '14:00', end_time: '15:40', teacher_id: 3, teacher_name: '李老师' },
-      { id: 4, course_name: '操作系统', class_name: '二班', day_of_week: 2, start_time: '16:00', end_time: '17:40', teacher_id: null, teacher_name: null },
+      { id: 1, course_name: '计算机应用基础', class_id: 1, class_name: '一班', day_of_week: 1, start_time: '08:00', end_time: '09:40', teacher_id: 2, teacher_name: '张老师' },
+      { id: 2, course_name: '数据结构', class_id: 1, class_name: '一班', day_of_week: 1, start_time: '10:00', end_time: '11:40', teacher_id: null, teacher_name: null },
+      { id: 3, course_name: '计算机网络', class_id: 2, class_name: '二班', day_of_week: 2, start_time: '14:00', end_time: '15:40', teacher_id: 3, teacher_name: '李老师' },
+      { id: 4, course_name: '操作系统', class_id: 2, class_name: '二班', day_of_week: 2, start_time: '16:00', end_time: '17:40', teacher_id: null, teacher_name: null },
     ]
   })
 
@@ -250,8 +250,8 @@ describe('ManageSchedulesDialog', () => {
     await flushPromises()
 
     const vm = wrapper.vm as ManageSchedulesDialogInstance
-    // 筛选一班
-    vm.selectedClass = '一班'
+    // 筛选一班（按班级 ID）
+    vm.selectedClass = '1'
     await flushPromises()
 
     // 只显示一班的课程

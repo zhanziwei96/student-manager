@@ -19,7 +19,6 @@ def student_user(test_engine, seed_refs):
         student = Student(
             student_id="S001",
             name="学生1",
-            class_name="一班",
             class_id=seed_refs["一班"],
             password_hash=password_hash,
             salt=salt,
@@ -33,13 +32,13 @@ def student_user(test_engine, seed_refs):
 class TestCheckinAPIEnhanced:
     """签到管理 API 增强测试"""
 
-    def _start_class_directly(self, test_engine, class_name, course_name=None, teacher_id=1, teacher_name="张老师"):
+    def _start_class_directly(self, test_engine, class_id, course_name=None, teacher_id=1, teacher_name="张老师"):
         """直接通过 CRUD 创建活跃课堂用于测试"""
         from app.crud.course_session import start_course_session
         with Session(test_engine) as session:
             cs = start_course_session(
                 session=session,
-                class_name=class_name,
+                class_id=class_id,
                 teacher_id=teacher_id,
                 teacher_name=teacher_name,
                 course_name=course_name
@@ -48,7 +47,7 @@ class TestCheckinAPIEnhanced:
 
     def test_student_checkin(self, client, test_engine, student_user, seed_refs):
         """测试学生签到 - 需要教师先开始上课"""
-        self._start_class_directly(test_engine, "一班")
+        self._start_class_directly(test_engine, seed_refs["一班"])
 
         # 学生登录并签到（student_user fixture 的密码是 student123）
         login_response = client.post("/api/v1/login", json={
@@ -60,10 +59,10 @@ class TestCheckinAPIEnhanced:
 
         # 获取验证码（教师已登录，但 client fixture 未登录教师，直接构造）
         from app.core.qr_signature import generate_verification_code
-        from app.crud.course_session import get_active_course_session_by_class_name
+        from app.crud.course_session import get_active_course_session_by_class_id
         from sqlmodel import Session
         with Session(test_engine) as session:
-            cs = get_active_course_session_by_class_name(session, "一班")
+            cs = get_active_course_session_by_class_id(session, seed_refs["一班"])
             code = generate_verification_code(cs.session_code)["code"]
 
         response = client.post("/api/v1/checkin", json={
@@ -98,7 +97,7 @@ class TestCheckinAPIEnhanced:
 
     def test_get_checkin_list(self, teacher_client, test_engine, seed_refs):
         """测试获取签到记录列表"""
-        self._start_class_directly(test_engine, "一班")
+        self._start_class_directly(test_engine, seed_refs["一班"])
 
         response = teacher_client.get("/api/v1/checkins")
 
@@ -109,7 +108,7 @@ class TestCheckinAPIEnhanced:
 
     def test_get_session_checkins(self, client, teacher_client, test_engine, student_user, seed_refs):
         """测试按 session 获取签到列表（教师有权限，学生无权限）"""
-        cs = self._start_class_directly(test_engine, "一班")
+        cs = self._start_class_directly(test_engine, seed_refs["一班"])
 
         # 学生登录并签到
         client.post("/api/v1/login", json={
@@ -141,7 +140,7 @@ class TestCheckinAPIEnhanced:
     def test_get_checkin_stats(self, teacher_client, test_engine, sample_students, seed_refs):
         """测试获取签到统计"""
         # 开始上课
-        self._start_class_directly(test_engine, "一班")
+        self._start_class_directly(test_engine, seed_refs["一班"])
 
         response = teacher_client.get("/api/v1/checkins/stats")
 
@@ -153,7 +152,7 @@ class TestCheckinAPIEnhanced:
 
     def test_get_active_class_sessions(self, teacher_client, test_engine, sample_students, seed_refs):
         """测试获取所有活跃课堂（需登录，教师可访问）"""
-        self._start_class_directly(test_engine, "一班")
+        self._start_class_directly(test_engine, seed_refs["一班"])
 
         response = teacher_client.get("/api/v1/course-sessions/active")
 
@@ -164,7 +163,7 @@ class TestCheckinAPIEnhanced:
 
     def test_get_class_session_for_student(self, client, test_engine, student_user, seed_refs):
         """测试学生获取班级课堂状态 - 需要登录"""
-        self._start_class_directly(test_engine, "一班")
+        self._start_class_directly(test_engine, seed_refs["一班"])
 
         # 学生登录（student_user fixture 创建的密码是 student123）
         client.post("/api/v1/login", json={
@@ -173,7 +172,7 @@ class TestCheckinAPIEnhanced:
             "role": "student"
         })
 
-        response = client.get("/api/v1/course-sessions/class/一班")
+        response = client.get(f"/api/v1/course-sessions/class/{seed_refs['一班']}")
 
         assert response.status_code == 200
         data = response.json()
@@ -183,7 +182,7 @@ class TestCheckinAPIEnhanced:
 
     def test_student_checkin_with_device(self, client, test_engine, student_user, seed_refs):
         """测试学生签到（带设备信息）"""
-        cs = self._start_class_directly(test_engine, "一班")
+        cs = self._start_class_directly(test_engine, seed_refs["一班"])
 
         # 学生登录
         client.post("/api/v1/login", json={
@@ -210,7 +209,7 @@ class TestCheckinAPIEnhanced:
 
     def test_device_cannot_checkin_twice(self, client, test_engine, student_user, seed_refs):
         """测试同一设备不能为多个学生签到"""
-        cs = self._start_class_directly(test_engine, "一班")
+        cs = self._start_class_directly(test_engine, seed_refs["一班"])
 
         # 学生登录
         client.post("/api/v1/login", json={

@@ -43,7 +43,6 @@ class TestConcurrentCheckin:
             student = Student(
                 student_id=student_id,
                 name=f"学生{student_id}",
-                class_name="一班",
                 class_id=class_id,
                 password_hash=password_hash,
                 salt=salt
@@ -77,11 +76,11 @@ class TestConcurrentCheckin:
 
     def _start_class(self, test_engine):
         """直接通过 CRUD 创建活跃课堂"""
-        self._seed_class(test_engine)
+        class_id = self._seed_class(test_engine)
         with Session(test_engine) as session:
             cs = start_course_session(
                 session=session,
-                class_name="一班",
+                class_id=class_id,
                 teacher_id=1,
                 teacher_name="教师1",
                 course_name="数学"
@@ -164,7 +163,6 @@ class TestConcurrentCheckin:
                 student = Student(
                     student_id=f"S{i:03d}",
                     name=f"学生{i}",
-                    class_name="一班",
                     class_id=class_id,
                     password_hash=password_hash,
                     salt=salt
@@ -262,7 +260,6 @@ class TestConcurrentCheckin:
                 session.add(Student(
                     student_id=f"W{i:03d}",
                     name=f"学生{i}",
-                    class_name="一班",
                     class_id=class_id,
                     password_hash=ph,
                     salt=s
@@ -272,7 +269,7 @@ class TestConcurrentCheckin:
         with Session(engine) as session:
             cs = start_course_session(
                 session=session,
-                class_name="一班",
+                class_id=class_id,
                 teacher_id=1,
                 teacher_name="教师1",
                 course_name="数学"

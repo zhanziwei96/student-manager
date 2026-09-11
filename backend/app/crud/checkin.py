@@ -5,7 +5,6 @@ from datetime import datetime, date
 from typing import List, Optional
 from sqlmodel import Session, select, func
 from app.models import CheckinRecord
-from app.core.class_cache import get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 
@@ -32,7 +31,7 @@ def get_all_checkins(
 
 
 def get_today_checkins(
-    session: Session, class_name: Optional[str] = None, session_start: Optional[datetime] = None
+    session: Session, class_id: Optional[int] = None, session_start: Optional[datetime] = None
 ) -> List[CheckinRecord]:
     """获取签到列表（支持按课堂开始时间筛选）"""
     from datetime import time
@@ -46,8 +45,8 @@ def get_today_checkins(
         CheckinRecord.checkin_time >= query_start,
         CheckinRecord.semester_id == get_current_semester_id(session),
     )
-    if class_name:
-        query = query.where(CheckinRecord.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(CheckinRecord.class_id == class_id)
     return list(session.exec(query).all())
 
 
@@ -126,7 +125,7 @@ def has_checked_in_session(session: Session, student_id: str, session_id: int) -
 
 
 def has_checked_in_today(
-    session: Session, student_id: str, class_name: Optional[str] = None,
+    session: Session, student_id: str, class_id: Optional[int] = None,
     session_start: Optional[datetime] = None
 ) -> bool:
     """检查是否已签到（支持按班级和课堂开始时间检查）- 兼容旧逻辑"""
@@ -141,8 +140,8 @@ def has_checked_in_today(
         CheckinRecord.student_id == student_id,
         CheckinRecord.checkin_time >= query_start
     )
-    if class_name:
-        query = query.where(CheckinRecord.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(CheckinRecord.class_id == class_id)
     return session.exec(query).first() is not None
 
 

@@ -94,7 +94,8 @@ export interface Student {
   id?: number                   // 内部ID（后端可能返回 null 或不存在此字段）
   student_id: string            // 学号（业务主键）
   name: string                  // 姓名
-  class_name: string            // 班级
+  class_id?: number | null      // 班级 ID（未分班为 null）
+  class_name: string            // 班级展示名（如 2026届软件工程1班；未分班为"未分班"）
   status?: StudentStatus        // 学籍状态（active|suspended|withdrawn|graduated）
   is_account_enabled: boolean   // 账户是否启用
   checkin_status?: 'checked_in' | 'not_checked_in' // 课堂签到状态（API 动态返回）
@@ -113,7 +114,7 @@ export type StudentStatus = 'active' | 'suspended' | 'withdrawn' | 'graduated'
 export interface CreateStudentRequest {
   student_id: string            // 学号
   name: string                  // 姓名
-  class_name: string            // 班级
+  class_id: number              // 班级ID（未分班传 null）
 }
 
 /**
@@ -123,7 +124,7 @@ export interface CreateStudentRequest {
  */
 export interface UpdateStudentRequest {
   name?: string                 // 姓名（可选）
-  class_name?: string           // 班级（可选）
+  class_id?: number             // 班级ID（可选）
   // 注意：后端 StudentUpdate 不支持修改账户状态
 }
 
@@ -242,7 +243,8 @@ export interface CourseOffering {
   semester_id: number           // 学期ID
   teacher_id: number | null     // 教师ID（可空：先排课后定教师）
   teacher_name: string          // 教师姓名
-  class_scope: string           // 面向范围（如 计科1-2班）
+  class_scope: string           // 面向范围展示串（如 计科1-2班；无关联行 = 所有班级）
+  class_ids: number[]           // 面向班级ID列表（空数组 = 全部班级通配）
   capacity: number | null       // 容量
   status: 'active' | 'ended'    // 状态
 }
@@ -300,7 +302,7 @@ export interface CourseSession {
 }
 
 export interface StartCourseSessionRequest {
-  class_name: string
+  class_id: number
   course_name?: string
   schedule_id?: number
 }
@@ -336,6 +338,7 @@ export interface CreateScheduleAdjustmentRequest {
 export interface TodayScheduleItem {
   id: number
   course_name: string
+  class_id: number
   class_name: string
   teacher_id?: number
   teacher_name?: string

@@ -26,7 +26,7 @@ router = APIRouter(tags=["questions"])
 
 class CreateQuestionRequest(BaseModel):
     content: str = Field(..., description="问题内容")
-    class_name: Optional[str] = Field(default=None, description="目标班级，None表示所有班级")
+    class_id: Optional[int] = Field(default=None, description="目标班级ID，None表示所有班级")
     is_realtime: bool = Field(default=False, description="是否实时提问")
 
 
@@ -81,14 +81,14 @@ async def teacher_create_question(
     user: dict = Depends(require_admin_or_teacher),
 ):
     """老师发布问题"""
-    # 学期归档后，禁用/不存在班级不可提问（class_name 为 None 表示所有班级，跳过校验）
-    if req.class_name:
-        verify_class_has_active_students(req.class_name, session)
+    # 学期归档后，禁用/不存在班级不可提问（class_id 为 None 表示所有班级，跳过校验）
+    if req.class_id is not None:
+        verify_class_has_active_students(req.class_id, session)
 
     teacher_id = int(user["sub"])
     question = create_question(
         session, teacher_id=teacher_id,
-        content=req.content, class_name=req.class_name,
+        content=req.content, class_id=req.class_id,
         is_realtime=req.is_realtime,
     )
     return {
@@ -100,17 +100,17 @@ async def teacher_create_question(
 @router.get("/teacher/questions")
 async def teacher_list_questions(
     request: Request,
-    class_name: Optional[str] = Query(None),
+    class_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
     """老师获取自己的问题列表"""
     teacher_id = int(user["sub"])
-    questions = get_questions_by_teacher(session, teacher_id, class_name, status)
+    questions = get_questions_by_teacher(session, teacher_id, class_id, status)
 
-    from app.core.class_cache import get_class_names
-    class_name_map = get_class_names(session, (q.class_id for q in questions))
+    from app.core.class_cache import get_class_display_names
+    class_name_map = get_class_display_names(session, (q.class_id for q in questions))
     result = []
     for q in questions:
         teacher = get_user(session, q.teacher_id)
@@ -194,14 +194,14 @@ async def student_list_questions(
     user: dict = Depends(get_current_user),
 ):
     """学生获取本班问题列表（含所有班级可见的问题）"""
-    class_name = user.get("class_name")
-    if not class_name:
+    student = get_student(session, user.get("sub", ""))
+    if student is None or student.class_id is None:
         raise HTTPException(status_code=400, detail="未设置班级")
 
-    questions = get_questions_by_class(session, class_name, status="active")
+    questions = get_questions_by_class(session, student.class_id, status="active")
 
-    from app.core.class_cache import get_class_names
-    class_name_map = get_class_names(session, (q.class_id for q in questions))
+    from app.core.class_cache import get_class_display_names
+    class_name_map = get_class_display_names(session, (q.class_id for q in questions))
     result = []
     for q in questions:
         teacher = get_user(session, q.teacher_id)

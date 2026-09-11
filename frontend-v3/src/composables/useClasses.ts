@@ -24,13 +24,13 @@ export function useClasses() {
 }
 
 /**
- * 获取指定班级的学生列表
+ * 获取指定班级（class_id）的学生列表
  */
-export function useClassStudents(className: MaybeRefOrGetter<string>) {
+export function useClassStudents(classId: MaybeRefOrGetter<number | undefined>) {
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: ['class-students', className],
-    queryFn: () => studentsApi.getStudentsByClass(toValue(className)),
-    enabled: () => !!toValue(className),
+    queryKey: ['class-students', classId],
+    queryFn: () => studentsApi.getStudentsByClass(toValue(classId)!),
+    enabled: () => !!toValue(classId),
   })
 
   return {

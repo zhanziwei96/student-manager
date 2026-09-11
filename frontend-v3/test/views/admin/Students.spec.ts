@@ -13,7 +13,7 @@ import Students from '@/views/admin/Students.vue'
 const holder = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
-  disableByClass: vi.fn(() => Promise.resolve({ disabled_count: 3, class_names: ['一班'] })),
+  disableByClass: vi.fn(() => Promise.resolve({ disabled_count: 3, class_ids: [1] })),
   paginated: null as unknown as Record<string, unknown>,
 }))
 
@@ -44,12 +44,12 @@ const makePaginated = (overrides: Record<string, unknown> = {}) => ({
   page: ref(1),
   pageSize: 50,
   searchQuery: ref(''),
-  className: ref(''),
+  classId: ref(''),
   isSearching: ref(false),
   classOptions: ref([
     { value: '', label: '全部班级', count: 0 },
-    { value: '一班', label: '一班', count: 0 },
-    { value: '二班', label: '二班', count: 0 },
+    { value: '1', label: '2026届软件工程1班', count: 0 },
+    { value: '2', label: '2026届软件工程2班', count: 0 },
   ]),
   filteredStudents: ref([]),
   total: ref(0),
@@ -124,8 +124,8 @@ describe('Admin Students - 批量禁用毕业生账号（多选）', () => {
 
     const checkboxes = dialog.findAll('input[type="checkbox"]')
     expect(checkboxes).toHaveLength(2)
-    expect(dialog.text()).toContain('一班')
-    expect(dialog.text()).toContain('二班')
+    expect(dialog.text()).toContain('2026届软件工程1班')
+    expect(dialog.text()).toContain('2026届软件工程2班')
     expect(dialog.text()).not.toContain('全部班级')
   })
 
@@ -149,7 +149,7 @@ describe('Admin Students - 批量禁用毕业生账号（多选）', () => {
     await dialog.find('[data-testid="confirm-disable-btn"]').trigger('click')
     await flushPromises()
 
-    expect(holder.disableByClass).toHaveBeenCalledWith(['一班'])
+    expect(holder.disableByClass).toHaveBeenCalledWith([1])
     expect(holder.success).toHaveBeenCalledWith('已禁用 3 名学生')
     // 成功后弹窗关闭
     expect(wrapper.find('.mock-dialog').exists()).toBe(false)
@@ -169,7 +169,7 @@ describe('Admin Students - 批量禁用毕业生账号（多选）', () => {
     await dialog.find('[data-testid="confirm-disable-btn"]').trigger('click')
     await flushPromises()
 
-    expect(holder.disableByClass).toHaveBeenCalledWith(['一班', '二班'])
+    expect(holder.disableByClass).toHaveBeenCalledWith([1, 2])
   })
 
   it('取消勾选后从选中列表移除', async () => {
@@ -184,7 +184,7 @@ describe('Admin Students - 批量禁用毕业生账号（多选）', () => {
     await dialog.find('[data-testid="confirm-disable-btn"]').trigger('click')
     await flushPromises()
 
-    expect(holder.disableByClass).toHaveBeenCalledWith(['二班'])
+    expect(holder.disableByClass).toHaveBeenCalledWith([2])
   })
 
   it('API 失败时显示错误提示且不关闭弹窗', async () => {

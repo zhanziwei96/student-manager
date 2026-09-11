@@ -226,14 +226,23 @@ def test_offerings_and_enrollments(admin_client, seed_basics, session):
     course_id = courses[0]["id"]
     sem_id = sems[0]["id"]
     teacher = session.exec(select(User).where(User.username == "t1")).one()
+    cls_id = session.exec(select(Class_).where(Class_.name == "一班")).one().id
 
     resp = admin_client.post("/api/v1/offerings", json={
         "course_id": course_id, "semester_id": sem_id,
-        "teacher_id": teacher.id, "class_scope": "一班", "capacity": 60,
+        "teacher_id": teacher.id, "class_ids": [cls_id], "capacity": 60,
     })
     assert resp.status_code == 200
     offering_id = resp.json()["data"]["id"]
     assert resp.json()["data"]["teacher_name"] == "张老师"
+    assert resp.json()["data"]["class_scope"] == "2026届一班"  # 关联表 display_name 拼装
+
+    # 不存在的班级 → 400
+    resp = admin_client.post("/api/v1/offerings", json={
+        "course_id": course_id, "semester_id": sem_id,
+        "teacher_id": teacher.id, "class_ids": [99999],
+    })
+    assert resp.status_code == 400
 
     # 批量导入选课
     resp = admin_client.post(f"/api/v1/offerings/{offering_id}/enrollments", json={
@@ -271,7 +280,7 @@ def test_student_status_and_transfer(admin_client, seed_basics, session):
     assert resp.status_code == 200
 
     resp = admin_client.get("/api/v1/students/S001")
-    assert resp.json()["data"]["class_name"] == "二班"
+    assert resp.json()["data"]["class_name"] == "2026届二班"  # 班级展示名（class_id 解析）
 
 
 def test_management_requires_admin(teacher_client, student_client):

@@ -69,7 +69,7 @@ class TestStatsAPI:
         assert data["data"]["today_checkins"] == 0
 
     def test_get_stats_teacher_access(self, teacher_client, sample_students):
-        """教师统计只覆盖授课班级（course_offerings.class_scope = 一班,二班）
+        """教师统计只覆盖授课班级（course_offering_classes 关联：一班,二班）
 
         sample_students 共 6 人：一班 3 人、二班 2 人、三班 1 人 → 教师看不到三班
         """

@@ -121,7 +121,7 @@ class TestScheduleConsistency:
         from app.crud.course_session import start_course_session
         course_session = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name=schedule.course_name,
@@ -243,7 +243,7 @@ class TestMakeupScheduledSession:
         from app.crud.course_session import start_course_session
         course_session = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name=schedule.course_name,
@@ -292,7 +292,7 @@ class TestCheckinClassSnapshot:
         from app.crud.course_session import start_course_session
         course_session = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="测试课程",

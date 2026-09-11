@@ -5,7 +5,7 @@ export interface RankingParams {
   type: 'individual' | 'group'
   course_id: number
   scope: 'class' | 'all'
-  class_name?: string
+  class_id?: number
 }
 
 /** 个人榜条目 */

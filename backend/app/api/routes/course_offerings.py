@@ -10,7 +10,10 @@ from sqlmodel import Session, func, select
 from app.api.deps import require_admin, require_admin_or_teacher
 from app.core.config import HttpStatus
 from app.core.db import get_session
-from app.models import Course, CourseOffering, Enrollment, Semester, Student
+from app.crud.enrollment import resolve_offering_class_ids, resolve_offering_scopes
+from app.models import (
+    Class_, Course, CourseOffering, CourseOfferingClass, Enrollment, Semester, Student,
+)
 from app.models.constants import ApiResponseConst, ApiResponse
 
 router = APIRouter(tags=["course-offerings"])
@@ -20,13 +23,13 @@ class CreateOfferingRequest(BaseModel):
     course_id: int = Field(..., description="课程ID")
     semester_id: int = Field(..., description="学期ID")
     teacher_id: Optional[int] = Field(default=None, description="教师ID（可空：先排课后定教师）")
-    class_scope: str = Field(..., min_length=1, max_length=100, description="面向范围（如 计科1-2班）")
+    class_ids: List[int] = Field(default_factory=list, description="面向班级ID列表（空=全部班级）")
     capacity: Optional[int] = Field(default=None, ge=1, description="容量")
 
 
 class UpdateOfferingRequest(BaseModel):
     teacher_id: Optional[int] = None
-    class_scope: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    class_ids: Optional[List[int]] = Field(default=None, description="面向班级ID列表（空=全部班级）")
     capacity: Optional[int] = Field(default=None, ge=1)
     status: Optional[str] = Field(default=None, description="active|ended")
 
@@ -35,14 +38,26 @@ class ImportEnrollmentsRequest(BaseModel):
     student_ids: List[str] = Field(..., description="学号列表（批量导入选课）")
 
 
-def _offering_dict(o: CourseOffering) -> dict:
+def _validate_class_ids(session: Session, class_ids: List[int]) -> None:
+    """校验班级存在（任一不存在即 400）"""
+    if not class_ids:
+        return
+    existing = set(session.exec(select(Class_.id).where(Class_.id.in_(class_ids))).all())
+    invalid = [cid for cid in class_ids if cid not in existing]
+    if invalid:
+        raise HTTPException(status_code=HttpStatus.BAD_REQUEST,
+                            detail=f"班级不存在: {invalid}")
+
+
+def _offering_dict(o: CourseOffering, class_scope: str, class_ids: List[int]) -> dict:
     return {
         "id": o.id,
         "course_id": o.course_id,
         "semester_id": o.semester_id,
         "teacher_id": o.teacher_id,
         "teacher_name": o.teacher_name,
-        "class_scope": o.class_scope,
+        "class_scope": class_scope,
+        "class_ids": class_ids,
         "capacity": o.capacity,
         "status": o.status,
     }
@@ -62,8 +77,11 @@ def list_offerings(
     if semester_id is not None:
         query = query.where(CourseOffering.semester_id == semester_id)
     offerings = session.exec(query).all()
+    scopes = resolve_offering_scopes(session, [o.id for o in offerings])
+    class_ids = resolve_offering_class_ids(session, [o.id for o in offerings])
     return {ApiResponseConst.SUCCESS: True,
-            ApiResponseConst.DATA: [_offering_dict(o) for o in offerings]}
+            ApiResponseConst.DATA: [
+                _offering_dict(o, scopes[o.id], class_ids[o.id]) for o in offerings]}
 
 
 @router.post("/offerings", response_model=ApiResponse[dict])
@@ -84,15 +102,22 @@ def create_offering(
         if teacher is None:
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="教师不存在")
         teacher_name = teacher.name
+    _validate_class_ids(session, body.class_ids)
     offering = CourseOffering(
         course_id=body.course_id, semester_id=body.semester_id,
         teacher_id=body.teacher_id, teacher_name=teacher_name,
-        class_scope=body.class_scope, capacity=body.capacity, status="active",
+        capacity=body.capacity, status="active",
     )
     session.add(offering)
+    session.flush()  # 取 id 供关联行引用
+    for cid in set(body.class_ids):
+        session.add(CourseOfferingClass(offering_id=offering.id, class_id=cid))
     session.commit()
     session.refresh(offering)
-    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: _offering_dict(offering),
+    scope = resolve_offering_scopes(session, [offering.id])[offering.id]
+    class_ids = resolve_offering_class_ids(session, [offering.id])[offering.id]
+    return {ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.DATA: _offering_dict(offering, scope, class_ids),
             ApiResponseConst.MESSAGE: "教学班创建成功"}
 
 
@@ -114,8 +139,15 @@ def update_offering(
             raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="教师不存在")
         offering.teacher_id = teacher.id
         offering.teacher_name = teacher.name
-    if body.class_scope is not None:
-        offering.class_scope = body.class_scope
+    if body.class_ids is not None:
+        _validate_class_ids(session, body.class_ids)
+        # 整体替换关联行（权限真源）
+        for old in session.exec(select(CourseOfferingClass).where(
+            CourseOfferingClass.offering_id == offering.id,
+        )).all():
+            session.delete(old)
+        for cid in set(body.class_ids):
+            session.add(CourseOfferingClass(offering_id=offering.id, class_id=cid))
     if body.capacity is not None:
         offering.capacity = body.capacity
     if body.status is not None:
@@ -125,7 +157,10 @@ def update_offering(
     session.add(offering)
     session.commit()
     session.refresh(offering)
-    return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: _offering_dict(offering),
+    scope = resolve_offering_scopes(session, [offering.id])[offering.id]
+    class_ids = resolve_offering_class_ids(session, [offering.id])[offering.id]
+    return {ApiResponseConst.SUCCESS: True,
+            ApiResponseConst.DATA: _offering_dict(offering, scope, class_ids),
             ApiResponseConst.MESSAGE: "教学班更新成功"}
 
 
@@ -151,11 +186,14 @@ def list_teacher_offerings(
     if semester_id is not None:
         query = query.where(CourseOffering.semester_id == semester_id)
     rows = session.exec(query.order_by(Course.name)).all()
+    scopes = resolve_offering_scopes(session, [o.id for o, _, _ in rows])
+    class_ids = resolve_offering_class_ids(session, [o.id for o, _, _ in rows])
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: [
         {
             "id": o.id, "course_id": o.course_id, "course_name": c.name,
             "course_code": c.code, "teacher_name": o.teacher_name,
-            "class_scope": o.class_scope, "capacity": o.capacity,
+            "class_scope": scopes.get(o.id, "所有班级"),
+            "class_ids": class_ids.get(o.id, []), "capacity": o.capacity,
             "status": o.status, "enrolled_count": cnt,
         }
         for o, c, cnt in rows
@@ -180,12 +218,15 @@ def list_offering_enrollments(
         .where(Enrollment.offering_id == offering_id, Enrollment.status == "enrolled")
         .order_by(Student.student_id)
     ).all()
+    # class_name 为响应字段：按 class_id 运行时解析展示名
+    from app.core.class_cache import get_class_display_names
+    class_names = get_class_display_names(session, (s.class_id for _, s in rows))
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: [
         {
             "enrollment_id": e.id,
             "student_id": s.student_id,
             "name": s.name,
-            "class_name": s.class_name,
+            "class_name": class_names.get(s.class_id),
             "score": e.score,
             "final_score": e.final_score,
         }

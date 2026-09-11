@@ -15,27 +15,30 @@ class TestScheduleCRUD:
     """测试课表 CRUD 操作"""
 
     @pytest.fixture(autouse=True)
-    def _seed_class_students(self, session: Session, seed_refs):
+    def _seed_classes(self, session: Session, seed_refs):
         """课表写入依赖班级 FK（class_id 必填），导入校验还要求班级有启用学生：
-        预置本文件用到的班级，并为导入测试所用班级预置启用学生"""
+        预置本文件用到的班级，并为导入测试所用班级预置启用学生，
+        id 经 self.class_ids 暴露给各用例"""
         from app.models import Class_, Student
 
+        names = ["导入班级1", "导入班级2", "班级1", "班级2",
+                 "软件1班", "软件2班", "班级A", "班级B", "班级X", "班级Y", "班级Z"]
         import_classes = ["导入班级1", "导入班级2", "班级1", "班级2"]
-        other_classes = ["软件1班", "软件2班", "班级A", "班级B", "班级X", "班级Y", "班级Z"]
-        class_ids = {}
-        for name in import_classes + other_classes:
+        self.class_ids = {}
+        for name in names:
             cls = session.exec(select(Class_).where(Class_.name == name)).first()
             if cls is None:
-                cls = Class_(name=name, cohort_year="2026")
+                cls = Class_(name=name, major="", cohort_year="2026")
                 session.add(cls)
                 session.commit()
                 session.refresh(cls)
-            class_ids[name] = cls.id
+            self.class_ids[name] = cls.id
 
-        for i, cls in enumerate(import_classes):
+        # 导入校验要求班级有启用学生，否则整行被拒
+        for i, name in enumerate(import_classes):
             session.add(Student(
                 student_id=f"TS{i:03d}", name=f"学生{i}",
-                class_name=cls, class_id=class_ids[cls],
+                class_id=self.class_ids[name],
             ))
         session.commit()
 
@@ -44,7 +47,7 @@ class TestScheduleCRUD:
         schedule = create_schedule(
             session=session,
             course_name="计算机基础",
-            class_name="软件1班",
+            class_id=self.class_ids["软件1班"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -56,8 +59,8 @@ class TestScheduleCRUD:
         )
 
         assert schedule.course_name == "计算机基础"
-        from app.core.class_cache import get_class_name_by_id
-        assert get_class_name_by_id(session, schedule.class_id) == "软件1班"
+        from app.core.class_cache import get_class_display_name_by_id
+        assert get_class_display_name_by_id(session, schedule.class_id) is not None
         assert schedule.teacher_id == 1
         assert schedule.day_of_week == 1
 
@@ -66,7 +69,7 @@ class TestScheduleCRUD:
         schedule = create_schedule(
             session=session,
             course_name="数据结构",
-            class_name="软件2班",
+            class_id=self.class_ids["软件2班"],
             teacher_id=None,
             teacher_name="",
             day_of_week=2,
@@ -89,12 +92,12 @@ class TestScheduleCRUD:
     def test_get_schedules_with_filters(self, session: Session):
         """测试筛选课表"""
         # 创建测试数据
-        create_schedule(session, "课程A", "班级A", 1, "教师A", 1, "08:00", "09:40", "A1", 1, 20)
-        create_schedule(session, "课程B", "班级B", 2, "教师B", 2, "10:00", "11:40", "B2", 1, 20)
-        create_schedule(session, "课程C", "班级A", 1, "教师A", 3, "14:00", "15:40", "A2", 1, 20)
-        
+        create_schedule(session, "课程A", self.class_ids["班级A"], 1, "教师A", 1, "08:00", "09:40", "A1", 1, 20)
+        create_schedule(session, "课程B", self.class_ids["班级B"], 2, "教师B", 2, "10:00", "11:40", "B2", 1, 20)
+        create_schedule(session, "课程C", self.class_ids["班级A"], 1, "教师A", 3, "14:00", "15:40", "A2", 1, 20)
+
         # 按班级筛选
-        result = get_schedules(session, class_name="班级A")
+        result = get_schedules(session, class_id=self.class_ids["班级A"])
         assert len(result) == 2
         
         # 按星期筛选
@@ -110,7 +113,7 @@ class TestScheduleCRUD:
         schedule = create_schedule(
             session=session,
             course_name="待删除课程",
-            class_name="班级X",
+            class_id=self.class_ids["班级X"],
             teacher_id=None,
             teacher_name="",
             day_of_week=1,
@@ -141,7 +144,7 @@ class TestScheduleCRUD:
         schedule = create_schedule(
             session=session,
             course_name="待删除课程",
-            class_name="班级X",
+            class_id=self.class_ids["班级X"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -184,7 +187,7 @@ class TestScheduleCRUD:
         schedule = create_schedule(
             session=session,
             course_name="待删除课程",
-            class_name="班级Y",
+            class_id=self.class_ids["班级Y"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -198,7 +201,7 @@ class TestScheduleCRUD:
         # 2. 创建 ended 状态的课堂
         ended_session = start_course_session(
             session=session,
-            class_name="班级Y",
+            class_id=self.class_ids["班级Y"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="待删除课程",
@@ -211,7 +214,7 @@ class TestScheduleCRUD:
         # 3. 创建 cancelled 状态的课堂
         cancelled_session = start_course_session(
             session=session,
-            class_name="班级Y",
+            class_id=self.class_ids["班级Y"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="待删除课程",
@@ -224,7 +227,7 @@ class TestScheduleCRUD:
         # 4. 创建 scheduled 状态的课堂
         scheduled_session = start_course_session(
             session=session,
-            class_name="班级Y",
+            class_id=self.class_ids["班级Y"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="待删除课程",
@@ -259,7 +262,7 @@ class TestScheduleCRUD:
         schedule = create_schedule(
             session=session,
             course_name="有活跃课堂的课程",
-            class_name="班级Z",
+            class_id=self.class_ids["班级Z"],
             teacher_id=1,
             teacher_name="张老师",
             day_of_week=1,
@@ -273,7 +276,7 @@ class TestScheduleCRUD:
         # 2. 创建 active 状态的课堂
         active_session = start_course_session(
             session=session,
-            class_name="班级Z",
+            class_id=self.class_ids["班级Z"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="有活跃课堂的课程",
@@ -304,6 +307,8 @@ class TestScheduleCRUD:
         records = [
             {
                 'course_name': '导入课程1',
+                'cohort_year': '2026',
+                'major': '',
                 'class_name': '导入班级1',
                 'teacher_name': '',
                 'day_of_week': '1',
@@ -315,6 +320,8 @@ class TestScheduleCRUD:
             },
             {
                 'course_name': '导入课程2',
+                'cohort_year': '2026',
+                'major': '',
                 'class_name': '导入班级2',
                 'teacher_name': '',
                 'day_of_week': '2',
@@ -340,6 +347,8 @@ class TestScheduleCRUD:
         records = [
             {
                 'course_name': '有效课程',
+                'cohort_year': '2026',
+                'major': '',
                 'class_name': '班级1',
                 'teacher_name': '',
                 'day_of_week': '1',
@@ -352,6 +361,8 @@ class TestScheduleCRUD:
             {
                 # 无效记录：缺少必需字段
                 'course_name': '无效课程',
+                'cohort_year': '2026',
+                'major': '',
                 'class_name': '班级2'
             }
         ]
@@ -367,6 +378,8 @@ class TestScheduleCRUD:
         records = [
             {
                 'course_name': '',  # 空值
+                'cohort_year': '2026',
+                'major': '',
                 'class_name': '班级1',
                 'teacher_name': '教师1',
                 'day_of_week': '1',
@@ -386,6 +399,8 @@ class TestScheduleCRUD:
         records = [
             {
                 'course_name': '课程1',
+                'cohort_year': '2026',
+                'major': '',
                 'class_name': '班级1',
                 'teacher_name': '教师1',
                 'day_of_week': '8',  # 无效：大于7
@@ -404,13 +419,15 @@ class TestScheduleCRUD:
         """测试导入查重检查"""
         # 先创建一个课程
         create_schedule(
-            session, "重复课程", "班级1", None, "教师1", 1, "08:00", "09:40", "A101", 1, 20
+            session, "重复课程", self.class_ids["班级1"], None, "教师1", 1, "08:00", "09:40", "A101", 1, 20
         )
         
         # 尝试导入相同课程
         records = [
             {
                 'course_name': '重复课程',
+                'cohort_year': '2026',
+                'major': '',
                 'class_name': '班级1',
                 'teacher_name': '教师1',
                 'day_of_week': '1',

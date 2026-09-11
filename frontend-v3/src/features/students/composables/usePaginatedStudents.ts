@@ -16,7 +16,7 @@ import type { ClassOption } from '../types'
 export function usePaginatedStudents(pageSize = 50, cohortYear?: Ref<string | undefined>) {
   const page = ref(1)
   const searchQuery = ref('')
-  const className = ref('')
+  const classId = ref('')
 
   const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
@@ -30,18 +30,18 @@ export function usePaginatedStudents(pageSize = 50, cohortYear?: Ref<string | un
   // 届切换后班级选项变化，重置已选班级并自动选中新届第一个班级
   if (cohortYear) {
     watch(cohortYear, () => {
-      className.value = ''
+      classId.value = ''
     })
   }
 
   const classOptions = computed<ClassOption[]>(() => [
     { value: '', label: '全部班级', count: 0 },
-    ...(classes.value ?? []).map((c) => ({ value: c.name, label: c.name, count: 0 })),
+    ...(classes.value ?? []).map((c) => ({ value: String(c.id), label: c.display_name, count: 0 })),
   ])
 
   // 查询参数：搜索时不分页（拉全量前端过滤），否则服务端分页
   const queryParams = computed(() => ({
-    class_name: className.value || undefined,
+    class_id: classId.value ? Number(classId.value) : undefined,
     limit: isSearching.value ? undefined : pageSize,
     offset: isSearching.value ? undefined : (page.value - 1) * pageSize,
   }))
@@ -69,14 +69,14 @@ export function usePaginatedStudents(pageSize = 50, cohortYear?: Ref<string | un
   })
 
   // 切换班级/搜索时回到第一页
-  watch([searchQuery, className], () => {
+  watch([searchQuery, classId], () => {
     page.value = 1
   })
 
   // 默认选中第一个班级（与原行为一致）
   const selectFirstClass = () => {
-    if (!className.value && classes.value && classes.value.length > 0) {
-      className.value = classes.value[0].name
+    if (!classId.value && classes.value && classes.value.length > 0) {
+      classId.value = String(classes.value[0].id)
     }
   }
   watch(classes, selectFirstClass, { immediate: true })
@@ -85,15 +85,15 @@ export function usePaginatedStudents(pageSize = 50, cohortYear?: Ref<string | un
     searchQuery.value = query
   }
 
-  const setClassFilter = (name: string) => {
-    className.value = name
+  const setClassFilter = (id: string) => {
+    classId.value = id
   }
 
   return {
     page,
     pageSize,
     searchQuery,
-    className,
+    classId,
     isSearching,
     classOptions,
     filteredStudents,

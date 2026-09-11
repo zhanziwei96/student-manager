@@ -26,6 +26,16 @@ vi.mock('@/api/offerings', () => ({
   },
 }))
 
+// 班内榜班级下拉需要按 display_name 反查 class_id
+vi.mock('@/api/classes', () => ({
+  classesApi: {
+    list: vi.fn(() => Promise.resolve([
+      { id: 1, name: '1班', major: '软件工程', cohort_year: '2026', display_name: '2026届软件工程1班', student_count: 0, status: 'active' },
+      { id: 2, name: '2班', major: '软件工程', cohort_year: '2026', display_name: '2026届软件工程2班', student_count: 0, status: 'active' },
+    ])),
+  },
+}))
+
 import { rankingsApi } from '@/api/rankings'
 const mockedGetRankings = vi.mocked(rankingsApi.getRankings)
 
@@ -33,10 +43,10 @@ const individualData = {
   type: 'individual' as const,
   scope: 'class' as const,
   course_name: '高等数学',
-  classes: ['一班'],
+  classes: ['2026届软件工程1班'],
   entries: [
-    { rank: 1, student_id: 'S001', name: '张三', class_name: '一班', score: 90 },
-    { rank: 2, student_id: 'S002', name: '李四', class_name: '一班', score: 80 },
+    { rank: 1, student_id: 'S001', name: '张三', class_name: '2026届软件工程1班', score: 90 },
+    { rank: 2, student_id: 'S002', name: '李四', class_name: '2026届软件工程1班', score: 80 },
   ],
   my_rank: null,
 }
@@ -45,9 +55,9 @@ const groupData = {
   type: 'group' as const,
   scope: 'class' as const,
   course_name: '高等数学',
-  classes: ['一班'],
+  classes: ['2026届软件工程1班'],
   entries: [
-    { rank: 1, group_id: 1, name: '第一组', class_name: '一班', score: 95, members: ['张三', '李四'] },
+    { rank: 1, group_id: 1, name: '第一组', class_name: '2026届软件工程1班', score: 95, members: ['张三', '李四'] },
   ],
   my_rank: null,
 }
@@ -121,7 +131,7 @@ describe('TeacherRankings 教师排行榜', () => {
     await selectCourse(wrapper)
 
     expect(mockedGetRankings).toHaveBeenLastCalledWith({
-      type: 'individual', course_id: 1, scope: 'class', class_name: '一班',
+      type: 'individual', course_id: 1, scope: 'class', class_id: 1,
     })
     expect(wrapper.text()).toContain('张三')
     expect(wrapper.text()).toContain('90')
@@ -138,7 +148,7 @@ describe('TeacherRankings 教师排行榜', () => {
     await flushPromises()
 
     expect(mockedGetRankings).toHaveBeenLastCalledWith({
-      type: 'group', course_id: 1, scope: 'class', class_name: '一班',
+      type: 'group', course_id: 1, scope: 'class', class_id: 1,
     })
     expect(wrapper.text()).toContain('第一组')
     expect(wrapper.text()).toContain('张三、李四')
@@ -148,7 +158,7 @@ describe('TeacherRankings 教师排行榜', () => {
     mockedGetRankings.mockResolvedValue({
       ...individualData,
       scope: 'all' as const,
-      classes: ['一班', '二班'],
+      classes: ['2026届软件工程1班', '2026届软件工程2班'],
     })
     const wrapper = mountComponent()
     await flushPromises()
@@ -159,7 +169,7 @@ describe('TeacherRankings 教师排行榜', () => {
     await flushPromises()
 
     expect(mockedGetRankings).toHaveBeenLastCalledWith({
-      type: 'individual', course_id: 1, scope: 'all', class_name: undefined,
+      type: 'individual', course_id: 1, scope: 'all', class_id: undefined,
     })
   })
 })

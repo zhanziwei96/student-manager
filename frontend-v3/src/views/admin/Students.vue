@@ -57,7 +57,7 @@ const cohortOptions = computed<ClassOption[]>(() => [
 const {
   page,
   searchQuery,
-  className,
+  classId,
   isSearching,
   classOptions,
   filteredStudents,
@@ -85,7 +85,7 @@ const { success: showSuccessToast, error: showErrorToast } = useToast()
 // === 按班级禁用（学期归档，支持多选班级） ===
 const queryClient = useQueryClient()
 const showDisableDialog = ref(false)
-const disableClassNames = ref<string[]>([])
+const disableClassIds = ref<number[]>([])
 const isDisabling = ref(false)
 
 // 可选班级（排除“全部班级”占位项）
@@ -94,25 +94,25 @@ const disableClassOptions = computed(() =>
 )
 
 const openDisableDialog = () => {
-  disableClassNames.value = []
+  disableClassIds.value = []
   showDisableDialog.value = true
 }
 
 // 勾选/取消勾选班级
-const toggleDisableClass = (className: string, checked: boolean) => {
+const toggleDisableClass = (classId: number, checked: boolean) => {
   if (checked) {
-    disableClassNames.value = [...disableClassNames.value, className]
+    disableClassIds.value = [...disableClassIds.value, classId]
   } else {
-    disableClassNames.value = disableClassNames.value.filter((c) => c !== className)
+    disableClassIds.value = disableClassIds.value.filter((c) => c !== classId)
   }
 }
 
 const handleDisableByClass = async () => {
-  if (disableClassNames.value.length === 0) return
+  if (disableClassIds.value.length === 0) return
 
   try {
     isDisabling.value = true
-    const result = await studentsApi.disableByClass(disableClassNames.value)
+    const result = await studentsApi.disableByClass(disableClassIds.value)
     // 刷新学生列表与班级列表（禁用后班级从列表消失）
     await queryClient.invalidateQueries({ queryKey: ['students'] })
     await queryClient.invalidateQueries({ queryKey: ['classes'] })
@@ -194,13 +194,11 @@ const validateAddForm = () => {
 const handleAddStudent = async () => {
   if (!validateAddForm()) return
 
-  const cls = (addClassesData.value ?? []).find((c) => c.id === Number(newStudent.value.class_id))
-
   try {
     await createStudent({
       student_id: newStudent.value.student_id.trim(),
       name: newStudent.value.name.trim(),
-      class_name: cls?.name ?? '',
+      class_id: Number(newStudent.value.class_id),
     })
 
     showSuccessToast(`学生 ${newStudent.value.name} 添加成功`)
@@ -329,7 +327,7 @@ const handleTransfer = async () => {
     <!-- Filters -->
     <StudentFilters
       v-model:search-query="searchQuery"
-      v-model:selected-class="className"
+      v-model:selected-class="classId"
       v-model:selected-cohort="cohortFilter"
       :class-options="classOptions"
       :cohort-options="cohortOptions"
@@ -613,18 +611,18 @@ const handleTransfer = async () => {
               class="flex items-center gap-2"
             >
               <Checkbox
-                :checked="disableClassNames.includes(String(cls.value))"
-                @update:checked="(checked) => toggleDisableClass(String(cls.value), checked)"
+                :checked="disableClassIds.includes(Number(cls.value))"
+                @update:checked="(checked) => toggleDisableClass(Number(cls.value), checked)"
               />
               <span class="text-sm">{{ cls.label }}</span>
             </div>
           </div>
         </div>
         <p
-          v-if="disableClassNames.length > 0"
+          v-if="disableClassIds.length > 0"
           class="text-sm text-[#ef4444]"
         >
-          将禁用 {{ disableClassNames.length }} 个班级的所有学生账号，确定吗？
+          将禁用 {{ disableClassIds.length }} 个班级的所有学生账号，确定吗？
         </p>
       </div>
       <template #footer>
@@ -636,7 +634,7 @@ const handleTransfer = async () => {
         </Button>
         <Button
           variant="destructive"
-          :disabled="disableClassNames.length === 0"
+          :disabled="disableClassIds.length === 0"
           :loading="isDisabling"
           data-testid="confirm-disable-btn"
           @click="handleDisableByClass"

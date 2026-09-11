@@ -61,8 +61,8 @@ vi.mock('@/composables', () => ({
 vi.mock('@/composables/useClasses', () => ({
   useClasses: () => ({
     data: ref([
-      { name: '计算机1班', status: 'active' },
-      { name: '软件工程班', status: 'active' }
+      { id: 1, name: '1班', major: '计算机', cohort_year: '2026', display_name: '2026届计算机1班', student_count: 0, status: 'active' },
+      { id: 2, name: '1班', major: '软件工程', cohort_year: '2026', display_name: '2026届软件工程1班', student_count: 0, status: 'active' }
     ])
   }),
   useClassStudents: () => ({
@@ -183,8 +183,9 @@ describe('CourseSession', () => {
     const wrapper = mountComponent()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('计算机1班')
-    expect(wrapper.text()).toContain('软件工程班')
+    // 班级选项展示后端返回的完整显示名
+    expect(wrapper.text()).toContain('2026届计算机1班')
+    expect(wrapper.text()).toContain('2026届软件工程1班')
   })
 
   it('allows entering course name and selecting class', async () => {
@@ -202,10 +203,11 @@ describe('CourseSession', () => {
     }
 
     // Select class (selects[0] is course selector, selects[1] is class selector)
+    // 班级选项的 value 为 class_id
     if (selects.length > 1) {
-      await selects[1].setValue('计算机1班')
+      await selects[1].setValue('1')
       await flushPromises()
-      expect(selects[1].element.value).toBe('计算机1班')
+      expect(selects[1].element.value).toBe('1')
     }
   })
 

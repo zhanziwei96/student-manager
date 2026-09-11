@@ -7,7 +7,7 @@ from sqlmodel import Session
 from app.crud.course_session import (
     start_course_session,
     end_course_session,
-    get_active_course_session_by_class_name,
+    get_active_course_session_by_class_id,
     get_teacher_active_course_sessions,
     get_course_sessions_by_schedule_and_week,
     get_teacher_course_sessions,
@@ -22,7 +22,7 @@ class TestStartCourseSession:
         """测试开始上课后状态为 active，有 session_code"""
         cs = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
@@ -41,7 +41,7 @@ class TestStartCourseSession:
         """测试开始上课时不传 course_name 默认为 None"""
         cs = start_course_session(
             session=session,
-            class_name="二班",
+            class_id=seed_refs["二班"],
             teacher_id=2,
             teacher_name="李老师"
         )
@@ -54,14 +54,14 @@ class TestStartCourseSession:
         """CRUD 层允许同教师多班级活跃（API 层负责拦截重复）"""
         cs1 = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="课程A"
         )
         cs2 = start_course_session(
             session=session,
-            class_name="二班",
+            class_id=seed_refs["二班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="课程B"
@@ -83,7 +83,7 @@ class TestStartCourseSession:
 
         cs = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=3,
             teacher_name="王老师",
             course_name="网络安全",
@@ -101,31 +101,31 @@ class TestStartCourseSession:
 class TestGetCourseSession:
     """测试查询课程会话功能"""
 
-    def test_get_active_course_session_by_class_name(self, session: Session, seed_refs):
-        """测试按班级名称查询活跃课堂"""
+    def test_get_active_course_session_by_class_id(self, session: Session, seed_refs):
+        """测试按班级 ID 查询活跃课堂"""
         started = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
         )
 
-        result = get_active_course_session_by_class_name(session, "一班")
+        result = get_active_course_session_by_class_id(session, seed_refs["一班"])
         assert result is not None
         assert result.id == started.id
         assert result.status == "active"
 
-    def test_get_active_course_session_by_class_name_no_active(self, session: Session):
+    def test_get_active_course_session_by_class_id_no_active(self, session: Session):
         """测试没有活跃课堂时返回 None"""
-        result = get_active_course_session_by_class_name(session, "不存在的班级")
+        result = get_active_course_session_by_class_id(session, 999999)
         assert result is None
 
     def test_get_teacher_active_course_sessions(self, session: Session, seed_refs):
         """测试按教师查询只返回该教师的活跃课程"""
         started = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
@@ -133,7 +133,7 @@ class TestGetCourseSession:
         # 其他教师的课堂
         start_course_session(
             session=session,
-            class_name="二班",
+            class_id=seed_refs["二班"],
             teacher_id=2,
             teacher_name="李老师",
             course_name="数据结构"
@@ -162,7 +162,7 @@ class TestGetCourseSession:
 
         cs = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=4,
             teacher_name="赵老师",
             schedule_id=100,
@@ -185,7 +185,7 @@ class TestEndCourseSession:
         """测试结束课堂后状态变为 ended，有 end_time"""
         started = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学"
@@ -202,22 +202,22 @@ class TestEndCourseSession:
         active = get_teacher_active_course_sessions(session, teacher_id=1)
         assert active == []
 
-    def test_end_course_session_with_class_name_filter(self, session: Session, seed_refs):
-        """测试指定班级结束课堂"""
+    def test_end_course_session_with_class_id_filter(self, session: Session, seed_refs):
+        """测试按班级 ID 结束课堂"""
         cs1 = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师"
         )
         cs2 = start_course_session(
             session=session,
-            class_name="二班",
+            class_id=seed_refs["二班"],
             teacher_id=1,
             teacher_name="张老师"
         )
 
-        ended = end_course_session(session, teacher_id=1, class_name="一班")
+        ended = end_course_session(session, teacher_id=1, class_id=seed_refs["一班"])
         assert len(ended) == 1
         assert ended[0].id == cs1.id
         assert ended[0].status == "ended"
@@ -237,9 +237,9 @@ class TestGetTeacherCourseSessions:
 
     def test_get_teacher_course_sessions_all(self, session: Session, seed_refs):
         """测试返回教师所有课堂"""
-        cs1 = start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
-        cs2 = start_course_session(session, "二班", teacher_id=1, teacher_name="张老师")
-        end_course_session(session, teacher_id=1, class_name="一班")
+        cs1 = start_course_session(session, seed_refs["一班"], teacher_id=1, teacher_name="张老师")
+        cs2 = start_course_session(session, seed_refs["二班"], teacher_id=1, teacher_name="张老师")
+        end_course_session(session, teacher_id=1, class_id=seed_refs["一班"])
 
         sessions = get_teacher_course_sessions(session, teacher_id=1)
         assert len(sessions) == 2
@@ -250,9 +250,9 @@ class TestGetTeacherCourseSessions:
 
     def test_get_teacher_course_sessions_filter_by_status_ended(self, session: Session, seed_refs):
         """测试 status='ended' 正确过滤"""
-        cs_active = start_course_session(session, "一班", teacher_id=2, teacher_name="李老师")
-        cs_ended = start_course_session(session, "二班", teacher_id=2, teacher_name="李老师")
-        end_course_session(session, teacher_id=2, class_name="二班")
+        cs_active = start_course_session(session, seed_refs["一班"], teacher_id=2, teacher_name="李老师")
+        cs_ended = start_course_session(session, seed_refs["二班"], teacher_id=2, teacher_name="李老师")
+        end_course_session(session, teacher_id=2, class_id=seed_refs["二班"])
 
         ended_sessions = get_teacher_course_sessions(session, teacher_id=2, status="ended")
         assert len(ended_sessions) == 1
@@ -264,8 +264,8 @@ class TestGetTeacherCourseSessions:
 
     def test_get_teacher_course_sessions_only_returns_own_data(self, session: Session, seed_refs):
         """测试只返回指定教师的数据"""
-        start_course_session(session, "一班", teacher_id=1, teacher_name="张老师")
-        start_course_session(session, "二班", teacher_id=2, teacher_name="李老师")
+        start_course_session(session, seed_refs["一班"], teacher_id=1, teacher_name="张老师")
+        start_course_session(session, seed_refs["二班"], teacher_id=2, teacher_name="李老师")
 
         sessions = get_teacher_course_sessions(session, teacher_id=1)
         assert len(sessions) == 1

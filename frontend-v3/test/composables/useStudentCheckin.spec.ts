@@ -112,34 +112,28 @@ describe('useStudentCourseSession', () => {
   })
 
   it('当班级有活跃课堂时应返回会话信息', async () => {
-    const { result, unmount } = withSetup(() => useStudentCourseSession())
+    const { result, unmount } = withSetup(() => useStudentCourseSession(ref(1)))
 
     // 等待 query 执行
     await new Promise((resolve) => setTimeout(resolve, 100))
     await nextTick()
 
-    expect(checkinApi.getCourseSessionForClass).toHaveBeenCalledWith('计算机一班')
+    expect(checkinApi.getCourseSessionForClass).toHaveBeenCalledWith(1)
     expect(result.data.value).toEqual(mockCourseSession)
     expect(result.hasActiveSession.value).toBe(true)
     unmount()
   })
 
-  it('当传入特定班级名时应使用传入值而非学生班级', async () => {
-    const { unmount } = withSetup(() => useStudentCourseSession(ref('计算机二班')))
+  it('当传入特定班级 ID 时应使用传入值', async () => {
+    const { unmount } = withSetup(() => useStudentCourseSession(ref(2)))
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(checkinApi.getCourseSessionForClass).toHaveBeenCalledWith('计算机二班')
+    expect(checkinApi.getCourseSessionForClass).toHaveBeenCalledWith(2)
     unmount()
   })
 
-  it('当学生信息未加载时不应调用API', () => {
-    vi.mocked(useStudentProfile).mockReturnValue({
-      data: ref(null),
-      isPending: ref(true),
-      error: ref(null),
-    } as QueryResult<Student>)
-
+  it('未传入班级 ID 时不应调用API', () => {
     const { unmount } = withSetup(() => useStudentCourseSession())
 
     expect(checkinApi.getCourseSessionForClass).not.toHaveBeenCalled()
@@ -152,11 +146,12 @@ describe('useStudentCourseSession', () => {
       active: false,
     })
 
-    const { result, unmount } = withSetup(() => useStudentCourseSession())
+    const { result, unmount } = withSetup(() => useStudentCourseSession(ref(1)))
 
     await new Promise((resolve) => setTimeout(resolve, 100))
     await nextTick()
 
+    expect(checkinApi.getCourseSessionForClass).toHaveBeenCalledWith(1)
     expect(result.hasActiveSession.value).toBe(false)
     unmount()
   })

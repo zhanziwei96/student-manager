@@ -10,7 +10,7 @@ import type { TodayScheduleItem } from '@/types'
  * 获取课表列表
  */
 export function useSchedules(params?: Ref<{
-  class_name?: string
+  class_id?: number
   teacher_id?: number
   day_of_week?: number
   week_number?: number

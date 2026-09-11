@@ -14,13 +14,13 @@ from sqlmodel import Session
 from app.models import Student
 
 
-def other_student_id(test_engine):
+def other_student_id(test_engine, seed_refs):
     """创建其他学生（非登录学生 S001，二班）并返回其学号"""
     with Session(test_engine) as session:
         student = Student(
             student_id="S002",
             name="其他学生",
-            class_name="二班",
+            class_id=seed_refs["二班"],
         )
         student_id = student.student_id
         session.add(student)
@@ -29,13 +29,13 @@ def other_student_id(test_engine):
 
 
 @pytest.fixture
-def other_class_student_id(test_engine):
+def other_class_student_id(test_engine, seed_refs):
     """创建三班学生（教师未负责班级）并返回其学号"""
     with Session(test_engine) as session:
         student = Student(
             student_id="S030",
             name="三班学生",
-            class_name="三班",
+            class_id=seed_refs["三班"],
         )
         student_id = student.student_id
         session.add(student)
@@ -47,7 +47,7 @@ def test_student_cannot_add_student(student_client):
     """学生不能添加学生"""
     resp = student_client.post(
         "/api/v1/students",
-        json={"student_id": "HACK001", "name": "越权学生", "class_name": "1班"},
+        json={"student_id": "HACK001", "name": "越权学生"},
     )
     assert resp.status_code == 403
 
@@ -106,7 +106,7 @@ def some_session_id(test_engine, seed_refs):
     with Session(test_engine) as session:
         cs = start_course_session(
             session=session,
-            class_name="一班",
+            class_id=seed_refs["一班"],
             teacher_id=1,
             teacher_name="张老师",
             course_name="高等数学",
@@ -147,7 +147,7 @@ def test_active_course_sessions_requires_login(anon_client):
 # ========== 教师无负责班级的签到列表 fail-closed ==========
 
 @pytest.fixture
-def teacher_without_classes_client(test_engine):
+def teacher_without_classes_client(test_engine, seed_refs):
     """已登录且无授课教学班的教师客户端（权限派生为空集）"
 
     同时造一条"一班"签到记录：若空班级列表被跳过过滤（旧 bug），
@@ -172,7 +172,7 @@ def teacher_without_classes_client(test_engine):
         )
         session.add(teacher)
         session.add(CheckinRecord(
-            student_id="S001", student_name="学生1", class_name="一班"
+            student_id="S001", student_name="学生1", class_id=seed_refs["一班"]
         ))
         session.commit()
 

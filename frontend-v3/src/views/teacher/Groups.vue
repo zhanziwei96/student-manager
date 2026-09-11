@@ -24,12 +24,12 @@ const queryClient = useQueryClient()
 
 // 班级选择
 const { data: classes } = useClasses()
-const selectedClass = ref('')
+const selectedClassId = ref<number | ''>('')
 watch(
   () => classes.value,
   (list) => {
-    if (list && list.length > 0 && !selectedClass.value) {
-      selectedClass.value = list[0].name
+    if (list && list.length > 0 && !selectedClassId.value) {
+      selectedClassId.value = list[0].id
     }
   },
   { immediate: true },
@@ -37,7 +37,7 @@ watch(
 
 const classOptions = computed(() => [
   { value: '', label: '请选择班级', disabled: true },
-  ...(classes.value || []).map((c: AdminClass) => ({ value: c.name, label: c.name })),
+  ...(classes.value || []).map((c: AdminClass) => ({ value: c.id, label: c.display_name })),
 ])
 
 // 课程下拉（小组按课程划分）
@@ -52,14 +52,15 @@ const courseOptions = computed(() => [
 ])
 
 // 小组列表（按课程过滤）
+const selectedClassIdParam = computed(() => (selectedClassId.value === '' ? undefined : selectedClassId.value))
 const { data: groups, isPending: loadingGroups } = useTeacherGroups(
-  selectedClass,
+  selectedClassIdParam,
   computed(() => (selectedCourseId.value === '' ? null : Number(selectedCourseId.value))),
 )
 const filteredGroups = computed(() => groups.value || [])
 
 // 小组人数上限设置
-const { data: groupSettings } = useClassGroupSettings(selectedClass)
+const { data: groupSettings } = useClassGroupSettings(selectedClassIdParam)
 const { mutateAsync: updateSettings } = useUpdateClassGroupSettings()
 const maxMembers = ref(5)
 const savingSettings = ref(false)
@@ -72,12 +73,12 @@ watch(() => groupSettings.value, (s) => {
 // 自动分配
 const { mutateAsync: autoAssign, isPending: autoAssigning } = useAutoAssign()
 async function handleAutoAssign() {
-  if (!selectedClass.value || selectedCourseId.value === '') {
+  if (selectedClassId.value === '' || selectedCourseId.value === '') {
     toastError('请先选择班级和课程')
     return
   }
   try {
-    await autoAssign({ className: selectedClass.value, courseId: Number(selectedCourseId.value) })
+    await autoAssign({ classId: selectedClassId.value, courseId: Number(selectedCourseId.value) })
     toastSuccess('自动分组完成')
   } catch (err) {
     toastError(getErrorMessage(err) || '自动分组失败')
@@ -85,14 +86,14 @@ async function handleAutoAssign() {
 }
 
 async function handleSaveSettings() {
-  if (!selectedClass.value) return
+  if (selectedClassId.value === '') return
   if (maxMembers.value < 2 || maxMembers.value > 10) {
     toastError('每组上限需在 2-10 之间')
     return
   }
   try {
     savingSettings.value = true
-    await updateSettings({ class_name: selectedClass.value, max_members_per_group: maxMembers.value })
+    await updateSettings({ class_id: selectedClassId.value, max_members_per_group: maxMembers.value })
     toastSuccess('小组人数上限已更新')
   } catch (err) {
     toastError(getErrorMessage(err) || '设置失败')
@@ -114,7 +115,7 @@ function openCreateGroupDialog() {
 }
 
 async function handleCreateGroup() {
-  if (!selectedClass.value) return
+  if (selectedClassId.value === '') return
   if (!newGroupName.value.trim()) {
     toastError('请输入小组名称')
     return
@@ -126,7 +127,7 @@ async function handleCreateGroup() {
   try {
     creatingGroup.value = true
     await groupsApi.createTeacherGroup({
-      class_name: selectedClass.value,
+      class_id: selectedClassId.value,
       name: newGroupName.value.trim(),
       course_id: Number(newGroupCourseId.value),
     })
@@ -200,7 +201,11 @@ async function handleRemoveMember(groupId: number, studentId: string) {
     await queryClient.invalidateQueries({ queryKey: ['teacher-groups'] })
     if (expandedGroupId.value === groupId) {
       // 刷新后检查小组是否仍存在（踢出最后一名成员后小组会自动解散）
-      const updatedGroups = queryClient.getQueryData<Group[]>(['teacher-groups', selectedClass.value, selectedCourseId.value === '' ? null : Number(selectedCourseId.value)])
+      const updatedGroups = queryClient.getQueryData<Group[]>([
+        'teacher-groups',
+        selectedClassId.value === '' ? undefined : selectedClassId.value,
+        selectedCourseId.value === '' ? null : Number(selectedCourseId.value),
+      ])
       const stillExists = updatedGroups?.some((g: Group) => g.id === groupId)
       if (stillExists) {
         groupDetail.value = await groupsApi.getGroupDetail(groupId)
@@ -347,7 +352,7 @@ async function handleUpdateScore() {
     <Card class="bg-white border-[#e5e5e5] p-5">
       <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 mb-4">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-          <Select v-model="selectedClass" :options="classOptions" class="w-full sm:w-48" />
+          <Select v-model="selectedClassId" :options="classOptions" class="w-full sm:w-48" />
           <Select v-model="selectedCourseId" :options="courseOptions" class="w-full sm:w-40" />
           <div class="flex items-center gap-2">
             <span class="text-sm text-[#737373]">每组上限</span>

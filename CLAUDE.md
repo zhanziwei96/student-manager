@@ -2,9 +2,9 @@
 
 ---
 
-**文档版本**: v2.0  
-**最后更新**: 2026-04-14  
-**适用版本**: v3.0.0+  
+**文档版本**: v2.1  
+**最后更新**: 2026-09-11  
+**适用版本**: v3.1.0+  
 **状态**: ✅ 已同步代码
 
 ---
@@ -214,6 +214,8 @@ tests/
 以下仅列出最常用、最简短的速查项：
 
 ### 后端速查
+- **班级锚点**：一律用 `class_id: int`，**禁止**按裸班级名解析（`classes` 唯一键是 `(name, major, cohort_year)`，裸名可跨专业重复）。展示名统一走 `class_cache.build_class_display_name` / `get_class_display_name(s)_by_id`
+- **教学班范围**：`course_offering_classes` 关联表；无关联行 = 面向全部班级（通配）
 - **API 响应常量**：使用 `ApiResponseConst.SUCCESS` / `DATA` / `MESSAGE`
 - **环境变量格式**：使用双下划线，如 `DATABASE__PATH`
 - **密码验证新接口**：`verify_password()` / `hash_password()`
@@ -221,6 +223,7 @@ tests/
 - **限流状态码**：返回 `429`，禁止 `503`
 
 ### 前端速查
+- **班级选择器**：value 用班级 `id`，label 用 `display_name`；响应里的 `class_name` 是完整展示名，**不可**用于逻辑判断或回传
 - **API 响应处理**：禁止 `res.user.role`，必须 `res.data.role`
 - **Tailwind v4**：自定义 `@theme` 时保留 `--spacing: 0.25rem` 或使用 `@theme inline`
 - **TanStack Query 缓存一致性**：修改 `queryKey` 时必须同步检查所有 `invalidateQueries`
