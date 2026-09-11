@@ -37,6 +37,7 @@ class StudentWithCheckin(BaseModel):
     id: Optional[int] = None
     student_id: str
     name: str
+    class_id: Optional[int] = None
     class_name: str
     status: str
     is_account_enabled: bool
@@ -155,6 +156,7 @@ async def get_students_list(
         student_dict = {
             'student_id': student.student_id,
             'name': student.name,
+            'class_id': student.class_id,
             'class_name': class_name_map.get(student.class_id) or "未分班",
             'status': student.status,
             'is_account_enabled': student.is_account_enabled,

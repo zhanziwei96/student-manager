@@ -675,7 +675,8 @@ curl http://localhost:8000/api/v1/admin/users \
 | name | string | 是 | 显示名称 |
 | password | string | 是 | 密码 |
 | role | string | 是 | 角色 (admin/teacher) |
-| assigned_class | string | 否 | 负责班级 |
+
+> 教师负责班级**不再**通过用户字段分配（`assigned_class` 已移除）——现由教学班 `course_offerings` + `course_offering_classes` 派生，见「教学班」相关接口。
 
 #### cURL 示例
 
@@ -687,8 +688,7 @@ curl -X POST http://localhost:8000/api/v1/admin/users \
     "username": "teacher1",
     "name": "王老师",
     "password": "teacher123",
-    "role": "teacher",
-    "assigned_class": "软件1班"
+    "role": "teacher"
   }'
 ```
 
