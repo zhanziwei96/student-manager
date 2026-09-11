@@ -21,7 +21,7 @@ from app.crud.schedule import (
 )
 from app.crud.course_session import (
     get_course_session,
-    get_active_course_session_by_class_name,
+    get_active_course_session_by_class_id,
     get_teacher_active_course_sessions,
     get_course_sessions_by_schedule_and_week,
     start_course_session,
@@ -86,7 +86,7 @@ __all__ = [
     "get_schedule", "get_schedules", "delete_schedule",
     "create_schedule", "import_schedules",
     # CourseSession
-    "get_course_session", "get_active_course_session_by_class_name",
+    "get_course_session", "get_active_course_session_by_class_id",
     "get_teacher_active_course_sessions", "get_course_sessions_by_schedule_and_week",
     "start_course_session", "end_course_session", "get_teacher_course_sessions",
     # Audit

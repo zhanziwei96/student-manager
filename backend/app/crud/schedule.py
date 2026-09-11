@@ -6,9 +6,16 @@
 """
 from typing import List, Optional
 from sqlmodel import Session, select
-from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
 from app.core.term import get_current_semester_id
-from app.models import CourseSchedule, User, Student
+from app.models import Class_, CourseSchedule, User
+
+
+def _class_ids_by_name(session: Session, class_name: str) -> List[int]:
+    """按裸班级名查 classes 表 ID 列表（可能跨专业/跨届多个，仅作过渡期解析）
+
+    TODO(Task 6): 课表导入改按「届+专业+班级名」三元组定位后删除此辅助函数。
+    """
+    return list(session.exec(select(Class_.id).where(Class_.name == class_name)).all())
 
 
 def get_schedule(session: Session, schedule_id: int) -> Optional[CourseSchedule]:
@@ -18,15 +25,15 @@ def get_schedule(session: Session, schedule_id: int) -> Optional[CourseSchedule]
 
 def get_schedules(
     session: Session,
-    class_name: Optional[str] = None,
+    class_id: Optional[int] = None,
     day_of_week: Optional[int] = None,
     teacher_id: Optional[int] = None
 ) -> List[CourseSchedule]:
     """获取课表列表"""
     query = select(CourseSchedule).where(CourseSchedule.semester_id == get_current_semester_id(session))
 
-    if class_name:
-        query = query.where(CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(CourseSchedule.class_id == class_id)
     if day_of_week:
         query = query.where(CourseSchedule.day_of_week == day_of_week)
     if teacher_id:
@@ -96,7 +103,7 @@ def delete_schedule(session: Session, schedule_id: int) -> bool:
 def create_schedule(
     session: Session,
     course_name: str,
-    class_name: str,
+    class_id: int,
     teacher_id: Optional[int],
     teacher_name: str,
     day_of_week: int,
@@ -109,11 +116,11 @@ def create_schedule(
 ) -> CourseSchedule:
     """
     创建课表
-    
+
     Args:
         session: 数据库会话
         course_name: 课程名称
-        class_name: 班级名称
+        class_id: 班级 ID
         teacher_id: 教师ID（可选）
         teacher_name: 教师姓名
         day_of_week: 星期几（1-7）
@@ -132,8 +139,7 @@ def create_schedule(
     now = get_now().isoformat()
     schedule = CourseSchedule(
         course_name=course_name,
-        class_name=class_name,
-        class_id=get_class_id_by_name(session, class_name),
+        class_id=class_id,
         semester_id=get_current_semester_id(session),
         teacher_id=teacher_id,
         teacher_name=teacher_name,
@@ -184,10 +190,9 @@ def import_schedules(
     errors = []
 
     # 有启用学生的班级集合（学期归档后，禁用/不存在班级不可导入新课表）
+    # TODO(Task 6): 课表导入改按「届+专业+班级名」三元组定位，此处暂按裸名匹配 classes 表
     active_classes = {
-        str(row) for row in session.exec(
-            select(Student.class_name).where(Student.is_account_enabled.is_(True)).distinct()
-        ).all() if row
+        str(row) for row in session.exec(select(Class_.name)).all() if row
     }
 
     for index, record in enumerate(records):
@@ -232,10 +237,11 @@ def import_schedules(
             ).first()
             
             # 查重检查（仅当前学期内查重，允许新学期导入与上学期相同的课程）
+            class_ids = _class_ids_by_name(session, class_name)
             existing = session.exec(
                 select(CourseSchedule).where(
                     CourseSchedule.course_name == course_name,
-                    CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])),
+                    CourseSchedule.class_id.in_(class_ids),
                     CourseSchedule.teacher_name == teacher_name,
                     CourseSchedule.day_of_week == day_of_week,
                     CourseSchedule.start_time == start_time,
@@ -252,7 +258,7 @@ def import_schedules(
             now = get_now().isoformat()
             schedule = CourseSchedule(
                 course_name=course_name,
-                class_id=get_class_id_by_name(session, class_name),
+                class_id=class_ids[0],
                 semester_id=get_current_semester_id(session),
                 teacher_id=teacher.id if teacher else None,
                 teacher_name=teacher_name,

@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
 from pydantic import BaseModel, Field
 
-from app.core.class_cache import get_class_name_by_id
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.api.deps import require_admin_or_teacher, verify_teacher_class_access
@@ -34,7 +33,7 @@ def update_score(
     if not group:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
 
-    verify_teacher_class_access(user, get_class_name_by_id(session, group.class_id), session)
+    verify_teacher_class_access(user, group.class_id, session)
 
     username = user.get("username", "")
     result = update_group_score(session, group_id, data.score_change, data.reason, username)
@@ -60,7 +59,7 @@ def get_score_logs(
     if not group:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
 
-    verify_teacher_class_access(user, get_class_name_by_id(session, group.class_id), session)
+    verify_teacher_class_access(user, group.class_id, session)
 
     logs = get_group_score_logs(session, group_id, limit=limit, offset=offset)
 

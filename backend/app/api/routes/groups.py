@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.core.class_cache import get_class_name_by_id, get_class_names
+from app.core.class_cache import get_class_display_name_by_id, get_class_display_names
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user, require_teacher
@@ -32,13 +32,13 @@ router = APIRouter(tags=["groups"])
 
 
 class AutoAssignRequest(BaseModel):
-    class_name: str = Field(..., min_length=1)
+    class_id: int = Field(..., description="班级ID")
     course_id: int = Field(..., description="课程ID（小组按科目划分）")
     group_size: Optional[int] = Field(default=None, ge=2, le=10)
 
 
 class UpdateClassGroupSettingsRequest(BaseModel):
-    class_name: str = Field(..., min_length=1)
+    class_id: int = Field(..., description="班级ID")
     max_members_per_group: int = Field(..., ge=2, le=10)
 
 
@@ -47,7 +47,7 @@ class TransferLeaderRequest(BaseModel):
 
 
 class CreateGroupRequest(BaseModel):
-    class_name: str = Field(..., min_length=1)
+    class_id: int = Field(..., description="班级ID")
     name: str = Field(..., min_length=1)
     course_id: int = Field(..., description="课程ID（小组按科目划分）")
 
@@ -60,7 +60,7 @@ class DissolutionRequestCreate(BaseModel):
 
 @router.get("/teacher/groups", response_model=ApiResponse[list])
 async def api_teacher_groups(
-    class_name: str,
+    class_id: int,
     course_id: Optional[int] = Query(None, description="按课程过滤"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
@@ -68,7 +68,7 @@ async def api_teacher_groups(
     """获取班级小组列表（小组按课程划分）"""
     from app.models import Student, Course
     from sqlmodel import col, select as sql_select
-    groups = get_groups_by_class(session, class_name, course_id=course_id)
+    groups = get_groups_by_class(session, class_id, course_id=course_id)
     # 批量查询所有相关学生姓名
     all_member_ids = []
     for g in groups:
@@ -83,7 +83,7 @@ async def api_teacher_groups(
     if course_ids:
         courses = session.exec(sql_select(Course).where(col(Course.id).in_(course_ids))).all()
         course_map = {c.id: c.name for c in courses}
-    group_class_names = get_class_names(session, (g.class_id for g in groups))
+    group_class_names = get_class_display_names(session, (g.class_id for g in groups))
     result = []
     for g in groups:
         members = get_group_members(session, g.id)
@@ -112,9 +112,9 @@ async def api_teacher_create_group(
 
     if session.get(Course, data.course_id) is None:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程不存在")
-    verify_class_has_active_students(data.class_name, session)
+    verify_class_has_active_students(data.class_id, session)
 
-    group = create_group(session, data.class_name, data.name, "", course_id=data.course_id)
+    group = create_group(session, data.class_id, data.name, "", course_id=data.course_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {"group_id": group.id, "name": group.name},
@@ -130,10 +130,10 @@ async def api_auto_assign(
 ):
     """自动分配未组队学生（按课程）"""
     # 校验班级存在且有启用学生（防止对已归档班级分组）
-    verify_class_has_active_students(data.class_name, session)
-    settings = get_or_create_class_group_settings(session, data.class_name)
+    verify_class_has_active_students(data.class_id, session)
+    settings = get_or_create_class_group_settings(session, data.class_id)
     group_size = data.group_size if data.group_size is not None else settings.max_members_per_group
-    new_groups = auto_assign_unassigned_students(session, data.class_name, group_size, course_id=data.course_id)
+    new_groups = auto_assign_unassigned_students(session, data.class_id, group_size, course_id=data.course_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [{"id": g.id, "name": g.name} for g in new_groups],
@@ -142,16 +142,16 @@ async def api_auto_assign(
 
 @router.get("/teacher/class-group-settings", response_model=ApiResponse[dict])
 async def api_get_class_group_settings(
-    class_name: str,
+    class_id: int,
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
     """获取班级小组设置"""
-    settings = get_class_group_settings(session, class_name)
+    settings = get_class_group_settings(session, class_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
-            "class_name": class_name,
+            "class_name": get_class_display_name_by_id(session, class_id),
             "max_members_per_group": settings.max_members_per_group if settings else 5,
         },
     }
@@ -165,7 +165,7 @@ async def api_update_class_group_settings(
 ):
     """更新班级小组人数上限"""
     # 校验：新上限 >= 该班所有小组中当前最大成员数
-    groups = get_groups_by_class(session, data.class_name)
+    groups = get_groups_by_class(session, data.class_id)
     max_current = 0
     for g in groups:
         count = len(get_group_members(session, g.id))
@@ -176,11 +176,11 @@ async def api_update_class_group_settings(
             status_code=HttpStatus.BAD_REQUEST,
             detail=f"当前有小组已有 {max_current} 人，上限不能小于此值",
         )
-    settings = update_class_group_settings(session, data.class_name, data.max_members_per_group)
+    settings = update_class_group_settings(session, data.class_id, data.max_members_per_group)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
-            "class_name": data.class_name,
+            "class_name": get_class_display_name_by_id(session, data.class_id),
             "max_members_per_group": settings.max_members_per_group,
         },
     }
@@ -331,10 +331,10 @@ async def api_student_create_group(
     if session.get(Course, data.course_id) is None:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程不存在")
     student_id = user.get("sub", "")
-    existing = get_student_active_group(session, student_id, data.class_name, course_id=data.course_id)
+    existing = get_student_active_group(session, student_id, data.class_id, course_id=data.course_id)
     if existing:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="已在该科目的一个小组中")
-    group = create_group(session, data.class_name, data.name, student_id, course_id=data.course_id)
+    group = create_group(session, data.class_id, data.name, student_id, course_id=data.course_id)
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {"group_id": group.id, "name": group.name},
@@ -343,14 +343,14 @@ async def api_student_create_group(
 
 @router.get("/student/groups", response_model=ApiResponse[list])
 async def api_student_groups(
-    class_name: str,
+    class_id: int,
     course_id: Optional[int] = Query(None, description="按课程过滤"),
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
     """获取班级可加入小组列表（小组按课程划分）"""
-    groups = get_groups_by_class(session, class_name, course_id=course_id)
-    settings = get_class_group_settings(session, class_name)
+    groups = get_groups_by_class(session, class_id, course_id=course_id)
+    settings = get_class_group_settings(session, class_id)
     max_m = settings.max_members_per_group if settings else None
     result = []
     for g in groups:
@@ -379,7 +379,7 @@ async def api_create_join_request(
     if not group or not group.is_active:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
     # 检查小组是否已满
-    settings = get_class_group_settings(session, get_class_name_by_id(session, group.class_id))
+    settings = get_class_group_settings(session, group.class_id)
     if settings:
         current_count = len(get_group_members(session, group.id))
         if current_count >= settings.max_members_per_group:
@@ -418,7 +418,7 @@ async def api_approve_join_request(
     if not group or group.leader_student_id != student_id:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权审批")
     # 检查小组是否已满
-    settings = get_class_group_settings(session, get_class_name_by_id(session, group.class_id))
+    settings = get_class_group_settings(session, group.class_id)
     if settings:
         current_count = len(get_group_members(session, group.id))
         if current_count >= settings.max_members_per_group:
@@ -501,7 +501,7 @@ async def api_leave_group(
     # 学生退出仅离开当前科目的小组（小组按科目划分）
     from app.crud.group import _remove_student_from_course_groups
     _remove_student_from_course_groups(
-        session, student_id, get_class_name_by_id(session, group.class_id), group.course_id)
+        session, student_id, group.class_id, group.course_id)
 
     return {
         ApiResponseConst.SUCCESS: True,
@@ -518,9 +518,9 @@ async def api_student_my_group(
     student_id = user.get("sub", "")
     from app.models import Student, Course
     stu = session.get(Student, student_id)
-    if not stu:
+    if not stu or stu.class_id is None:
         return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
-    my_groups = get_student_groups(session, student_id, stu.class_name)
+    my_groups = get_student_groups(session, student_id, stu.class_id)
     if not my_groups:
         return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
 
@@ -540,7 +540,7 @@ async def api_student_my_group(
         students = session.exec(select(Student).where(col(Student.student_id).in_(all_member_ids))).all()
         student_map = {s.student_id: s.name for s in students}
 
-    my_class_names = get_class_names(session, (g.class_id for g in my_groups))
+    my_class_names = get_class_display_names(session, (g.class_id for g in my_groups))
     result = []
     for g in my_groups:
         members = get_group_members(session, g.id)

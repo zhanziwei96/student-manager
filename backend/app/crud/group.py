@@ -2,7 +2,7 @@
 from typing import List, Optional
 import random
 from sqlmodel import Session, select
-from app.core.class_cache import get_class_name_by_id, get_class_id_by_name, get_class_ids_by_names
+from app.core.class_cache import get_class_display_name_by_id
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 from app.models.group import (
@@ -18,12 +18,12 @@ def get_group(session: Session, group_id: int) -> Optional[Group]:
 
 def get_groups_by_class(
     session: Session,
-    class_name: str,
+    class_id: int,
     course_id: Optional[int] = None,
 ) -> List[Group]:
     """获取某班当前学期所有活跃小组（可按课程过滤）"""
     query = select(Group).where(
-        Group.class_id.in_(get_class_ids_by_names(session, [class_name])),
+        Group.class_id == class_id,
         Group.is_active.is_(True),
         Group.semester_id == get_current_semester_id(session),
     )
@@ -35,7 +35,7 @@ def get_groups_by_class(
 def get_student_active_group(
     session: Session,
     student_id: str,
-    class_name: str,
+    class_id: int,
     course_id: Optional[int] = None,
 ) -> Optional[Group]:
     """获取学生在某班当前学期的活跃小组（小组按科目划分：同科目唯一）"""
@@ -44,7 +44,7 @@ def get_student_active_group(
         .join(GroupMember, GroupMember.group_id == Group.id)
         .where(
             GroupMember.student_id == student_id,
-            Group.class_id.in_(get_class_ids_by_names(session, [class_name])),
+            Group.class_id == class_id,
             Group.is_active.is_(True),
             Group.semester_id == get_current_semester_id(session),
         )
@@ -54,14 +54,14 @@ def get_student_active_group(
     return session.exec(statement).first()
 
 
-def get_student_groups(session: Session, student_id: str, class_name: str) -> List[Group]:
+def get_student_groups(session: Session, student_id: str, class_id: int) -> List[Group]:
     """获取学生在某班当前学期的全部活跃小组（每科一个）"""
     statement = (
         select(Group)
         .join(GroupMember, GroupMember.group_id == Group.id)
         .where(
             GroupMember.student_id == student_id,
-            Group.class_id.in_(get_class_ids_by_names(session, [class_name])),
+            Group.class_id == class_id,
             Group.is_active.is_(True),
             Group.semester_id == get_current_semester_id(session),
         )
@@ -79,14 +79,14 @@ def get_group_members(session: Session, group_id: int) -> List[GroupMember]:
 
 def create_group(
     session: Session,
-    class_name: str,
+    class_id: int,
     name: str,
     leader_student_id: str,
     course_id: Optional[int] = None,
 ) -> Group:
     """创建小组（按科目划分），组长自动加入"""
     group = Group(
-        class_id=get_class_id_by_name(session, class_name),
+        class_id=class_id,
         semester_id=get_current_semester_id(session),
         name=name,
         leader_student_id=leader_student_id,
@@ -105,10 +105,10 @@ def create_group(
 
 
 def _remove_student_from_course_groups(
-    session: Session, student_id: str, class_name: str, course_id: Optional[int],
+    session: Session, student_id: str, class_id: int, course_id: Optional[int],
 ) -> None:
     """将学生从某班指定科目（或全部科目）的活跃小组中移除；若小组无人则自动解散"""
-    groups = get_groups_by_class(session, class_name, course_id=course_id)
+    groups = get_groups_by_class(session, class_id, course_id=course_id)
     for group in groups:
         members = session.exec(
             select(GroupMember).where(
@@ -162,7 +162,7 @@ def approve_membership_request(session: Session, request_id: int) -> Optional[Gr
     req.resolved_at = get_now()
     # 先退出同科目旧组（小组按科目划分）
     _remove_student_from_course_groups(
-        session, req.student_id, get_class_name_by_id(session, group.class_id), group.course_id)
+        session, req.student_id, group.class_id, group.course_id)
     # 加入新组
     member = GroupMember(group_id=group.id, student_id=req.student_id)
     session.add(member)
@@ -252,19 +252,19 @@ def transfer_group_leader(session: Session, group_id: int, new_leader_id: str) -
 
 
 def auto_assign_unassigned_students(
-    session: Session, class_name: str, group_size: int = 4, course_id: Optional[int] = None,
+    session: Session, class_id: int, group_size: int = 4, course_id: Optional[int] = None,
 ) -> List[Group]:
     """将某班未组队学生随机分配成新小组（按课程）"""
     from app.models import Student
     # 找出该班所有启用学生（禁用学生不参与自动分组）
     all_students = session.exec(
         select(Student).where(
-            Student.class_id.in_(get_class_ids_by_names(session, [class_name])),
+            Student.class_id == class_id,
             Student.is_account_enabled.is_(True),
         )
     ).all()
     # 找出已在活跃小组的学生（同科目）
-    active_groups = get_groups_by_class(session, class_name, course_id=course_id)
+    active_groups = get_groups_by_class(session, class_id, course_id=course_id)
     assigned_ids = set()
     for g in active_groups:
         for m in get_group_members(session, g.id):
@@ -280,7 +280,7 @@ def auto_assign_unassigned_students(
         leader = random.choice(chunk)
         group = create_group(
             session,
-            class_name=class_name,
+            class_id=class_id,
             name=f"第 {len(active_groups) + len(groups) + 1} 组",
             leader_student_id=leader.student_id,
             course_id=course_id,
@@ -295,26 +295,25 @@ def auto_assign_unassigned_students(
     return groups
 
 
-def _get_class_group_settings(session: Session, class_name: str) -> Optional[ClassGroupSettings]:
-    """按 class_name 解析 (class_id, semester_id) 后按复合主键查询"""
-    class_id = get_class_id_by_name(session, class_name)
+def _get_class_group_settings(session: Session, class_id: int) -> Optional[ClassGroupSettings]:
+    """按复合主键 (class_id, semester_id) 查询班级小组设置"""
     semester_id = get_current_semester_id(session)
-    if class_id is None or semester_id is None:
+    if semester_id is None:
         return None
     return session.get(ClassGroupSettings, (class_id, semester_id))
 
 
-def get_class_group_settings(session: Session, class_name: str) -> Optional[ClassGroupSettings]:
+def get_class_group_settings(session: Session, class_id: int) -> Optional[ClassGroupSettings]:
     """获取班级小组设置"""
-    return _get_class_group_settings(session, class_name)
+    return _get_class_group_settings(session, class_id)
 
 
-def get_or_create_class_group_settings(session: Session, class_name: str) -> ClassGroupSettings:
+def get_or_create_class_group_settings(session: Session, class_id: int) -> ClassGroupSettings:
     """获取或创建班级小组设置（复合主键 (class_id, semester_id)）"""
-    settings = _get_class_group_settings(session, class_name)
+    settings = _get_class_group_settings(session, class_id)
     if not settings:
         settings = ClassGroupSettings(
-            class_id=get_class_id_by_name(session, class_name),
+            class_id=class_id,
             semester_id=get_current_semester_id(session),
         )
         session.add(settings)
@@ -323,9 +322,9 @@ def get_or_create_class_group_settings(session: Session, class_name: str) -> Cla
     return settings
 
 
-def update_class_group_settings(session: Session, class_name: str, max_members: int) -> ClassGroupSettings:
+def update_class_group_settings(session: Session, class_id: int, max_members: int) -> ClassGroupSettings:
     """更新班级小组人数上限"""
-    settings = get_or_create_class_group_settings(session, class_name)
+    settings = get_or_create_class_group_settings(session, class_id)
     settings.max_members_per_group = max_members
     settings.updated_at = get_now()
     session.add(settings)
@@ -365,7 +364,7 @@ def get_group_with_members(session: Session, group_id: int) -> Optional[dict]:
 
     return {
         "id": group.id,
-        "class_name": get_class_name_by_id(session, group.class_id),
+        "class_name": get_class_display_name_by_id(session, group.class_id),
         "name": group.name,
         "leader_student_id": group.leader_student_id,
         "is_active": group.is_active,

@@ -6,7 +6,6 @@ from typing import List, Optional
 import uuid
 from zoneinfo import ZoneInfo
 from sqlmodel import Session, select
-from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.models import CourseSession
 
@@ -24,10 +23,10 @@ def get_course_session_by_session_code(session: Session, session_code: str) -> O
     return session.exec(query).first()
 
 
-def get_active_course_session_by_class_name(session: Session, class_name: str) -> Optional[CourseSession]:
-    """根据班级名称获取当前学期活跃课程会话"""
+def get_active_course_session_by_class_id(session: Session, class_id: int) -> Optional[CourseSession]:
+    """根据班级 ID 获取当前学期活跃课程会话"""
     query = select(CourseSession).where(
-        CourseSession.class_id.in_(get_class_ids_by_names(session, [class_name])),
+        CourseSession.class_id == class_id,
         CourseSession.status == "active",
         CourseSession.semester_id == get_current_semester_id(session),
     )
@@ -67,7 +66,7 @@ def get_course_sessions_by_schedule_and_week(
 
 def start_course_session(
     session: Session,
-    class_name: str,
+    class_id: int,
     teacher_id: int,
     teacher_name: Optional[str] = None,
     course_name: Optional[str] = None,
@@ -82,7 +81,7 @@ def start_course_session(
         session_code=session_code,
         schedule_id=schedule_id,
         course_name=course_name,
-        class_id=get_class_id_by_name(session, class_name),
+        class_id=class_id,
         semester_id=get_current_semester_id(session),
         classroom=classroom,
         teacher_id=teacher_id,
@@ -101,15 +100,15 @@ def start_course_session(
 def end_course_session(
     session: Session,
     teacher_id: int,
-    class_name: Optional[str] = None
+    class_id: Optional[int] = None
 ) -> List[CourseSession]:
     """结束上课"""
     query = select(CourseSession).where(
         CourseSession.teacher_id == teacher_id,
         CourseSession.status == "active"
     )
-    if class_name:
-        query = query.where(CourseSession.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(CourseSession.class_id == class_id)
 
     sessions = session.exec(query).all()
     ended_sessions = []

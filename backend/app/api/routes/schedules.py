@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field
 
 from app.core.db import get_session
 from app.core.config import HttpStatus
-from app.core.class_cache import get_class_ids_by_names
 from app.core.term import get_current_semester_id
 from app.core.upload import (
     validate_filename,
@@ -46,10 +45,10 @@ def _enrich_schedule_with_week_data(
     from app.crud.schedule_adjustment import get_adjustment
     from app.crud.course_session import get_course_sessions_by_schedule_and_week
 
-    from app.core.class_cache import get_class_name_by_id
+    from app.core.class_cache import get_class_display_name_by_id
 
     schedule_data = schedule.model_dump()
-    schedule_data["class_name"] = get_class_name_by_id(session, schedule.class_id)
+    schedule_data["class_name"] = get_class_display_name_by_id(session, schedule.class_id)
     schedule_data["week_number"] = week_number
 
     week_type = getattr(schedule, "week_type", "all")
@@ -137,7 +136,7 @@ class ScheduleSuccessResponse(ApiSuccessResponse):
 
 @router.get("/schedules", response_model=ScheduleListResponse)
 async def get_schedules(
-    class_name: Optional[str] = Query(None, description="按班级筛选"),
+    class_id: Optional[int] = Query(None, description="按班级筛选"),
     teacher_id: Optional[int] = Query(None, description="按教师筛选"),
     day_of_week: Optional[int] = Query(None, description="按星期筛选(1-7)"),
     week_number: Optional[int] = Query(None, description="指定周次，不传则使用当前周"),
@@ -155,8 +154,8 @@ async def get_schedules(
     elif teacher_id:
         query = query.where(CourseSchedule.teacher_id == teacher_id)
 
-    if class_name:
-        query = query.where(CourseSchedule.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(CourseSchedule.class_id == class_id)
     if day_of_week:
         query = query.where(CourseSchedule.day_of_week == day_of_week)
     

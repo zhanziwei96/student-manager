@@ -16,7 +16,7 @@ from app.crud import (
     unlock_student_account, disable_students_by_class, count_students_filtered
 )
 from app.crud.checkin import get_today_checkins
-from app.crud.course_session import get_active_course_session_by_class_name
+from app.crud.course_session import get_active_course_session_by_class_id
 from app.models.constants import (
     ApiResponseConst, MessageConst,
     ApiResponse, ApiSuccessResponse, ApiListResponse
@@ -28,7 +28,7 @@ router = APIRouter(tags=["students"])
 class CreateStudentRequest(BaseModel):
     student_id: str = Field(..., min_length=1, description="学号")
     name: str = Field(..., min_length=1, description="姓名")
-    class_name: Optional[str] = Field(None, description="班级")
+    class_id: Optional[int] = Field(None, description="班级ID（未分班为 None）")
 
 
 class StudentWithCheckin(BaseModel):
@@ -75,7 +75,7 @@ class ImportResponse(ApiSuccessResponse):
 @router.get("/students", response_model=StudentListResponse)
 async def get_students_list(
     request: Request,
-    class_name: Optional[str] = Query(None, description="班级名称"),
+    class_id: Optional[int] = Query(None, description="班级ID"),
     limit: Optional[int] = Query(None, ge=1, le=200, description="每页数量（不传则返回全部，保持向后兼容）"),
     offset: int = Query(0, ge=0, description="偏移量（分页用）"),
     session: Session = Depends(get_session),
@@ -95,10 +95,10 @@ async def get_students_list(
 
     if is_admin:
         # 管理员可以查看所有学生
-        if class_name:
-            students = get_students_by_class(session, class_name, limit=limit, offset=offset)
+        if class_id is not None:
+            students = get_students_by_class(session, class_id, limit=limit, offset=offset)
             if limit is not None:
-                total = count_students_filtered(session, class_name=class_name)
+                total = count_students_filtered(session, class_id=class_id)
         else:
             students = get_students(session, limit=limit, offset=offset)
             if limit is not None:
@@ -110,33 +110,43 @@ async def get_students_list(
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无效的用户信息")
 
         from app.api.deps import get_teacher_accessible_classes
-        assigned_classes = get_teacher_accessible_classes(user, session)
+        # int 列表 / None（通配：面向全部班级）/ []（空集，fail-closed）
+        assigned_class_ids = get_teacher_accessible_classes(user, session)
 
-        if class_name:
-            # 如果指定了班级，检查权限
-            if class_name not in assigned_classes:
+        if class_id is not None:
+            # 如果指定了班级，检查权限（通配时放行）
+            if assigned_class_ids is not None and class_id not in assigned_class_ids:
                 raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看该班级学生")
-            students = get_students_by_class(session, class_name, limit=limit, offset=offset)
+            students = get_students_by_class(session, class_id, limit=limit, offset=offset)
             if limit is not None:
-                total = count_students_filtered(session, class_name=class_name)
+                total = count_students_filtered(session, class_id=class_id)
+        elif assigned_class_ids is None:
+            # 通配：面向全部班级
+            students = get_students(session, limit=limit, offset=offset)
+            if limit is not None:
+                total = count_students_filtered(session)
         else:
             # 获取所有负责班级的学生 - 使用IN查询优化性能（REVIEW-P1）
             # 替代循环查询，减少数据库往返次数
-            students = get_students_by_classes(session, assigned_classes, limit=limit, offset=offset)
+            students = get_students_by_classes(session, assigned_class_ids, limit=limit, offset=offset)
             if limit is not None:
-                total = count_students_filtered(session, class_names=assigned_classes)
-    
+                total = count_students_filtered(session, class_ids=assigned_class_ids)
+
     # 获取当前课堂会话
-    cs = get_active_course_session_by_class_name(session, class_name) if class_name else None
-    current_class = cs.class_name if cs and cs.status == "active" else None
-    
+    cs = get_active_course_session_by_class_id(session, class_id) if class_id is not None else None
+    current_class_id = cs.class_id if cs and cs.status == "active" else None
+
     # 只获取当前课堂的签到记录（如果没有活跃课堂，则无人活跃）
-    if current_class:
-        checkins = get_today_checkins(session, current_class)
+    if current_class_id is not None:
+        checkins = get_today_checkins(session, current_class_id)
     else:
         checkins = []
     checked_in_students = set(c.student_id for c in checkins)
-    
+
+    # 批量解析班级展示名（class_id → 完整展示名）
+    from app.core.class_cache import get_class_display_names
+    class_name_map = get_class_display_names(session, (s.class_id for s in students))
+
     # 构建带签到状态的学生列表（白名单字段，防止泄露 password_hash/version/last_login）
     students_with_checkin = []
     for student in students:
@@ -144,7 +154,7 @@ async def get_students_list(
         student_dict = {
             'student_id': student.student_id,
             'name': student.name,
-            'class_name': student.class_name,
+            'class_name': class_name_map.get(student.class_id) or "未分班",
             'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
@@ -320,15 +330,16 @@ async def get_student_info(
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权查看其他学生信息')
     elif role == UserRoleConst.TEACHER:
         # 教师只能查看负责班级的学生
-        verify_teacher_class_access(user, student.class_name, session)
+        verify_teacher_class_access(user, student.class_id, session)
 
     # 白名单字段，防止泄露 password_hash（P0 修复）
+    from app.core.class_cache import get_class_display_name_by_id
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {
             'student_id': student.student_id,
             'name': student.name,
-            'class_name': student.class_name,
+            'class_name': get_class_display_name_by_id(session, student.class_id) or "未分班",
             'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
@@ -349,20 +360,21 @@ async def add_student(
         raise HTTPException(status_code=HttpStatus.CONFLICT, detail='学号已存在')
     
     student = create_student(
-        session, 
-        data.student_id, 
-        data.name, 
-        data.class_name or "未分班"
+        session,
+        data.student_id,
+        data.name,
+        class_id=data.class_id
     )
-    
+
     # 白名单字段，防止泄漏 password_hash/version（与 get_student_info 一致）
+    from app.core.class_cache import get_class_display_name_by_id
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.STUDENT_CREATED,
         ApiResponseConst.DATA: {
             'student_id': student.student_id,
             'name': student.name,
-            'class_name': student.class_name,
+            'class_name': get_class_display_name_by_id(session, student.class_id) or "未分班",
             'status': student.status,
             'is_account_enabled': student.is_account_enabled,
             'created_at': student.created_at,
@@ -425,7 +437,7 @@ async def unlock_student_api(
     if not student:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='学生不存在')
 
-    verify_teacher_class_access(user, student.class_name, session)
+    verify_teacher_class_access(user, student.class_id, session)
 
     unlock_student_account(session, student_id)
 
@@ -436,7 +448,7 @@ async def unlock_student_api(
 
 
 class DisableByClassRequest(BaseModel):
-    class_names: List[str] = Field(..., min_length=1, description="班级名称列表")
+    class_ids: List[int] = Field(..., min_length=1, description="班级ID列表")
 
 
 @router.post("/students/disable-by-class", response_model=ApiResponse[dict])
@@ -452,13 +464,13 @@ async def disable_students_by_class_api(
     老师不再具备禁用权限（业务纠正：老师不教了不再等于禁用学生账号）。
     """
     total_disabled = 0
-    for class_name in data.class_names:
-        total_disabled += disable_students_by_class(session, class_name)
+    for class_id in data.class_ids:
+        total_disabled += disable_students_by_class(session, class_id)
 
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: f"已禁用 {total_disabled} 名学生",
-        ApiResponseConst.DATA: {"disabled_count": total_disabled, "class_names": data.class_names}
+        ApiResponseConst.DATA: {"disabled_count": total_disabled, "class_ids": data.class_ids}
     }
 
 
@@ -531,7 +543,6 @@ def transfer_student_class(
 
     # 同步冗余缓存（cohort_year 为身份属性不随转班更新）
     student.class_id = target.id
-    student.class_name = target.name
     session.add(student)
     session.commit()
     invalidate_class_cache()

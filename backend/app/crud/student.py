@@ -9,7 +9,6 @@ from datetime import datetime
 from typing import List, Optional
 from sqlmodel import Session, select
 from sqlalchemy import event as sa_event
-from app.core.class_cache import get_class_id_by_name, get_class_ids_by_names
 from app.models import Student
 from app.core.events import ScoreUpdated, event_bus
 
@@ -21,7 +20,7 @@ def get_student(session: Session, student_id: str) -> Optional[Student]:
 
 def get_students(
     session: Session,
-    class_name: Optional[str] = None,
+    class_id: Optional[int] = None,
     include_disabled: bool = False,
     limit: Optional[int] = None,
     offset: int = 0,
@@ -30,7 +29,7 @@ def get_students(
 
     Args:
         session: 数据库会话
-        class_name: 班级名称（可选）
+        class_id: 班级 ID（可选）
         include_disabled: 是否包含已禁用学生（admin 恢复场景用）
         limit: 返回数量限制（None=全部，保持向后兼容）
         offset: 偏移量（分页用）
@@ -38,8 +37,8 @@ def get_students(
     query = select(Student).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
-    if class_name:
-        query = query.where(Student.class_id.in_(get_class_ids_by_names(session, [class_name])))
+    if class_id is not None:
+        query = query.where(Student.class_id == class_id)
     if offset:
         query = query.offset(offset)
     if limit:
@@ -49,32 +48,32 @@ def get_students(
 
 def count_students_filtered(
     session: Session,
-    class_name: Optional[str] = None,
-    class_names: Optional[List[str]] = None,
+    class_id: Optional[int] = None,
+    class_ids: Optional[List[int]] = None,
     include_disabled: bool = False,
 ) -> int:
     """按筛选条件统计学生总数（分页 total 用）
 
     Args:
         session: 数据库会话
-        class_name: 单个班级名称（可选）
-        class_names: 多个班级名称（可选，教师全部负责班级场景）
+        class_id: 单个班级 ID（可选）
+        class_ids: 多个班级 ID（可选，教师全部负责班级场景）
         include_disabled: 是否包含已禁用学生
     """
     from sqlalchemy import func
     query = select(func.count()).select_from(Student)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
-    if class_name:
-        query = query.where(Student.class_id.in_(get_class_ids_by_names(session, [class_name])))
-    elif class_names is not None:
-        query = query.where(Student.class_id.in_(get_class_ids_by_names(session, class_names)))
+    if class_id is not None:
+        query = query.where(Student.class_id == class_id)
+    elif class_ids is not None:
+        query = query.where(Student.class_id.in_(class_ids))
     return session.exec(query).one()
 
 
 def get_students_by_class(
     session: Session,
-    class_name: str,
+    class_id: int,
     include_disabled: bool = False,
     limit: Optional[int] = None,
     offset: int = 0,
@@ -83,12 +82,12 @@ def get_students_by_class(
 
     Args:
         session: 数据库会话
-        class_name: 班级名称
+        class_id: 班级 ID
         include_disabled: 是否包含已禁用学生（admin 恢复场景用）
         limit: 返回数量限制（None=全部）
         offset: 偏移量（分页用）
     """
-    query = select(Student).where(Student.class_id.in_(get_class_ids_by_names(session, [class_name]))).order_by(Student.student_id)
+    query = select(Student).where(Student.class_id == class_id).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if offset:
@@ -100,7 +99,7 @@ def get_students_by_class(
 
 def get_students_by_classes(
     session: Session,
-    class_names: List[str],
+    class_ids: List[int],
     include_disabled: bool = False,
     limit: Optional[int] = None,
     offset: int = 0,
@@ -114,7 +113,7 @@ def get_students_by_classes(
 
     Args:
         session: 数据库会话
-        class_names: 班级名称列表
+        class_ids: 班级 ID 列表
         include_disabled: 是否包含已禁用学生（admin 恢复场景用）
         limit: 返回数量限制（None=全部）
         offset: 偏移量（分页用）
@@ -124,11 +123,11 @@ def get_students_by_classes(
     """
     from sqlalchemy import distinct
 
-    if not class_names:
+    if not class_ids:
         return []
 
     # 使用 IN 查询一次性获取所有班级学生
-    query = select(Student).where(Student.class_id.in_(get_class_ids_by_names(session, class_names))).order_by(Student.student_id)
+    query = select(Student).where(Student.class_id.in_(class_ids)).order_by(Student.student_id)
     if not include_disabled:
         query = query.where(Student.is_account_enabled.is_(True))
     if offset:
@@ -142,14 +141,12 @@ def create_student(
     session: Session,
     student_id: str,
     name: str,
-    class_name: str,
     class_id: Optional[int] = None,
 ) -> Student:
     """创建学生 - SEC-003: 使用简化密码哈希接口
 
     Args:
-        class_id: 显式指定班级 ID（多专业同名时按裸名解析会有歧义，导入等场景应显式传入）；
-                  为 None 时回退按班级名解析（兼容既有调用方）
+        class_id: 班级 ID（唯一锚点；未分班传 None）
     """
     from app.core.security import hash_password
 
@@ -159,8 +156,7 @@ def create_student(
     student = Student(
         student_id=student_id,
         name=name,
-        class_name=class_name,
-        class_id=class_id if class_id is not None else get_class_id_by_name(session, class_name),
+        class_id=class_id,
         password_hash=password_hash
         # SEC-003: salt 字段不再设置（bcrypt 已内置盐值）
     )
@@ -181,18 +177,15 @@ def delete_student(session: Session, student_id: str) -> bool:
 
 
 def get_all_classes(session: Session) -> List[str]:
-    """获取所有班级列表：classes 表 ∪ 启用学生的 class_name（含未分班学生的历史班名）"""
+    """获取所有班级列表（classes 表的班级名去重）
+
+    TODO(Task 4-11): 返回裸名在跨专业/跨届同名时有歧义，调用方应迁移到 class_id + 展示名。
+    """
     from app.models import Class_
-    class_names = set(session.exec(select(Class_.name)).all())
-    student_names = set(session.exec(
-        select(Student.class_name)
-        .where(Student.is_account_enabled.is_(True))
-        .distinct()
-    ).all())
-    return sorted(class_names | student_names)
+    return sorted(set(session.exec(select(Class_.name)).all()))
 
 
-def disable_students_by_class(session: Session, class_name: str) -> int:
+def disable_students_by_class(session: Session, class_id: int) -> int:
     """批量禁用指定班级的所有学生账号（学期归档）
 
     只更新当前处于启用状态的学生，重复调用返回 0（幂等）。
@@ -200,7 +193,7 @@ def disable_students_by_class(session: Session, class_name: str) -> int:
 
     Args:
         session: 数据库会话
-        class_name: 班级名称
+        class_id: 班级 ID
 
     Returns:
         int: 本次禁用的学生数量
@@ -209,7 +202,7 @@ def disable_students_by_class(session: Session, class_name: str) -> int:
     result = session.exec(
         update(Student)
         .where(
-            Student.class_id.in_(get_class_ids_by_names(session, [class_name])),
+            Student.class_id == class_id,
             Student.is_account_enabled.is_(True),
         )
         .values(is_account_enabled=False)
@@ -418,7 +411,7 @@ def import_students(session: Session, records: List[dict]) -> dict:
         try:
             # 按三元组解析出的 class_id 显式传入，避免多专业同名时按裸名误挂
             class_id = ensure_class(session, class_name, cohort_year, major)
-            create_student(session, student_id, name, class_name or "未分班", class_id=class_id)
+            create_student(session, student_id, name, class_id=class_id)
             imported += 1
         except Exception as exc:  # noqa: BLE001 - 单行失败不影响整批
             session.rollback()
