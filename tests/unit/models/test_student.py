@@ -2,35 +2,33 @@
 学生模型单元测试
 """
 import pytest
-from app.models import Student, StudentCreate, StudentUpdate
+from app.models import Student, StudentCreate, StudentUpdate, StudentResponse
 from app.core.security import hash_password
 
 
 class TestStudentModel:
     """测试学生模型"""
-    
+
     def test_student_creation(self):
         """测试创建学生"""
         student = Student(
             student_id="2024001",
-            name="张三",
-            class_name="软件1班"
+            name="张三"
         )
-        
+
         assert student.student_id == "2024001"
         assert student.name == "张三"
-        assert student.class_name == "软件1班"
         assert student.status == "active"
         assert student.is_account_enabled is True
-    
+
     def test_student_default_values(self):
         """测试学生默认值"""
         student = Student(
             student_id="2024002",
             name="李四"
         )
-        
-        assert student.class_name == "未分班"
+
+        assert student.class_id is None
         assert student.status == "active"
         assert student.is_account_enabled is True
     
@@ -54,16 +52,32 @@ class TestStudentSchemas:
         """测试创建学生请求"""
         data = StudentCreate(
             student_id="2024004",
-            name="赵六",
-            class_name="软件2班"
+            name="赵六"
         )
-        
+
         assert data.student_id == "2024004"
-        assert data.class_name == "软件2班"
-    
+        assert data.class_id is None
+
     def test_student_update(self):
         """测试更新学生请求"""
         data = StudentUpdate(name="新名字")
-        
+
         assert data.name == "新名字"
+
+    def test_student_response_class_name_field(self):
+        """测试响应模型的 class_name 响应字段（默认 None，由 API 层按 class_id 注入）"""
+        data = StudentResponse(
+            student_id="2024005",
+            name="孙七",
+            created_at="2024-01-01T00:00:00"
+        )
+
         assert data.class_name is None
+
+        data_with_class = StudentResponse(
+            student_id="2024005",
+            name="孙七",
+            created_at="2024-01-01T00:00:00",
+            class_name="2024届软件工程1班"
+        )
+        assert data_with_class.class_name == "2024届软件工程1班"
