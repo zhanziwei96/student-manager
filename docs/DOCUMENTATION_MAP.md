@@ -116,6 +116,7 @@ student-manager/
 | [README.md](../README.md) | 项目主文档，快速开始 | ⭐⭐⭐⭐⭐ |
 | [GETTING_STARTED.md](../GETTING_STARTED.md) | 开发者快速开始指南 | ⭐⭐⭐⭐⭐ |
 | [.agents/DEPLOYMENT.md](../.agents/DEPLOYMENT.md) | 部署指南 | ⭐⭐⭐⭐ |
+| [docs/OPERATIONS_GUIDE.md](./OPERATIONS_GUIDE.md) | **管理员 / 教师操作指南**（逐屏说明 + 截图 + 注意事项） | ⭐⭐⭐⭐⭐ |
 | [docs/FAQ.md](./FAQ.md) | 常见问题解答 | ⭐⭐⭐⭐ |
 
 ### 架构设计
