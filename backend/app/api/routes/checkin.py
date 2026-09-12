@@ -69,6 +69,7 @@ class CheckinStatsData(BaseModel):
 
 class ActiveSessionData(BaseModel):
     """活跃课堂数据"""
+    id: int
     course_name: Optional[str] = None
     class_name: Optional[str] = None
     teacher_id: int
@@ -373,6 +374,7 @@ def get_active_course_sessions(
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [
             {
+                'id': s.id,
                 'course_name': s.course_name,
                 'class_name': name_map.get(s.class_id),
                 'teacher_id': s.teacher_id,
