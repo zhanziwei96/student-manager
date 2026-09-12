@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { Card, Button, Badge, Input, Select, Dialog, Checkbox } from '@/components/ui'
-import { Plus, Loader2, Pencil, Users, Presentation } from 'lucide-vue-next'
+import { Plus, Loader2, Pencil, Users, Presentation, Search } from 'lucide-vue-next'
 import { offeringsApi } from '@/api/offerings'
 import { classesApi } from '@/api/classes'
 import { coursesApi } from '@/api/courses'
@@ -177,9 +177,19 @@ const { data: rosterData, refetch: refetchRoster } = useQuery({
 })
 const roster = computed(() => rosterData.value ?? [])
 
+// 名单搜索：按学号/姓名过滤（106 人以上的名单靠翻找不现实）
+const rosterKeyword = ref('')
+const filteredRoster = computed(() => {
+  const kw = rosterKeyword.value.trim().toLowerCase()
+  if (kw === '') return roster.value
+  return roster.value.filter((row) =>
+    row.student_id.toLowerCase().includes(kw) || row.name.toLowerCase().includes(kw))
+})
+
 const openRosterDialog = (offering: CourseOffering) => {
   rosterOffering.value = offering
   importText.value = ''
+  rosterKeyword.value = ''
   showRosterDialog.value = true
 }
 
@@ -264,7 +274,7 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
 
       <table
         v-else-if="offerings.length > 0"
-        class="w-full text-sm"
+        class="w-full text-[15px]"
       >
         <thead class="bg-[#fafafa] text-[#737373] border-b border-[#e5e5e5]">
           <tr>
@@ -633,71 +643,97 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
         </div>
 
         <!-- 名单列表 -->
-        <div
-          v-if="roster.length === 0"
-          class="flex h-32 items-center justify-center text-sm text-[#a3a3a3]"
-        >
-          暂无选课学生
-        </div>
-        <div v-else class="max-h-[45vh] overflow-y-auto rounded-xl border border-[#e5e5e5]">
-          <table class="w-full text-[15px]">
-            <thead class="bg-[#fafafa] text-[#737373] border-b border-[#e5e5e5]">
-              <tr>
-                <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
-                  学号
-                </th>
-                <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
-                  姓名
-                </th>
-                <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
-                  班级
-                </th>
-                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
-                  平时成绩
-                </th>
-                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
-                  期末成绩
-                </th>
-                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#e5e5e5]">
-              <tr
-                v-for="row in roster"
-                :key="row.enrollment_id"
-                class="text-[#737373] hover:bg-[#fafafa] transition-colors"
-              >
-                <td class="whitespace-nowrap px-4 py-3 font-mono text-[13px]">
-                  {{ row.student_id }}
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 font-medium text-black">
-                  {{ row.name }}
-                </td>
-                <td class="whitespace-nowrap px-4 py-3">
-                  {{ row.class_name }}
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                  {{ row.score }}
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                  {{ row.final_score ?? '—' }}
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="isDropping"
-                    class="hover:bg-red-500/10"
-                    @click="dropEnrollment(row)"
-                  >
-                    退课
-                  </Button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="space-y-2">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-[#737373]">
+              名单 · 共 {{ roster.length }} 人
+              <span v-if="rosterKeyword.trim()">（筛选出 {{ filteredRoster.length }} 人）</span>
+            </p>
+            <div class="relative sm:w-64">
+              <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
+              <Input
+                v-model="rosterKeyword"
+                placeholder="搜索学号或姓名..."
+                class="pl-9"
+              />
+            </div>
+          </div>
+
+          <div
+            v-if="roster.length === 0"
+            class="flex h-32 items-center justify-center text-sm text-[#a3a3a3]"
+          >
+            暂无选课学生
+          </div>
+          <div
+            v-else-if="filteredRoster.length === 0"
+            class="flex h-32 flex-col items-center justify-center text-sm text-[#a3a3a3]"
+          >
+            <p>没有匹配的学生</p>
+            <p class="mt-1 text-xs">
+              换个学号或姓名试试
+            </p>
+          </div>
+          <div v-else class="max-h-[42vh] overflow-y-auto rounded-xl border border-[#e5e5e5]">
+            <table class="w-full text-[15px]">
+              <thead class="bg-[#fafafa] text-[#737373] border-b border-[#e5e5e5]">
+                <tr>
+                  <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
+                    学号
+                  </th>
+                  <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
+                    姓名
+                  </th>
+                  <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
+                    班级
+                  </th>
+                  <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
+                    平时成绩
+                  </th>
+                  <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
+                    期末成绩
+                  </th>
+                  <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#e5e5e5]">
+                <tr
+                  v-for="row in filteredRoster"
+                  :key="row.enrollment_id"
+                  class="text-[#737373] hover:bg-[#fafafa] transition-colors"
+                >
+                  <td class="whitespace-nowrap px-4 py-3 font-mono text-[13px]">
+                    {{ row.student_id }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3 font-medium text-black">
+                    {{ row.name }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3">
+                    {{ row.class_name }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                    {{ row.score }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                    {{ row.final_score ?? '—' }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3 text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      :disabled="isDropping"
+                      class="hover:bg-red-500/10"
+                      @click="dropEnrollment(row)"
+                    >
+                      退课
+                    </Button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       <template #footer>

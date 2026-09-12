@@ -110,7 +110,14 @@ const MockInput = {
   name: 'Input',
   props: ['modelValue', 'type', 'placeholder'],
   emits: ['update:modelValue'],
-  template: '<input :value="modelValue" :type="type || \'text\'" :placeholder="placeholder" class="mock-input" />',
+  // 与真实 Input 一致：number 类型回传数值，其余回传字符串
+  template: `<input
+    :value="modelValue"
+    :type="type || 'text'"
+    :placeholder="placeholder"
+    class="mock-input"
+    @input="$emit('update:modelValue', type === 'number' ? Number($event.target.value) : $event.target.value)"
+  />`,
 }
 
 const MockSelect = {
@@ -306,6 +313,39 @@ describe('Offerings 教学班管理', () => {
     expect(wrapper.text()).toContain('S001')
     expect(wrapper.text()).toContain('学生1')
     expect(wrapper.text()).toContain('退课')
+  })
+
+  it('名单弹窗可搜索学号/姓名并提示筛选人数', async () => {
+    mockedListEnrollments.mockResolvedValue([
+      { enrollment_id: 1, student_id: 'S001', name: '学生1', class_name: '一班', score: 85, final_score: null },
+      { enrollment_id: 2, student_id: 'S002', name: '学生2', class_name: '一班', score: 80, final_score: null },
+      { enrollment_id: 3, student_id: 'S003', name: '学生3', class_name: '二班', score: 70, final_score: null },
+    ])
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    const rosterButton = wrapper.findAll('button').find((b) => b.text().includes('名单'))
+    await rosterButton!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('名单 · 共 3 人')
+
+    const search = wrapper.find('input[placeholder="搜索学号或姓名..."]')
+
+    await search.setValue('学生3')  // 按姓名
+    await flushPromises()
+    expect(wrapper.text()).toContain('筛选出 1 人')
+    expect(wrapper.text()).toContain('S003')
+    expect(wrapper.text()).not.toContain('S001')
+
+    await search.setValue('S002')  // 按学号
+    await flushPromises()
+    expect(wrapper.text()).toContain('S002')
+    expect(wrapper.text()).not.toContain('S003')
+
+    await search.setValue('不存在的学生')
+    await flushPromises()
+    expect(wrapper.text()).toContain('没有匹配的学生')
   })
 
   it('名单弹窗可按班级一键加入名单', async () => {
