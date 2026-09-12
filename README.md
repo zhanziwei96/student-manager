@@ -2,6 +2,8 @@
 
 一个现代化的班级管理系统，采用前后端分离架构，支持网页签到、班级管理、分数统计等功能。
 
+> 📖 **管理员 / 教师用户**：请直接看 **[操作指南（逐屏截图 + 注意事项）](./docs/OPERATIONS_GUIDE.md)** —— 每个菜单做什么、怎么操作、容易踩的坑都在里面。
+
 ---
 
 ## 功能特性
@@ -66,6 +68,8 @@ pnpm dev
 
 **首次登录后请立即修改密码。**
 
+登录之后该点哪里、每个页面怎么用，见 **[管理员 / 教师操作指南](./docs/OPERATIONS_GUIDE.md)**。
+
 ---
 
 ## 项目结构
@@ -85,6 +89,7 @@ student-manager/
 
 | 文档 | 说明 |
 |------|------|
+| [docs/OPERATIONS_GUIDE.md](./docs/OPERATIONS_GUIDE.md) | **管理员 / 教师操作指南**（逐屏说明 + 截图 + 注意事项） |
 | [GETTING_STARTED.md](./GETTING_STARTED.md) | 开发者快速开始指南（环境搭建、故障排查） |
 | [docs/FAQ.md](./docs/FAQ.md) | 常见问题解答（25 个问题） |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 专业术语和缩写解释 |
