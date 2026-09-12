@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useRoute, useRouter } from 'vue-router'
 import { Card, Button, Input, Select, Dialog, Label } from '@/components/ui'
-import { Loader2, ArrowLeft, Plus, FileText, Users } from 'lucide-vue-next'
+import { Loader2, ArrowLeft, Plus, FileText, Users, Search } from 'lucide-vue-next'
 import { offeringsApi } from '@/api/offerings'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
@@ -34,6 +34,51 @@ const { data: rosterData, isPending } = useQuery({
 const roster = computed(() => rosterData.value ?? [])
 
 const invalidateRoster = () => queryClient.invalidateQueries({ queryKey: ['offerings', 'enrollments', offeringId] })
+
+// === 名单查找：学号/姓名搜索 + 班级筛选，列表按行政班分组 ===
+const UNCLASSIFIED = '未分班'
+
+/** 行所属行政班展示名（后端按 class_id 解析，异常数据可能为空） */
+const rowClass = (row: EnrollmentRow) => row.class_name || UNCLASSIFIED
+
+const keyword = ref('')
+const classFilter = ref('')
+
+const hasRoster = computed(() => roster.value.length > 0)
+const isFiltering = computed(() => keyword.value.trim() !== '' || classFilter.value !== '')
+
+/** 名单中的行政班（distinct，按首次出现） */
+const rosterClasses = computed(() => [...new Set(roster.value.map(rowClass))])
+
+const filteredRoster = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  return roster.value.filter((row) =>
+    (classFilter.value === '' || rowClass(row) === classFilter.value)
+    && (kw === ''
+      || row.student_id.toLowerCase().includes(kw)
+      || row.name.toLowerCase().includes(kw)))
+})
+
+/** 按行政班分组（保持接口返回的学号序，组序按首次出现） */
+const groupedRoster = computed(() => {
+  const byClass = new Map<string, EnrollmentRow[]>()
+  for (const row of filteredRoster.value) {
+    const className = rowClass(row)
+    const list = byClass.get(className)
+    if (list) list.push(row)
+    else byClass.set(className, [row])
+  }
+  return [...byClass].map(([className, students]) => ({ className, students }))
+})
+
+/** 班级筛选下拉（含「全部」与各班人数） */
+const classOptions = computed(() => [
+  { value: '', label: `全部班级（${roster.value.length} 人）` },
+  ...rosterClasses.value.map((className) => ({
+    value: className,
+    label: `${className}（${roster.value.filter((r) => rowClass(r) === className).length} 人）`,
+  })),
+])
 
 // === 个人成绩加减分 ===
 const showScoreDialog = ref(false)
@@ -101,9 +146,6 @@ const groupFinalGroupId = ref<number | ''>('')
 const groupFinalScore = ref(0)
 const groupFinalError = ref('')
 
-// 名单中的行政班（distinct）
-const rosterClasses = computed(() => [...new Set(roster.value.map((r) => r.class_name))])
-
 // 小组列表（按选中班级，enabled 时查询）
 const { data: groupsData } = useQuery({
   queryKey: ['teacher-groups', groupFinalClass],
@@ -160,6 +202,7 @@ const handleSetGroupFinal = async () => {
         </h1>
         <p class="text-[#737373]">
           {{ offering?.class_scope }} · 共 {{ roster.length }} 名学生
+          <span v-if="isFiltering">（筛选出 {{ filteredRoster.length }} 人）</span>
         </p>
       </div>
       <Button
@@ -173,6 +216,26 @@ const handleSetGroupFinal = async () => {
 
     <!-- 名单表格 -->
     <Card class="overflow-hidden p-0">
+      <!-- 查找工具栏：学号/姓名搜索 + 班级筛选 -->
+      <div
+        v-if="hasRoster && !isPending"
+        class="flex flex-col gap-3 border-b border-[#e5e5e5] p-4 sm:flex-row"
+      >
+        <div class="relative flex-1">
+          <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
+          <Input
+            v-model="keyword"
+            placeholder="搜索学号或姓名..."
+            class="pl-9"
+          />
+        </div>
+        <Select
+          v-model="classFilter"
+          :options="classOptions"
+          class="w-full sm:w-52"
+        />
+      </div>
+
       <div
         v-if="isPending"
         class="flex h-64 items-center justify-center"
@@ -181,7 +244,7 @@ const handleSetGroupFinal = async () => {
       </div>
 
       <table
-        v-else-if="roster.length > 0"
+        v-else-if="filteredRoster.length > 0"
         class="w-full text-sm"
       >
         <thead class="bg-[#fafafa] text-[#737373] border-b border-[#e5e5e5]">
@@ -206,9 +269,22 @@ const handleSetGroupFinal = async () => {
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-[#e5e5e5]">
+        <tbody
+          v-for="group in groupedRoster"
+          :key="group.className"
+          class="divide-y divide-[#e5e5e5]"
+        >
+          <tr class="bg-white text-[#737373]">
+            <td
+              colspan="6"
+              class="border-b border-[#e5e5e5] px-4 py-2 text-xs"
+            >
+              <span class="font-medium text-black">{{ group.className }}</span>
+              <span class="ml-2 text-[#a3a3a3]">{{ group.students.length }} 人</span>
+            </td>
+          </tr>
           <tr
-            v-for="row in roster"
+            v-for="row in group.students"
             :key="row.enrollment_id"
             class="text-[#737373] hover:bg-[#fafafa] transition-colors"
           >
@@ -253,14 +329,25 @@ const handleSetGroupFinal = async () => {
         </tbody>
       </table>
 
-      <!-- Empty state -->
+      <!-- Empty state：名单为空 -->
       <div
-        v-else
+        v-else-if="roster.length === 0"
         class="flex h-64 flex-col items-center justify-center text-[#737373]"
       >
         <p>暂无选课学生</p>
         <p class="mt-1 text-sm text-[#a3a3a3]">
           请联系管理员导入选课名单
+        </p>
+      </div>
+
+      <!-- Empty state：筛选/搜索无结果 -->
+      <div
+        v-else
+        class="flex h-40 flex-col items-center justify-center text-[#737373]"
+      >
+        <p>没有匹配的学生</p>
+        <p class="mt-1 text-sm text-[#a3a3a3]">
+          换个学号或姓名，或把班级切回「全部班级」
         </p>
       </div>
     </Card>
