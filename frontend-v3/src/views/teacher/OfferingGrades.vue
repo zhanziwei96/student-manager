@@ -9,6 +9,7 @@ import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/error'
+import ScoreReasonChips from '@/components/teacher/ScoreReasonChips.vue'
 import type { EnrollmentRow } from '@/types'
 
 const route = useRoute()
@@ -284,6 +285,9 @@ const handleSetGroupFinal = async () => {
           <Input
             v-model="scoreReason"
             placeholder="如：课堂表现优秀"
+          />
+          <ScoreReasonChips
+            @pick="(preset) => { scoreReason = preset.label; scoreChange = preset.delta }"
           />
         </div>
         <p
