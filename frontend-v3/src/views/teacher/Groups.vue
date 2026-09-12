@@ -17,6 +17,7 @@ import type { GroupDetail } from '@/types/api'
 import type { Group } from '@/api/groups'
 import { groupsApi } from '@/api'
 import { coursesApi } from '@/api/courses'
+import ScoreReasonChips from '@/components/teacher/ScoreReasonChips.vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 
 const { success: toastSuccess, error: toastError } = useToast()
@@ -632,6 +633,9 @@ async function handleUpdateScore() {
             v-model="scoreReason"
             placeholder="输入分数变化原因"
             data-testid="group-score-reason"
+          />
+          <ScoreReasonChips
+            @pick="(preset) => { scoreReason = preset.label; scoreChange = preset.delta }"
           />
         </div>
         <!-- 分数日志 -->

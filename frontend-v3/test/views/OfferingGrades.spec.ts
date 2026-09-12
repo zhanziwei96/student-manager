@@ -161,6 +161,44 @@ describe('OfferingGrades 成绩录入', () => {
     expect(wrapper.text()).toContain('请输入分数变化原因')
   })
 
+  it('快捷标签同时填入原因与分值，保存后带上该分值', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+    mockedUpdateScore.mockResolvedValue({ enrollment_id: 1, score: 82 })
+
+    const scoreButtons = wrapper.findAll('button').filter((b) => b.text().includes('加减分'))
+    await scoreButtons[0]!.trigger('click')
+    await flushPromises()
+
+    await wrapper.find('[data-testid="score-preset-课堂积极发言"]').trigger('click')
+    await flushPromises()
+
+    const reasonInput = wrapper.find('input[placeholder="如：课堂表现优秀"]').element as HTMLInputElement
+    const deltaInput = wrapper.find('input[type="number"]').element as HTMLInputElement
+    expect(reasonInput.value).toBe('课堂积极发言')
+    expect(deltaInput.value).toBe('2')
+
+    await wrapper.findAll('button').find((b) => b.text().includes('保存'))!.trigger('click')
+    await flushPromises()
+
+    expect(mockedUpdateScore).toHaveBeenCalledWith(1, { score_change: 2, reason: '课堂积极发言' })
+  })
+
+  it('减分标签填入负分（旷课 -5）', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    const scoreButtons = wrapper.findAll('button').filter((b) => b.text().includes('加减分'))
+    await scoreButtons[0]!.trigger('click')
+    await flushPromises()
+
+    await wrapper.find('[data-testid="score-preset-旷课"]').trigger('click')
+    await flushPromises()
+
+    const deltaInput = wrapper.find('input[type="number"]').element as HTMLInputElement
+    expect(deltaInput.value).toBe('-5')
+  })
+
   it('打开期末分弹窗', async () => {
     const wrapper = mountComponent()
     await flushPromises()
