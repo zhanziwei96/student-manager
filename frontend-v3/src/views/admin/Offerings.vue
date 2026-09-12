@@ -577,6 +577,7 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
     <!-- Roster Dialog -->
     <Dialog
       v-model:open="showRosterDialog"
+      class="max-w-4xl"
       :title="rosterOffering ? `${courseName(rosterOffering.course_id)} · 选课名单` : '选课名单'"
       description="批量导入学号（每行一个），退课保留历史记录"
     >
@@ -638,26 +639,26 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
         >
           暂无选课学生
         </div>
-        <div v-else class="max-h-72 overflow-y-auto rounded-xl border border-[#e5e5e5]">
-          <table class="w-full text-sm">
+        <div v-else class="max-h-[45vh] overflow-y-auto rounded-xl border border-[#e5e5e5]">
+          <table class="w-full text-[15px]">
             <thead class="bg-[#fafafa] text-[#737373] border-b border-[#e5e5e5]">
               <tr>
-                <th class="px-3 py-2 text-left font-medium">
+                <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
                   学号
                 </th>
-                <th class="px-3 py-2 text-left font-medium">
+                <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
                   姓名
                 </th>
-                <th class="px-3 py-2 text-left font-medium">
+                <th class="whitespace-nowrap px-4 py-3 text-left font-medium">
                   班级
                 </th>
-                <th class="px-3 py-2 text-right font-medium">
+                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
                   平时成绩
                 </th>
-                <th class="px-3 py-2 text-right font-medium">
+                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
                   期末成绩
                 </th>
-                <th class="px-3 py-2 text-right font-medium">
+                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">
                   操作
                 </th>
               </tr>
@@ -666,24 +667,24 @@ const { mutateAsync: dropEnrollment, isPending: isDropping } = useMutation({
               <tr
                 v-for="row in roster"
                 :key="row.enrollment_id"
-                class="text-[#737373]"
+                class="text-[#737373] hover:bg-[#fafafa] transition-colors"
               >
-                <td class="px-3 py-2 font-mono text-xs">
+                <td class="whitespace-nowrap px-4 py-3 font-mono text-[13px]">
                   {{ row.student_id }}
                 </td>
-                <td class="px-3 py-2 font-medium text-black">
+                <td class="whitespace-nowrap px-4 py-3 font-medium text-black">
                   {{ row.name }}
                 </td>
-                <td class="px-3 py-2">
+                <td class="whitespace-nowrap px-4 py-3">
                   {{ row.class_name }}
                 </td>
-                <td class="px-3 py-2 text-right">
+                <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                   {{ row.score }}
                 </td>
-                <td class="px-3 py-2 text-right">
+                <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                   {{ row.final_score ?? '—' }}
                 </td>
-                <td class="px-3 py-2 text-right">
+                <td class="whitespace-nowrap px-4 py-3 text-right">
                   <Button
                     variant="outline"
                     size="sm"
