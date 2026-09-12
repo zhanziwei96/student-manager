@@ -102,6 +102,7 @@ const routes = [
         path: 'offerings/:id/grades',
         name: 'TeacherOfferingGrades',
         component: () => import('@/views/teacher/OfferingGrades.vue'),
+        meta: { fullWidth: true },  // 名单宽表：铺满内容区
       },
       {
         path: 'rankings',
