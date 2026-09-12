@@ -62,7 +62,8 @@ describe('StudentImportDialog', () => {
   it('展示导入说明与模板下载入口', () => {
     const wrapper = mountDialog()
 
-    expect(wrapper.text()).toContain('学号、姓名、所属届、班级名')
+    expect(wrapper.text()).toContain('学号、姓名、所属届、专业、班级名')
+    expect(wrapper.text()).toContain('按「所属届 + 专业 + 班级名」自动创建')
     expect(wrapper.find('[data-testid="download-template"]').exists()).toBe(true)
   })
 

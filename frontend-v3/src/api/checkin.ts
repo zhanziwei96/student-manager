@@ -11,6 +11,7 @@ export interface CheckinStats {
 }
 
 export interface ActiveCourseSession {
+  id: number                    // 课堂会话ID（用于按课堂查签到统计）
   course_name?: string
   class_name: string
   teacher_name: string

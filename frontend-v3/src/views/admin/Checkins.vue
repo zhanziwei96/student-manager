@@ -1,10 +1,25 @@
 <script setup lang="ts">
-import { Card } from '@/components/ui'
+import { computed, ref } from 'vue'
+import { Card, Select } from '@/components/ui'
 import { CheckCircle, Users, Clock, TrendingUp } from 'lucide-vue-next'
 import { useSessionCheckinStats } from '@/composables/useCheckins'
+import { useActiveClassSessions } from '@/composables/useCourseSessions'
 
-// Data
-const { data: stats } = useSessionCheckinStats()
+// 先取活跃课堂列表，再按所选课堂拉签到统计
+// （不传 session_id 时后端按「当前教师」的身份查，管理员拿不到数据）
+const { data: sessionsData, isPending: isLoadingSessions } = useActiveClassSessions()
+const sessions = computed(() => sessionsData.value ?? [])
+
+const selectedId = ref<number>()
+const sessionId = computed(() => selectedId.value ?? sessions.value[0]?.id)
+const { data: stats } = useSessionCheckinStats(sessionId)
+
+const sessionOptions = computed(() =>
+  sessions.value.map((s) => ({
+    value: s.id,
+    label: `${s.class_name}${s.course_name ? ` · ${s.course_name}` : ''}（${s.teacher_name}）`,
+  })),
+)
 </script>
 
 <template>
@@ -19,10 +34,30 @@ const { data: stats } = useSessionCheckinStats()
           查看当前活跃课堂的签到统计
         </p>
       </div>
+      <Select
+        v-if="sessions.length > 1"
+        v-model="selectedId"
+        :options="sessionOptions"
+        class="w-full sm:w-80"
+      />
     </div>
 
+    <!-- 没有进行中的课堂 -->
+    <Card
+      v-if="!isLoadingSessions && sessions.length === 0"
+      class="flex h-64 flex-col items-center justify-center border-[#e5e5e5] text-[#737373]"
+    >
+      <p>当前没有进行中的课堂</p>
+      <p class="mt-1 text-sm text-[#a3a3a3]">
+        教师在「课堂签到」里开始课堂后，这里会实时显示签到数据
+      </p>
+    </Card>
+
     <!-- Stats Cards - CSS变量主题色 -->
-    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 mb-5">
+    <div
+      v-else
+      class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 mb-5"
+    >
       <!-- 总学生数 -->
       <Card class="relative overflow-hidden p-4 border-[#e5e5e5] bg-[#fafafa]">
         <div class="relative z-10 flex items-center gap-3">

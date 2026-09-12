@@ -206,6 +206,27 @@ describe('Admin Students - 列表分页', () => {
     vi.clearAllMocks()
   })
 
+  it('表头与数据列一一对应', async () => {
+    holder.paginated = makePaginated({
+      filteredStudents: ref([
+        {
+          student_id: 'S001',
+          name: '张三',
+          class_name: '2026届软件工程1班',
+          status: 'active',
+          is_account_enabled: true,
+        },
+      ]),
+    })
+    const wrapper = createWrapper()
+    await flushPromises()
+
+    const headers = wrapper.findAll('thead th').map((th) => th.text())
+    expect(headers).toEqual(['学号', '姓名', '班级', '学籍', '账号', '操作'])
+    // 每行格子数必须与表头一致（曾出现表头 7 列、数据 6 列的错位）
+    expect(wrapper.find('tbody tr').findAll('td')).toHaveLength(headers.length)
+  })
+
   it('totalPages > 1 时渲染分页组件并显示总数', () => {
     holder.paginated = makePaginated({
       page: ref(1),

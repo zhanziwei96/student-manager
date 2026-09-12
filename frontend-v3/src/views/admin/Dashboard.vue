@@ -22,19 +22,16 @@ const statCards = computed(() => [
     title: '学生总数',
     value: stats.value?.total_students ?? 0,
     icon: Users,
-    trend: '+12%',
   },
   {
     title: '活跃学生',
     value: stats.value?.active_students ?? 0,
     icon: GraduationCap,
-    trend: '+5%',
   },
   {
     title: '班级总数',
     value: stats.value?.total_classes ?? 0,
     icon: BookOpen,
-    trend: '0%',
   },
 ])
 
@@ -99,15 +96,6 @@ const statCards = computed(() => [
                 class="h-5 w-5"
               />
             </div>
-          </div>
-          <div class="mt-3 flex items-center gap-2">
-            <Badge
-              class="text-xs px-2 py-0.5 border-0 bg-[#e5e5e5] text-black"
-              
-            >
-              {{ card.trend }}
-            </Badge>
-            <span class="text-xs text-[#a3a3a3]">较上月</span>
           </div>
         </div>
         <!-- 背景装饰 -->

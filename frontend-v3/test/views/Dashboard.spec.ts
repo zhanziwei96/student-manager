@@ -83,6 +83,16 @@ describe('Dashboard Active Classes', () => {
     })
   }
 
+  it('不展示写死的趋势百分比', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    // 统计卡曾写死 +12% / +5% / 0% 与「较上月」，属于假数据
+    expect(wrapper.text()).not.toContain('较上月')
+    expect(wrapper.text()).not.toContain('+12%')
+    expect(wrapper.text()).not.toContain('+5%')
+  })
+
   it('displays active classes with correct format', async () => {
     const activeSessions = [
       {

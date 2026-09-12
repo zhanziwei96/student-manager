@@ -34,10 +34,29 @@ class TestActiveClassSessionsAPI:
         assert len(data["data"]) >= 1
 
         first_session = data["data"][0]
+        assert "id" in first_session
         assert "course_name" in first_session
         assert "class_name" in first_session
         assert "teacher_name" in first_session
         assert "start_time" in first_session
+
+    def test_active_session_id_usable_for_checkin_stats(self, admin_client, test_engine, seed_refs):
+        """列表返回的 id 可直接查签到统计（管理员签到管理页依赖此字段）"""
+        self._start_class_directly(test_engine, seed_refs["一班"], "高等数学")
+
+        sessions = admin_client.get("/api/v1/course-sessions/active").json()["data"]
+        assert len(sessions) == 1
+
+        response = admin_client.get(
+            f"/api/v1/checkins/stats?session_id={sessions[0]['id']}"
+        )
+        assert response.status_code == 200
+        stats = response.json()["data"]
+        # 未指定 session_id 时管理员取不到统计（回退逻辑按教师身份查），
+        # 带上课堂 id 才能拿到该班数据
+        assert stats["active"] is True
+        assert stats["total"] >= 0
+        assert stats["checked_in"] == 0
 
     def test_get_active_class_sessions_returns_empty_list(self, student_client):
         """测试没有活跃课堂时返回空列表"""

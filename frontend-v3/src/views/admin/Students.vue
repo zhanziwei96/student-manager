@@ -419,13 +419,10 @@ const handleTransfer = async () => {
                   班级
                 </th>
                 <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
-                  分数
-                </th>
-                <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   学籍
                 </th>
                 <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
-                  状态
+                  账号
                 </th>
                 <th class="px-4 py-3 text-left text-sm font-medium text-[#737373]">
                   操作
