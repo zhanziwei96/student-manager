@@ -242,7 +242,8 @@ const handleChangePassword = () => {
 
     <!-- 主内容区：响应式边距 -->
     <main class="min-h-screen p-4 pt-16 pb-20 lg:ml-64 lg:p-8 lg:pt-8 lg:pb-8">
-      <div class="mx-auto max-w-7xl">
+      <!-- 内容宽度：默认居中限宽；名单等宽表页面用 meta.fullWidth 铺满 -->
+      <div :class="route.meta.fullWidth ? '' : 'mx-auto max-w-7xl'">
         <RouterView />
       </div>
     </main>

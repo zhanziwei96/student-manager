@@ -245,26 +245,23 @@ const handleSetGroupFinal = async () => {
 
       <table
         v-else-if="filteredRoster.length > 0"
-        class="w-full text-sm"
+        class="w-full text-[15px]"
       >
         <thead class="bg-[#fafafa] text-[#737373] border-b border-[#e5e5e5]">
           <tr>
-            <th class="px-4 py-3 text-left font-medium">
+            <th class="px-5 py-4 text-left font-medium">
               学号
             </th>
-            <th class="px-4 py-3 text-left font-medium">
+            <th class="px-5 py-4 text-left font-medium">
               姓名
             </th>
-            <th class="px-4 py-3 text-left font-medium">
-              班级
-            </th>
-            <th class="px-4 py-3 text-right font-medium">
+            <th class="px-5 py-4 text-right font-medium">
               平时成绩
             </th>
-            <th class="px-4 py-3 text-right font-medium">
+            <th class="px-5 py-4 text-right font-medium">
               期末成绩
             </th>
-            <th class="px-4 py-3 text-right font-medium">
+            <th class="px-5 py-4 text-right font-medium">
               操作
             </th>
           </tr>
@@ -276,11 +273,11 @@ const handleSetGroupFinal = async () => {
         >
           <tr class="bg-white text-[#737373]">
             <td
-              colspan="6"
-              class="border-b border-[#e5e5e5] px-4 py-2 text-xs"
+              colspan="5"
+              class="border-b border-[#e5e5e5] px-5 py-3"
             >
-              <span class="font-medium text-black">{{ group.className }}</span>
-              <span class="ml-2 text-[#a3a3a3]">{{ group.students.length }} 人</span>
+              <span class="text-[15px] font-medium text-black">{{ group.className }}</span>
+              <span class="ml-2 text-[13px] text-[#a3a3a3]">{{ group.students.length }} 人</span>
             </td>
           </tr>
           <tr
@@ -288,22 +285,19 @@ const handleSetGroupFinal = async () => {
             :key="row.enrollment_id"
             class="text-[#737373] hover:bg-[#fafafa] transition-colors"
           >
-            <td class="px-4 py-3 font-mono text-xs">
+            <td class="px-5 py-4 font-mono text-[13px]">
               {{ row.student_id }}
             </td>
-            <td class="px-4 py-3 font-medium text-black">
+            <td class="px-5 py-4 font-medium text-black">
               {{ row.name }}
             </td>
-            <td class="px-4 py-3">
-              {{ row.class_name }}
-            </td>
-            <td class="px-4 py-3 text-right font-medium text-black">
+            <td class="px-5 py-4 text-right font-medium tabular-nums text-black">
               {{ row.score }}
             </td>
-            <td class="px-4 py-3 text-right font-medium text-black">
+            <td class="px-5 py-4 text-right font-medium tabular-nums text-black">
               {{ row.final_score ?? '—' }}
             </td>
-            <td class="px-4 py-3">
+            <td class="px-5 py-4">
               <div class="flex justify-end gap-2">
                 <Button
                   variant="outline"

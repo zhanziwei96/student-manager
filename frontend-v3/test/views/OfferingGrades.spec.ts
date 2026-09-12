@@ -163,6 +163,9 @@ describe('OfferingGrades 成绩录入', () => {
     expect(wrapper.text()).toContain('2026届软件工程二班')
     expect(wrapper.text()).toContain('2 人')
     expect(wrapper.text()).toContain('1 人')
+    // 班级已在组标题里，表格不再重复该列
+    expect(wrapper.findAll('th').map((th) => th.text()))
+      .toEqual(['学号', '姓名', '平时成绩', '期末成绩', '操作'])
   })
 
   it('搜索学号或姓名过滤名单并提示筛选人数', async () => {
