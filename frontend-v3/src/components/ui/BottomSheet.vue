@@ -205,16 +205,14 @@ const sheetClasses = computed(() =>
 .bottom-sheet-glass {
   background: #ffffff;
   /* 刘海屏底部安全区（--safe-bottom） */
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  padding-bottom: calc(var(--safe-bottom) + 1rem);
 }
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .bottom-sheet-glass {
-    /* tokens.css 的 @theme inline 不导出运行时变量，此处写字面值：
-       --color-surface-glass / --material-blur */
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    background: var(--color-surface-glass);
+    backdrop-filter: var(--material-blur);
+    -webkit-backdrop-filter: var(--material-blur);
   }
 }
 </style>

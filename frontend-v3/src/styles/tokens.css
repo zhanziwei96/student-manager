@@ -151,9 +151,17 @@
 }
 
 /* ========== CSS 变量导出 ========== */
+/* @theme inline 只生成工具类、不导出运行时变量；
+   以下供组件内 var() 直接引用（运行时令牌的单一事实源） */
 :root {
   --color-background: #ffffff;
   --color-text-primary: #000000;
   --color-text-secondary: #737373;
   --color-border: #e5e5e5;
+
+  /* 移动端材质与安全区（教师/学生页专用） */
+  --material-blur: saturate(180%) blur(20px);
+  --color-surface-glass: rgba(255, 255, 255, 0.85);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
