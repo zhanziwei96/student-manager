@@ -24,11 +24,12 @@
   --color-background-active: #f5f5f5;
 
   /* 文字色 */
+  /* 对比度修复：HIG 正文辅助文字 ≥4.5:1（原 #a3a3a3 仅 2.5:1） */
   --color-text-primary: #000000;
   --color-text-secondary: #737373;
-  --color-text-tertiary: #a3a3a3;
-  --color-text-muted: #a3a3a3;
-  --color-text-placeholder: #a3a3a3;
+  --color-text-tertiary: #525252;
+  --color-text-muted: #525252;
+  --color-text-placeholder: #525252;
 
   /* 主色（灰度系） */
   --color-primary: #000000;
@@ -106,7 +107,7 @@
 
   --color-gray-200: #e5e5e5;
   --color-gray-300: #d4d4d4;
-  --color-gray-400: #a3a3a3;
+  --color-gray-400: #525252;
   --color-gray-500: #737373;
   --color-gray-700: #404040;
 
@@ -117,6 +118,18 @@
   /* ========== 圆角系统（严格二元） ========== */
   --radius-container: 0.75rem;
   --radius-full: 9999px;
+
+  /* 移动端加大圆角（底部 Sheet / 卡片） */
+  --radius-container-lg: 1rem;
+  --radius-sheet: 1.25rem;
+
+  /* 材质层（移动端教师/学生页面专用；管理员/桌面端不用，见 DESIGN_SYSTEM.md 移动端例外） */
+  --material-blur: saturate(180%) blur(20px);
+  --color-surface-glass: rgba(255, 255, 255, 0.85);
+
+  /* 刘海屏安全区（配合 viewport-fit=cover） */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 
   /* ========== 过渡时间 ========== */
   --duration-instant: 100ms;
