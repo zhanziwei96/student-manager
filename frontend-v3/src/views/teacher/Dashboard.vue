@@ -54,81 +54,29 @@ const statCards = computed(() => [
       </p>
     </div>
 
-    <!-- Quick actions -->
-    <div class="flex gap-3 mb-5">
-      <Button @click="router.push('/teacher/session')">
-        <Calendar class="mr-2 h-4 w-4" />
+    <!-- 主操作区：开始上课（移动端全宽黑按钮，h-14 触控目标） -->
+    <div>
+      <button
+        type="button"
+        class="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-black text-base font-medium text-white transition-colors hover:bg-neutral-800 active:bg-neutral-700"
+        @click="router.push('/teacher/session')"
+      >
+        <Calendar class="h-5 w-5" />
         开始上课
-      </Button>
-      <Button
-        variant="outline"
-        @click="router.push('/teacher/students')"
+      </button>
+      <!-- 有进行中课堂时的次级提示，点击进入课堂管理 -->
+      <button
+        v-if="activeSessionsCount > 0"
+        type="button"
+        class="mt-2 flex min-h-[44px] w-full items-center justify-center text-sm text-[#525252] underline-offset-4 hover:underline"
+        @click="router.push('/teacher/session')"
       >
-        <Users class="mr-2 h-4 w-4" />
-        查看学生
-      </Button>
-    </div>
-
-    <!-- Loading state -->
-    <div
-      v-if="isPending"
-      class="flex h-64 items-center justify-center"
-    >
-      <Loader2 class="h-8 w-8 animate-spin text-primary" />
-    </div>
-
-    <!-- Error state -->
-    <div
-      v-else-if="error"
-      class="rounded-xl border border-red-500/30 bg-red-500/15 p-4 text-red-400"
-    >
-      加载统计数据失败: {{ error.message }}
-    </div>
-
-    <!-- Stats grid - 移动端2列布局 -->
-    <div
-      v-else
-      class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 mb-5"
-    >
-      <Card
-        v-for="card in statCards"
-        :key="card.title"
-        class="group relative overflow-hidden p-4 cursor-pointer"
-        :class="'bg-white border-[#e5e5e5]'"
-        @click="router.push(card.link)"
-      >
-        <div class="relative z-10">
-          <div class="flex items-start justify-between">
-            <div>
-              <p class="mt-3 text-xs font-medium text-[#737373]">
-                {{ card.title }}
-              </p>
-              <p class="mt-1 text-2xl font-medium text-black">
-                {{ card.value }}
-              </p>
-            </div>
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform bg-[#f5f5f5] text-primary"
-            >
-              <component
-                :is="card.icon"
-                class="h-5 w-5"
-              />
-            </div>
-          </div>
-          <div class="mt-3">
-            <span class="text-xs text-[#737373] flex items-center">
-              查看详情
-              <ArrowRight class="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
-            </span>
-          </div>
-        </div>
-        <!-- 背景装饰 -->
-      </Card>
+        当前有 {{ activeSessionsCount }} 个进行中的课堂
+      </button>
     </div>
 
     <!-- Today's schedule - 增强视觉层次 -->
-    <Card class="border-[#e5e5e5] bg-white p-5 mt-5">
+    <Card class="border-[#e5e5e5] bg-white p-5">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-lg font-medium text-black">
@@ -216,5 +164,63 @@ const statCards = computed(() => [
         </div>
       </DataContainer>
     </Card>
+
+    <!-- Loading state -->
+    <div
+      v-if="isPending"
+      class="flex h-64 items-center justify-center"
+    >
+      <Loader2 class="h-8 w-8 animate-spin text-primary" />
+    </div>
+
+    <!-- Error state -->
+    <div
+      v-else-if="error"
+      class="rounded-xl border border-red-500/30 bg-red-500/15 p-4 text-red-400"
+    >
+      加载统计数据失败: {{ error.message }}
+    </div>
+
+    <!-- Stats grid - 移动端2列布局（下移，主操作之后） -->
+    <div
+      v-else
+      class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3"
+    >
+      <Card
+        v-for="card in statCards"
+        :key="card.title"
+        class="group relative overflow-hidden p-4 cursor-pointer"
+        :class="'bg-white border-[#e5e5e5]'"
+        @click="router.push(card.link)"
+      >
+        <div class="relative z-10">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="mt-3 text-xs font-medium text-[#737373]">
+                {{ card.title }}
+              </p>
+              <p class="mt-1 text-2xl font-medium text-black">
+                {{ card.value }}
+              </p>
+            </div>
+            <div
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-transform bg-[#f5f5f5] text-primary"
+            >
+              <component
+                :is="card.icon"
+                class="h-5 w-5"
+              />
+            </div>
+          </div>
+          <div class="mt-3">
+            <span class="text-xs text-[#737373] flex items-center">
+              查看详情
+              <ArrowRight class="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+            </span>
+          </div>
+        </div>
+        <!-- 背景装饰 -->
+      </Card>
+    </div>
   </div>
 </template>
