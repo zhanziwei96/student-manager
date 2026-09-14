@@ -212,4 +212,34 @@ describe('BottomNav', () => {
 
     wrapper.unmount()
   })
+
+  it('前缀匹配带路径段边界：/teacher/sessions-history 不误点亮签到', () => {
+    mockState.role = 'teacher'
+    mockState.path = '/teacher/sessions-history'
+    const wrapper = mountNav()
+
+    // 中央签到按钮不应呈选中态（ring 标记）
+    const checkin = wrapper.find('a[aria-label="签到"]')
+    expect(checkin.classes().join(' ')).not.toContain('ring-2')
+
+    // 历史课堂属于「更多」面板 → 更多 tab 呈选中态
+    const moreBtn = wrapper.findAll('button').find((b) => b.text().includes('更多'))!
+    expect(moreBtn.classes().join(' ')).toContain('font-medium')
+
+    wrapper.unmount()
+  })
+
+  it('Esc 键关闭「更多」面板', async () => {
+    mockState.role = 'teacher'
+    mockState.path = '/teacher'
+    const wrapper = mountNav()
+    await openMore(wrapper)
+    expect(document.body.querySelector('[role="dialog"]')).toBeTruthy()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull()
+    wrapper.unmount()
+  })
 })

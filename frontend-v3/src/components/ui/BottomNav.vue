@@ -104,12 +104,13 @@ const moreItems = computed<SheetItem[]>(() => {
   return []
 })
 
-// 与 DashboardLayout 一致：角色根路径精确匹配，其余前缀匹配
+// 与 DashboardLayout 一致：角色根路径精确匹配，其余前缀匹配。
+// 前缀匹配带路径段边界：/teacher/session 不能命中 /teacher/sessions-history
 const isActive = (path: string) => {
   if (path === '/teacher' || path === '/student') {
     return route.path === path
   }
-  return route.path.startsWith(path)
+  return route.path === path || route.path.startsWith(path + '/')
 }
 
 // 当前路由属于「更多」面板条目时，更多 tab 呈选中态
@@ -121,8 +122,12 @@ const handleChangePassword = () => {
 }
 
 const handleLogout = async () => {
-  await authStore.logout()
-  showMore.value = false
+  try {
+    await authStore.logout()
+  } finally {
+    // 失败路径也要收起面板（路由 watcher 只覆盖成功跳转的情况）
+    showMore.value = false
+  }
 }
 </script>
 
@@ -163,6 +168,8 @@ const handleLogout = async () => {
         <button
           v-else
           type="button"
+          aria-haspopup="dialog"
+          :aria-expanded="showMore"
           class="flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1"
           :class="moreActive ? 'text-black font-medium' : 'text-[#525252]'"
           @click="showMore = true"
