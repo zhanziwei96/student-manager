@@ -238,7 +238,7 @@ const handleChangePassword = () => {
     <MobileDrawer v-model:open="showMobileMenu" @change-password="showChangePassword = true" />
 
     <!-- 移动端：底部导航栏（仅学生/教师） -->
-    <BottomNav v-if="!isAdmin" class="lg:hidden" />
+    <BottomNav v-if="!isAdmin" class="lg:hidden" @change-password="showChangePassword = true" />
 
     <!-- 主内容区：响应式边距 -->
     <main class="min-h-screen p-4 pt-16 pb-20 lg:ml-64 lg:p-8 lg:pt-8 lg:pb-8">
