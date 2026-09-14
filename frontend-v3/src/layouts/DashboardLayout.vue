@@ -13,7 +13,6 @@ import {
   School,
   CheckCircle,
   BookOpen,
-  Menu,
   MessageCircle,
   Search,
   CalendarRange,
@@ -132,9 +131,10 @@ const handleChangePassword = () => {
 
 <template>
   <div class="min-h-screen bg-[#fafafa]">
-    <!-- 移动端：顶部导航栏 -->
-    <header class="lg:hidden fixed top-0 left-0 right-0 h-14 z-40
-                   bg-white border-b border-[#e5e5e5]
+    <!-- 移动端：顶部导航栏（刘海屏安全区 + 毛玻璃材质） -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 z-40 mobile-header-glass
+                   h-[calc(3.5rem+var(--safe-top))] pt-[var(--safe-top)]
+                   border-b border-[#e5e5e5]
                    flex items-center justify-between px-4">
       <div class="flex items-center gap-2">
         <GraduationCap class="h-6 w-6 text-black" />
@@ -144,7 +144,7 @@ const handleChangePassword = () => {
         class="p-2 -mr-2 rounded-lg text-[#a3a3a3] hover:text-black hover:bg-[#fafafa] min-h-[44px] min-w-[44px] flex items-center justify-center"
         @click="showMobileMenu = true"
       >
-        <Menu class="h-6 w-6" />
+        <User class="h-6 w-6" />
       </button>
     </header>
 
@@ -240,8 +240,8 @@ const handleChangePassword = () => {
     <!-- 移动端：底部导航栏（仅学生/教师） -->
     <BottomNav v-if="!isAdmin" class="lg:hidden" @change-password="showChangePassword = true" />
 
-    <!-- 主内容区：响应式边距 -->
-    <main class="min-h-screen p-4 pt-16 pb-20 lg:ml-64 lg:p-8 lg:pt-8 lg:pb-8">
+    <!-- 主内容区：响应式边距（移动端避开顶栏安全区高度与 BottomNav + 底部安全区） -->
+    <main class="min-h-screen p-4 pt-[calc(3.5rem+var(--safe-top)+0.5rem)] pb-[calc(4rem+var(--safe-bottom)+1rem)] lg:ml-64 lg:p-8 lg:pt-8 lg:pb-8">
       <!-- 内容宽度：默认居中限宽；名单等宽表页面用 meta.fullWidth 铺满 -->
       <div :class="route.meta.fullWidth ? '' : 'mx-auto max-w-7xl'">
         <RouterView />
@@ -255,3 +255,18 @@ const handleChangePassword = () => {
     <ChangePasswordDialog v-model:open="showChangePassword" />
   </div>
 </template>
+
+<style scoped>
+/* 顶栏毛玻璃材质；微信 WebView 等不支持 backdrop-filter 时降级纯白 */
+.mobile-header-glass {
+  background: #ffffff;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .mobile-header-glass {
+    background: var(--color-surface-glass);
+    backdrop-filter: var(--material-blur);
+    -webkit-backdrop-filter: var(--material-blur);
+  }
+}
+</style>

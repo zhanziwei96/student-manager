@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { X, User, LayoutDashboard, Users, GraduationCap, BookOpen, CheckCircle, School, KeyRound, MessageCircle, CalendarRange, Layers, Library, Presentation, CalendarDays, Trophy } from 'lucide-vue-next'
+import { X, User, LayoutDashboard, Users, GraduationCap, CheckCircle, School, KeyRound, CalendarRange, Layers, Library, Presentation, CalendarDays } from 'lucide-vue-next'
 import { Button } from '.'
 import { useAuthStore } from '@/stores'
 import { computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 
 defineProps<{
   open: boolean
@@ -19,10 +19,9 @@ const route = useRoute()
 
 const user = computed(() => authStore.user)
 const isAdmin = computed(() => authStore.isAdmin)
-const isTeacher = computed(() => authStore.isTeacher)
-const isStudent = computed(() => authStore.isStudent)
 
-// Navigation items based on role
+// 抽屉已收窄为「我的」账户面板；教师/学生导航职能移交 BottomNav。
+// 仅管理员（无 BottomNav）保留导航项
 const navItems = computed(() => {
   const items: { name: string; path: string; icon: typeof User }[] = []
 
@@ -38,25 +37,6 @@ const navItems = computed(() => {
       { name: '教师管理', path: '/admin/teachers', icon: User },
       { name: '课表管理', path: '/admin/schedules', icon: CalendarDays },
       { name: '签到管理', path: '/admin/checkins', icon: CheckCircle }
-    )
-  } else if (isTeacher.value) {
-    items.push(
-      { name: '仪表板', path: '/teacher', icon: LayoutDashboard },
-      { name: '我的教学班', path: '/teacher/my-offerings', icon: Presentation },
-      { name: '排行榜', path: '/teacher/rankings', icon: Trophy },
-      { name: '课堂签到', path: '/teacher/session', icon: CheckCircle },
-      { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
-      { name: '小组管理', path: '/teacher/groups', icon: GraduationCap },
-      { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle }
-    )
-  } else if (isStudent.value) {
-    items.push(
-      { name: '仪表板', path: '/student', icon: LayoutDashboard },
-      { name: '我的成绩', path: '/student/grades', icon: GraduationCap },
-      { name: '排行榜', path: '/student/rankings', icon: Trophy },
-      { name: '课堂签到', path: '/student/checkin', icon: CheckCircle },
-      { name: '我的小组', path: '/student/my-group', icon: Users },
-      { name: '课堂问答', path: '/student/questions', icon: MessageCircle }
     )
   }
 
@@ -121,7 +101,7 @@ watch(() => route.path, () => {
       <div class="flex items-center justify-between h-16 px-4 border-b border-[#e5e5e5] flex-shrink-0">
         <div class="flex items-center gap-2">
           <GraduationCap class="h-6 w-6 text-black" />
-          <span class="text-lg font-medium text-black">智慧课堂</span>
+          <span class="text-lg font-medium text-black">{{ isAdmin ? '智慧课堂' : '我的' }}</span>
         </div>
         <button
           class="p-2 -mr-2 rounded-lg text-[#a3a3a3] hover:text-black hover:bg-[#fafafa]"
@@ -150,8 +130,8 @@ watch(() => route.path, () => {
 
       <!-- Scrollable content -->
       <div class="flex-1 overflow-y-auto min-h-0">
-        <!-- Navigation -->
-        <nav class="p-2 space-y-1">
+        <!-- 导航（仅管理员；教师/学生走 BottomNav） -->
+        <nav v-if="navItems.length" class="p-2 space-y-1">
           <RouterLink
             v-for="item in navItems"
             :key="item.path"
@@ -169,7 +149,7 @@ watch(() => route.path, () => {
         </nav>
 
         <!-- Change password -->
-        <div class="px-2 pt-2 border-t border-[#e5e5e5] mx-2 mt-2">
+        <div :class="['px-2 pt-2 mx-2', navItems.length ? 'border-t border-[#e5e5e5] mt-2' : 'mt-2']">
           <button
             class="flex w-full items-center gap-4 rounded-full px-4 py-3.5 text-base font-medium text-[#737373] hover:bg-[#fafafa] hover:text-black"
             @click="handleChangePassword"
