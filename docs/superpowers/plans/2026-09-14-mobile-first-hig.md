@@ -41,10 +41,12 @@
 
 ## 任务清单
 
-- [ ] **Task 0 — 设计令牌升级（tokens.css）**：对比度修复（`text-tertiary/muted/placeholder` `#a3a3a3` → `#525252`，同步 `--color-gray-400`）；字号体系 rem 化 + 移动端基准（html `font-size` 保持 16px 基准使 rem 生效；`text-xs` 语义收敛为 Caption）；新增 `--radius-container-lg: 1rem`、`--radius-sheet: 1.25rem`；新增材质令牌 `--material-blur: saturate(180%) blur(20px)`、`--color-surface-glass: rgba(255,255,255,0.85)`；新增安全区辅助 `--safe-bottom: env(safe-area-inset-bottom, 0px)`
-- [ ] **Task 1 — 底部 Sheet 组件（`components/ui/BottomSheet.vue`）**：通用底部半模态（替代移动端 Dialog/更多菜单）：拖拽下滑关闭、遮罩点击关闭、安全区内边距、`--radius-sheet` 顶部圆角、`backdrop-blur` 遮罩；导出供 BottomNav「更多」、危险操作确认（红字 Action 样式）、表单弹层复用。含 vitest 组件测试
-- [ ] **Task 2 — BottomNav 重构**：≤5 tab + 中央签到主操作 + 死链清理 + 安全区 + 填充态选中图标。教师：`仪表板 / 学生 / [签到●] / 课表 / 更多`；学生：`仪表板 / 小组 / [签到●] / 成绩 / 更多`；中央签到按钮为凸起圆形主按钮（黑底白图标，56px，超出栏高）；「更多」打开 BottomSheet 列出剩余入口（教师：教学班/小组/问答/排行/历史课堂/失物招领/修改密码/退出；学生：问答/排行/失物招领/修改密码/退出）；死链移除。更新 `DashboardLayout.vue` 挂载（签到中央按钮仅在有活跃课堂语境下高亮——无则常态可点）。vitest 更新
-- [ ] **Task 3 — 布局移动端优先化（DashboardLayout.vue）**：主内容区 `pb` 改为 `calc(BottomNav 高 + safe-bottom)`；header 与 BottomNav 加安全区 padding 与毛玻璃材质（`backdrop-filter` + 半透明白）；`max-w-7xl` 居中限宽仅桌面（`lg:`）生效，移动端全宽；管理员桌面端布局零变化（验收：admin 登录桌面视口截图对比）。MobileDrawer 角色收窄为「我的」页（头像/改密码/退出），导航职能移交 BottomNav+更多
+- [x] **Task 0 — 设计令牌升级（tokens.css）**：✅ 1c78dea + e58ebb1（双评审通过；质量评审抓出 @theme inline 死令牌已修）
+
+> 原 Task 0 中「字号 rem 化 + text-xs 语义收敛」实际拆到 Task 9 执行（Tailwind 字号本为 rem，无需动令牌）
+- [x] **Task 1 — 底部 Sheet 组件**：✅ d52403c + 17c8f9c（双评审通过；评审跟进 Esc 关闭 + aria-labelledby + 令牌工具类）
+- [x] **Task 2 — BottomNav 重构**：✅ 17ab2db + 36f9a40（双评审通过；评审抓出 /teacher/session 前缀撞车 /teacher/sessions-history 已修 + 2 回归测试）。注：签到中央按钮选中态为路由匹配（非「有活跃课堂才高亮」），实现侧有意为之，UX 更直觉
+- [x] **Task 3 — 布局移动端优先化**：✅ c841317（双评审通过）。注：抽屉「我的」与更多面板的修改密码/退出为**有意保留的双入口**；管理员移动端底部留白与抽屉 safe-top 遮挡为既有行为，不在本计划修
 - [ ] **Task 4 — 学生端首屏重构（views/student/Dashboard.vue + Checkin.vue）**：Dashboard 首屏顶部 = 签到主卡片：无活跃课堂→"当前没有进行中的课堂"态；有→大号「立即签到」按钮（h-14 全宽黑底）+ 课堂信息（课程名/教师/开始时间）；其下才是课程成绩摘要与小组摘要（现有卡片下移，顺序不变）。Checkin.vue 签到按钮触控区 ≥56px、验证码输入框移动端 16px 字号防缩放
 - [ ] **Task 5 — 教师端首屏重构（views/teacher/Dashboard.vue）**：首屏顶部 = 「开始上课」大按钮（h-14 全宽）；下方今日课程列表（已有，保留）+ 活跃课堂卡片（保留）；统计卡片下移。移动端隐藏次要统计，桌面端布局不变
 - [ ] **Task 6 — 手势 composable 三件套**：`composables/usePullToRefresh.ts`（触摸下拉>80px 触发 `refetch`，带阻力曲线与回弹动画，作用于列表页容器）；`composables/useSwipeBack.ts`（详情页左缘右滑>阈值→`router.back()`，同时保留返回按钮）；`composables/useSwipeActions.ts`（列表行左滑露出操作按钮）。各含单测（模拟 TouchEvent 序列）
