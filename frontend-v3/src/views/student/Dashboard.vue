@@ -4,10 +4,11 @@ import { useQuery } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { useStudentProfile } from '@/composables/useStudentProfile'
+import { useStudentCourseSession } from '@/composables/useStudentCheckin'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
-import { Card } from '@/components/ui'
-import { Users, Award, TrendingUp, Loader2, AlertCircle, Trophy, BookOpen } from 'lucide-vue-next'
+import { Card, Button } from '@/components/ui'
+import { Users, Award, TrendingUp, Loader2, AlertCircle, Trophy, BookOpen, CalendarCheck } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -30,6 +31,20 @@ const { data: myGroupsData } = useQuery({
   enabled: () => !!studentId.value,
 })
 const myGroups = computed(() => myGroupsData.value ?? [])
+
+// 签到主任务：查询班级活跃课堂（class_id 为空时 enabled=false，不发请求）
+const classId = computed(() => currentStudent.value?.class_id ?? undefined)
+const { data: classSession, hasActiveSession } = useStudentCourseSession(classId)
+
+// 课堂开始时间格式化
+const formatTime = (time?: string) => {
+  if (!time) return ''
+  try {
+    return new Date(time).toLocaleString('zh-CN')
+  } catch {
+    return time
+  }
+}
 
 const getCardTextMutedColor = () => 'text-[#737373]'
 </script>
@@ -76,6 +91,44 @@ const getCardTextMutedColor = () => 'text-[#737373]'
     </div>
 
     <template v-else>
+      <!-- 签到主卡片：最高频任务置顶（HIG 聚焦主任务） -->
+      <Card class="border-[#e5e5e5] bg-white p-5">
+        <!-- 有活跃课堂：课堂信息 + 大号签到按钮 -->
+        <div v-if="hasActiveSession && classSession">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <CalendarCheck class="h-5 w-5" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <h2 class="text-lg font-medium text-black">
+                课堂进行中
+              </h2>
+              <p class="text-xs text-[#a3a3a3] mt-0.5 truncate">
+                {{ classSession.class_name || '课堂' }} · {{ classSession.teacher_name || '教师' }}
+                <template v-if="classSession.start_time">· 开始于 {{ formatTime(classSession.start_time) }}</template>
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="cta"
+            class="mt-4 h-14 w-full text-base"
+            @click="router.push('/student/checkin')"
+          >
+            立即签到
+          </Button>
+        </div>
+
+        <!-- 无活跃课堂 / 未分班：安静状态，无操作按钮 -->
+        <div v-else class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f5f5f5] text-[#a3a3a3]">
+            <CalendarCheck class="h-5 w-5" />
+          </div>
+          <p class="text-sm text-[#737373]">
+            当前没有进行中的课堂
+          </p>
+        </div>
+      </Card>
+
       <!-- Stats grid -->
       <div class="grid grid-cols-2 gap-3 sm:gap-4">
         <!-- 班级卡片 -->
@@ -144,7 +197,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
             </p>
           </div>
           <button
-            class="inline-flex items-center gap-1.5 rounded-full bg-[#f5f5f5] px-3 py-1.5 text-xs font-medium text-black transition-colors hover:bg-[#e5e5e5]"
+            class="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-[#f5f5f5] px-3 py-1.5 text-xs font-medium text-black transition-colors hover:bg-[#e5e5e5]"
             @click="router.push('/student/grades')"
           >
             <BookOpen class="h-3.5 w-3.5" />
@@ -213,7 +266,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
             </p>
           </div>
           <button
-            class="inline-flex items-center gap-1.5 rounded-full bg-[#f5f5f5] px-3 py-1.5 text-xs font-medium text-black transition-colors hover:bg-[#e5e5e5]"
+            class="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-[#f5f5f5] px-3 py-1.5 text-xs font-medium text-black transition-colors hover:bg-[#e5e5e5]"
             @click="router.push('/student/my-group')"
           >
             <Users class="h-3.5 w-3.5" />
@@ -258,7 +311,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
       <!-- 快捷入口 -->
       <div class="flex gap-3">
         <button
-          class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-[#f5f5f5] px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-[#e5e5e5]"
+          class="flex-1 inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full bg-[#f5f5f5] px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-[#e5e5e5]"
           @click="router.push('/student/rankings')"
         >
           <Trophy class="h-4 w-4" />

@@ -260,7 +260,7 @@ const formatTime = (time: string) => {
               class="w-full max-w-[200px] text-center text-xl tracking-[0.15em] uppercase"
               @keyup.enter="handleCheckin"
             />
-            <Button variant="cta" class="w-full max-w-[200px]" @click="handleCheckin">
+            <Button variant="cta" class="h-14 w-full max-w-[200px] text-base" @click="handleCheckin">
               <CheckCircle class="h-4 w-4" />
               确认签到
             </Button>
