@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, useId, watch } from 'vue'
 import { useScrollLock } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import { cn } from '@/lib/utils'
@@ -28,6 +28,9 @@ const emit = defineEmits<{
   'update:open': [value: boolean]
 }>()
 
+// 标题与 aria-labelledby 关联（无障碍）
+const titleId = useId()
+
 // 检查是否在客户端环境（SSR 安全）
 const isClient = typeof window !== 'undefined'
 
@@ -36,6 +39,14 @@ const isLocked = useScrollLock(isClient ? document.body : null)
 
 const close = () => {
   emit('update:open', false)
+}
+
+// Esc 键关闭（模态对话框的键盘可达性底线）
+const onKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.open) close()
+}
+if (isClient) {
+  window.addEventListener('keydown', onKeydown)
 }
 
 // ========== 拖拽下滑关闭 ==========
@@ -65,9 +76,10 @@ watch(
   { immediate: true }
 )
 
-// 组件卸载时恢复滚动，避免泄漏
+// 组件卸载时恢复滚动 + 移除键盘监听，避免泄漏
 onUnmounted(() => {
   isLocked.value = false
+  if (isClient) window.removeEventListener('keydown', onKeydown)
 })
 
 // 路由切换时关闭（同 MobileDrawer）
@@ -127,8 +139,8 @@ const sheetStyle = computed(() => {
 const sheetClasses = computed(() =>
   cn(
     'fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col',
-    // --radius-sheet
-    'rounded-t-[1.25rem] bottom-sheet-glass',
+    // 圆角令牌 --radius-sheet（@theme inline 生成 rounded-t-sheet 工具类）
+    'rounded-t-sheet bottom-sheet-glass',
     props.class
   )
 )
@@ -169,6 +181,7 @@ const sheetClasses = computed(() =>
         ref="sheetRef"
         role="dialog"
         aria-modal="true"
+        :aria-labelledby="title ? titleId : undefined"
         :class="sheetClasses"
         :style="sheetStyle"
       >
@@ -180,12 +193,13 @@ const sheetClasses = computed(() =>
           @touchend="onTouchEnd"
           @touchcancel="onTouchEnd"
         >
-          <div class="mx-auto h-1.5 w-10 rounded-full bg-[#d4d4d4]" />
+          <div class="mx-auto h-1.5 w-10 rounded-full bg-gray-300" />
         </div>
 
         <!-- 标题 -->
         <h3
           v-if="title"
+          :id="titleId"
           class="px-4 pb-2 text-center text-base font-medium text-black"
         >
           {{ title }}
