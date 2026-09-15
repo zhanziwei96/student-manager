@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStudentLostFoundItems } from '@/composables/useLostFound'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import { Card, Button, Badge, DataContainer, Select } from '@/components/ui'
-import { Search, MapPin, User, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Search, MapPin, User, ChevronLeft, ChevronRight, Loader2, ArrowDown } from 'lucide-vue-next'
 import type { LostFoundStatus } from '@/types/lostFound'
 
 const router = useRouter()
@@ -29,6 +30,22 @@ const queryParams = computed(() => ({
 }))
 
 const { data, isPending, error, refetch } = useStudentLostFoundItems(() => queryParams.value)
+
+// 下拉刷新：页面由 window 滚动（布局无局部滚动容器），以 documentElement 为容器
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await refetch()
+})
+
+onMounted(() => {
+  pageRef.value = document.documentElement
+  // 抑制 Chrome Android 原生下拉刷新，避免与手势冲突
+  document.documentElement.classList.add('overscroll-y-contain')
+})
+
+onUnmounted(() => {
+  document.documentElement.classList.remove('overscroll-y-contain')
+})
 
 const items = computed(() => data.value?.items ?? [])
 const total = computed(() => data.value?.total ?? 0)
@@ -71,7 +88,18 @@ const statusVariant: Record<string, string> = {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="overscroll-y-contain space-y-5">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
+
     <div>
       <h1 class="text-2xl font-medium text-black">
         失物招领

@@ -6,12 +6,16 @@ import {
   useCreateLostFoundComment,
   useClaimLostFoundItem,
 } from '@/composables/useLostFound'
+import { useSwipeBack } from '@/composables/useSwipeBack'
 import { Card, Button, Badge, DataContainer, Dialog } from '@/components/ui'
 import { ArrowLeft, MapPin, User, Clock, MessageCircle, Send } from 'lucide-vue-next'
 import type { ClaimStatus } from '@/types/lostFound'
 
 const route = useRoute()
 const router = useRouter()
+
+// 左缘右滑返回（HIG 手势增强，返回按钮仍为主要途径）
+useSwipeBack()
 
 const itemId = computed(() => Number(route.params.id))
 

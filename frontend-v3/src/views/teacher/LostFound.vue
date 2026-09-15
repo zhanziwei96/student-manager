@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Card, Button, Badge, Select, DataContainer, Input } from '@/components/ui'
-import { useTeacherLostFoundItems } from '@/composables/useLostFound'
-import { Plus, MapPin, Search, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Card, Button, Badge, Select, DataContainer, Input, Dialog } from '@/components/ui'
+import { useTeacherLostFoundItems, useDeleteLostFoundItem } from '@/composables/useLostFound'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
+import { useSwipeActions } from '@/composables/useSwipeActions'
+import { Plus, MapPin, Search, ChevronLeft, ChevronRight, Trash2, Loader2, ArrowDown } from 'lucide-vue-next'
 import type { LostFoundStatus } from '@/types/lostFound'
 
 const router = useRouter()
@@ -29,7 +31,50 @@ const queryParams = computed(() => ({
   page_size: pageSize,
 }))
 
-const { data, isPending } = useTeacherLostFoundItems(() => queryParams.value)
+const { data, isPending, refetch } = useTeacherLostFoundItems(() => queryParams.value)
+
+// 下拉刷新：页面由 window 滚动（布局无局部滚动容器），以 documentElement 为容器
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await refetch()
+})
+
+onMounted(() => {
+  pageRef.value = document.documentElement
+  // 抑制 Chrome Android 原生下拉刷新，避免与手势冲突
+  document.documentElement.classList.add('overscroll-y-contain')
+})
+
+onUnmounted(() => {
+  document.documentElement.classList.remove('overscroll-y-contain')
+})
+
+// 行左滑操作（HIG 手势）：露出「删除」按钮
+const { bindRow, openRowId, activeRowId, rowOffset, closeRow } = useSwipeActions()
+
+/** 行位移：手势中跟手，展开行驻留在 -64（threshold），其余归位 */
+function rowTransform(id: number) {
+  if (activeRowId.value === id) return rowOffset.value
+  return openRowId.value === id ? -64 : 0
+}
+
+// 删除确认
+const { mutateAsync: deleteItem, isPending: deleting } = useDeleteLostFoundItem()
+const showDeleteDialog = ref(false)
+const pendingDeleteId = ref<number | null>(null)
+
+function askDelete(id: number) {
+  pendingDeleteId.value = id
+  showDeleteDialog.value = true
+  closeRow()
+}
+
+async function handleDelete() {
+  if (pendingDeleteId.value === null) return
+  await deleteItem(pendingDeleteId.value)
+  showDeleteDialog.value = false
+  pendingDeleteId.value = null
+}
 
 const items = computed(() => data.value?.items || [])
 const total = computed(() => data.value?.total || 0)
@@ -58,6 +103,11 @@ function formatDate(iso: string) {
 }
 
 function goToDetail(id: number) {
+  // 行已展开时点击仅收起，不跳转
+  if (openRowId.value === id) {
+    closeRow()
+    return
+  }
   router.push({ name: 'TeacherLostFoundDetail', params: { id } })
 }
 
@@ -67,7 +117,18 @@ function goToCreate() {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="overscroll-y-contain space-y-6">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
+
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-medium text-black">
@@ -105,43 +166,66 @@ function goToCreate() {
           <div
             v-for="item in items"
             :key="item.id"
-            class="rounded-xl border border-[#e5e5e5] bg-white overflow-hidden cursor-pointer transition-colors hover:bg-[#fafafa]"
-            @click="goToDetail(item.id)"
+            class="relative overflow-hidden rounded-xl"
           >
-            <!-- 图片 -->
-            <img
-              v-if="item.image_url"
-              :src="item.image_url"
-              :alt="item.title"
-              class="w-full max-h-48 object-contain bg-[#f5f5f5]"
+            <!-- 滑动操作层（行左滑露出） -->
+            <div class="absolute inset-y-0 right-0 w-16">
+              <button
+                type="button"
+                class="flex h-full w-full flex-col items-center justify-center gap-1 bg-red-500 text-xs text-white"
+                @click.stop="askDelete(item.id)"
+              >
+                <Trash2 class="h-4 w-4" />
+                删除
+              </button>
+            </div>
+            <!-- 行内容层（跟手左移） -->
+            <div
+              class="relative"
+              :class="{ 'transition-transform duration-200': activeRowId !== item.id }"
+              :style="{ transform: `translateX(${rowTransform(item.id)}px)` }"
+              v-on="bindRow(item.id)"
             >
-            <div class="p-4">
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <h3 class="font-medium text-black truncate flex-1">
-                  {{ item.title }}
-                </h3>
-                <Badge :variant="getStatusBadge(item.status).variant">
-                  {{ getStatusBadge(item.status).label }}
-                </Badge>
-              </div>
+              <div
+                class="rounded-xl border border-[#e5e5e5] bg-white overflow-hidden cursor-pointer transition-colors hover:bg-[#fafafa]"
+                @click="goToDetail(item.id)"
+              >
+                <!-- 图片 -->
+                <img
+                  v-if="item.image_url"
+                  :src="item.image_url"
+                  :alt="item.title"
+                  class="w-full max-h-48 object-contain bg-[#f5f5f5]"
+                >
+                <div class="p-4">
+                  <div class="flex items-start justify-between gap-2 mb-2">
+                    <h3 class="font-medium text-black truncate flex-1">
+                      {{ item.title }}
+                    </h3>
+                    <Badge :variant="getStatusBadge(item.status).variant">
+                      {{ getStatusBadge(item.status).label }}
+                    </Badge>
+                  </div>
 
-              <p class="text-sm text-[#737373] mb-3 line-clamp-2">
-                {{ truncate(item.description, 80) }}
-              </p>
+                  <p class="text-sm text-[#737373] mb-3 line-clamp-2">
+                    {{ truncate(item.description, 80) }}
+                  </p>
 
-              <div class="flex items-center gap-4 text-xs text-[#a3a3a3]">
-                <span v-if="item.location" class="flex items-center gap-1">
-                  <MapPin class="h-3 w-3" />
-                  {{ item.location }}
-                </span>
-                <span>{{ formatDate(item.created_at) }}</span>
-              </div>
+                  <div class="flex items-center gap-4 text-xs text-[#a3a3a3]">
+                    <span v-if="item.location" class="flex items-center gap-1">
+                      <MapPin class="h-3 w-3" />
+                      {{ item.location }}
+                    </span>
+                    <span>{{ formatDate(item.created_at) }}</span>
+                  </div>
 
-              <div class="mt-3 pt-3 border-t border-[#e5e5e5] flex items-center gap-3 text-xs text-[#737373]">
-                <span>认领 {{ item.total_claims }} 条</span>
-                <span v-if="item.pending_count > 0" class="text-[#f97316]">
-                  待处理 {{ item.pending_count }}
-                </span>
+                  <div class="mt-3 pt-3 border-t border-[#e5e5e5] flex items-center gap-3 text-xs text-[#737373]">
+                    <span>认领 {{ item.total_claims }} 条</span>
+                    <span v-if="item.pending_count > 0" class="text-[#f97316]">
+                      待处理 {{ item.pending_count }}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -174,5 +258,13 @@ function goToCreate() {
         </div>
       </DataContainer>
     </Card>
+
+    <!-- 删除确认 -->
+    <Dialog v-model:open="showDeleteDialog" title="确认删除" description="删除后不可恢复，确定要删除此物品吗？">
+      <div class="flex justify-end gap-2 mt-4">
+        <Button variant="outline" @click="showDeleteDialog = false">取消</Button>
+        <Button variant="destructive" :loading="deleting" @click="handleDelete">确认删除</Button>
+      </div>
+    </Dialog>
   </div>
 </template>

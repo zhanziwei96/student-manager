@@ -8,12 +8,16 @@ import { offeringsApi } from '@/api/offerings'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
 import { useToast } from '@/composables/useToast'
+import { useSwipeBack } from '@/composables/useSwipeBack'
 import { getErrorMessage } from '@/lib/error'
 import ScoreReasonChips from '@/components/teacher/ScoreReasonChips.vue'
 import type { EnrollmentRow } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
+
+// 左缘右滑返回（HIG 手势增强，返回按钮仍为主要途径）
+useSwipeBack()
 const { showToast } = useToast()
 const queryClient = useQueryClient()
 
