@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useClasses, useToast } from '@/composables'
-import { Card, Button, Select, Input, Label, DataContainer, Dialog, Badge, PullToRefreshIndicator } from '@/components/ui'
+import { Card, Button, Select, Input, Label, DataContainer, ResponsiveDialog, Badge, PullToRefreshIndicator } from '@/components/ui'
 import {
   useTeacherGroups,
   useAutoAssign,
@@ -554,7 +554,7 @@ async function handleUpdateScore() {
       </DataContainer>
     </Card>
 
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showTransferDialog"
       title="转让组长"
     >
@@ -585,10 +585,10 @@ async function handleUpdateScore() {
           </Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
     <!-- 解散确认对话框 -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showDissolveDialog"
       title="解散小组"
     >
@@ -605,6 +605,7 @@ async function handleUpdateScore() {
           </Button>
           <Button
             variant="destructive"
+            class="max-md:border-transparent max-md:bg-transparent max-md:text-[#ef4444]"
             :loading="dissolving"
             @click="handleDissolve"
           >
@@ -612,10 +613,10 @@ async function handleUpdateScore() {
           </Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
     <!-- 加减分弹窗 -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showScoreDialog"
       :title="scoreGroup ? `加减分 - ${scoreGroup.name}` : '加减分'"
     >
@@ -686,10 +687,10 @@ async function handleUpdateScore() {
           </Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
     <!-- 建组 Dialog -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showCreateGroupDialog"
       title="创建小组"
       description="小组按课程划分，学生可申请加入"
@@ -729,6 +730,6 @@ async function handleUpdateScore() {
           </Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
   </div>
 </template>

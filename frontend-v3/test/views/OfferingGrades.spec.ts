@@ -58,7 +58,7 @@ const fakeRow = (id: number, sid: string, name: string, className: string | null
 })
 
 const MockDialog = {
-  name: 'Dialog',
+  name: 'ResponsiveDialog',
   props: ['open', 'title', 'description'],
   emits: ['update:open'],
   template: `
@@ -118,7 +118,7 @@ const mountComponent = () => {
     global: {
       plugins: [[VueQueryPlugin, { queryClient }]],
       stubs: {
-        Dialog: MockDialog,
+        ResponsiveDialog: MockDialog,
         Button: MockButton,
         Input: MockInput,
         Select: MockSelect,

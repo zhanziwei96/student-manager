@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useRoute, useRouter } from 'vue-router'
-import { Card, Button, Input, Select, Dialog, Label } from '@/components/ui'
+import { Card, Button, Input, Select, ResponsiveDialog, Label } from '@/components/ui'
 import { Loader2, ArrowLeft, Plus, FileText, Users, Search } from 'lucide-vue-next'
 import { offeringsApi } from '@/api/offerings'
 import { enrollmentsApi } from '@/api/enrollments'
@@ -351,7 +351,7 @@ const handleSetGroupFinal = async () => {
     </Card>
 
     <!-- 加减分 Dialog -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showScoreDialog"
       :title="scoreStudent ? `调整 ${scoreStudent.name} 的平时成绩` : '调整平时成绩'"
       description="分数变化会记录操作人与原因"
@@ -400,10 +400,10 @@ const handleSetGroupFinal = async () => {
           保存
         </Button>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
     <!-- 期末分 Dialog -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showFinalDialog"
       :title="finalStudent ? `登记 ${finalStudent.name} 的期末成绩` : '登记期末成绩'"
       description="试卷考试使用个人分数；任务考核请用「期末任务同分」"
@@ -436,10 +436,10 @@ const handleSetGroupFinal = async () => {
           登记
         </Button>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
     <!-- 期末任务同分 Dialog -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showGroupFinalDialog"
       title="期末任务同分"
       description="小组任务考核：组内成员获得相同期末成绩"
@@ -494,6 +494,6 @@ const handleSetGroupFinal = async () => {
           登记
         </Button>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
   </div>
 </template>

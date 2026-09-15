@@ -44,7 +44,7 @@ const stubs = {
   Label: { template: '<label class="label"><slot /></label>' },
   Badge: { template: '<span class="badge"><slot /></span>' },
   DataContainer: { props: ['loading', 'hasData'], template: '<div class="data-container"><slot /></div>' },
-  Dialog: {
+  ResponsiveDialog: {
     props: ['open', 'title'],
     template: '<div v-if="open" class="dialog"><div class="dialog-title">{{ title }}</div><slot /><slot name="footer" /></div>',
   },

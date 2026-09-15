@@ -160,7 +160,7 @@ describe('CourseSession', () => {
           Select: MockSelect,
           Input: MockInput,
           Badge: { template: '<span class="mock-badge"><slot /></span>' },
-          Dialog: MockDialog,
+          ResponsiveDialog: MockDialog,
           Toast: { template: '<div class="mock-toast" />' },
           NetworkErrorBanner: MockNetworkErrorBanner,
           CheckinStats: MockCheckinStats,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useToast } from '@/composables'
-import { Card, Button, Select, Label, DataContainer, Dialog, Badge, PullToRefreshIndicator } from '@/components/ui'
+import { Card, Button, Select, Label, DataContainer, ResponsiveDialog, Badge, PullToRefreshIndicator } from '@/components/ui'
 import {
   useMyGroups,
   useStudentGroups,
@@ -348,7 +348,7 @@ function formatTime(iso: string) {
     </DataContainer>
 
     <!-- 创建小组弹窗 -->
-    <Dialog v-model:open="showCreateDialog" title="创建小组">
+    <ResponsiveDialog v-model:open="showCreateDialog" title="创建小组">
       <div class="space-y-3">
         <div class="text-sm text-[#737373]">
           班级：{{ className }}
@@ -373,10 +373,10 @@ function formatTime(iso: string) {
           <Button variant="cta" :loading="creating" @click="handleCreate">确认创建</Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
     <!-- 解散申请弹窗 -->
-    <Dialog v-model:open="showDissolveDialog" title="申请解散小组">
+    <ResponsiveDialog v-model:open="showDissolveDialog" title="申请解散小组">
       <div class="space-y-3">
         <textarea
           v-model="dissolveReason"
@@ -388,9 +388,9 @@ function formatTime(iso: string) {
       <template #footer>
         <div class="flex w-full gap-2 sm:justify-end">
           <Button variant="outline" @click="showDissolveDialog = false">取消</Button>
-          <Button variant="destructive" :loading="dissolving" @click="handleDissolve">提交申请</Button>
+          <Button variant="destructive" class="max-md:border-transparent max-md:bg-transparent max-md:text-[#ef4444]" :loading="dissolving" @click="handleDissolve">提交申请</Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
   </div>
 </template>

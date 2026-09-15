@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Card, Button, Badge, DataContainer, Dialog } from '@/components/ui'
+import { Card, Button, Badge, DataContainer, ResponsiveDialog } from '@/components/ui'
 import {
   useTeacherLostFoundDetail,
   useConfirmClaim,
@@ -265,11 +265,11 @@ function formatDate(iso: string) {
     </DataContainer>
 
     <!-- 删除确认对话框 -->
-    <Dialog v-model:open="showDeleteDialog" title="确认删除" description="删除后不可恢复，确定要删除此物品吗？">
+    <ResponsiveDialog v-model:open="showDeleteDialog" title="确认删除" description="删除后不可恢复，确定要删除此物品吗？">
       <div class="flex justify-end gap-2 mt-4">
         <Button variant="outline" @click="showDeleteDialog = false">取消</Button>
-        <Button variant="destructive" :loading="deleting" @click="handleDelete">确认删除</Button>
+        <Button variant="destructive" class="max-md:border-transparent max-md:bg-transparent max-md:text-[#ef4444]" :loading="deleting" @click="handleDelete">确认删除</Button>
       </div>
-    </Dialog>
+    </ResponsiveDialog>
   </div>
 </template>

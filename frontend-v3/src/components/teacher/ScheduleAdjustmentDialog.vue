@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { Dialog, Button, Input } from '@/components/ui'
+import { ResponsiveDialog, Button, Input } from '@/components/ui'
 import { useCreateScheduleAdjustment, useToast } from '@/composables'
 import { ApiError } from '@/lib/api'
 import type { CreateScheduleAdjustmentRequest } from '@/types'
@@ -109,7 +109,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <Dialog
+  <ResponsiveDialog
     :open="open"
     title="课程调整"
     @update:open="emit('update:open', $event)"
@@ -206,5 +206,5 @@ const handleSubmit = async () => {
         提交
       </Button>
     </template>
-  </Dialog>
+  </ResponsiveDialog>
 </template>

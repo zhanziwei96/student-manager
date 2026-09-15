@@ -7,7 +7,7 @@ import {
   useClaimLostFoundItem,
 } from '@/composables/useLostFound'
 import { useSwipeBack } from '@/composables/useSwipeBack'
-import { Card, Button, Badge, DataContainer, Dialog } from '@/components/ui'
+import { Card, Button, Badge, DataContainer, ResponsiveDialog } from '@/components/ui'
 import { ArrowLeft, MapPin, User, Clock, MessageCircle, Send } from 'lucide-vue-next'
 import type { ClaimStatus } from '@/types/lostFound'
 
@@ -235,7 +235,7 @@ function goBack() {
     </DataContainer>
 
     <!-- 认领弹窗 -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showClaimModal"
       title="申请认领"
       description="请填写联系方式，以便物品发布者与你联系"
@@ -281,6 +281,6 @@ function goBack() {
           </Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
   </div>
 </template>

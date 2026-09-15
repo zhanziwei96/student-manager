@@ -4,7 +4,7 @@ import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplat
 import { useClasses, useToast } from '@/composables'
 import { useTermInfo } from '@/composables/useTermInfo'
 import { useAuthStore } from '@/stores/auth'
-import { Card, Button, Badge, Dialog, DataContainer, MobilePicker, PullToRefreshIndicator } from '@/components/ui'
+import { Card, Button, Badge, ResponsiveDialog, DataContainer, MobilePicker, PullToRefreshIndicator } from '@/components/ui'
 import ScheduleAdjustmentDialog from '@/components/teacher/ScheduleAdjustmentDialog.vue'
 import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X, Settings2 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
@@ -947,7 +947,7 @@ const handleBatchDelete = async () => {
     />
 
     <!-- Import Dialog -->
-    <Dialog
+    <ResponsiveDialog
       v-model:open="showImportDialog"
       title="导入课表"
     >
@@ -996,7 +996,7 @@ const handleBatchDelete = async () => {
           导入
         </Button>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
     <!-- 底部批量操作栏 -->
     <div

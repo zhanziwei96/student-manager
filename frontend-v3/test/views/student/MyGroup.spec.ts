@@ -70,7 +70,7 @@ const stubs = {
   Select: { props: ['modelValue', 'options', 'placeholder'], emits: ['update:modelValue'], template: '<select class="select"><slot /></select>' },
   Label: { template: '<label class="label"><slot /></label>' },
   DataContainer: { props: ['loading', 'hasData'], template: '<div class="data-container"><slot /></div>' },
-  Dialog: {
+  ResponsiveDialog: {
     props: ['open', 'title'],
     template: '<div v-if="open" class="dialog"><div class="dialog-title">{{ title }}</div><slot /><slot name="footer" /></div>',
   },

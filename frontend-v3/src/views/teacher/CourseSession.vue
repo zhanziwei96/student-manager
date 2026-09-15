@@ -23,7 +23,7 @@ import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useSessionCheckins } from '@/composables/useCheckins'
 import { useTeacherCourses } from '@/composables/useTeacherCourses'
 import { useAuthStore } from '@/stores'
-import { Card, Button, Input, Select, Badge, NetworkErrorBanner, Dialog } from '@/components/ui'
+import { Card, Button, Input, Select, Badge, NetworkErrorBanner, ResponsiveDialog } from '@/components/ui'
 import {
   Play, Square, CheckCircle, Clock, X, Plus,
   AlertTriangle, Users
@@ -904,7 +904,7 @@ const getSourceTypeBadge = (sourceType: string) => {
     </template>
 
     <!-- End Session Confirmation Dialog -->
-    <Dialog
+    <ResponsiveDialog
       :open="showEndConfirm"
       title="确认结束课堂"
       @update:open="showEndConfirm = $event"
@@ -935,13 +935,14 @@ const getSourceTypeBadge = (sourceType: string) => {
           </Button>
           <Button
             variant="destructive"
+            class="max-md:border-transparent max-md:bg-transparent max-md:text-[#ef4444]"
             @click="confirmEndSession"
           >
             确认结束
           </Button>
         </div>
       </template>
-    </Dialog>
+    </ResponsiveDialog>
 
   </div>
 </template>
