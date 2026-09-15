@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { defineComponent, h, ref } from 'vue'
+import { defineComponent, h, ref, nextTick } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
@@ -98,6 +98,36 @@ describe('usePullToRefresh', () => {
     expect(onRefresh).not.toHaveBeenCalled()
     expect(api.pulling.value).toBe(false)
     expect(api.pullDistance.value).toBe(0)
+  })
+
+  it('容器 v-if 条件渲染（ref 后赋值）时 watch 重新挂载监听', async () => {
+    const onRefresh = vi.fn().mockResolvedValue(undefined)
+    // 模拟加载态：初始 ref 为 null，容器后挂载
+    const containerRef = ref<HTMLElement | null>(null)
+    let api!: ReturnType<typeof usePullToRefresh>
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          api = usePullToRefresh(containerRef, onRefresh)
+          return () => h('div')
+        },
+      }),
+    )
+    cleanups.push(() => wrapper.unmount())
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    cleanups.push(() => container.remove())
+    containerRef.value = container
+    await nextTick()
+
+    container.dispatchEvent(makeTouchEvent('touchstart', 100, 100))
+    container.dispatchEvent(makeTouchEvent('touchmove', 100, 400))
+    container.dispatchEvent(makeTouchEvent('touchend', 100, 400))
+
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+    await flushPromises()
+    expect(api.refreshing.value).toBe(false)
   })
 
   it('卸载后移除监听，不再响应触摸', () => {

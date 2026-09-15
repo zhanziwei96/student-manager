@@ -2,6 +2,9 @@
  * 左缘右滑返回组合式函数（HIG 手势支持）
  * 仅在屏幕左缘 edgeWidth 内起手，避让 iOS 系统边缘手势的惯例
  * 原生 TouchEvent 实现，SSR 安全
+ *
+ * 注意：深链直接进入的页面无路由历史，router.back() 可能 noop 甚至退出应用；
+ * 页面应保留返回按钮作为主要返回途径，本手势仅作增强。
  */
 import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
