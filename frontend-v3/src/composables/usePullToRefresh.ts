@@ -43,8 +43,14 @@ export function usePullToRefresh(
 
   const onTouchstart = (e: TouchEvent) => {
     const el = containerRef.value
-    // 仅在容器位于顶部时才允许下拉
-    if (!el || el.scrollTop !== 0 || refreshing.value) return
+    if (!el || refreshing.value) return
+    // 仅在滚动到顶部时才允许下拉。容器自身可滚动（页面级滚动容器）时看容器 scrollTop；
+    // 容器不可滚动（窗口级滚动，如 DashboardLayout 的 main 为 min-h-screen）时看 window.scrollY，
+    // 否则 scrollTop 恒为 0，守卫失效（页面中间下拉也会触发刷新）。
+    const atTop = el.scrollHeight > el.clientHeight
+      ? el.scrollTop === 0
+      : window.scrollY === 0
+    if (!atTop) return
     startY = e.touches[0].clientY
     tracking = true
   }

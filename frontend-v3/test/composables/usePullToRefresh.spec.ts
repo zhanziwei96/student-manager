@@ -90,6 +90,10 @@ describe('usePullToRefresh', () => {
     const { container, api, unmount } = setup(onRefresh)
     cleanups.push(unmount)
 
+    // jsdom 无布局，scrollHeight/clientHeight 恒 0——守卫会走 window.scrollY 分支；
+    // 此处显式 mock 出「可滚动的容器」以覆盖容器分支
+    Object.defineProperty(container, 'scrollHeight', { value: 1000, configurable: true })
+    Object.defineProperty(container, 'clientHeight', { value: 400, configurable: true })
     container.scrollTop = 50
     container.dispatchEvent(makeTouchEvent('touchstart', 100, 100))
     container.dispatchEvent(makeTouchEvent('touchmove', 100, 400))
@@ -98,6 +102,25 @@ describe('usePullToRefresh', () => {
     expect(onRefresh).not.toHaveBeenCalled()
     expect(api.pulling.value).toBe(false)
     expect(api.pullDistance.value).toBe(0)
+  })
+
+  it('窗口级滚动布局（容器自身不滚动）且窗口不在顶部时不响应下拉', () => {
+    const onRefresh = vi.fn()
+    const { container, api, unmount } = setup(onRefresh)
+    cleanups.push(unmount)
+
+    // jsdom 容器 scrollHeight/clientHeight 均为 0（不可滚动）→ 守卫看 window.scrollY
+    Object.defineProperty(window, 'scrollY', { value: 300, configurable: true, writable: true })
+    container.dispatchEvent(makeTouchEvent('touchstart', 100, 100))
+    container.dispatchEvent(makeTouchEvent('touchmove', 100, 400))
+    container.dispatchEvent(makeTouchEvent('touchend', 100, 400))
+
+    expect(onRefresh).not.toHaveBeenCalled()
+    expect(api.pulling.value).toBe(false)
+    expect(api.pullDistance.value).toBe(0)
+
+    // 还原，避免影响同文件其它用例
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true })
   })
 
   it('容器 v-if 条件渲染（ref 后赋值）时 watch 重新挂载监听', async () => {
