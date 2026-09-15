@@ -15,6 +15,10 @@ export { useAuthQuery } from './useAuth'
 export { useSchedules, useTodaySchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplate } from './useSchedules'
 export * from './useCourseSessions'
 export { useCreateScheduleAdjustment } from './useScheduleAdjustments'
+// 手势支持（HIG）
+export { usePullToRefresh } from './usePullToRefresh'
+export { useSwipeBack } from './useSwipeBack'
+export { useSwipeActions } from './useSwipeActions'
 // 失物招领
 export {
   useTeacherLostFoundItems, useTeacherLostFoundDetail,
