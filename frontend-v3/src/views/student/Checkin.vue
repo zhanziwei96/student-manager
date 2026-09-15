@@ -200,7 +200,7 @@ const formatTime = (time: string) => {
           class="flex items-center gap-3 md:gap-4 relative z-10"
         >
           <div
-            :class="hasActiveSession ? 'bg-green-100 text-green-600' : 'bg-[#f5f5f5] text-[#a3a3a3]'"
+            :class="hasActiveSession ? 'bg-green-100 text-green-600' : 'bg-[#f5f5f5] text-[#525252]'"
             class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full flex-shrink-0"
           >
             <Clock

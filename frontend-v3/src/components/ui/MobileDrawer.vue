@@ -104,7 +104,7 @@ watch(() => route.path, () => {
           <span class="text-lg font-medium text-black">{{ isAdmin ? '智慧课堂' : '我的' }}</span>
         </div>
         <button
-          class="p-2 -mr-2 rounded-lg text-[#a3a3a3] hover:text-black hover:bg-[#fafafa]"
+          class="p-2 -mr-2 rounded-lg text-[#525252] hover:text-black hover:bg-[#fafafa]"
           @click="handleClose"
         >
           <X class="h-6 w-6" />
@@ -121,7 +121,7 @@ watch(() => route.path, () => {
             <p class="text-base font-medium text-black truncate">
               {{ user?.name }}
             </p>
-            <p class="text-sm text-[#a3a3a3]">
+            <p class="text-sm text-[#525252]">
               {{ user?.role === 'admin' ? '管理员' : user?.role === 'teacher' ? '教师' : '学生' }}
             </p>
           </div>
@@ -164,7 +164,7 @@ watch(() => route.path, () => {
       <div class="p-4 border-t border-[#e5e5e5] flex-shrink-0">
         <Button
           variant="ghost"
-          class="w-full justify-start gap-3 text-[#a3a3a3] hover:text-black h-12"
+          class="w-full justify-start gap-3 text-[#525252] hover:text-black h-12"
           @click="handleLogout"
         >
           <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

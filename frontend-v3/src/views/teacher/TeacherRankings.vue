@@ -169,7 +169,7 @@ const switchScope = (next: 'class' | 'all') => {
       >
         <Trophy class="mb-4 h-12 w-12 opacity-50" />
         <p>请选择科目</p>
-        <p class="mt-1 text-sm text-[#a3a3a3]">
+        <p class="mt-1 text-sm text-[#525252]">
           排行榜按您所授科目的成绩排名
         </p>
       </div>
@@ -213,7 +213,7 @@ const switchScope = (next: 'class' | 'all') => {
             <td class="px-4 py-3">
               <span
                 class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium"
-                :class="entry.rank === 1 ? 'bg-[#f59e0b]/15 text-[#f59e0b]' : entry.rank <= 3 ? 'bg-[#e5e5e5] text-black' : 'text-[#a3a3a3]'"
+                :class="entry.rank === 1 ? 'bg-[#f59e0b]/15 text-[#f59e0b]' : entry.rank <= 3 ? 'bg-[#e5e5e5] text-black' : 'text-[#525252]'"
               >
                 {{ entry.rank }}
               </span>
@@ -224,7 +224,7 @@ const switchScope = (next: 'class' | 'all') => {
               </p>
               <p
                 v-if="isGroupEntry()"
-                class="text-xs text-[#a3a3a3]"
+                class="text-xs text-[#525252]"
               >
                 {{ (entry as RankingGroupEntry).members.join('、') }}
               </p>
@@ -247,7 +247,7 @@ const switchScope = (next: 'class' | 'all') => {
         class="flex h-64 flex-col items-center justify-center text-[#737373]"
       >
         <p>暂无成绩数据</p>
-        <p class="mt-1 text-sm text-[#a3a3a3]">
+        <p class="mt-1 text-sm text-[#525252]">
           成绩录入后自动生成排名
         </p>
       </div>

@@ -102,18 +102,18 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
                 <div class="flex items-center gap-2 text-[#737373]">
-                  <Calendar class="h-3.5 w-3.5 text-[#a3a3a3]" />
+                  <Calendar class="h-3.5 w-3.5 text-[#525252]" />
                   <span>{{ session.class_name }}</span>
                 </div>
                 <div
                   v-if="session.classroom"
                   class="flex items-center gap-2 text-[#737373]"
                 >
-                  <MapPin class="h-3.5 w-3.5 text-[#a3a3a3]" />
+                  <MapPin class="h-3.5 w-3.5 text-[#525252]" />
                   <span>{{ session.classroom }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-[#737373]">
-                  <Clock class="h-3.5 w-3.5 text-[#a3a3a3]" />
+                  <Clock class="h-3.5 w-3.5 text-[#525252]" />
                   <span>{{ formatDateTime(session.start_time) }} ~ {{ formatDateTime(session.end_time) }}</span>
                 </div>
                 <div
@@ -137,7 +137,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
                 >
                   {{ sourceBadge(session.source_type).label }}
                 </Badge>
-                <span class="text-xs text-[#a3a3a3]">
+                <span class="text-xs text-[#525252]">
                   课堂码: {{ session.session_code }}
                 </span>
               </div>
@@ -147,7 +147,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
             <Button
               variant="ghost"
               size="sm"
-              class="h-8 px-2 text-[#a3a3a3] hover:text-black flex-shrink-0"
+              class="h-8 px-2 text-[#525252] hover:text-black flex-shrink-0"
               @click="toggleExpand(session.id)"
             >
               <Users class="h-4 w-4 mr-1" />
@@ -169,7 +169,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
             class="mt-3 pt-3 border-t border-[#e5e5e5]"
           >
             <div class="flex items-center gap-2 text-sm text-[#737373]">
-              <Users class="h-4 w-4 text-[#a3a3a3]" />
+              <Users class="h-4 w-4 text-[#525252]" />
               <span>已签到：--</span>
             </div>
           </div>

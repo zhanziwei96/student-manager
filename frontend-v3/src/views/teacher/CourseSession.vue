@@ -441,7 +441,7 @@ const getSourceTypeBadge = (sourceType: string) => {
           >
           <div>
             <p class="text-sm text-black font-medium">{{ schedule.course_name }}</p>
-            <p class="text-xs text-[#a3a3a3]">{{ schedule.class_name }} · {{ schedule.start_time?.slice(0, 5) }}</p>
+            <p class="text-xs text-[#525252]">{{ schedule.class_name }} · {{ schedule.start_time?.slice(0, 5) }}</p>
           </div>
           <Button
             size="sm"
@@ -517,16 +517,16 @@ const getSourceTypeBadge = (sourceType: string) => {
               class="text-sm text-[#737373] mt-0.5 truncate"
             >
               <span class="text-black">{{ selectedSession.class_name }}</span>
-              <span class="mx-1.5 text-[#a3a3a3]">•</span>
+              <span class="mx-1.5 text-[#525252]">•</span>
               <span>{{ selectedSession.course_name || '未命名课程' }}</span>
-              <span class="mx-1.5 text-[#a3a3a3]">•</span>
+              <span class="mx-1.5 text-[#525252]">•</span>
               <span>开始于 {{ formatTime(selectedSession.start_time) }}</span>
               <template v-if="selectedSession.session_code">
-                <span class="mx-1.5 text-[#a3a3a3]">•</span>
+                <span class="mx-1.5 text-[#525252]">•</span>
                 <span>课堂码 {{ selectedSession.session_code }}</span>
               </template>
               <template v-if="selectedSession.source_type">
-                <span class="mx-1.5 text-[#a3a3a3]">•</span>
+                <span class="mx-1.5 text-[#525252]">•</span>
                 <Badge
                   variant="secondary"
                   class="text-[10px] px-1 py-0"
@@ -689,7 +689,7 @@ const getSourceTypeBadge = (sourceType: string) => {
             </Badge>
           </button>
           <button
-            class="ml-2 p-1 rounded hover:bg-[#f5f5f5] text-[#a3a3a3] hover:text-black"
+            class="ml-2 p-1 rounded hover:bg-[#f5f5f5] text-[#525252] hover:text-black"
             title="结束此课堂"
             @click="handleEndSession(session)"
           >

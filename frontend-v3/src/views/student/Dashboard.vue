@@ -64,7 +64,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
       <h1 class="text-2xl font-medium text-black tracking-tight">
         学生仪表板
       </h1>
-      <p class="text-[#a3a3a3] text-sm mt-1">
+      <p class="text-[#525252] text-sm mt-1">
         欢迎回来，{{ authStore.user?.name }}
       </p>
     </div>
@@ -111,7 +111,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
               <h2 class="text-lg font-medium text-black">
                 课堂进行中
               </h2>
-              <p class="text-xs text-[#a3a3a3] mt-0.5 truncate">
+              <p class="text-xs text-[#525252] mt-0.5 truncate">
                 {{ classSession.class_name || '课堂' }} · {{ classSession.teacher_name || '教师' }}
                 <template v-if="classSession.start_time">· 开始于 {{ formatTime(classSession.start_time) }}</template>
               </p>
@@ -128,7 +128,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
 
         <!-- 无活跃课堂 / 未分班：安静状态，无操作按钮 -->
         <div v-else class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f5f5f5] text-[#a3a3a3]">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f5f5f5] text-[#525252]">
             <CalendarCheck class="h-5 w-5" />
           </div>
           <p class="text-sm text-[#737373]">
@@ -200,7 +200,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
             <h2 class="text-lg font-medium text-black">
               我的课程
             </h2>
-            <p class="text-xs text-[#a3a3a3] mt-0.5">
+            <p class="text-xs text-[#525252] mt-0.5">
               当前学期各科成绩概览
             </p>
           </div>
@@ -237,7 +237,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
                 <p class="text-sm font-medium text-black">
                   {{ course.course_name }}
                 </p>
-                <p class="text-[11px] text-[#a3a3a3] mt-0.5">
+                <p class="text-xs text-[#525252] mt-0.5">
                   {{ course.teacher_name }}
                 </p>
               </div>
@@ -251,7 +251,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
 
         <div
           v-else
-          class="mt-6 flex flex-col items-center justify-center py-4 text-[#a3a3a3]"
+          class="mt-6 flex flex-col items-center justify-center py-4 text-[#525252]"
         >
           <div class="h-12 w-12 rounded-full bg-[#f5f5f5] flex items-center justify-center mb-3">
             <BookOpen class="h-5 w-5 opacity-50" />
@@ -269,7 +269,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
             <h2 class="text-lg font-medium text-black">
               我的小组
             </h2>
-            <p class="text-xs text-[#a3a3a3] mt-0.5">
+            <p class="text-xs text-[#525252] mt-0.5">
               各科小组累计分
             </p>
           </div>
@@ -295,7 +295,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
               <p class="text-sm font-medium text-black">
                 {{ group.name }}
               </p>
-              <p class="text-[11px] text-[#a3a3a3] mt-0.5">
+              <p class="text-xs text-[#525252] mt-0.5">
                 {{ group.course_name || '未分科' }}
               </p>
             </div>
@@ -305,7 +305,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
 
         <div
           v-else
-          class="mt-6 flex flex-col items-center justify-center py-4 text-[#a3a3a3]"
+          class="mt-6 flex flex-col items-center justify-center py-4 text-[#525252]"
         >
           <div class="h-12 w-12 rounded-full bg-[#f5f5f5] flex items-center justify-center mb-3">
             <Users class="h-5 w-5 opacity-50" />

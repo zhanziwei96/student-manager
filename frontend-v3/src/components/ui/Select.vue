@@ -38,7 +38,7 @@ const classes = computed(() =>
     // 文字
     'text-sm text-black',
     // 占位符
-    'placeholder:text-[#a3a3a3]',
+    'placeholder:text-[#525252]',
     // 状态
     'focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 focus:border-black',
     'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[#fafafa]',
@@ -81,6 +81,6 @@ const onChange = (event: Event) => {
       </option>
       <slot />
     </select>
-    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
+    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#525252]" />
   </div>
 </template>

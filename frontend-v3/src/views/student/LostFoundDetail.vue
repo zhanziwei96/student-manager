@@ -196,7 +196,7 @@ function goBack() {
             >
               <div class="flex items-center gap-2 mb-1">
                 <span class="text-sm font-medium text-black">匿名用户</span>
-                <span class="text-xs text-[#a3a3a3]">
+                <span class="text-xs text-[#525252]">
                   {{ formatDate(comment.created_at) }}
                 </span>
               </div>
@@ -205,7 +205,7 @@ function goBack() {
               </p>
             </div>
           </div>
-          <p v-else class="text-sm text-[#a3a3a3] mb-4">
+          <p v-else class="text-sm text-[#525252] mb-4">
             暂无评论
           </p>
 
@@ -215,7 +215,7 @@ function goBack() {
               v-model="commentContent"
               type="text"
               placeholder="写下你的评论..."
-              class="flex-1 rounded-full border border-[#e5e5e5] bg-white px-4 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+              class="flex-1 rounded-full border border-[#e5e5e5] bg-white px-4 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
               @keyup.enter="handleSubmitComment"
             >
             <Button
@@ -227,7 +227,7 @@ function goBack() {
               发送
             </Button>
           </div>
-          <p v-else class="text-sm text-[#a3a3a3]">
+          <p v-else class="text-sm text-[#525252]">
             该物品已关闭，无法发表评论
           </p>
         </Card>
@@ -249,7 +249,7 @@ function goBack() {
             v-model="claimContact"
             type="text"
             placeholder="手机号/微信号/QQ号"
-            class="w-full rounded-full border border-[#e5e5e5] bg-white px-4 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+            class="w-full rounded-full border border-[#e5e5e5] bg-white px-4 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
           >
         </div>
         <div>
@@ -260,7 +260,7 @@ function goBack() {
             v-model="claimMessage"
             rows="3"
             placeholder="补充说明..."
-            class="w-full rounded-xl border border-[#e5e5e5] bg-white px-4 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 resize-none"
+            class="w-full rounded-xl border border-[#e5e5e5] bg-white px-4 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50 resize-none"
           />
         </div>
       </div>

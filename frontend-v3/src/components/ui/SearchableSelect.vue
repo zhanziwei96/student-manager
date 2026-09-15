@@ -124,7 +124,7 @@ onUnmounted(() => {
       :disabled="disabled"
       @click="toggleOpen"
     >
-      <span :class="!modelValue && 'text-[#a3a3a3]'">
+      <span :class="!modelValue && 'text-[#525252]'">
         {{ selectedLabel }}
       </span>
       <div class="flex items-center gap-1">
@@ -134,11 +134,11 @@ onUnmounted(() => {
           class="rounded p-0.5 hover:bg-[#fafafa]"
           @click.stop="clearSelection"
         >
-          <X class="h-3.5 w-3.5 text-[#a3a3a3]" />
+          <X class="h-3.5 w-3.5 text-[#525252]" />
         </button>
         <ChevronDown
           :class="cn(
-            'h-4 w-4 text-[#a3a3a3]',
+            'h-4 w-4 text-[#525252]',
             isOpen && 'rotate-180'
           )"
         />
@@ -161,12 +161,12 @@ onUnmounted(() => {
       <!-- Search Input -->
       <div class="border-b border-[#e5e5e5] p-2">
         <div class="relative">
-          <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
+          <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#525252]" />
           <input
             v-model="searchQuery"
             type="text"
             :placeholder="searchPlaceholder || '搜索...'"
-            class="w-full rounded-full bg-[#fafafa] border border-[#e5e5e5] py-1.5 pl-9 pr-3 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-1 focus:ring-[#3b82f6]/50"
+            class="w-full rounded-full bg-[#fafafa] border border-[#e5e5e5] py-1.5 pl-9 pr-3 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#3b82f6]/50"
             @click.stop
           >
         </div>
@@ -189,7 +189,7 @@ onUnmounted(() => {
         </div>
         <div
           v-if="filteredOptions.length === 0"
-          class="px-3 py-4 text-center text-sm text-[#a3a3a3]"
+          class="px-3 py-4 text-center text-sm text-[#525252]"
         >
           未找到匹配选项
         </div>

@@ -130,7 +130,7 @@ const STATUS_LABEL: Record<string, string> = {
                 <p class="text-sm font-medium text-black">
                   {{ student.name }}
                 </p>
-                <p class="font-mono text-xs text-[#a3a3a3]">
+                <p class="font-mono text-xs text-[#525252]">
                   {{ student.student_id }}
                 </p>
               </div>

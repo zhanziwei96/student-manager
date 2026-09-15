@@ -80,7 +80,7 @@ const goRankings = (courseId: number) => {
               <p class="font-medium text-black">
                 {{ offering.course_name }}
               </p>
-              <p class="font-mono text-xs text-[#a3a3a3]">
+              <p class="font-mono text-xs text-[#525252]">
                 {{ offering.course_code }}
               </p>
             </td>
@@ -88,7 +88,7 @@ const goRankings = (courseId: number) => {
               {{ offering.class_scope }}
             </td>
             <td class="px-4 py-3 text-right">
-              {{ offering.enrolled_count }}<span class="text-xs text-[#a3a3a3]"> / {{ offering.capacity ?? '不限' }}</span>
+              {{ offering.enrolled_count }}<span class="text-xs text-[#525252]"> / {{ offering.capacity ?? '不限' }}</span>
             </td>
             <td class="px-4 py-3">
               <Badge :variant="offering.status === 'active' ? 'default' : 'secondary'">
@@ -128,7 +128,7 @@ const goRankings = (courseId: number) => {
       >
         <Presentation class="mb-4 h-12 w-12 opacity-50" />
         <p>本学期暂无授课任务</p>
-        <p class="mt-1 text-sm text-[#a3a3a3]">
+        <p class="mt-1 text-sm text-[#525252]">
           请联系管理员安排教学班
         </p>
       </div>

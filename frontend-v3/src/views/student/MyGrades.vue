@@ -91,7 +91,7 @@ const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async ()
               <p class="font-medium text-black">
                 {{ enrollment.course_name }}
               </p>
-              <p class="text-xs text-[#a3a3a3]">
+              <p class="text-xs text-[#525252]">
                 {{ enrollment.class_scope }}
               </p>
             </td>
@@ -120,7 +120,7 @@ const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async ()
       >
         <GraduationCap class="mb-4 h-12 w-12 opacity-50" />
         <p>暂无选课成绩</p>
-        <p class="mt-1 text-sm text-[#a3a3a3]">
+        <p class="mt-1 text-sm text-[#525252]">
           请联系管理员确认选课名单
         </p>
       </div>
@@ -155,7 +155,7 @@ const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async ()
               <p class="font-medium text-black">
                 {{ group.name }}
               </p>
-              <p class="text-xs text-[#a3a3a3]">
+              <p class="text-xs text-[#525252]">
                 {{ group.course_name || '未分科' }}
               </p>
             </td>

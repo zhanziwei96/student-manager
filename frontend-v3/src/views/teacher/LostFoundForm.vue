@@ -206,7 +206,7 @@ function goBack() {
                 v-model="description"
                 placeholder="请输入物品描述"
                 rows="4"
-                class="flex w-full rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 focus-visible:border-black resize-none"
+                class="flex w-full rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#525252] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 focus-visible:border-black resize-none"
                 required
               />
             </div>
@@ -240,9 +240,9 @@ function goBack() {
                 v-else
                 class="flex flex-col items-center justify-center h-40 w-64 rounded-xl border-2 border-dashed border-[#e5e5e5] cursor-pointer hover:border-[#d4d4d4] transition-colors"
               >
-                <Upload class="h-8 w-8 text-[#a3a3a3] mb-2" />
+                <Upload class="h-8 w-8 text-[#525252] mb-2" />
                 <span class="text-sm text-[#737373]">点击上传图片</span>
-                <span class="text-xs text-[#a3a3a3] mt-1">支持 JPG、PNG，最大 10MB（自动压缩）</span>
+                <span class="text-xs text-[#525252] mt-1">支持 JPG、PNG，最大 10MB（自动压缩）</span>
                 <input type="file" accept="image/*" class="hidden" @change="handleFileSelect">
               </label>
             </div>
@@ -277,7 +277,7 @@ function goBack() {
             v-model="description"
             placeholder="请输入物品描述"
             rows="4"
-            class="flex w-full rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 focus-visible:border-black resize-none"
+            class="flex w-full rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#525252] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/50 focus-visible:border-black resize-none"
             required
           />
         </div>
@@ -311,9 +311,9 @@ function goBack() {
             v-else
             class="flex flex-col items-center justify-center h-40 w-64 rounded-xl border-2 border-dashed border-[#e5e5e5] cursor-pointer hover:border-[#d4d4d4] transition-colors"
           >
-            <Upload class="h-8 w-8 text-[#a3a3a3] mb-2" />
+            <Upload class="h-8 w-8 text-[#525252] mb-2" />
             <span class="text-sm text-[#737373]">点击上传图片</span>
-            <span class="text-xs text-[#a3a3a3] mt-1">支持 JPG、PNG，最大 10MB（自动压缩）</span>
+            <span class="text-xs text-[#525252] mt-1">支持 JPG、PNG，最大 10MB（自动压缩）</span>
             <input type="file" accept="image/*" class="hidden" @change="handleFileSelect">
           </label>
         </div>

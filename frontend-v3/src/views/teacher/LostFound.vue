@@ -138,7 +138,7 @@ function goToCreate() {
     <Card class="bg-white border-[#e5e5e5] p-5">
       <div class="flex flex-col sm:flex-row gap-3 mb-4">
         <div class="relative flex-1">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a3a3a3]" />
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#525252]" />
           <Input
             v-model="keyword"
             placeholder="搜索物品标题或描述..."
@@ -202,7 +202,7 @@ function goToCreate() {
                     {{ truncate(item.description, 80) }}
                   </p>
 
-                  <div class="flex items-center gap-4 text-xs text-[#a3a3a3]">
+                  <div class="flex items-center gap-4 text-xs text-[#525252]">
                     <span v-if="item.location" class="flex items-center gap-1">
                       <MapPin class="h-3 w-3" />
                       {{ item.location }}

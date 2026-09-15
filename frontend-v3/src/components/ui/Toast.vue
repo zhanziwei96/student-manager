@@ -114,7 +114,7 @@ defineExpose({ show: showToast, close })
     <span class="flex-1 text-sm font-medium">{{ message }}</span>
     <button
       type="button"
-      class="shrink-0 p-1 rounded-md text-[#a3a3a3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+      class="shrink-0 p-1 rounded-md text-[#525252] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
       @click="close"
     >
       <X class="h-4 w-4" />

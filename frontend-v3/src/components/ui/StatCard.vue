@@ -92,7 +92,7 @@ const trendColorClasses = computed(() => {
         >
           {{ trend }}
         </span>
-        <span class="text-xs text-[#a3a3a3]">较上月</span>
+        <span class="text-xs text-[#525252]">较上月</span>
       </div>
       <div
         v-else-if="link"

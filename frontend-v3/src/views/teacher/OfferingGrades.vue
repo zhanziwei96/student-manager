@@ -226,7 +226,7 @@ const handleSetGroupFinal = async () => {
         class="flex flex-col gap-3 border-b border-[#e5e5e5] p-4 sm:flex-row"
       >
         <div class="relative flex-1">
-          <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]" />
+          <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#525252]" />
           <Input
             v-model="keyword"
             placeholder="搜索学号或姓名..."
@@ -281,7 +281,7 @@ const handleSetGroupFinal = async () => {
               class="border-b border-[#e5e5e5] px-5 py-3"
             >
               <span class="text-[15px] font-medium text-black">{{ group.className }}</span>
-              <span class="ml-2 text-[13px] text-[#a3a3a3]">{{ group.students.length }} 人</span>
+              <span class="ml-2 text-[13px] text-[#525252]">{{ group.students.length }} 人</span>
             </td>
           </tr>
           <tr
@@ -333,7 +333,7 @@ const handleSetGroupFinal = async () => {
         class="flex h-64 flex-col items-center justify-center text-[#737373]"
       >
         <p>暂无选课学生</p>
-        <p class="mt-1 text-sm text-[#a3a3a3]">
+        <p class="mt-1 text-sm text-[#525252]">
           请联系管理员导入选课名单
         </p>
       </div>
@@ -344,7 +344,7 @@ const handleSetGroupFinal = async () => {
         class="flex h-40 flex-col items-center justify-center text-[#737373]"
       >
         <p>没有匹配的学生</p>
-        <p class="mt-1 text-sm text-[#a3a3a3]">
+        <p class="mt-1 text-sm text-[#525252]">
           换个学号或姓名，或把班级切回「全部班级」
         </p>
       </div>

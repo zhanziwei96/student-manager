@@ -31,7 +31,7 @@ const classes = computed(() =>
     // 文字
     'text-sm text-black',
     // 占位符
-    'placeholder:text-[#a3a3a3]',
+    'placeholder:text-[#525252]',
     // 文件输入
     'file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-black',
     // 状态

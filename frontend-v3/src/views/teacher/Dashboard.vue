@@ -57,7 +57,7 @@ const statCards = computed(() => [
       <h1 class="text-2xl font-medium text-black tracking-tight">
         教师仪表板
       </h1>
-      <p class="text-[#a3a3a3] text-sm mt-1">
+      <p class="text-[#525252] text-sm mt-1">
         欢迎回来，教师
       </p>
     </div>
@@ -90,7 +90,7 @@ const statCards = computed(() => [
           <h2 class="text-lg font-medium text-black">
             今日课表
           </h2>
-          <p class="text-xs text-[#a3a3a3] mt-0.5">
+          <p class="text-xs text-[#525252] mt-0.5">
             {{ todayWeekDay }}的课程安排
           </p>
         </div>
@@ -131,7 +131,7 @@ const statCards = computed(() => [
                   补课
                 </Badge>
               </div>
-              <p class="text-xs text-[#a3a3a3] flex items-center gap-1.5">
+              <p class="text-xs text-[#525252] flex items-center gap-1.5">
                 {{ schedule.class_name }}
                 <span
                   v-if="(schedule.adjustment?.new_classroom || schedule.classroom)"
@@ -152,10 +152,10 @@ const statCards = computed(() => [
               </Button>
             </template>
             <template v-else-if="schedule.session_status === 'ended'">
-              <span class="text-xs text-[#a3a3a3]">已结束</span>
+              <span class="text-xs text-[#525252]">已结束</span>
             </template>
             <template v-else-if="schedule.session_status === 'cancelled' || schedule.session_status === 'skipped'">
-              <Badge variant="outline" class="bg-[#fafafa] text-[#a3a3a3] border-[#e5e5e5]">
+              <Badge variant="outline" class="bg-[#fafafa] text-[#525252] border-[#e5e5e5]">
                 已停课
               </Badge>
             </template>

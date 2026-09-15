@@ -137,7 +137,7 @@ const handleSubmit = (e: Event) => {
         <!-- Close button -->
         <button
           type="button"
-          class="absolute right-4 top-4 p-1 rounded-md text-[#a3a3a3] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+          class="absolute right-4 top-4 p-1 rounded-md text-[#525252] hover:text-black focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
           @click="close"
         >
           <X class="h-4 w-4" />

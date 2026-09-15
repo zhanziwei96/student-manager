@@ -104,12 +104,12 @@ const statusVariant: Record<string, string> = {
     <Card class="bg-white border-[#e5e5e5] p-4">
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a3a3a3]" />
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#525252]" />
           <input
             v-model="keyword"
             type="text"
             placeholder="搜索标题或描述..."
-            class="w-full rounded-full border border-[#e5e5e5] bg-white pl-10 pr-4 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+            class="w-full rounded-full border border-[#e5e5e5] bg-white pl-10 pr-4 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
             @keyup.enter="handleSearch"
           >
         </div>
@@ -164,7 +164,7 @@ const statusVariant: Record<string, string> = {
             <p class="text-sm text-[#737373] mb-3 line-clamp-2">
               {{ truncate(item.description, 80) }}
             </p>
-            <div class="flex items-center gap-3 text-xs text-[#a3a3a3]">
+            <div class="flex items-center gap-3 text-xs text-[#525252]">
               <span v-if="item.location" class="flex items-center gap-1">
                 <MapPin class="h-3 w-3" />
                 {{ item.location }}

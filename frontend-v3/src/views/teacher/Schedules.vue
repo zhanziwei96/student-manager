@@ -888,7 +888,7 @@ const handleBatchDelete = async () => {
                           >
                             {{ schedule.teacher_name || '未分配教师' }}
                           </Badge>
-                          <span class="text-xs text-[#a3a3a3]">
+                          <span class="text-xs text-[#525252]">
                             第{{ schedule.week_start }}-{{ schedule.week_end }}周
                           </span>
                           <span
@@ -911,7 +911,7 @@ const handleBatchDelete = async () => {
                         v-if="!schedule.is_virtual && canAdjustSchedule(schedule)"
                         variant="ghost"
                         size="sm"
-                        class="h-8 w-8 p-0 text-[#a3a3a3] hover:text-primary flex-shrink-0 ml-1"
+                        class="h-8 w-8 p-0 text-[#525252] hover:text-primary flex-shrink-0 ml-1"
                         @click="openAdjustmentDialog(schedule)"
                       >
                         <Settings2 class="h-4 w-4" />
@@ -922,7 +922,7 @@ const handleBatchDelete = async () => {
                         v-if="!schedule.is_virtual && isAdmin"
                         variant="ghost"
                         size="sm"
-                        class="h-8 w-8 p-0 text-[#a3a3a3] hover:text-red-400 flex-shrink-0 ml-1"
+                        class="h-8 w-8 p-0 text-[#525252] hover:text-red-400 flex-shrink-0 ml-1"
                         :loading="isDeleting"
                         @click="handleDelete(schedule.id)"
                       >

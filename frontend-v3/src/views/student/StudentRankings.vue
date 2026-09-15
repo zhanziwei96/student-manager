@@ -73,7 +73,7 @@ const myRank = computed(() => data.value?.my_rank ?? null)
       >
         <Trophy class="mb-4 h-12 w-12 opacity-50" />
         <p>请选择科目</p>
-        <p class="mt-1 text-sm text-[#a3a3a3]">
+        <p class="mt-1 text-sm text-[#525252]">
           按科目查看本班学生成绩排名
         </p>
       </div>
@@ -93,7 +93,7 @@ const myRank = computed(() => data.value?.my_rank ?? null)
         >
           <span class="text-[#737373]">我的排名：</span>
           <span class="font-medium text-black">第 {{ myRank.rank }} 名</span>
-          <span class="ml-2 text-[#a3a3a3]">{{ myRank.score }} 分</span>
+          <span class="ml-2 text-[#525252]">{{ myRank.score }} 分</span>
         </div>
 
         <table
@@ -123,7 +123,7 @@ const myRank = computed(() => data.value?.my_rank ?? null)
               <td class="px-4 py-3">
                 <span
                   class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium"
-                  :class="entry.rank === 1 ? 'bg-[#f59e0b]/15 text-[#f59e0b]' : entry.rank <= 3 ? 'bg-[#e5e5e5] text-black' : 'text-[#a3a3a3]'"
+                  :class="entry.rank === 1 ? 'bg-[#f59e0b]/15 text-[#f59e0b]' : entry.rank <= 3 ? 'bg-[#e5e5e5] text-black' : 'text-[#525252]'"
                 >
                   {{ entry.rank }}
                 </span>
@@ -134,7 +134,7 @@ const myRank = computed(() => data.value?.my_rank ?? null)
                 </span>
                 <span
                   v-if="entry.student_id === studentId"
-                  class="ml-2 text-xs text-[#a3a3a3]"
+                  class="ml-2 text-xs text-[#525252]"
                 >
                   （我）
                 </span>

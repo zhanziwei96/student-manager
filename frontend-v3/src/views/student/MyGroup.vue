@@ -261,7 +261,7 @@ function formatTime(iso: string) {
             >
               <div class="text-sm">
                 <span class="text-black font-medium">{{ req.student_id }}</span>
-                <span class="text-[#a3a3a3] text-xs ml-2">{{ formatTime(req.created_at) }}</span>
+                <span class="text-[#525252] text-xs ml-2">{{ formatTime(req.created_at) }}</span>
               </div>
               <div class="flex gap-2">
                 <Button size="sm" variant="outline" @click="handleReject(req.id)">
@@ -364,7 +364,7 @@ function formatTime(iso: string) {
         <input
           v-model="createForm.name"
           placeholder="小组名称"
-          class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+          class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
         >
       </div>
       <template #footer>
@@ -382,7 +382,7 @@ function formatTime(iso: string) {
           v-model="dissolveReason"
           placeholder="请填写解散原因"
           rows="3"
-          class="w-full rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+          class="w-full rounded-xl border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
         />
       </div>
       <template #footer>

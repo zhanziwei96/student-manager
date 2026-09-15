@@ -124,7 +124,7 @@ const isSelected = (option: MobilePickerOption) => {
       :disabled="disabled"
       @click="open"
     >
-      <span :class="!selectedOption && 'text-[#a3a3a3]'">
+      <span :class="!selectedOption && 'text-[#525252]'">
         <template v-if="selectedOption">
           {{ selectedOption.label }}
           <span v-if="selectedOption.subtitle" class="text-[#737373] ml-1">
@@ -142,11 +142,11 @@ const isSelected = (option: MobilePickerOption) => {
           class="rounded p-0.5 hover:bg-[#fafafa]"
           @click.stop="clear"
         >
-          <X class="h-4 w-4 text-[#a3a3a3]" />
+          <X class="h-4 w-4 text-[#525252]" />
         </button>
         <ChevronDown
           :class="cn(
-            'h-4 w-4 text-[#a3a3a3]',
+            'h-4 w-4 text-[#525252]',
             isOpen && 'rotate-180'
           )"
         />
@@ -190,12 +190,12 @@ const isSelected = (option: MobilePickerOption) => {
           <!-- 搜索框 -->
           <div v-if="searchable" class="p-3 border-b border-[#e5e5e5]">
             <div class="relative">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a3a3a3]" />
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#525252]" />
               <input
                 v-model="searchQuery"
                 type="text"
                 :placeholder="searchPlaceholder"
-                class="w-full h-10 pl-10 pr-4 rounded-full bg-[#fafafa] border border-[#e5e5e5] text-black text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-black"
+                class="w-full h-10 pl-10 pr-4 rounded-full bg-[#fafafa] border border-[#e5e5e5] text-black text-sm placeholder:text-[#525252] focus:outline-none focus:border-black"
               >
             </div>
           </div>
@@ -215,7 +215,7 @@ const isSelected = (option: MobilePickerOption) => {
                 <div :class="cn('text-base', isSelected(option) ? 'text-black font-medium' : 'text-[#737373]')">
                   {{ option.label }}
                 </div>
-                <div v-if="option.subtitle" class="text-sm text-[#a3a3a3] mt-0.5">
+                <div v-if="option.subtitle" class="text-sm text-[#525252] mt-0.5">
                   {{ option.subtitle }}
                 </div>
               </div>
@@ -224,7 +224,7 @@ const isSelected = (option: MobilePickerOption) => {
                 class="h-5 w-5 text-black"
               />
             </div>
-            <div v-if="filteredOptions.length === 0" class="py-8 text-center text-[#a3a3a3]">
+            <div v-if="filteredOptions.length === 0" class="py-8 text-center text-[#525252]">
               未找到匹配选项
             </div>
           </div>
@@ -241,12 +241,12 @@ const isSelected = (option: MobilePickerOption) => {
       <!-- 搜索框 -->
       <div v-if="searchable" class="p-2 border-b border-[#e5e5e5]">
         <div class="relative">
-          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a3a3a3]" />
+          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#525252]" />
           <input
             v-model="searchQuery"
             type="text"
             :placeholder="searchPlaceholder"
-            class="w-full h-9 pl-9 pr-3 rounded-full bg-[#fafafa] border border-[#e5e5e5] text-black text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-black"
+            class="w-full h-9 pl-9 pr-3 rounded-full bg-[#fafafa] border border-[#e5e5e5] text-black text-sm placeholder:text-[#525252] focus:outline-none focus:border-black"
             @keydown.esc="close"
           >
         </div>
@@ -268,7 +268,7 @@ const isSelected = (option: MobilePickerOption) => {
             <div :class="cn('text-sm', isSelected(option) ? 'text-black font-medium' : 'text-[#737373]')">
               {{ option.label }}
             </div>
-            <div v-if="option.subtitle" class="text-xs text-[#a3a3a3] mt-0.5">
+            <div v-if="option.subtitle" class="text-xs text-[#525252] mt-0.5">
               {{ option.subtitle }}
             </div>
           </div>
@@ -277,7 +277,7 @@ const isSelected = (option: MobilePickerOption) => {
             class="h-4 w-4 text-black"
           />
         </div>
-        <div v-if="filteredOptions.length === 0" class="py-6 text-center text-sm text-[#a3a3a3]">
+        <div v-if="filteredOptions.length === 0" class="py-6 text-center text-sm text-[#525252]">
           未找到匹配选项
         </div>
       </div>

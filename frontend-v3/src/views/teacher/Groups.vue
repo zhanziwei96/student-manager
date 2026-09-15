@@ -529,7 +529,7 @@ async function handleUpdateScore() {
               <p class="text-xs text-[#737373] mt-0.5">
                 {{ req.reason }}
               </p>
-              <p class="text-[11px] text-[#a3a3a3] mt-0.5">
+              <p class="text-xs text-[#525252] mt-0.5">
                 {{ new Date(req.created_at).toLocaleString() }}
               </p>
             </div>
@@ -565,7 +565,7 @@ async function handleUpdateScore() {
         <input
           v-model="newLeaderId"
           placeholder="学号"
-          class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+          class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
         >
       </div>
       <template #footer>
@@ -709,7 +709,7 @@ async function handleUpdateScore() {
           <input
             v-model="newGroupName"
             placeholder="如：数学A组"
-            class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
+            class="w-full rounded-full border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-black placeholder:text-[#525252] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
           >
         </div>
       </div>

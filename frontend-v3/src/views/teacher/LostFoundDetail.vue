@@ -147,22 +147,22 @@ function formatDate(iso: string) {
               </div>
 
               <div v-if="item.location" class="flex items-center gap-2 text-sm">
-                <MapPin class="h-4 w-4 text-[#a3a3a3]" />
+                <MapPin class="h-4 w-4 text-[#525252]" />
                 <span class="text-[#737373]">{{ item.location }}</span>
               </div>
 
               <div class="flex items-center gap-2 text-sm">
-                <User class="h-4 w-4 text-[#a3a3a3]" />
+                <User class="h-4 w-4 text-[#525252]" />
                 <span class="text-[#737373]">发布者: {{ item.publisher_name || '未知' }}</span>
               </div>
 
               <div class="flex items-center gap-2 text-sm">
-                <Calendar class="h-4 w-4 text-[#a3a3a3]" />
+                <Calendar class="h-4 w-4 text-[#525252]" />
                 <span class="text-[#737373]">发布时间: {{ formatDate(item.created_at) }}</span>
               </div>
 
               <div class="flex items-center gap-2 text-sm">
-                <Clock class="h-4 w-4 text-[#a3a3a3]" />
+                <Clock class="h-4 w-4 text-[#525252]" />
                 <span class="text-[#737373]">更新时间: {{ formatDate(item.updated_at) }}</span>
               </div>
             </div>
@@ -176,7 +176,7 @@ function formatDate(iso: string) {
             评论 ({{ item.comments.length }})
           </h2>
 
-          <div v-if="item.comments.length === 0" class="text-sm text-[#a3a3a3] py-4 text-center">
+          <div v-if="item.comments.length === 0" class="text-sm text-[#525252] py-4 text-center">
             暂无评论
           </div>
 
@@ -188,7 +188,7 @@ function formatDate(iso: string) {
             >
               <div class="flex items-center justify-between mb-1">
                 <span class="text-sm font-medium text-black">{{ comment.user_name || '匿名用户' }}</span>
-                <span class="text-xs text-[#a3a3a3]">{{ formatDate(comment.created_at) }}</span>
+                <span class="text-xs text-[#525252]">{{ formatDate(comment.created_at) }}</span>
               </div>
               <p class="text-sm text-[#737373]">{{ comment.content }}</p>
             </div>
@@ -205,7 +205,7 @@ function formatDate(iso: string) {
             </Badge>
           </h2>
 
-          <div v-if="item.claims.length === 0" class="text-sm text-[#a3a3a3] py-4 text-center">
+          <div v-if="item.claims.length === 0" class="text-sm text-[#525252] py-4 text-center">
             暂无认领申请
           </div>
 
@@ -225,7 +225,7 @@ function formatDate(iso: string) {
                   </div>
 
                   <div class="flex items-center gap-2 text-sm text-[#737373]">
-                    <Phone class="h-3.5 w-3.5 text-[#a3a3a3]" />
+                    <Phone class="h-3.5 w-3.5 text-[#525252]" />
                     {{ claim.contact }}
                   </div>
 
@@ -233,7 +233,7 @@ function formatDate(iso: string) {
                     {{ claim.message }}
                   </p>
 
-                  <span class="text-xs text-[#a3a3a3]">{{ formatDate(claim.created_at) }}</span>
+                  <span class="text-xs text-[#525252]">{{ formatDate(claim.created_at) }}</span>
                 </div>
 
                 <!-- 操作按钮 -->

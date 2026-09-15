@@ -109,7 +109,7 @@ function timeAgo(iso: string): string {
 
     <!-- Loading -->
     <div v-if="isLoading" class="flex h-64 items-center justify-center">
-      <Loader2 class="h-8 w-8 animate-spin text-[#a3a3a3]" />
+      <Loader2 class="h-8 w-8 animate-spin text-[#525252]" />
     </div>
 
     <!-- Empty State -->
@@ -118,10 +118,10 @@ function timeAgo(iso: string): string {
       class="flex flex-col items-center justify-center py-20"
     >
       <div class="h-16 w-16 rounded-full bg-[#fafafa] flex items-center justify-center mb-4">
-        <MessageCircle class="h-8 w-8 text-[#a3a3a3]" />
+        <MessageCircle class="h-8 w-8 text-[#525252]" />
       </div>
       <p class="text-[#737373] mb-1">老师还没有发布问题</p>
-      <p class="text-sm text-[#a3a3a3]">稍等一下，有问题就能回答啦</p>
+      <p class="text-sm text-[#525252]">稍等一下，有问题就能回答啦</p>
     </div>
 
     <!-- Main Content -->
@@ -144,7 +144,7 @@ function timeAgo(iso: string): string {
             <div
               :class="[
                 'flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0',
-                q.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-[#f5f5f5] text-[#a3a3a3]',
+                q.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-[#f5f5f5] text-[#525252]',
               ]"
             >
               <Hand v-if="q.status === 'active'" class="h-4 w-4" />
@@ -152,7 +152,7 @@ function timeAgo(iso: string): string {
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-black truncate">{{ q.content }}</p>
-              <div class="flex items-center gap-2 mt-1.5 text-xs text-[#a3a3a3]">
+              <div class="flex items-center gap-2 mt-1.5 text-xs text-[#525252]">
                 <span>{{ q.teacher_name }}</span>
                 <span class="text-[#e5e5e5]">|</span>
                 <span>{{ q.answer_count }} 条回答</span>
@@ -178,7 +178,7 @@ function timeAgo(iso: string): string {
           class="flex flex-col items-center justify-center py-20"
         >
           <div class="h-12 w-12 rounded-full bg-[#fafafa] flex items-center justify-center mb-3">
-            <MessageCircle class="h-6 w-6 text-[#a3a3a3]" />
+            <MessageCircle class="h-6 w-6 text-[#525252]" />
           </div>
           <p class="text-[#737373] text-sm">点击左边的问题开始回答</p>
         </div>
@@ -199,10 +199,10 @@ function timeAgo(iso: string): string {
                 {{ selectedQuestion.status === 'active' ? '进行中' : '已结束' }}
               </span>
               <span v-if="!selectedQuestion.class_name" class="text-xs text-blue-500">所有班级</span>
-              <span v-else class="text-xs text-[#a3a3a3]">{{ selectedQuestion.class_name }}</span>
+              <span v-else class="text-xs text-[#525252]">{{ selectedQuestion.class_name }}</span>
             </div>
             <p class="text-black font-medium">{{ selectedQuestion.content }}</p>
-            <p class="text-xs text-[#a3a3a3] mt-2">
+            <p class="text-xs text-[#525252] mt-2">
               {{ selectedQuestion.teacher_name }} · {{ timeAgo(selectedQuestion.created_at) }}
             </p>
           </div>
@@ -212,7 +212,7 @@ function timeAgo(iso: string): string {
             <div v-if="editingAnswer" class="mb-2">
               <div class="flex items-center justify-between mb-2">
                 <p class="text-sm text-[#737373]">修改回答</p>
-                <button class="text-xs text-[#a3a3a3] hover:text-black" @click="cancelEdit">取消</button>
+                <button class="text-xs text-[#525252] hover:text-black" @click="cancelEdit">取消</button>
               </div>
               <AnswerInput
                 placeholder="修改你的回答..."
@@ -237,13 +237,13 @@ function timeAgo(iso: string): string {
           <div>
             <div class="flex items-center gap-2 mb-3">
               <h3 class="text-sm font-medium text-black">回答</h3>
-              <span class="text-xs text-[#a3a3a3] bg-[#fafafa] px-2 py-0.5 rounded-full">
+              <span class="text-xs text-[#525252] bg-[#fafafa] px-2 py-0.5 rounded-full">
                 {{ answers?.length || 0 }}
               </span>
             </div>
 
             <div v-if="answersLoading" class="flex justify-center py-8">
-              <Loader2 class="h-6 w-6 animate-spin text-[#a3a3a3]" />
+              <Loader2 class="h-6 w-6 animate-spin text-[#525252]" />
             </div>
 
             <AnswerList
