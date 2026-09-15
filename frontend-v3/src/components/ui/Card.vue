@@ -29,7 +29,8 @@ const variantClasses = {
 
 const classes = computed(() =>
   cn(
-    'rounded-xl border p-4 md:p-6 text-black',
+    // 移动端 16px 圆角（HIG），桌面端 12px；对应 tokens.css --radius-container-lg / --radius-container
+    'rounded-2xl md:rounded-xl border p-4 md:p-6 text-black',
     variantClasses[props.variant],
     props.class
   )

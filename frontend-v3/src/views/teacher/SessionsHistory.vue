@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { courseSessionApi } from '@/api'
-import { Card, Badge, Button, DataContainer } from '@/components/ui'
+import { Badge, Button, DataContainer } from '@/components/ui'
 import { History, Calendar, Clock, MapPin, BookOpen, Users, ChevronDown, ChevronUp } from 'lucide-vue-next'
 import type { CourseSession } from '@/types'
 
@@ -81,11 +81,11 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
       empty-text="暂无历史课堂记录"
       @retry="refetch"
     >
-      <div class="space-y-3">
-        <Card
+      <div class="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white divide-y divide-[#f5f5f5]">
+        <div
           v-for="session in historySessions"
           :key="session.id"
-          class="relative overflow-hidden p-4 transition-colors border-[#e5e5e5] bg-[#fafafa] rounded-xl"
+          class="relative p-4 transition-colors"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
@@ -147,7 +147,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
             <Button
               variant="ghost"
               size="sm"
-              class="h-8 px-2 text-[#525252] hover:text-black flex-shrink-0"
+              class="px-2 text-[#525252] hover:text-black flex-shrink-0"
               @click="toggleExpand(session.id)"
             >
               <Users class="h-4 w-4 mr-1" />
@@ -173,7 +173,7 @@ const sourceBadge = (sourceType: CourseSession['source_type']) => {
               <span>已签到：--</span>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     </DataContainer>
   </div>

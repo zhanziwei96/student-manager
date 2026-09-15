@@ -222,12 +222,12 @@ const getCardTextMutedColor = () => 'text-[#737373]'
 
         <div
           v-else-if="courses.length > 0"
-          class="mt-5 space-y-2.5"
+          class="mt-5 overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white divide-y divide-[#f5f5f5]"
         >
           <div
             v-for="course in courses"
             :key="course.enrollment_id"
-            class="flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-4"
+            class="flex items-center justify-between p-4"
           >
             <div class="flex items-center gap-3">
               <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -284,12 +284,12 @@ const getCardTextMutedColor = () => 'text-[#737373]'
 
         <div
           v-if="myGroups.length > 0"
-          class="mt-5 space-y-2.5"
+          class="mt-5 overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white divide-y divide-[#f5f5f5]"
         >
           <div
             v-for="group in myGroups"
             :key="group.id"
-            class="flex items-center justify-between rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-4"
+            class="flex items-center justify-between p-4"
           >
             <div>
               <p class="text-sm font-medium text-black">

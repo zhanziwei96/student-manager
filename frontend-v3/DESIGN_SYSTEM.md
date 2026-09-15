@@ -143,7 +143,7 @@
 ### 5.2 Card
 - **背景**: `bg-white`
 - **边框**: `border border-[#e5e5e5]`
-- **圆角**: `rounded-xl`
+- **圆角**: `rounded-2xl md:rounded-xl`（移动端 16px，桌面端 12px；对应 `--radius-container-lg` / `--radius-container`）
 - **无阴影**: 不使用任何 shadow 类
 
 ### 5.3 Input / Select
@@ -197,16 +197,30 @@
 - `border-white/10` 任何基于白色透明的边框
 - 通过 `getCardStyle()` 等运行时 JS 函数注入样式
 
+### 7.1 移动端例外（教师/学生页面）
+
+以下模式**仅允许**在移动端教师/学生页面使用（iOS HIG 方向）；管理员页面与桌面端的上述禁令保持不变：
+
+- **毛玻璃材质层**: 顶栏 / 底部导航 / BottomSheet 允许 `backdrop-filter` 毛玻璃（`--material-blur` + `--color-surface-glass`，不支持时降级纯白实色）
+- **BottomSheet 半模态**: 移动端以底部 Sheet 替代居中弹窗（`ResponsiveDialog` 在移动端自动渲染为 Sheet）
+- **加大圆角**: 移动端容器圆角 16px（`rounded-2xl` / `--radius-container-lg`），桌面端仍为 12px
+- **手势交互**: 下拉刷新（`usePullToRefresh`）、滑动返回（`useSwipeBack`）、行滑动操作（`useSwipeActions`）
+- **分组列表（inset grouped）**: 同类行堆叠用单容器 + 内部分隔线（`divide-y`）替代多张独立卡片
+
 ---
 
 ## 8. 文件索引
 
 | 文件 | 说明 |
 |------|------|
-| `src/styles/tokens.css` | CSS 设计 Token（颜色、圆角、间距） |
+| `src/styles/tokens.css` | CSS 设计 Token（颜色、圆角、间距、材质层、安全区） |
 | `src/styles/index.css` | 全局基础样式、Tailwind v4 主题导入 |
 | `src/styles/components.css` | 组件级基础样式覆盖 |
 | `src/components/ui/*.vue` | 核心 UI 组件（Button、Card、Input、Badge 等） |
+| `src/components/ui/BottomSheet.vue` | 移动端底部半模态 Sheet（拖拽关闭、安全区） |
+| `src/components/ui/ResponsiveDialog.vue` | 响应式弹窗：移动端 BottomSheet / 桌面端 Dialog |
+| `src/components/ui/PullToRefreshIndicator.vue` | 下拉刷新指示器（配合 `usePullToRefresh`） |
+| `src/components/ui/BottomNav.vue` | 移动端底部导航（毛玻璃材质、中央签到主操作） |
 
 ---
 

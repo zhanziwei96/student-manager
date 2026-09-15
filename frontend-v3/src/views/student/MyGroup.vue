@@ -253,11 +253,11 @@ function formatTime(iso: string) {
           <h3 class="text-sm font-medium text-black mb-2">
             待处理入组申请
           </h3>
-          <div class="space-y-2">
+          <div class="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white divide-y divide-[#f5f5f5]">
             <div
               v-for="req in currentGroup.pending_requests"
               :key="req.id"
-              class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-3"
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3"
             >
               <div class="text-sm">
                 <span class="text-black font-medium">{{ req.student_id }}</span>

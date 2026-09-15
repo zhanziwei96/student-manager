@@ -27,7 +27,7 @@ import {
  * - 底部安全区 padding + 毛玻璃材质（不支持 backdrop-filter 时降级实色）
  *
  * 注：lucide 图标为描边风格（路径 fill="none"），选中态不设置 fill，
- * 否则会把图标填成色块。选中态用 黑色文字 + font-medium 区分。
+ * 否则会把图标填成色块。选中态用 黑色文字 + font-medium + stroke-width 2.5（轻量填充感）区分。
  */
 
 const emit = defineEmits<{
@@ -145,7 +145,7 @@ const handleLogout = async () => {
           class="flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1"
           :class="isActive(item.path) ? 'text-black font-medium' : 'text-[#525252]'"
         >
-          <component :is="item.icon" class="h-6 w-6" />
+          <component :is="item.icon" class="h-6 w-6" :stroke-width="isActive(item.path) ? 2.5 : 2" />
           <span class="max-w-full truncate px-1 text-xs">{{ item.name }}</span>
         </RouterLink>
 
@@ -174,7 +174,7 @@ const handleLogout = async () => {
           :class="moreActive ? 'text-black font-medium' : 'text-[#525252]'"
           @click="showMore = true"
         >
-          <MoreHorizontal class="h-6 w-6" />
+          <MoreHorizontal class="h-6 w-6" :stroke-width="moreActive ? 2.5 : 2" />
           <span class="text-xs">更多</span>
         </button>
       </template>
