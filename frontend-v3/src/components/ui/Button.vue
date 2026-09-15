@@ -36,17 +36,17 @@ const buttonVariants = cva(
         link: 'text-black underline-offset-4 hover:underline bg-transparent',
       },
       size: {
-        // 小尺寸: min-h 44px（HIG 触控热区下限）
-        sm: 'min-h-[44px] px-3 text-xs rounded-full',
+        // 小尺寸: 桌面 32px；移动端触控热区 ≥44px（HIG 44pt 是触控规范，桌面鼠标不需要）
+        sm: 'h-8 max-md:min-h-[44px] px-3 text-xs rounded-full',
 
-        // 默认尺寸: min-h 44px（HIG 触控热区下限）
-        default: 'min-h-[44px] px-4 py-2 text-sm rounded-full',
+        // 默认尺寸: 桌面 36px；移动端 ≥44px
+        default: 'h-9 max-md:min-h-[44px] px-4 py-2 text-sm rounded-full',
 
-        // 大尺寸: min-h 44px
-        lg: 'min-h-[44px] px-6 text-base rounded-full',
+        // 大尺寸: 桌面 40px；移动端 ≥44px
+        lg: 'h-10 max-md:min-h-[44px] px-6 text-base rounded-full',
 
-        // 图标按钮: 正方形，min 44×44px
-        icon: 'min-h-[44px] min-w-[44px] p-0 rounded-full',
+        // 图标按钮: 正方形；移动端 ≥44×44px
+        icon: 'h-9 w-9 max-md:min-h-[44px] max-md:min-w-[44px] p-0 rounded-full',
       },
     },
     defaultVariants: {

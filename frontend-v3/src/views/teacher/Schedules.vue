@@ -910,8 +910,8 @@ const handleBatchDelete = async () => {
                       <Button
                         v-if="!schedule.is_virtual && canAdjustSchedule(schedule)"
                         variant="ghost"
-                        size="sm"
-                        class="h-8 w-8 p-0 text-[#525252] hover:text-primary flex-shrink-0 ml-1"
+                        size="icon"
+                        class="text-[#525252] hover:text-primary flex-shrink-0 ml-1"
                         @click="openAdjustmentDialog(schedule)"
                       >
                         <Settings2 class="h-4 w-4" />
@@ -921,8 +921,8 @@ const handleBatchDelete = async () => {
                       <Button
                         v-if="!schedule.is_virtual && isAdmin"
                         variant="ghost"
-                        size="sm"
-                        class="h-8 w-8 p-0 text-[#525252] hover:text-red-400 flex-shrink-0 ml-1"
+                        size="icon"
+                        class="text-[#525252] hover:text-red-400 flex-shrink-0 ml-1"
                         :loading="isDeleting"
                         @click="handleDelete(schedule.id)"
                       >
