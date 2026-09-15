@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { Card, Badge } from '@/components/ui'
-import { Loader2, GraduationCap, Users } from 'lucide-vue-next'
+import { Loader2, GraduationCap, Users, ArrowDown } from 'lucide-vue-next'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
 import { useAuthQuery } from '@/composables/useAuth'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const { user } = useAuthQuery()
 const studentId = computed(() => user.value?.username || '')
 
 // 我的成绩：当前学期选课列表
-const { data: enrollmentsData, isPending } = useQuery({
+const { data: enrollmentsData, isPending, refetch: refetchEnrollments } = useQuery({
   queryKey: ['my-enrollments', studentId],
   queryFn: () => enrollmentsApi.getMyEnrollments(studentId.value),
   enabled: () => !!studentId.value,
@@ -19,16 +20,32 @@ const { data: enrollmentsData, isPending } = useQuery({
 const enrollments = computed(() => enrollmentsData.value ?? [])
 
 // 我的小组分（每科小组累计分）
-const { data: myGroupsData } = useQuery({
+const { data: myGroupsData, refetch: refetchMyGroups } = useQuery({
   queryKey: ['my-groups', studentId],
   queryFn: () => groupsApi.getMyGroups(),
   enabled: () => !!studentId.value,
 })
 const myGroups = computed(() => myGroupsData.value ?? [])
+
+// 下拉刷新（移动端手势）：await 全部查询完成后 refreshing 复位
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await Promise.all([refetchEnrollments(), refetchMyGroups()])
+})
 </script>
 
 <template>
-  <div>
+  <div ref="pageRef" class="overscroll-y-contain">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>

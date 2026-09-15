@@ -1,23 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession } from '@/composables/useStudentCheckin'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
 import { Card, Button } from '@/components/ui'
-import { Users, Award, TrendingUp, Loader2, AlertCircle, Trophy, BookOpen, CalendarCheck } from 'lucide-vue-next'
+import { Users, Award, TrendingUp, Loader2, AlertCircle, Trophy, BookOpen, CalendarCheck, ArrowDown } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const router = useRouter()
-const { data: currentStudent, isPending, error } = useStudentProfile()
+const { data: currentStudent, isPending, error, refetch: refetchProfile } = useStudentProfile()
 
 const studentId = computed(() => currentStudent.value?.student_id || '')
 
 // 当前学期课程成绩（与"我的成绩"页同源，Dashboard 只展示摘要）
-const { data: enrollmentsData, isPending: coursesLoading } = useQuery({
+const { data: enrollmentsData, isPending: coursesLoading, refetch: refetchEnrollments } = useQuery({
   queryKey: ['my-enrollments', studentId],
   queryFn: () => enrollmentsApi.getMyEnrollments(studentId.value),
   enabled: () => !!studentId.value,
@@ -25,7 +26,7 @@ const { data: enrollmentsData, isPending: coursesLoading } = useQuery({
 const courses = computed(() => enrollmentsData.value ?? [])
 
 // 每科小组累计分
-const { data: myGroupsData } = useQuery({
+const { data: myGroupsData, refetch: refetchMyGroups } = useQuery({
   queryKey: ['my-groups', studentId],
   queryFn: () => groupsApi.getMyGroups(),
   enabled: () => !!studentId.value,
@@ -34,7 +35,13 @@ const myGroups = computed(() => myGroupsData.value ?? [])
 
 // 签到主任务：查询班级活跃课堂（class_id 为空时 enabled=false，不发请求）
 const classId = computed(() => currentStudent.value?.class_id ?? undefined)
-const { data: classSession, hasActiveSession } = useStudentCourseSession(classId)
+const { data: classSession, hasActiveSession, refetch: refetchSession } = useStudentCourseSession(classId)
+
+// 下拉刷新（移动端手势）：await 全部查询完成后 refreshing 复位
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await Promise.all([refetchProfile(), refetchEnrollments(), refetchMyGroups(), refetchSession()])
+})
 
 // 课堂开始时间格式化
 const formatTime = (time?: string) => {
@@ -50,7 +57,17 @@ const getCardTextMutedColor = () => 'text-[#737373]'
 </script>
 
 <template>
-  <div class="space-y-5 px-4">
+  <div ref="pageRef" class="overscroll-y-contain space-y-5 px-4">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
     <!-- Header -->
     <div class="px-1">
       <h1 class="text-2xl font-medium text-black tracking-tight">

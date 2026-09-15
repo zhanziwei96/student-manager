@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { StudentFilters, usePaginatedStudents } from '@/features/students'
 import { DataContainer, Card, Badge, Button } from '@/components/ui'
-import { Users, GraduationCap, UserRound, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Users, GraduationCap, UserRound, ChevronLeft, ChevronRight, Loader2, ArrowDown } from 'lucide-vue-next'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 /**
  * 教师学生名册页
@@ -28,6 +29,12 @@ const {
   setClassFilter,
 } = usePaginatedStudents()
 
+// 下拉刷新（移动端手势）：await 学生列表 refetch 完成后 refreshing 复位
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await refetch()
+})
+
 // 统计信息（总数来自服务端 total；已签到基于当前展示列表）
 const stats = computed(() => {
   const total = isSearching.value ? filteredStudents.value.length : totalStudents.value
@@ -49,7 +56,17 @@ const STATUS_LABEL: Record<string, string> = {
 </script>
 
 <template>
-  <div>
+  <div ref="pageRef" class="overscroll-y-contain">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>

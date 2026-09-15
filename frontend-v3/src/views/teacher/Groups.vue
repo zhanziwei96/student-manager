@@ -10,7 +10,7 @@ import {
   useGroupScore,
   useGroupScoreLogs,
 } from '@/features/group-collaboration'
-import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2, Plus } from 'lucide-vue-next'
+import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2, Plus, Loader2, ArrowDown } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import type { AdminClass } from '@/types'
 import type { GroupDetail } from '@/types/api'
@@ -19,6 +19,7 @@ import { groupsApi } from '@/api'
 import { coursesApi } from '@/api/courses'
 import ScoreReasonChips from '@/components/teacher/ScoreReasonChips.vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const { success: toastSuccess, error: toastError } = useToast()
 const queryClient = useQueryClient()
@@ -54,7 +55,7 @@ const courseOptions = computed(() => [
 
 // 小组列表（按课程过滤）
 const selectedClassIdParam = computed(() => (selectedClassId.value === '' ? undefined : selectedClassId.value))
-const { data: groups, isPending: loadingGroups } = useTeacherGroups(
+const { data: groups, isPending: loadingGroups, refetch: refetchGroups } = useTeacherGroups(
   selectedClassIdParam,
   computed(() => (selectedCourseId.value === '' ? null : Number(selectedCourseId.value))),
 )
@@ -254,9 +255,15 @@ async function handleDissolve() {
 }
 
 // 解散申请
-const { data: dissolutions, isPending: loadingDissolutions } = useQuery({
+const { data: dissolutions, isPending: loadingDissolutions, refetch: refetchDissolutions } = useQuery({
   queryKey: ['dissolution-requests'],
   queryFn: () => groupsApi.getDissolutionRequests(),
+})
+
+// 下拉刷新（移动端手势）：await 小组列表与解散申请完成后 refreshing 复位
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await Promise.all([refetchGroups(), refetchDissolutions()])
 })
 
 const { mutateAsync: approveDissolution } = useMutation({
@@ -339,7 +346,17 @@ async function handleUpdateScore() {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div ref="pageRef" class="overscroll-y-contain space-y-6">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
     <div>
       <h1 class="text-2xl font-medium text-black">
         小组管理

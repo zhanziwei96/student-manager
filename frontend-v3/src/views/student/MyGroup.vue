@@ -9,12 +9,13 @@ import {
   useJoinGroup,
   useApproveJoin,
 } from '@/features/group-collaboration'
-import { Users, Crown, Plus, LogIn, Trash2, LogOut } from 'lucide-vue-next'
+import { Users, Crown, Plus, LogIn, Trash2, LogOut, Loader2, ArrowDown } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { groupsApi } from '@/api'
 import { coursesApi } from '@/api/courses'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '@/stores'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const { success: toastSuccess, error: toastError } = useToast()
 const queryClient = useQueryClient()
@@ -24,8 +25,8 @@ const authStore = useAuthStore()
 const className = computed(() => authStore.user?.class_name || '')
 
 // 我的小组（每科一个）+ 课程目录
-const { data: myGroups, isPending: loadingMyGroups } = useMyGroups()
-const { data: courses } = useQuery({
+const { data: myGroups, isPending: loadingMyGroups, refetch: refetchMyGroups } = useMyGroups()
+const { data: courses, refetch: refetchCourses } = useQuery({
   queryKey: ['courses'],
   queryFn: () => coursesApi.list(),
 })
@@ -128,11 +129,17 @@ async function handleCreate() {
 }
 
 // 可加入小组（当前课程、未入组时）
-const { data: availableGroups, isPending: loadingGroups } = useStudentGroups(
+const { data: availableGroups, isPending: loadingGroups, refetch: refetchAvailableGroups } = useStudentGroups(
   className,
   computed(() => (selectedCourseId.value === '' ? null : Number(selectedCourseId.value))),
 )
 const { mutateAsync: joinGroup, isPending: joining } = useJoinGroup()
+
+// 下拉刷新（移动端手势）：await 全部查询完成后 refreshing 复位
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await Promise.all([refetchMyGroups(), refetchCourses(), refetchAvailableGroups()])
+})
 
 async function handleJoin(groupId: number) {
   try {
@@ -177,7 +184,17 @@ function formatTime(iso: string) {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div ref="pageRef" class="overscroll-y-contain space-y-5">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
     <div>
       <h1 class="text-2xl font-medium text-black">
         我的小组

@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useStats, useTodaySchedules, useActiveClassSessions } from '@/composables'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import { Card, Button, DataContainer, Badge } from '@/components/ui'
-import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin } from 'lucide-vue-next'
+import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin, ArrowDown } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const { data: stats, isPending, error } = useStats()
-const { data: todaySchedules, isPending: isLoadingSchedules } = useTodaySchedules()
-const { data: activeSessions } = useActiveClassSessions()
+const { data: stats, isPending, error, refetch: refetchStats } = useStats()
+const { data: todaySchedules, isPending: isLoadingSchedules, refetch: refetchTodaySchedules } = useTodaySchedules()
+const { data: activeSessions, refetch: refetchActiveSessions } = useActiveClassSessions()
+
+// 下拉刷新（移动端手势）：await 全部查询完成后 refreshing 复位
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await Promise.all([refetchStats(), refetchTodaySchedules(), refetchActiveSessions()])
+})
 
 // 活跃课堂数量
 const activeSessionsCount = computed(() => activeSessions.value?.length || 0)
@@ -43,7 +50,17 @@ const statCards = computed(() => [
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div ref="pageRef" class="overscroll-y-contain space-y-5">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
     <!-- Header -->
     <div class="px-1">
       <h1 class="text-2xl font-medium text-black tracking-tight">

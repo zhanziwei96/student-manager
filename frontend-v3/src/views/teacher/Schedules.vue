@@ -6,9 +6,10 @@ import { useTermInfo } from '@/composables/useTermInfo'
 import { useAuthStore } from '@/stores/auth'
 import { Card, Button, Badge, Dialog, DataContainer, MobilePicker } from '@/components/ui'
 import ScheduleAdjustmentDialog from '@/components/teacher/ScheduleAdjustmentDialog.vue'
-import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X, Settings2 } from 'lucide-vue-next'
+import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X, Settings2, Loader2, ArrowDown } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 // ========== 课程类型颜色主题 (Light theme) ==========
 const courseTypeThemes = [
@@ -145,6 +146,12 @@ const filteredSchedulesByDay = computed(() => {
 })
 
 const { data: schedules, isPending, error, refetch } = useSchedules(queryParams)
+
+// 下拉刷新（移动端手势）：await 课表 refetch 完成后 refreshing 复位
+const pageRef = ref<HTMLElement | null>(null)
+const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
+  await refetch()
+})
 
 // 导入相关
 const showImportDialog = ref(false)
@@ -414,7 +421,17 @@ const handleBatchDelete = async () => {
 </script>
 
 <template>
-  <div>
+  <div ref="pageRef" class="overscroll-y-contain">
+    <!-- 下拉刷新指示器 -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
+      :style="{ height: pullDistance + 'px' }"
+    >
+      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
+      <ArrowDown v-else class="h-4 w-4" />
+      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
+    </div>
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
       <div class="min-w-0">
