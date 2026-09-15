@@ -8,8 +8,8 @@ import { useStudentCourseSession } from '@/composables/useStudentCheckin'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
-import { Card, Button } from '@/components/ui'
-import { Users, Award, TrendingUp, Loader2, AlertCircle, Trophy, BookOpen, CalendarCheck, ArrowDown } from 'lucide-vue-next'
+import { Card, Button, PullToRefreshIndicator } from '@/components/ui'
+import { Users, Award, TrendingUp, Loader2, AlertCircle, Trophy, BookOpen, CalendarCheck } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -58,16 +58,7 @@ const getCardTextMutedColor = () => 'text-[#737373]'
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain space-y-5 px-4">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <!-- Header -->
     <div class="px-1">
       <h1 class="text-2xl font-medium text-black tracking-tight">

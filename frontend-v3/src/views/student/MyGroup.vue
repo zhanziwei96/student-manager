@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useToast } from '@/composables'
-import { Card, Button, Select, Label, DataContainer, Dialog, Badge } from '@/components/ui'
+import { Card, Button, Select, Label, DataContainer, Dialog, Badge, PullToRefreshIndicator } from '@/components/ui'
 import {
   useMyGroups,
   useStudentGroups,
@@ -9,7 +9,7 @@ import {
   useJoinGroup,
   useApproveJoin,
 } from '@/features/group-collaboration'
-import { Users, Crown, Plus, LogIn, Trash2, LogOut, Loader2, ArrowDown } from 'lucide-vue-next'
+import { Users, Crown, Plus, LogIn, Trash2, LogOut } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { groupsApi } from '@/api'
 import { coursesApi } from '@/api/courses'
@@ -185,16 +185,7 @@ function formatTime(iso: string) {
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain space-y-5">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <div>
       <h1 class="text-2xl font-medium text-black">
         我的小组

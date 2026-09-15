@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useClasses, useToast } from '@/composables'
-import { Card, Button, Select, Input, Label, DataContainer, Dialog, Badge } from '@/components/ui'
+import { Card, Button, Select, Input, Label, DataContainer, Dialog, Badge, PullToRefreshIndicator } from '@/components/ui'
 import {
   useTeacherGroups,
   useAutoAssign,
@@ -10,7 +10,7 @@ import {
   useGroupScore,
   useGroupScoreLogs,
 } from '@/features/group-collaboration'
-import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2, Plus, Loader2, ArrowDown } from 'lucide-vue-next'
+import { Users, Shuffle, Crown, ChevronDown, ChevronUp, UserMinus, Trash2, Plus } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import type { AdminClass } from '@/types'
 import type { GroupDetail } from '@/types/api'
@@ -347,16 +347,7 @@ async function handleUpdateScore() {
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain space-y-6">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <div>
       <h1 class="text-2xl font-medium text-black">
         小组管理

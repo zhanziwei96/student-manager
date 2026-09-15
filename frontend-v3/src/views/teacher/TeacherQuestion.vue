@@ -6,10 +6,10 @@ import { useAnswers } from '@/features/question/composables/useAnswers'
 import QuestionCard from '@/features/question/components/QuestionCard.vue'
 import AnswerList from '@/features/question/components/AnswerList.vue'
 import AnswerInput from '@/features/question/components/AnswerInput.vue'
-import { Select } from '@/components/ui'
+import { Select, PullToRefreshIndicator } from '@/components/ui'
 import { useClasses } from '@/composables'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
-import { Loader2, ArrowDown } from 'lucide-vue-next'
+import {  } from 'lucide-vue-next'
 import type { Question } from '@/types/question'
 
 const statusFilter = ref('')
@@ -89,16 +89,7 @@ function formatDate(iso: string): string {
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain p-6 max-w-6xl mx-auto">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">课堂问答</h1>
       <button

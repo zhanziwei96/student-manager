@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
-import { Card, Badge } from '@/components/ui'
-import { Loader2, GraduationCap, Users, ArrowDown } from 'lucide-vue-next'
+import { Card, Badge, PullToRefreshIndicator } from '@/components/ui'
+import { Loader2, GraduationCap, Users } from 'lucide-vue-next'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
 import { useAuthQuery } from '@/composables/useAuth'
@@ -36,16 +36,7 @@ const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async ()
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
       <div>

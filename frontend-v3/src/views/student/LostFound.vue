@@ -3,8 +3,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStudentLostFoundItems } from '@/composables/useLostFound'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
-import { Card, Button, Badge, DataContainer, Select } from '@/components/ui'
-import { Search, MapPin, User, ChevronLeft, ChevronRight, Loader2, ArrowDown } from 'lucide-vue-next'
+import { Card, Button, Badge, DataContainer, Select, PullToRefreshIndicator } from '@/components/ui'
+import { Search, MapPin, User, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import type { LostFoundStatus } from '@/types/lostFound'
 
 const router = useRouter()
@@ -89,16 +89,7 @@ const statusVariant: Record<string, string> = {
 
 <template>
   <div class="overscroll-y-contain space-y-5">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
 
     <div>
       <h1 class="text-2xl font-medium text-black">

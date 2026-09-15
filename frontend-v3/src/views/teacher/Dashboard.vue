@@ -2,8 +2,8 @@
 import { ref, computed } from 'vue'
 import { useStats, useTodaySchedules, useActiveClassSessions } from '@/composables'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
-import { Card, Button, DataContainer, Badge } from '@/components/ui'
-import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin, ArrowDown } from 'lucide-vue-next'
+import { Card, Button, DataContainer, Badge, PullToRefreshIndicator } from '@/components/ui'
+import { Users, Calendar, Clock, Loader2, ArrowRight, MapPin } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -51,16 +51,7 @@ const statCards = computed(() => [
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain space-y-5">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <!-- Header -->
     <div class="px-1">
       <h1 class="text-2xl font-medium text-black tracking-tight">

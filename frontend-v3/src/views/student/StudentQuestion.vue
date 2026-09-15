@@ -8,7 +8,8 @@ import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import AnswerList from '@/features/question/components/AnswerList.vue'
 import AnswerInput from '@/features/question/components/AnswerInput.vue'
 import type { Question, Answer } from '@/types/question'
-import { MessageCircle, Loader2, ChevronRight, Hand, ArrowDown } from 'lucide-vue-next'
+import { MessageCircle, Loader2, ChevronRight, Hand } from 'lucide-vue-next'
+import { PullToRefreshIndicator } from '@/components/ui'
 
 const { success: showSuccess, error: showError } = useToast()
 
@@ -95,16 +96,7 @@ function timeAgo(iso: string): string {
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-2xl font-medium text-black">

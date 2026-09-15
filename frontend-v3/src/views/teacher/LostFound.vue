@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Card, Button, Badge, Select, DataContainer, Input, Dialog } from '@/components/ui'
+import { Card, Button, Badge, Select, DataContainer, Input, Dialog, PullToRefreshIndicator } from '@/components/ui'
 import { useTeacherLostFoundItems, useDeleteLostFoundItem } from '@/composables/useLostFound'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import { useSwipeActions } from '@/composables/useSwipeActions'
-import { Plus, MapPin, Search, ChevronLeft, ChevronRight, Trash2, Loader2, ArrowDown } from 'lucide-vue-next'
+import { Plus, MapPin, Search, ChevronLeft, ChevronRight, Trash2 } from 'lucide-vue-next'
 import type { LostFoundStatus } from '@/types/lostFound'
 
 const router = useRouter()
@@ -118,16 +118,7 @@ function goToCreate() {
 
 <template>
   <div class="overscroll-y-contain space-y-6">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>

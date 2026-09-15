@@ -4,9 +4,9 @@ import { useSchedules, useImportSchedules, useDeleteSchedule, useDownloadTemplat
 import { useClasses, useToast } from '@/composables'
 import { useTermInfo } from '@/composables/useTermInfo'
 import { useAuthStore } from '@/stores/auth'
-import { Card, Button, Badge, Dialog, DataContainer, MobilePicker } from '@/components/ui'
+import { Card, Button, Badge, Dialog, DataContainer, MobilePicker, PullToRefreshIndicator } from '@/components/ui'
 import ScheduleAdjustmentDialog from '@/components/teacher/ScheduleAdjustmentDialog.vue'
-import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X, Settings2, Loader2, ArrowDown } from 'lucide-vue-next'
+import { Upload, Download, Trash2, Calendar, Clock, MapPin, BookOpen, Layers, AlertCircle, UserX, AlertTriangle, CheckSquare, X, Settings2 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { getCurrentWeek } from '@/lib/date'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
@@ -422,16 +422,7 @@ const handleBatchDelete = async () => {
 
 <template>
   <div ref="pageRef" class="overscroll-y-contain">
-    <!-- 下拉刷新指示器 -->
-    <div
-      v-if="pulling || refreshing"
-      class="flex items-center justify-center gap-1.5 overflow-hidden text-xs text-[#525252] transition-[height] duration-150"
-      :style="{ height: pullDistance + 'px' }"
-    >
-      <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin" />
-      <ArrowDown v-else class="h-4 w-4" />
-      <span>{{ refreshing ? '刷新中…' : pullDistance >= 80 ? '释放刷新' : '下拉刷新' }}</span>
-    </div>
+    <PullToRefreshIndicator :pulling="pulling" :pull-distance="pullDistance" :refreshing="refreshing" />
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
       <div class="min-w-0">
