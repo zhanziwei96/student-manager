@@ -24,17 +24,37 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. 关联表：复合主键 + FK 级联删除
-    op.create_table(
-        'course_offering_classes',
-        sa.Column('offering_id', sa.Integer(), nullable=False),
-        sa.Column('class_id', sa.Integer(), nullable=False),
-        sa.PrimaryKeyConstraint('offering_id', 'class_id'),
-        sa.ForeignKeyConstraint(['offering_id'], ['course_offerings.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['class_id'], ['classes.id'], ondelete='CASCADE'),
-    )
+    # 1. 关联表：复合主键 + FK 级联删除。
+    # 幂等保护：开发库在 Phase 6 验收时曾手工建过同构表（PG DDL 单事务，
+    # 表留下但 alembic_version 未记），直接 create_table 会 DuplicateTable。
+    bind = op.get_bind()
+    table_exists = bind.execute(sa.text(
+        "SELECT to_regclass('public.course_offering_classes') IS NOT NULL"
+    )).scalar()
 
-    # 2. 回填（best-effort）：裸名唯一匹配才插入；regexp_split_to_table(NULL) 返回空集，天然跳过
+    if not table_exists:
+        op.create_table(
+            'course_offering_classes',
+            sa.Column('offering_id', sa.Integer(), nullable=False),
+            sa.Column('class_id', sa.Integer(), nullable=False),
+            sa.PrimaryKeyConstraint('offering_id', 'class_id'),
+            sa.ForeignKeyConstraint(['offering_id'], ['course_offerings.id'], ondelete='CASCADE'),
+            sa.ForeignKeyConstraint(['class_id'], ['classes.id'], ondelete='CASCADE'),
+        )
+    else:
+        # 表已存在：确保 FK 带 CASCADE（手工建表时可能未带）
+        for fk, col, ref in (
+            ('course_offering_classes_offering_id_fkey', 'offering_id', 'course_offerings'),
+            ('course_offering_classes_class_id_fkey', 'class_id', 'classes'),
+        ):
+            op.execute(f"""
+                ALTER TABLE course_offering_classes
+                DROP CONSTRAINT IF EXISTS {fk},
+                ADD CONSTRAINT {fk} FOREIGN KEY ({col}) REFERENCES {ref}(id) ON DELETE CASCADE
+            """)
+
+    # 2. 回填（best-effort）：裸名唯一匹配才插入；regexp_split_to_table(NULL) 返回空集，天然跳过。
+    # ON CONFLICT 保护幂等（表已存在且部分回填过的库重跑时不报主键冲突）
     op.execute("""
         INSERT INTO course_offering_classes (offering_id, class_id)
         SELECT DISTINCT o.id, c.id
@@ -42,17 +62,23 @@ def upgrade() -> None:
         CROSS JOIN LATERAL regexp_split_to_table(o.class_scope, ',') AS token
         JOIN classes c ON c.name = btrim(token)
         WHERE (SELECT count(*) FROM classes c2 WHERE c2.name = btrim(token)) = 1
+        ON CONFLICT (offering_id, class_id) DO NOTHING
     """)
 
-    # 3. 唯一约束重建：去掉 class_scope 维度
-    op.drop_constraint('uix_offering', 'course_offerings', type_='unique')
-    op.create_unique_constraint(
-        'uix_offering', 'course_offerings',
-        ['course_id', 'semester_id', 'teacher_id'],
-    )
+    # 3. 唯一约束重建：去掉 class_scope 维度（若 class_scope 列仍存在）
+    col_exists = bind.execute(sa.text("""
+        SELECT count(*) FROM information_schema.columns
+        WHERE table_name='course_offerings' AND column_name='class_scope'
+    """)).scalar()
+    if col_exists:
+        op.drop_constraint('uix_offering', 'course_offerings', type_='unique')
+        op.create_unique_constraint(
+            'uix_offering', 'course_offerings',
+            ['course_id', 'semester_id', 'teacher_id'],
+        )
 
-    # 4. 删除自由文本列
-    op.drop_column('course_offerings', 'class_scope')
+        # 4. 删除自由文本列
+        op.drop_column('course_offerings', 'class_scope')
 
 
 def downgrade() -> None:
