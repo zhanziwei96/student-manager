@@ -212,7 +212,7 @@ function timeAgo(iso: string): string {
             <div v-if="editingAnswer" class="mb-2">
               <div class="flex items-center justify-between mb-2">
                 <p class="text-sm text-[#737373]">修改回答</p>
-                <button class="text-xs text-[#525252] hover:text-black" @click="cancelEdit">取消</button>
+                <button class="text-xs text-[#525252] hover:text-black inline-flex min-h-[44px] min-w-[44px] items-center px-2 -mx-2" @click="cancelEdit">取消</button>
               </div>
               <AnswerInput
                 placeholder="修改你的回答..."

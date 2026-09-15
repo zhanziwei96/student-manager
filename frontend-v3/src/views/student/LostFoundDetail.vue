@@ -102,7 +102,7 @@ function goBack() {
   <div class="space-y-5">
     <!-- 返回按钮 -->
     <button
-      class="flex items-center gap-1 text-sm text-[#737373] hover:text-black transition-colors"
+      class="flex items-center gap-1 min-h-[44px] text-sm text-[#737373] hover:text-black transition-colors"
       @click="goBack"
     >
       <ArrowLeft class="h-4 w-4" />

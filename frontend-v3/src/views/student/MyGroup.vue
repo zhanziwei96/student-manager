@@ -368,7 +368,7 @@ function formatTime(iso: string) {
         >
       </div>
       <template #footer>
-        <div class="flex w-full gap-2 sm:justify-end">
+        <div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" @click="showCreateDialog = false">取消</Button>
           <Button variant="cta" :loading="creating" @click="handleCreate">确认创建</Button>
         </div>
@@ -386,7 +386,7 @@ function formatTime(iso: string) {
         />
       </div>
       <template #footer>
-        <div class="flex w-full gap-2 sm:justify-end">
+        <div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" @click="showDissolveDialog = false">取消</Button>
           <Button variant="destructive" class="max-md:border-transparent max-md:bg-transparent max-md:text-[#ef4444]" :loading="dissolving" @click="handleDissolve">提交申请</Button>
         </div>

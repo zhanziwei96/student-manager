@@ -93,7 +93,7 @@ function formatDate(iso: string): string {
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">课堂问答</h1>
       <button
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        class="px-4 py-2 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         @click="showCreateForm = !showCreateForm"
       >
         {{ showCreateForm ? '取消' : '发布问题' }}
@@ -120,7 +120,7 @@ function formatDate(iso: string): string {
           <span class="text-sm">实时提问</span>
         </label>
         <button
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          class="px-4 py-2 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           :disabled="!newQuestionContent.trim()"
           @click="handleCreate"
         >
@@ -134,19 +134,19 @@ function formatDate(iso: string): string {
       <div>
         <div class="flex gap-2 mb-4">
           <button
-            :class="['px-3 py-1 text-sm rounded', !statusFilter ? 'bg-blue-100 text-blue-700' : 'bg-gray-100']"
+            :class="['px-3 py-1 min-h-[44px] text-sm rounded', !statusFilter ? 'bg-blue-100 text-blue-700' : 'bg-gray-100']"
             @click="statusFilter = ''"
           >
             全部
           </button>
           <button
-            :class="['px-3 py-1 text-sm rounded', statusFilter === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100']"
+            :class="['px-3 py-1 min-h-[44px] text-sm rounded', statusFilter === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100']"
             @click="statusFilter = 'active'"
           >
             进行中
           </button>
           <button
-            :class="['px-3 py-1 text-sm rounded', statusFilter === 'closed' ? 'bg-gray-200 text-gray-700' : 'bg-gray-100']"
+            :class="['px-3 py-1 min-h-[44px] text-sm rounded', statusFilter === 'closed' ? 'bg-gray-200 text-gray-700' : 'bg-gray-100']"
             @click="statusFilter = 'closed'"
           >
             已结束
@@ -197,7 +197,7 @@ function formatDate(iso: string): string {
               submit-label="发送追问"
               @submit="(content) => handleReply(replyTarget!, content)"
             />
-            <button class="text-xs text-gray-500 mt-1" @click="replyTarget = null">取消</button>
+            <button class="text-xs text-gray-500 mt-1 inline-flex min-h-[44px] min-w-[44px] items-center px-2 -mx-2" @click="replyTarget = null">取消</button>
           </div>
         </div>
       </div>

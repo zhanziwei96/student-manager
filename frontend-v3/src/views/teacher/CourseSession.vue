@@ -926,7 +926,7 @@ const getSourceTypeBadge = (sourceType: string) => {
       </div>
 
       <template #footer>
-        <div class="flex gap-2 justify-end">
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button
             variant="outline"
             @click="showEndConfirm = false"

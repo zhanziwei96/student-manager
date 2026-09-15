@@ -104,7 +104,7 @@ watch(() => route.path, () => {
           <span class="text-lg font-medium text-black">{{ isAdmin ? '智慧课堂' : '我的' }}</span>
         </div>
         <button
-          class="p-2 -mr-2 rounded-lg text-[#525252] hover:text-black hover:bg-[#fafafa]"
+          class="p-2 -mr-2 rounded-lg text-[#525252] hover:text-black hover:bg-[#fafafa] min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
           @click="handleClose"
         >
           <X class="h-6 w-6" />

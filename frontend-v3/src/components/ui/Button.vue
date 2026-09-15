@@ -36,17 +36,17 @@ const buttonVariants = cva(
         link: 'text-black underline-offset-4 hover:underline bg-transparent',
       },
       size: {
-        // 小尺寸: h-8 (32px)
-        sm: 'h-8 px-3 text-xs rounded-full',
+        // 小尺寸: min-h 44px（HIG 触控热区下限）
+        sm: 'min-h-[44px] px-3 text-xs rounded-full',
 
-        // 默认尺寸: h-9 (36px)
-        default: 'h-9 px-4 py-2 text-sm rounded-full',
+        // 默认尺寸: min-h 44px（HIG 触控热区下限）
+        default: 'min-h-[44px] px-4 py-2 text-sm rounded-full',
 
-        // 大尺寸: h-10 (40px)
-        lg: 'h-10 px-6 text-base rounded-full',
+        // 大尺寸: min-h 44px
+        lg: 'min-h-[44px] px-6 text-base rounded-full',
 
-        // 图标按钮: 正方形
-        icon: 'h-9 w-9 p-0 rounded-full',
+        // 图标按钮: 正方形，min 44×44px
+        icon: 'min-h-[44px] min-w-[44px] p-0 rounded-full',
       },
     },
     defaultVariants: {

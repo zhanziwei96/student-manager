@@ -175,7 +175,7 @@ function goBack() {
   <div class="space-y-6">
     <!-- 返回按钮 -->
     <button
-      class="flex items-center gap-1 text-sm text-[#737373] hover:text-black transition-colors"
+      class="flex items-center gap-1 min-h-[44px] text-sm text-[#737373] hover:text-black transition-colors"
       @click="goBack"
     >
       <ArrowLeft class="h-4 w-4" />
@@ -229,7 +229,7 @@ function goBack() {
                 >
                 <button
                   type="button"
-                  class="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-[#ef4444] text-white flex items-center justify-center hover:bg-[#dc2626]"
+                  class="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-[#ef4444] text-white flex items-center justify-center hover:bg-[#dc2626] after:absolute after:-inset-[10px] after:content-['']"
                   @click="removeImage"
                 >
                   <X class="h-3.5 w-3.5" />
@@ -300,7 +300,7 @@ function goBack() {
             >
             <button
               type="button"
-              class="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-[#ef4444] text-white flex items-center justify-center hover:bg-[#dc2626]"
+              class="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-[#ef4444] text-white flex items-center justify-center hover:bg-[#dc2626] after:absolute after:-inset-[10px] after:content-['']"
               @click="removeImage"
             >
               <X class="h-3.5 w-3.5" />

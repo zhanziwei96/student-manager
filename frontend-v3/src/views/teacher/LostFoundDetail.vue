@@ -90,7 +90,7 @@ function formatDate(iso: string) {
   <div class="space-y-6">
     <!-- 返回按钮 -->
     <button
-      class="flex items-center gap-1 text-sm text-[#737373] hover:text-black transition-colors"
+      class="flex items-center gap-1 min-h-[44px] text-sm text-[#737373] hover:text-black transition-colors"
       @click="goBack"
     >
       <ArrowLeft class="h-4 w-4" />
@@ -266,10 +266,10 @@ function formatDate(iso: string) {
 
     <!-- 删除确认对话框 -->
     <ResponsiveDialog v-model:open="showDeleteDialog" title="确认删除" description="删除后不可恢复，确定要删除此物品吗？">
-      <div class="flex justify-end gap-2 mt-4">
+      <template #footer>
         <Button variant="outline" @click="showDeleteDialog = false">取消</Button>
         <Button variant="destructive" class="max-md:border-transparent max-md:bg-transparent max-md:text-[#ef4444]" :loading="deleting" @click="handleDelete">确认删除</Button>
-      </div>
+      </template>
     </ResponsiveDialog>
   </div>
 </template>

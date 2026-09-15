@@ -131,7 +131,7 @@ onUnmounted(() => {
         <button
           v-if="modelValue"
           type="button"
-          class="rounded p-0.5 hover:bg-[#fafafa]"
+          class="rounded p-0.5 min-h-[44px] min-w-[44px] -m-3 inline-flex items-center justify-center hover:bg-[#fafafa]"
           @click.stop="clearSelection"
         >
           <X class="h-3.5 w-3.5 text-[#525252]" />

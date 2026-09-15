@@ -139,7 +139,7 @@ const isSelected = (option: MobilePickerOption) => {
         <button
           v-if="clearable && modelValue !== undefined"
           type="button"
-          class="rounded p-0.5 hover:bg-[#fafafa]"
+          class="rounded p-0.5 min-h-[44px] min-w-[44px] -m-3 inline-flex items-center justify-center hover:bg-[#fafafa]"
           @click.stop="clear"
         >
           <X class="h-4 w-4 text-[#525252]" />
@@ -169,7 +169,7 @@ const isSelected = (option: MobilePickerOption) => {
           class="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-xl max-h-[70vh] flex flex-col"
         >
           <!-- 指示条 -->
-          <div class="flex justify-center pt-3 pb-2" @click="close">
+          <div class="flex min-h-[44px] items-center justify-center pt-3 pb-2" @click="close">
             <div class="w-10 h-1 rounded-full bg-[#d4d4d4]" />
           </div>
 
@@ -180,7 +180,7 @@ const isSelected = (option: MobilePickerOption) => {
             </h3>
             <button
               type="button"
-              class="text-black text-base font-medium"
+              class="text-black text-base font-medium min-h-[44px] inline-flex items-center px-2 -mx-2"
               @click="close"
             >
               完成

@@ -252,10 +252,10 @@ function goToCreate() {
 
     <!-- 删除确认 -->
     <ResponsiveDialog v-model:open="showDeleteDialog" title="确认删除" description="删除后不可恢复，确定要删除此物品吗？">
-      <div class="flex justify-end gap-2 mt-4">
+      <template #footer>
         <Button variant="outline" @click="showDeleteDialog = false">取消</Button>
         <Button variant="destructive" class="max-md:border-transparent max-md:bg-transparent max-md:text-[#ef4444]" :loading="deleting" @click="handleDelete">确认删除</Button>
-      </div>
+      </template>
     </ResponsiveDialog>
   </div>
 </template>
