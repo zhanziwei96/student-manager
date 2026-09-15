@@ -56,19 +56,19 @@ const statCards = computed(() => [
 
     <!-- 主操作区：开始上课（移动端全宽黑按钮，h-14 触控目标） -->
     <div>
-      <button
-        type="button"
-        class="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-black text-base font-medium text-white transition-colors hover:bg-neutral-800 active:bg-neutral-700"
+      <Button
+        variant="cta"
+        class="h-14 w-full text-base"
         @click="router.push('/teacher/session')"
       >
         <Calendar class="h-5 w-5" />
         开始上课
-      </button>
+      </Button>
       <!-- 有进行中课堂时的次级提示，点击进入课堂管理 -->
       <button
         v-if="activeSessionsCount > 0"
         type="button"
-        class="mt-2 flex min-h-[44px] w-full items-center justify-center text-sm text-[#525252] underline-offset-4 hover:underline"
+        class="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-full text-sm text-[#525252] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
         @click="router.push('/teacher/session')"
       >
         当前有 {{ activeSessionsCount }} 个进行中的课堂

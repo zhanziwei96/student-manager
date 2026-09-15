@@ -47,8 +47,8 @@
 - [x] **Task 1 — 底部 Sheet 组件**：✅ d52403c + 17c8f9c（双评审通过；评审跟进 Esc 关闭 + aria-labelledby + 令牌工具类）
 - [x] **Task 2 — BottomNav 重构**：✅ 17ab2db + 36f9a40（双评审通过；评审抓出 /teacher/session 前缀撞车 /teacher/sessions-history 已修 + 2 回归测试）。注：签到中央按钮选中态为路由匹配（非「有活跃课堂才高亮」），实现侧有意为之，UX 更直觉
 - [x] **Task 3 — 布局移动端优先化**：✅ c841317（双评审通过）。注：抽屉「我的」与更多面板的修改密码/退出为**有意保留的双入口**；管理员移动端底部留白与抽屉 safe-top 遮挡为既有行为，不在本计划修
-- [ ] **Task 4 — 学生端首屏重构（views/student/Dashboard.vue + Checkin.vue）**：Dashboard 首屏顶部 = 签到主卡片：无活跃课堂→"当前没有进行中的课堂"态；有→大号「立即签到」按钮（h-14 全宽黑底）+ 课堂信息（课程名/教师/开始时间）；其下才是课程成绩摘要与小组摘要（现有卡片下移，顺序不变）。Checkin.vue 签到按钮触控区 ≥56px、验证码输入框移动端 16px 字号防缩放
-- [ ] **Task 5 — 教师端首屏重构（views/teacher/Dashboard.vue）**：首屏顶部 = 「开始上课」大按钮（h-14 全宽）；下方今日课程列表（已有，保留）+ 活跃课堂卡片（保留）；统计卡片下移。移动端隐藏次要统计，桌面端布局不变
+- [x] **Task 4 — 学生端首屏重构**：✅ c36781b（双评审通过）。Minor 留档：签到卡片加载中间态会闪现「无课堂」态（staleTime 缓存缓解，未修）；桌面端 CTA 全宽过宽（有意取舍）
+- [x] **Task 5 — 教师端首屏重构**：✅ 446fa23 + 质量评审跟进（CTA 换 Button variant="cta" 补齐焦点环/与学生端一致；次级提示补 focus-visible）。**计划条文修订**：原写「移动端隐藏次要统计」→ 实现侧有意保留全部统计卡（移动端 2 列展示有价值，不隐藏）。**已知程序瑕疵**：446fa23 混入学生端 spec 改动（并行 add 目录误收），该 commit 单独检出时学生端 2 测试为红（UI 在后续 c36781b 才落地）；分支历史不 rewrite，合并 main 时建议 squash
 - [ ] **Task 6 — 手势 composable 三件套**：`composables/usePullToRefresh.ts`（触摸下拉>80px 触发 `refetch`，带阻力曲线与回弹动画，作用于列表页容器）；`composables/useSwipeBack.ts`（详情页左缘右滑>阈值→`router.back()`，同时保留返回按钮）；`composables/useSwipeActions.ts`（列表行左滑露出操作按钮）。各含单测（模拟 TouchEvent 序列）
 - [ ] **Task 7 — 手势落地到页面**：下拉刷新应用到学生端（Dashboard/我的成绩/我的小组/问答/失物招领）与教师端（Dashboard/学生/课表/小组/问答/失物招领）列表页；滑动返回应用到失物招领详情、问答详情、OfferingGrades；行滑动操作应用到失物招领列表（标记已解决/删除）
 - [ ] **Task 8 — 移动端弹窗 Sheet 化**：移动端（<768px）下教师/学生页面的确认类 Dialog（删除确认、转班确认等）与筛选弹层统一迁移到 BottomSheet（危险操作红字 Action 样式）；桌面端保持居中 Dialog 不变。复用 MobilePicker 的移动端检测模式
