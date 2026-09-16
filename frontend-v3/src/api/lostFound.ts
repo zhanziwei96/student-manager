@@ -20,12 +20,15 @@ export async function createLostFoundItem(data: {
   description: string
   location?: string
   file?: File
+  class_ids?: number[]
 }): Promise<{ item_id: number }> {
   const formData = new FormData()
   formData.append('title', data.title)
   formData.append('description', data.description)
   if (data.location) formData.append('location', data.location)
   if (data.file) formData.append('image', data.file)
+  // 每个勾选班级一个 class_ids 重复字段；空选不传（后端默认 [] = 所有班级可见）
+  for (const classId of data.class_ids ?? []) formData.append('class_ids', String(classId))
   return post('/teacher/lost-found', formData)
 }
 
@@ -42,12 +45,15 @@ export async function updateLostFoundItem(id: number, data: {
   description?: string
   location?: string
   file?: File
+  class_ids?: number[]
 }): Promise<void> {
   const formData = new FormData()
   if (data.title) formData.append('title', data.title)
   if (data.description) formData.append('description', data.description)
   if (data.location) formData.append('location', data.location)
   if (data.file) formData.append('image', data.file)
+  // 每个勾选班级一个 class_ids 重复字段；空选不传（后端 None = 保持原范围不变）
+  for (const classId of data.class_ids ?? []) formData.append('class_ids', String(classId))
   return put(`/teacher/lost-found/${id}`, formData)
 }
 

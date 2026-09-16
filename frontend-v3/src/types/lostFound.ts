@@ -33,6 +33,8 @@ export interface TeacherLostFoundDetail {
   comments: LostFoundComment[]
   claims: LostFoundClaim[]
   pending_count: number
+  /** 可见班级 ID 列表；空/缺省 = 所有班级可见 */
+  class_ids?: number[]
 }
 
 export interface StudentLostFoundItem {
