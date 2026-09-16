@@ -82,6 +82,17 @@ def _resolve_viewer_class_id(session: Session, user: dict) -> int:
     return 0
 
 
+def _check_item_visibility(session: Session, item_id: int, student_sub: str) -> None:
+    """校验学生对物品的可见性：物品限定了可见班级且本班不在其中 → 404（不泄露存在性）"""
+    visible_class_ids = get_item_class_ids(session, [item_id]).get(item_id, [])
+    if not visible_class_ids:
+        return
+    student = get_student(session, student_sub)
+    student_class_id = student.class_id if student else None
+    if student_class_id not in visible_class_ids:
+        raise HTTPException(status_code=404, detail="物品不存在")
+
+
 # ============== 教师端路由 ==============
 
 @router.post("/teacher/lost-found")
@@ -383,12 +394,7 @@ async def student_get_item(
     student_id = int(user["sub"])
 
     # 可见性校验：物品限定了可见班级且本班不在其中 → 404（不泄露物品存在性）
-    visible_class_ids = get_item_class_ids(session, [item_id]).get(item_id, [])
-    if visible_class_ids:
-        student = get_student(session, user["sub"])
-        student_class_id = student.class_id if student else None
-        if student_class_id not in visible_class_ids:
-            raise HTTPException(status_code=404, detail="物品不存在")
+    _check_item_visibility(session, item_id, user["sub"])
 
     # 获取评论（学生端匿名显示）
     comments = get_comments_by_item(session, item_id)
@@ -442,6 +448,8 @@ async def student_create_comment(
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
 
+    _check_item_visibility(session, item_id, user["sub"])
+
     student_id = int(user["sub"])
     comment = create_comment(session, item_id, student_id, req.content)
 
@@ -460,6 +468,8 @@ async def student_claim_item(
     item = get_lost_found_item(session, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
+
+    _check_item_visibility(session, item_id, user["sub"])
 
     student_id = int(user["sub"])
     try:

@@ -509,3 +509,34 @@ class TestClassVisibilityAPI:
         assert resp.status_code == 200
         ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
         assert item_id in ids2
+
+    def test_comment_and_claim_visibility(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """评论/认领可见性：他班学生对限定物品评论/认领返回 404（防凭 item_id 猜测越权）"""
+        c1 = _make_class(session, "1班")
+        c2 = _make_class(session, "2班")
+        scoped_id = _create_scoped_item(teacher_client, [c1.id])
+
+        s1 = _make_student_client(app, session, "s_class1", "一班学生", c1.id)
+        s2 = _make_student_client(app, session, "s_class2", "二班学生", c2.id)
+
+        # 本班学生：评论/认领正常
+        assert s1.post(
+            f"/api/v1/student/lost-found/{scoped_id}/comments",
+            json={"content": "是我的"},
+        ).status_code == 200
+        assert s1.post(
+            f"/api/v1/student/lost-found/{scoped_id}/claim",
+            json={"contact": "13800000000", "message": "认领"},
+        ).status_code == 200
+
+        # 他班学生：评论/认领均 404
+        assert s2.post(
+            f"/api/v1/student/lost-found/{scoped_id}/comments",
+            json={"content": "冒充"},
+        ).status_code == 404
+        assert s2.post(
+            f"/api/v1/student/lost-found/{scoped_id}/claim",
+            json={"contact": "13900000000", "message": "冒充认领"},
+        ).status_code == 404
