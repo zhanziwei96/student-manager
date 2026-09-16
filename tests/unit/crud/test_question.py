@@ -2,13 +2,14 @@
 问答 CRUD 单元测试
 """
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.crud.question import (
     create_question, get_question, get_questions_by_teacher,
-    get_questions_by_class, close_question, count_answers,
+    get_questions_by_class, get_question_class_ids, close_question, count_answers,
     create_answer, get_answers_by_question, update_answer,
     star_answer, delete_answer,
 )
+from app.models.question import QuestionClass
 
 
 @pytest.fixture(autouse=True)
@@ -31,40 +32,80 @@ class TestQuestionCRUD:
     def test_create_question(self, session: Session, seed_refs):
         q = create_question(
             session, teacher_id=1, content="什么是Python？",
-            class_id=seed_refs["一班"], is_realtime=True,
+            class_ids=[seed_refs["一班"]], is_realtime=True,
         )
         assert q.teacher_id == 1
         assert q.content == "什么是Python？"
-        assert q.class_id == seed_refs["一班"]
         assert q.semester_id == seed_refs["semester_id"]
         assert q.status == "active"
         assert q.is_realtime is True
 
+        rows = session.exec(
+            select(QuestionClass).where(QuestionClass.question_id == q.id)
+        ).all()
+        assert [r.class_id for r in rows] == [seed_refs["一班"]]
+
+    def test_create_question_multiple_classes(self, session: Session, seed_refs):
+        q = create_question(
+            session, teacher_id=1, content="多班问题",
+            class_ids=[seed_refs["一班"], seed_refs["二班"]],
+        )
+        rows = session.exec(
+            select(QuestionClass).where(QuestionClass.question_id == q.id)
+        ).all()
+        assert sorted(r.class_id for r in rows) == sorted(
+            [seed_refs["一班"], seed_refs["二班"]]
+        )
+
     def test_create_question_all_classes(self, session: Session):
         q = create_question(session, teacher_id=1, content="通用问题")
-        assert q.class_id is None
+        rows = session.exec(
+            select(QuestionClass).where(QuestionClass.question_id == q.id)
+        ).all()
+        assert rows == []
+
+    def test_get_question_class_ids(self, session: Session, seed_refs):
+        q1 = create_question(
+            session, teacher_id=1, content="Q1",
+            class_ids=[seed_refs["二班"], seed_refs["一班"]],
+        )
+        q2 = create_question(session, teacher_id=1, content="Q2")
+
+        result = get_question_class_ids(session, [q1.id, q2.id])
+        assert result[q1.id] == sorted([seed_refs["一班"], seed_refs["二班"]])
+        assert result[q2.id] == []
 
     def test_get_questions_by_teacher(self, session: Session, seed_refs):
-        create_question(session, teacher_id=1, content="Q1", class_id=seed_refs["一班"])
-        create_question(session, teacher_id=1, content="Q2", class_id=seed_refs["二班"])
-        create_question(session, teacher_id=2, content="Q3", class_id=seed_refs["一班"])
+        create_question(session, teacher_id=1, content="Q1", class_ids=[seed_refs["一班"]])
+        create_question(session, teacher_id=1, content="Q2", class_ids=[seed_refs["二班"]])
+        create_question(session, teacher_id=2, content="Q3", class_ids=[seed_refs["一班"]])
 
         questions = get_questions_by_teacher(session, teacher_id=1)
         assert len(questions) == 2
 
     def test_get_questions_by_teacher_with_filter(self, session: Session, seed_refs):
-        create_question(session, teacher_id=1, content="Q1", class_id=seed_refs["一班"])
-        q2 = create_question(session, teacher_id=1, content="Q2", class_id=seed_refs["一班"])
+        create_question(session, teacher_id=1, content="Q1", class_ids=[seed_refs["一班"]])
+        q2 = create_question(session, teacher_id=1, content="Q2", class_ids=[seed_refs["一班"]])
         close_question(session, q2.id)
 
         active = get_questions_by_teacher(session, teacher_id=1, status="active")
         assert len(active) == 1
         assert active[0].content == "Q1"
 
+    def test_get_questions_by_teacher_filter_class(self, session: Session, seed_refs):
+        create_question(session, teacher_id=1, content="一班题", class_ids=[seed_refs["一班"]])
+        create_question(session, teacher_id=1, content="通用题")
+        create_question(session, teacher_id=1, content="多班题",
+                        class_ids=[seed_refs["一班"], seed_refs["二班"]])
+
+        questions = get_questions_by_teacher(session, teacher_id=1, class_id=seed_refs["一班"])
+        contents = {q.content for q in questions}
+        assert contents == {"一班题", "多班题"}
+
     def test_get_questions_by_class(self, session: Session, seed_refs):
-        create_question(session, teacher_id=1, content="班级问题", class_id=seed_refs["一班"])
+        create_question(session, teacher_id=1, content="班级问题", class_ids=[seed_refs["一班"]])
         create_question(session, teacher_id=1, content="通用问题")
-        create_question(session, teacher_id=1, content="其他班级", class_id=seed_refs["二班"])
+        create_question(session, teacher_id=1, content="其他班级", class_ids=[seed_refs["二班"]])
 
         questions = get_questions_by_class(session, seed_refs["一班"])
         assert len(questions) == 2
@@ -72,6 +113,17 @@ class TestQuestionCRUD:
         assert "班级问题" in contents
         assert "通用问题" in contents
         assert "其他班级" not in contents
+
+    def test_get_questions_by_class_multi_class(self, session: Session, seed_refs):
+        """多班问题对勾选内每个班可见，对未勾选班不可见"""
+        create_question(session, teacher_id=1, content="多班问题",
+                        class_ids=[seed_refs["一班"], seed_refs["二班"]])
+
+        for cls in ("一班", "二班"):
+            contents = {q.content for q in get_questions_by_class(session, seed_refs[cls])}
+            assert "多班问题" in contents
+        contents = {q.content for q in get_questions_by_class(session, seed_refs["三班"])}
+        assert "多班问题" not in contents
 
     def test_close_question(self, session: Session):
         q = create_question(session, teacher_id=1, content="Q1")

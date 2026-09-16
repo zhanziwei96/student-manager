@@ -13,10 +13,6 @@ class Question(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     teacher_id: int = Field(..., foreign_key="users.id", description="提问老师ID", index=True)
-    class_id: Optional[int] = Field(
-        default=None, foreign_key="classes.id", index=True,
-        description="目标班级ID（None 表示所有班级可见）",
-    )
     semester_id: Optional[int] = Field(
         default=None, foreign_key="semesters.id", index=True,
         description="学期ID（FK）",

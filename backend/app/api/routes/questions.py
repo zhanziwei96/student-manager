@@ -1,7 +1,7 @@
 """
 课堂问答 API
 """
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlmodel import Session
@@ -11,7 +11,7 @@ from app.core.jwt import get_current_user
 from app.api.deps import require_admin_or_teacher, verify_class_has_active_students
 from app.crud.question import (
     create_question, get_question, get_questions_by_teacher,
-    get_questions_by_class, close_question, count_answers,
+    get_questions_by_class, get_question_class_ids, close_question, count_answers,
     create_answer, get_answer, get_answers_by_question,
     update_answer, star_answer, delete_answer,
     DuplicateAnswerError,
@@ -26,7 +26,7 @@ router = APIRouter(tags=["questions"])
 
 class CreateQuestionRequest(BaseModel):
     content: str = Field(..., description="问题内容")
-    class_id: Optional[int] = Field(default=None, description="目标班级ID，None表示所有班级")
+    class_ids: List[int] = Field(default_factory=list, description="可见班级ID列表，空表示所有班级")
     is_realtime: bool = Field(default=False, description="是否实时提问")
 
 
@@ -50,6 +50,7 @@ class QuestionListItem(BaseModel):
     teacher_id: int
     teacher_name: Optional[str]
     class_name: Optional[str]
+    class_ids: List[int]
     content: str
     status: str
     is_realtime: bool
@@ -71,6 +72,33 @@ class AnswerItem(BaseModel):
     is_own: bool = False
 
 
+def _build_question_list(session: Session, questions) -> list:
+    """组装问题列表响应：class_name 为可见班级展示名（多班 、分隔，无关联行 = 所有班级）"""
+    from app.core.class_cache import get_class_display_names
+    class_ids_map = get_question_class_ids(session, [q.id for q in questions])
+    all_class_ids = {cid for ids in class_ids_map.values() for cid in ids}
+    class_name_map = get_class_display_names(session, all_class_ids)
+    result = []
+    for q in questions:
+        teacher = get_user(session, q.teacher_id)
+        q_class_ids = class_ids_map.get(q.id, [])
+        names = [class_name_map[cid] for cid in q_class_ids if cid in class_name_map]
+        result.append(QuestionListItem(
+            id=q.id,
+            teacher_id=q.teacher_id,
+            teacher_name=teacher.name if teacher else None,
+            class_name="、".join(names) if names else "所有班级",
+            class_ids=q_class_ids,
+            content=q.content,
+            status=q.status,
+            is_realtime=q.is_realtime,
+            answer_count=count_answers(session, q.id),
+            created_at=q.created_at.isoformat(),
+            closed_at=q.closed_at.isoformat() if q.closed_at else None,
+        ).model_dump())
+    return result
+
+
 # ============== 教师端路由 ==============
 
 @router.post("/teacher/questions")
@@ -81,14 +109,14 @@ async def teacher_create_question(
     user: dict = Depends(require_admin_or_teacher),
 ):
     """老师发布问题"""
-    # 学期归档后，禁用/不存在班级不可提问（class_id 为 None 表示所有班级，跳过校验）
-    if req.class_id is not None:
-        verify_class_has_active_students(req.class_id, session)
+    # 学期归档后，禁用/不存在班级不可提问（class_ids 为空表示所有班级，跳过校验）
+    for class_id in req.class_ids:
+        verify_class_has_active_students(class_id, session)
 
     teacher_id = int(user["sub"])
     question = create_question(
         session, teacher_id=teacher_id,
-        content=req.content, class_id=req.class_id,
+        content=req.content, class_ids=req.class_ids,
         is_realtime=req.is_realtime,
     )
     return {
@@ -108,25 +136,7 @@ async def teacher_list_questions(
     """老师获取自己的问题列表"""
     teacher_id = int(user["sub"])
     questions = get_questions_by_teacher(session, teacher_id, class_id, status)
-
-    from app.core.class_cache import get_class_display_names
-    class_name_map = get_class_display_names(session, (q.class_id for q in questions))
-    result = []
-    for q in questions:
-        teacher = get_user(session, q.teacher_id)
-        result.append(QuestionListItem(
-            id=q.id,
-            teacher_id=q.teacher_id,
-            teacher_name=teacher.name if teacher else None,
-            class_name=class_name_map.get(q.class_id),
-            content=q.content,
-            status=q.status,
-            is_realtime=q.is_realtime,
-            answer_count=count_answers(session, q.id),
-            created_at=q.created_at.isoformat(),
-            closed_at=q.closed_at.isoformat() if q.closed_at else None,
-        ).model_dump())
-    return {"success": True, "data": result}
+    return {"success": True, "data": _build_question_list(session, questions)}
 
 
 @router.put("/teacher/questions/{question_id}/close")
@@ -199,25 +209,7 @@ async def student_list_questions(
         raise HTTPException(status_code=400, detail="未设置班级")
 
     questions = get_questions_by_class(session, student.class_id, status="active")
-
-    from app.core.class_cache import get_class_display_names
-    class_name_map = get_class_display_names(session, (q.class_id for q in questions))
-    result = []
-    for q in questions:
-        teacher = get_user(session, q.teacher_id)
-        result.append(QuestionListItem(
-            id=q.id,
-            teacher_id=q.teacher_id,
-            teacher_name=teacher.name if teacher else None,
-            class_name=class_name_map.get(q.class_id),
-            content=q.content,
-            status=q.status,
-            is_realtime=q.is_realtime,
-            answer_count=count_answers(session, q.id),
-            created_at=q.created_at.isoformat(),
-            closed_at=q.closed_at.isoformat() if q.closed_at else None,
-        ).model_dump())
-    return {"success": True, "data": result}
+    return {"success": True, "data": _build_question_list(session, questions)}
 
 
 @router.get("/student/questions/{question_id}/answers")

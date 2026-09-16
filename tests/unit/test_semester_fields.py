@@ -59,7 +59,6 @@ def test_checkin_and_question_semester_id_are_optional():
 
     question = Question(teacher_id=1, content="今天讲了什么？")
     assert question.semester_id is None
-    assert question.class_id is None
 
 
 def test_explicit_semester_id_preserved(session: Session, seed_refs):
