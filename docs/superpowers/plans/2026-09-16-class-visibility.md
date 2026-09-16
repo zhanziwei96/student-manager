@@ -48,8 +48,8 @@
 - [x] **Task 1 — 后端：关联表模型 + 迁移**：✅ fc21cba（spec 通过；12 迁移测试绿）：新增 `QuestionClass(question_id, class_id)` 复合主键表 + `LostFoundClass(item_id, class_id)` 复合主键表（均 FK CASCADE）；迁移建两表 + 从 `questions.class_id` 回填 `question_classes` + 删 `questions.class_id` 列；模型注册 `models/__init__.py`；含迁移测试（回填验证：有 class_id 的问题→关联行，NULL→无行=全可见）
 - [x] **Task 2 — 后端：问答可见性改造**：✅ 01eb039（spec 通过；46 测试绿；顺带修 classes.py 的 _CLASS_REFERENCES 引用已删字段）：`create_question` 收 `class_ids: List[int]`（空=所有班级）写关联行；`get_questions_by_class` 改为「关联表含本班 OR 无关联行」过滤；`POST /teacher/questions` body `class_ids`；`GET /teacher/questions` 返回各问题的可见班级列表；学生端 `/student/questions` 过滤不变（逻辑在 crud 层）；更新相关测试
 - [x] **Task 3 — 后端：失物招领可见性改造**：✅ 63f5b4c + 43344b5（spec 通过；42 测试绿；spec 评审抓出评论/认领端点越权已补校验 + 回归测试）：`create_lost_found_item` 收 `class_ids`（空=所有班级）写关联行；`get_lost_found_items` 学生端按「关联表含本班 OR 无关联行」过滤（教师端不过滤）；发布端点 Form 加 `class_ids` 参数；详情端点加可见性校验（学生无权访问未授权班级物品→404）；更新相关测试
-- [ ] **Task 4 — 前端：问答发布多选班级**：`TeacherQuestion.vue` 单选下拉 → 分组多选（复用 Offerings 的 classGroups 模式 + 全选/清空 + 已选计数）；提交 `class_ids: number[]`（空数组=所有班级）；问题列表显示可见班级（多个时"N 个班级"）；`api/question.ts` 类型同步
-- [ ] **Task 5 — 前端：失物招领发布/编辑多选班级**：`LostFoundForm.vue` 加分组多选班级（默认全不勾=所有班级，提示"未选择=所有班级可见"）；编辑时从详情加载已勾选班级；Form 提交加 `class_ids`；`api/lostFound.ts` 类型同步
+- [x] **Task 4 — 前端：问答发布多选班级**：✅ 6463e8e（329 测试绿）：`TeacherQuestion.vue` 单选下拉 → 分组多选（复用 Offerings 的 classGroups 模式 + 全选/清空 + 已选计数）；提交 `class_ids: number[]`（空数组=所有班级）；问题列表显示可见班级（多个时"N 个班级"）；`api/question.ts` 类型同步
+- [x] **Task 5 — 前端：失物招领发布/编辑多选班级**：✅ 5d135fd + 18d7f36（329 测试绿；发现并补后端缺口：详情返回 class_ids 编辑回显 + clear_class_scope 恢复全可见）：`LostFoundForm.vue` 加分组多选班级（默认全不勾=所有班级，提示"未选择=所有班级可见"）；编辑时从详情加载已勾选班级；Form 提交加 `class_ids`；`api/lostFound.ts` 类型同步
 - [ ] **Task 6 — 前端：学生端类型与展示适配**：学生端问答/失物招领列表无需改（后端已过滤）；检查详情页是否有"可见范围"展示需求（如有则显示可见班级）；类型文件同步
 - [ ] **Task 7 — 测试与端到端验证**：后端全量 + 前端全量全绿；起服务手工验证：教师发问答勾 2 个班→只有这 2 个班学生能看到；教师发失物招领勾 1 个班→只有该班学生能看到；不勾→所有学生能看到
 
