@@ -42,6 +42,16 @@ class Answer(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
 
 
+class QuestionClass(SQLModel, table=True):
+    """问答可见班级关联表（替代 questions.class_id 单班级字段）
+
+    复合主键 (question_id, class_id)。无关联行 = 所有班级可见（与教学班通配语义一致）。
+    """
+    __tablename__ = "question_classes"
+    question_id: int = Field(..., foreign_key="questions.id", primary_key=True, description="问题ID")
+    class_id: int = Field(..., foreign_key="classes.id", primary_key=True, description="班级ID")
+
+
 # Pydantic 响应模型
 class QuestionResponse(SQLModel):
     """问题响应"""

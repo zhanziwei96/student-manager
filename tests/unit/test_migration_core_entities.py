@@ -20,7 +20,8 @@ PRE_HEAD = '20260907_add_group_subject_score'
 @pytest.fixture(scope="module")
 def migrated_db():
     """清空迁移库 → 跑到 PRE_HEAD → 插入回填验证学生 → 跑到 20260911c 之前
-    → 插入 class_scope 回填验证数据 → 跑到 head"""
+    → 插入 class_scope 回填验证数据 → 跑到 20260916 之前
+    → 插入 questions.class_id 回填验证数据 → 跑到 head"""
     engine = create_engine(MIGRATION_TEST_URL)
     # 清库用 DROP SCHEMA（历史迁移的 downgrade 不完整，downgrade base 不可靠）
     with engine.begin() as conn:
@@ -84,6 +85,28 @@ def migrated_db():
             "      (VALUES ('实验3班'), ('1班'), ('所有专业')) AS v(scope)"
             " WHERE c.code = 'MIGC1' AND s.label = '2096-2097-1'"
         ))
+    run_alembic('20260911c_add_course_offering_classes')
+    # 20260916 回填验证：class_id 列在 20260916 才删除，须在其前插入
+    # - '限定班级问题'：class_id 指向 实验3班 → 回填 question_classes
+    # - '全班级问题'：class_id NULL → 无关联行（= 所有班级可见）
+    with engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO users (username, name, role, is_account_enabled,"
+            " password_hash, login_fail_count, created_at, version)"
+            " VALUES ('migteacher', '迁移教师', 'teacher', true, 'x', 0,"
+            " '2026-09-01 08:00:00', 1)"
+        ))
+        conn.execute(text(
+            "INSERT INTO questions (teacher_id, class_id, content, created_at)"
+            " SELECT u.id, c.id, '限定班级问题', '2026-09-01 08:00:00'"
+            " FROM users u, classes c"
+            " WHERE u.username = 'migteacher' AND c.name = '实验3班'"
+        ))
+        conn.execute(text(
+            "INSERT INTO questions (teacher_id, class_id, content, created_at)"
+            " SELECT u.id, NULL, '全班级问题', '2026-09-01 08:00:00'"
+            " FROM users u WHERE u.username = 'migteacher'"
+        ))
     run_alembic('head')
 
     yield engine
@@ -146,11 +169,14 @@ def test_enrollments_final_score_and_groups_course_id_columns(migrated_db):
 
 
 def test_business_table_fk_columns_exist(migrated_db):
-    """业务表 FK 列：5 张表含 class_id+semester_id，4 张表仅 semester_id"""
+    """业务表 FK 列：4 张表含 class_id+semester_id，4 张表仅 semester_id
+
+    questions.class_id 已被 20260916 迁移删除（可见范围改走 question_classes 关联表）。
+    """
     class_tables = [
-        'course_schedules', 'course_sessions', 'checkin_records', 'groups', 'questions',
+        'course_schedules', 'course_sessions', 'checkin_records', 'groups',
     ]
-    semester_tables = ['schedule_adjustments', 'group_score_logs', 'audit_logs']
+    semester_tables = ['schedule_adjustments', 'group_score_logs', 'audit_logs', 'questions']
 
     with migrated_db.connect() as conn:
         for t in class_tables:
@@ -215,3 +241,43 @@ def test_backfill_cohort_class_student_by_import_year(migrated_db):
         assert student[0] == cls_id
         assert student[1] == '2025'
         assert student[2] == 'active'
+
+
+def test_visibility_class_tables_exist(migrated_db):
+    """20260916：question_classes / lost_found_classes 关联表已创建"""
+    with migrated_db.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT table_name FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name IN"
+            " ('question_classes', 'lost_found_classes')"
+        )).all()
+    assert {r[0] for r in rows} == {'question_classes', 'lost_found_classes'}
+
+
+def test_questions_class_id_dropped(migrated_db):
+    """20260916：questions.class_id 单班级列已删除"""
+    with migrated_db.connect() as conn:
+        col = conn.execute(text(
+            "SELECT count(*) FROM information_schema.columns"
+            " WHERE table_name = 'questions' AND column_name = 'class_id'"
+        )).scalar_one()
+    assert col == 0
+
+
+def test_backfill_question_classes(migrated_db):
+    """20260916 回填：class_id 非空的问题获得关联行；NULL 问题无关联行（= 全班级可见）
+
+    fixture 在 20260916 之前插入 2 个问题：'限定班级问题'（class_id=实验3班）、
+    '全班级问题'（class_id NULL）。
+    """
+    with migrated_db.connect() as conn:
+        rows = conn.execute(text(
+            "SELECT q.content, c.name FROM question_classes qc"
+            " JOIN questions q ON q.id = qc.question_id"
+            " JOIN classes c ON c.id = qc.class_id"
+        )).all()
+        total_questions = conn.execute(text(
+            "SELECT count(*) FROM questions"
+        )).scalar_one()
+    assert [(r[0], r[1]) for r in rows] == [('限定班级问题', '实验3班')]
+    assert total_questions == 2  # NULL class_id 的问题保留但无关联行
