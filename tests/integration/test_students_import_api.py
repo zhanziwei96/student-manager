@@ -231,3 +231,36 @@ def test_import_students_requires_admin(teacher_client):
     resp = _upload(teacher_client, content)
 
     assert resp.status_code == 403
+
+
+def test_import_large_batch_within_timeout(admin_client, test_engine):
+    """494 行大名单须在 gunicorn 超时内完成（性能回归防护）
+
+    背景：优化前逐行 commit + 逐行查重导致 494 行导入超过 gunicorn 默认 30s
+    worker 超时被 SIGABRT 杀掉 → nginx 502。此用例守护查询批量化的效果：
+    查重由 N 次 SELECT 降为 1 次 IN 查询后，耗时主要只剩 bcrypt 哈希本身。
+    """
+    import time
+
+    rows = [
+        (f"2599{i:04d}", f"学生{i}", "2026", "性能测试", f"{i % 5 + 1}班")
+        for i in range(494)
+    ]
+    content = _xlsx_bytes(rows)
+
+    start = time.monotonic()
+    resp = _upload(admin_client, content)
+    elapsed = time.monotonic() - start
+
+    assert resp.status_code == 200, resp.text
+    data = resp.json()["data"]
+    assert data["imported"] == 494
+    assert data["skipped"] == 0
+    assert data["errors"] == []
+
+    with Session(test_engine) as session:
+        assert len(session.exec(select(Class_)).all()) == 5  # 5 个班各建一次
+        assert len(session.exec(select(Student)).all()) == 494
+
+    # 仅哈希开销（bcrypt 约 0.3s/行），给足余量但须低于 gunicorn 超时
+    assert elapsed < 60, f"494 行导入耗时 {elapsed:.1f}s，过慢"

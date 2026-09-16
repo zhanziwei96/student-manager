@@ -39,4 +39,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # 启动命令 - Gunicorn + Uvicorn worker，4 workers 匹配 4 核 CPU
-CMD ["gunicorn", "main:app", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--workers", "4", "--preload", "--access-logfile", "-", "--error-logfile", "-"]
+# --timeout 120: 默认 30s 会让批量导入（bcrypt 哈希逐行计算，494 行并发后仍需约 37s）被 SIGABRT 杀掉并返回 502
+# --graceful-timeout 30: 让超时 worker 有机会收尾退出
+CMD ["gunicorn", "main:app", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "--graceful-timeout", "30", "--preload", "--access-logfile", "-", "--error-logfile", "-"]
