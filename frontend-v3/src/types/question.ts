@@ -10,6 +10,7 @@ export interface Question {
   id: number
   teacher_id: number
   teacher_name?: string
+  class_ids: number[]
   class_name?: string
   content: string
   status: QuestionStatus
@@ -36,7 +37,7 @@ export interface Answer {
 /** 创建问题请求 */
 export interface CreateQuestionRequest {
   content: string
-  class_id?: number
+  class_ids: number[]  // 空数组 = 所有班级可见
   is_realtime?: boolean
 }
 

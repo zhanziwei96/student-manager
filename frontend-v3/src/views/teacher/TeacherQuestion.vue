@@ -6,25 +6,49 @@ import { useAnswers } from '@/features/question/composables/useAnswers'
 import QuestionCard from '@/features/question/components/QuestionCard.vue'
 import AnswerList from '@/features/question/components/AnswerList.vue'
 import AnswerInput from '@/features/question/components/AnswerInput.vue'
-import { Select, PullToRefreshIndicator } from '@/components/ui'
+import { Checkbox, PullToRefreshIndicator } from '@/components/ui'
 import { useClasses } from '@/composables'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import {  } from 'lucide-vue-next'
 import type { Question } from '@/types/question'
+import type { AdminClass } from '@/types'
 
 const statusFilter = ref('')
 const selectedQuestion = ref<Question | null>(null)
 const showCreateForm = ref(false)
 const newQuestionContent = ref('')
-const newQuestionClassId = ref<number | ''>('')
+const newQuestionClassIds = ref<number[]>([])  // 空数组 = 所有班级可见
 const newQuestionRealtime = ref(false)
 
-// 目标班级选项（value 为 class_id，'' = 所有班级）
+// 目标班级选项（空选 = 所有班级）
 const { data: classes } = useClasses()
-const classOptions = computed(() => [
-  { value: '' as const, label: '所有班级' },
-  ...(classes.value ?? []).map((c) => ({ value: c.id, label: c.display_name })),
-])
+
+/** 班级选项按「届 · 专业」分组，组内保持后端的届/班级名顺序 */
+const classGroups = computed(() => {
+  const groups = new Map<string, { label: string; items: AdminClass[] }>()
+  for (const cls of classes.value ?? []) {
+    const label = `${cls.cohort_year}届 · ${cls.major}`
+    const group = groups.get(label) ?? { label, items: [] }
+    group.items.push(cls)
+    groups.set(label, group)
+  }
+  return [...groups.values()].sort((a, b) => b.label.localeCompare(a.label, 'zh-Hans-CN'))
+})
+
+const toggleClassId = (ids: number[], classId: number, checked: boolean) => {
+  if (checked) {
+    if (!ids.includes(classId)) ids.push(classId)
+    return
+  }
+  const index = ids.indexOf(classId)
+  if (index >= 0) ids.splice(index, 1)
+}
+
+const toggleAllClassIds = (ids: number[]) => {
+  const all = classes.value ?? []
+  if (ids.length === all.length) ids.length = 0
+  else ids.splice(0, ids.length, ...all.map((c) => c.id))
+}
 
 const { questions, isLoading, createQuestion, closeQuestion } = useTeacherQuestions({
   status: statusFilter,
@@ -55,12 +79,12 @@ async function handleCreate() {
   if (!newQuestionContent.value.trim()) return
   await createQuestion({
     content: newQuestionContent.value.trim(),
-    class_id: newQuestionClassId.value === '' ? undefined : newQuestionClassId.value,
+    class_ids: [...newQuestionClassIds.value],
     is_realtime: newQuestionRealtime.value,
   })
   showCreateForm.value = false
   newQuestionContent.value = ''
-  newQuestionClassId.value = ''
+  newQuestionClassIds.value = []
   newQuestionRealtime.value = false
 }
 
@@ -108,13 +132,60 @@ function formatDate(iso: string): string {
         rows="3"
         class="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+      <div class="mt-3">
+        <div class="flex items-center justify-between">
+          <label class="text-sm text-gray-500">目标班级</label>
+          <button
+            type="button"
+            data-testid="create-select-all-classes"
+            class="px-3 py-1 min-h-[44px] text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+            @click="toggleAllClassIds(newQuestionClassIds)"
+          >
+            {{ newQuestionClassIds.length === (classes?.length ?? 0) && (classes?.length ?? 0) > 0 ? '清空' : '全选' }}
+          </button>
+        </div>
+        <div
+          data-testid="question-class-panel"
+          class="mt-1 max-h-56 space-y-3 overflow-y-auto rounded-xl border border-gray-200 p-3"
+        >
+          <div
+            v-for="group in classGroups"
+            :key="group.label"
+          >
+            <p class="mb-1 text-xs font-medium text-gray-400">
+              {{ group.label }}
+            </p>
+            <div class="space-y-1.5">
+              <div
+                v-for="cls in group.items"
+                :key="cls.id"
+                class="flex items-center gap-2"
+              >
+                <Checkbox
+                  :checked="newQuestionClassIds.includes(cls.id)"
+                  @update:checked="(checked) => toggleClassId(newQuestionClassIds, cls.id, checked)"
+                />
+                <span class="text-sm">{{ cls.name }}</span>
+              </div>
+            </div>
+          </div>
+          <p
+            v-if="classGroups.length === 0"
+            class="text-xs text-gray-400"
+          >
+            暂无班级
+          </p>
+        </div>
+        <p
+          class="mt-1 text-xs"
+          :class="newQuestionClassIds.length === 0 ? 'text-gray-500' : 'text-gray-400'"
+        >
+          {{ newQuestionClassIds.length === 0
+            ? '未选择班级 = 所有班级可见'
+            : `已选 ${newQuestionClassIds.length} 个班级` }}
+        </p>
+      </div>
       <div class="flex gap-4 mt-3 items-center">
-        <Select
-          v-model="newQuestionClassId"
-          class="w-56"
-          placeholder="目标班级"
-          :options="classOptions"
-        />
         <label class="flex items-center gap-2 cursor-pointer">
           <input v-model="newQuestionRealtime" type="checkbox" class="w-4 h-4" />
           <span class="text-sm">实时提问</span>
