@@ -46,14 +46,20 @@ export async function updateLostFoundItem(id: number, data: {
   location?: string
   file?: File
   class_ids?: number[]
+  clear_class_scope?: boolean
 }): Promise<void> {
   const formData = new FormData()
   if (data.title) formData.append('title', data.title)
   if (data.description) formData.append('description', data.description)
   if (data.location) formData.append('location', data.location)
   if (data.file) formData.append('image', data.file)
-  // 每个勾选班级一个 class_ids 重复字段；空选不传（后端 None = 保持原范围不变）
-  for (const classId of data.class_ids ?? []) formData.append('class_ids', String(classId))
+  // 显式恢复所有班级可见：优先于 class_ids 替换
+  if (data.clear_class_scope) {
+    formData.append('clear_class_scope', 'true')
+  } else {
+    // 每个勾选班级一个 class_ids 重复字段；空选不传（后端 None = 保持原范围不变）
+    for (const classId of data.class_ids ?? []) formData.append('class_ids', String(classId))
+  }
   return put(`/teacher/lost-found/${id}`, formData)
 }
 

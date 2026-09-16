@@ -510,6 +510,48 @@ class TestClassVisibilityAPI:
         ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
         assert item_id in ids2
 
+    def test_detail_returns_class_ids(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """详情返回 class_ids（编辑回显用；空列表=所有班级可见）"""
+        c1 = _make_class(session, "1班")
+        scoped_id = _create_scoped_item(teacher_client, [c1.id])
+        public_id = _create_item(teacher_client, title="公开物品")
+
+        resp = teacher_client.get(f"/api/v1/teacher/lost-found/{scoped_id}")
+        assert resp.json()["data"]["class_ids"] == [c1.id]
+
+        resp = teacher_client.get(f"/api/v1/teacher/lost-found/{public_id}")
+        assert resp.json()["data"]["class_ids"] == []
+
+    def test_clear_class_scope_restores_all_visible(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """clear_class_scope：显式恢复所有班级可见（已限定班级改回全可见）"""
+        c1 = _make_class(session, "1班")
+        c2 = _make_class(session, "2班")
+        item_id = _create_scoped_item(teacher_client, [c1.id])
+
+        s1 = _make_student_client(app, session, "s_class1", "一班学生", c1.id)
+        s2 = _make_student_client(app, session, "s_class2", "二班学生", c2.id)
+
+        # 限定 1班：2班不可见
+        ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
+        assert item_id not in ids2
+
+        # clear_class_scope 恢复全可见
+        resp = teacher_client.put(
+            f"/api/v1/teacher/lost-found/{item_id}",
+            data={"clear_class_scope": "true"},
+        )
+        assert resp.status_code == 200
+
+        ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
+        assert item_id in ids2
+        # 详情确认关联行已清空
+        detail = teacher_client.get(f"/api/v1/teacher/lost-found/{item_id}").json()["data"]
+        assert detail["class_ids"] == []
+
     def test_comment_and_claim_visibility(
         self, app, session, teacher_client: TestClient,
     ):

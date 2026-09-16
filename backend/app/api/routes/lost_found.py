@@ -227,6 +227,8 @@ async def teacher_get_item(
             "publisher_name": publisher_name,
             "comments": comment_list,
             "claims": claim_list,
+            # 可见班级（编辑回显用；空列表=所有班级可见）
+            "class_ids": get_item_class_ids(session, [item.id]).get(item.id, []),
             "created_at": _format_datetime(item.created_at),
             "updated_at": _format_datetime(item.updated_at),
         },
@@ -242,6 +244,7 @@ async def teacher_update_item(
     location: Optional[str] = Form(default=None, description="丢失/拾获地点"),
     image: Optional[UploadFile] = File(default=None, description="物品图片"),
     class_ids: Optional[List[int]] = Form(default=None, description="可见班级ID（可多选，重复字段）；提供则整体替换"),
+    clear_class_scope: bool = Form(default=False, description="显式恢复所有班级可见（清空可见班级限定）"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
@@ -257,6 +260,10 @@ async def teacher_update_item(
     image_url = None
     if image:
         image_url = await _save_image(image)
+
+    # 显式清空优先于 class_ids 替换（恢复所有班级可见）
+    if clear_class_scope:
+        class_ids = []
 
     updated = update_lost_found_item(
         session,

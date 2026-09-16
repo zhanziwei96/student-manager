@@ -70,6 +70,9 @@ const { data: existingItem, isPending: loadingItem } = useTeacherLostFoundDetail
   () => isEditMode.value && editId.value > 0
 )
 
+// 编辑模式：记录原始可见班级，用于判断用户是否把「已限定」清成了「所有班级可见」
+const originalClassIds = ref<number[]>([])
+
 watch(
   () => existingItem.value,
   (item) => {
@@ -78,6 +81,7 @@ watch(
       description.value = item.description
       location.value = item.location || ''
       selectedClassIds.value = [...(item.class_ids ?? [])]
+      originalClassIds.value = [...(item.class_ids ?? [])]
       if (item.image_url) {
         imagePreview.value = item.image_url
       }
@@ -196,7 +200,12 @@ async function handleSubmit() {
   }
 
   if (isEditMode.value) {
-    await updateItem({ id: editId.value, data: payload })
+    // 编辑：原本限定了班级（original 非空），用户清成了空 → 显式恢复所有班级可见
+    const clearedToAll = originalClassIds.value.length > 0 && selectedClassIds.value.length === 0
+    await updateItem({
+      id: editId.value,
+      data: { ...payload, clear_class_scope: clearedToAll },
+    })
     router.push({ name: 'TeacherLostFoundDetail', params: { id: editId.value } })
   } else {
     await createItem(payload)
