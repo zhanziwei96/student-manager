@@ -46,6 +46,16 @@ class LostFoundClaim(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
 
 
+class LostFoundClass(SQLModel, table=True):
+    """失物招领可见班级关联表
+
+    复合主键 (item_id, class_id)。无关联行 = 所有班级可见。
+    """
+    __tablename__ = "lost_found_classes"
+    item_id: int = Field(..., foreign_key="lost_found_items.id", primary_key=True, description="物品ID")
+    class_id: int = Field(..., foreign_key="classes.id", primary_key=True, description="班级ID")
+
+
 # Pydantic 响应模型
 class LostFoundItemResponse(SQLModel):
     """物品响应"""

@@ -1,9 +1,9 @@
 """
 失物招领 CRUD 操作
 """
-from typing import List, Optional
+from typing import Dict, List, Optional
 from sqlmodel import Session, select, func, or_
-from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim
+from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim, LostFoundClass
 from app.core.timezone import get_now
 
 
@@ -30,8 +30,12 @@ def create_lost_found_item(
     description: str,
     location: Optional[str] = None,
     image_url: Optional[str] = None,
+    class_ids: Optional[List[int]] = None,
 ) -> LostFoundItem:
-    """创建失物招领物品"""
+    """创建失物招领物品
+
+    class_ids 为空/None = 所有班级可见（不写关联行）；非空则写 lost_found_classes 关联行。
+    """
     item = LostFoundItem(
         publisher_id=publisher_id,
         title=title,
@@ -41,6 +45,10 @@ def create_lost_found_item(
         status="open",
     )
     session.add(item)
+    session.flush()  # 先拿到 item.id 再写关联行
+    if class_ids:
+        for class_id in class_ids:
+            session.add(LostFoundClass(item_id=item.id, class_id=class_id))
     session.commit()
     session.refresh(item)
     return item
@@ -60,34 +68,43 @@ def get_lost_found_items(
     status: Optional[str] = None,
     page: int = 1,
     page_size: int = 20,
+    viewer_class_id: Optional[int] = None,
 ) -> tuple[List[LostFoundItem], int]:
-    """获取物品列表（支持关键词搜索、状态过滤、分页）"""
+    """获取物品列表（支持关键词搜索、状态过滤、分页）
+
+    viewer_class_id 提供时（学生视角）按可见班级过滤：
+    关联表含本班 OR 物品无任何关联行（全班级可见）。教师端传 None 不过滤。
+    """
     query = select(LostFoundItem)
+    count_query = select(func.count()).select_from(LostFoundItem)
 
     if keyword:
         like_pattern = f"%{keyword}%"
-        query = query.where(
-            or_(
-                LostFoundItem.title.contains(keyword),
-                LostFoundItem.description.contains(keyword),
-                LostFoundItem.location.contains(keyword),
-            )
+        keyword_cond = or_(
+            LostFoundItem.title.contains(keyword),
+            LostFoundItem.description.contains(keyword),
+            LostFoundItem.location.contains(keyword),
         )
+        query = query.where(keyword_cond)
+        count_query = count_query.where(keyword_cond)
     if status:
         query = query.where(LostFoundItem.status == status)
+        count_query = count_query.where(LostFoundItem.status == status)
+
+    if viewer_class_id is not None:
+        # 可见性：关联表含本班 OR 无关联行（与问答同一 or_/IN 模式）
+        has_this = select(LostFoundClass.item_id).where(
+            LostFoundClass.class_id == viewer_class_id
+        )
+        has_any = select(LostFoundClass.item_id)
+        visibility = or_(
+            LostFoundItem.id.in_(has_this),
+            ~LostFoundItem.id.in_(has_any),
+        )
+        query = query.where(visibility)
+        count_query = count_query.where(visibility)
 
     # 统计总数
-    count_query = select(func.count()).select_from(LostFoundItem)
-    if keyword:
-        count_query = count_query.where(
-            or_(
-                LostFoundItem.title.contains(keyword),
-                LostFoundItem.description.contains(keyword),
-                LostFoundItem.location.contains(keyword),
-            )
-        )
-    if status:
-        count_query = count_query.where(LostFoundItem.status == status)
     total = session.exec(count_query).one()
 
     # 分页
@@ -105,8 +122,13 @@ def update_lost_found_item(
     description: Optional[str] = None,
     location: Optional[str] = None,
     image_url: Optional[str] = None,
+    class_ids: Optional[List[int]] = None,
 ) -> Optional[LostFoundItem]:
-    """更新物品信息"""
+    """更新物品信息
+
+    class_ids 为 None = 不动可见范围；提供（含空列表）= 整体替换关联行，
+    空列表即恢复为所有班级可见。
+    """
     item = session.get(LostFoundItem, item_id)
     if not item:
         return None
@@ -120,11 +142,36 @@ def update_lost_found_item(
     if image_url is not None:
         item.image_url = image_url
 
+    if class_ids is not None:
+        old_rows = session.exec(
+            select(LostFoundClass).where(LostFoundClass.item_id == item_id)
+        ).all()
+        for row in old_rows:
+            session.delete(row)
+        for class_id in class_ids:
+            session.add(LostFoundClass(item_id=item_id, class_id=class_id))
+
     item.updated_at = get_now()
     session.add(item)
     session.commit()
     session.refresh(item)
     return item
+
+
+def get_item_class_ids(
+    session: Session,
+    item_ids: List[int],
+) -> Dict[int, List[int]]:
+    """批量获取物品的可见班级ID（供响应拼装；无关联行的物品不在结果中）"""
+    if not item_ids:
+        return {}
+    rows = session.exec(
+        select(LostFoundClass).where(LostFoundClass.item_id.in_(item_ids))
+    ).all()
+    result: Dict[int, List[int]] = {}
+    for row in rows:
+        result.setdefault(row.item_id, []).append(row.class_id)
+    return result
 
 
 def delete_lost_found_item(session: Session, item_id: int) -> bool:
@@ -146,6 +193,13 @@ def delete_lost_found_item(session: Session, item_id: int) -> bool:
     ).all()
     for claim in claims:
         session.delete(claim)
+
+    # 删除可见班级关联行（与评论/认领一致显式删除，不依赖 DB 级联）
+    class_rows = session.exec(
+        select(LostFoundClass).where(LostFoundClass.item_id == item_id)
+    ).all()
+    for row in class_rows:
+        session.delete(row)
 
     session.delete(item)
     session.commit()

@@ -13,9 +13,9 @@ from app.models.group import (
     GroupDissolutionRequest,
     ClassGroupSettings, GroupScoreLog,
 )
-from app.models.question import Question, Answer, QuestionResponse, AnswerResponse
+from app.models.question import Question, Answer, QuestionClass, QuestionResponse, AnswerResponse
 from app.models.lost_found import (
-    LostFoundItem, LostFoundComment, LostFoundClaim,
+    LostFoundItem, LostFoundComment, LostFoundClaim, LostFoundClass,
     LostFoundItemResponse, LostFoundCommentResponse, LostFoundClaimResponse,
 )
 from app.models.constants import (
@@ -57,9 +57,9 @@ __all__ = [
     # API Response Models
     "ApiResponse", "ApiSuccessResponse", "ApiListResponse", "ApiErrorResponse",
     # Question & Answer
-    "Question", "Answer", "QuestionResponse", "AnswerResponse",
+    "Question", "Answer", "QuestionClass", "QuestionResponse", "AnswerResponse",
     # Lost & Found
-    "LostFoundItem", "LostFoundComment", "LostFoundClaim",
+    "LostFoundItem", "LostFoundComment", "LostFoundClaim", "LostFoundClass",
     "LostFoundItemResponse", "LostFoundCommentResponse", "LostFoundClaimResponse",
     # Semester
     "Semester", "SemesterCreate", "SemesterUpdate", "SemesterResponse",

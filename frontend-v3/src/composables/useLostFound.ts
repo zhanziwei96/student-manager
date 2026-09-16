@@ -44,7 +44,7 @@ export function useCreateLostFoundItem() {
   const { success, error: showError } = useToast()
 
   return useMutation({
-    mutationFn: async (data: { title: string; description: string; location?: string; file?: File }) =>
+    mutationFn: async (data: { title: string; description: string; location?: string; file?: File; class_ids?: number[] }) =>
       await lostFoundApi.createLostFoundItem(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-lost-found'] })
@@ -62,7 +62,7 @@ export function useUpdateLostFoundItem() {
   const { success, error: showError } = useToast()
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: { title?: string; description?: string; location?: string; file?: File } }) =>
+    mutationFn: async ({ id, data }: { id: number; data: { title?: string; description?: string; location?: string; file?: File; class_ids?: number[]; clear_class_scope?: boolean } }) =>
       await lostFoundApi.updateLostFoundItem(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-lost-found'] })

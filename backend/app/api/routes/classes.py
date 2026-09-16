@@ -13,7 +13,7 @@ from app.core.config import HttpStatus
 from app.core.db import get_session
 from app.models import (
     CheckinRecord, Class_, ClassGroupSettings, Cohort, CourseSchedule,
-    CourseSession, Group, Question, Student, StudentClassSemester,
+    CourseSession, Group, QuestionClass, Student, StudentClassSemester,
 )
 from app.models.constants import ApiResponseConst, ApiResponse
 
@@ -29,7 +29,7 @@ _CLASS_REFERENCES = (
     ("签到记录", "条", CheckinRecord, CheckinRecord.class_id),
     ("小组", "个", Group, Group.class_id),
     ("小组设置", "条", ClassGroupSettings, ClassGroupSettings.class_id),
-    ("问题", "条", Question, Question.class_id),
+    ("问题", "条", QuestionClass, QuestionClass.class_id),
 )
 
 

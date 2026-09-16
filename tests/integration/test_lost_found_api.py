@@ -16,6 +16,7 @@ from app.core.db import get_session
 from app.core.jwt import create_access_token
 from app.models.user import User
 from app.models.student import Student
+from app.models.class_ import Class_
 from app.models.constants import UserRoleConst
 from app.core.security import generate_password_hash
 
@@ -371,3 +372,213 @@ class TestStudentAPI:
         claims = resp.json()["data"]["claims"]
         assert len(claims) == 1
         assert claims[0]["status"] == "confirmed"
+
+
+# ============== 可见班级测试 ==============
+
+def _make_class(session, name: str) -> Class_:
+    """创建测试班级"""
+    cls = Class_(name=name, cohort_year="2026")
+    session.add(cls)
+    session.commit()
+    session.refresh(cls)
+    return cls
+
+
+def _make_student_client(app, session, username: str, name: str, class_id) -> TestClient:
+    """创建指定班级的学生用户并返回已认证客户端（class_id=None 即未分班）"""
+    password_hash, salt = generate_password_hash("student123")
+    user = User(
+        username=username,
+        name=name,
+        password_hash=password_hash,
+        salt=salt,
+        role=UserRoleConst.STUDENT,
+        is_active=True,
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    student = Student(
+        student_id=str(user.id),
+        name=name,
+        class_id=class_id,
+        password_hash=password_hash,
+        salt=salt,
+    )
+    session.add(student)
+    session.commit()
+    token = create_access_token({
+        "sub": str(user.id),
+        "username": username,
+        "name": name,
+        "role": UserRoleConst.STUDENT,
+        "is_admin": False,
+    })
+    c = TestClient(app)
+    c.cookies.set("access_token", token)
+    return c
+
+
+def _create_scoped_item(client: TestClient, class_ids, title="限定物品") -> int:
+    """教师创建限定可见班级的物品（multipart 重复字段），返回 item_id"""
+    resp = client.post("/api/v1/teacher/lost-found", data={
+        "title": title,
+        "description": "限定可见范围",
+        "class_ids": [str(cid) for cid in class_ids],
+    })
+    assert resp.status_code == 200
+    return resp.json()["data"]["item_id"]
+
+
+class TestClassVisibilityAPI:
+    """失物招领可见班级 API 测试（无关联行 = 全班级可见）"""
+
+    def test_scoped_item_visibility(
+        self, app, session, teacher_client: TestClient, student_client: TestClient,
+    ):
+        """限定班级的物品：本班可见，他班不可见；公开物品均可见"""
+        c1 = _make_class(session, "1班")
+        c2 = _make_class(session, "2班")
+        scoped_id = _create_scoped_item(teacher_client, [c1.id])
+        public_id = _create_item(teacher_client, title="公开物品")
+
+        s1 = _make_student_client(app, session, "s_class1", "一班学生", c1.id)
+        s2 = _make_student_client(app, session, "s_class2", "二班学生", c2.id)
+
+        # 1班学生：限定 + 公开都可见
+        items = s1.get("/api/v1/student/lost-found").json()["data"]["items"]
+        ids = {i["id"] for i in items}
+        assert {scoped_id, public_id} <= ids
+
+        # 2班学生：仅公开可见
+        resp = s2.get("/api/v1/student/lost-found")
+        data = resp.json()["data"]
+        assert public_id in {i["id"] for i in data["items"]}
+        assert scoped_id not in {i["id"] for i in data["items"]}
+
+        # 未分班学生（student_client 无 class_id）：仅公开可见
+        items = student_client.get("/api/v1/student/lost-found").json()["data"]["items"]
+        ids = {i["id"] for i in items}
+        assert public_id in ids
+        assert scoped_id not in ids
+
+    def test_detail_visibility_wrong_class_404(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """详情可见性：他班学生访问限定物品返回 404（不泄露存在性）"""
+        c1 = _make_class(session, "1班")
+        c2 = _make_class(session, "2班")
+        scoped_id = _create_scoped_item(teacher_client, [c1.id])
+
+        s1 = _make_student_client(app, session, "s_class1", "一班学生", c1.id)
+        s2 = _make_student_client(app, session, "s_class2", "二班学生", c2.id)
+
+        assert s1.get(f"/api/v1/student/lost-found/{scoped_id}").status_code == 200
+        resp = s2.get(f"/api/v1/student/lost-found/{scoped_id}")
+        assert resp.status_code == 404
+
+    def test_update_class_ids(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """编辑可见班级：整体替换；不传则不变"""
+        c1 = _make_class(session, "1班")
+        c2 = _make_class(session, "2班")
+        item_id = _create_scoped_item(teacher_client, [c1.id])
+
+        s1 = _make_student_client(app, session, "s_class1", "一班学生", c1.id)
+        s2 = _make_student_client(app, session, "s_class2", "二班学生", c2.id)
+
+        # 替换为 2班可见
+        resp = teacher_client.put(
+            f"/api/v1/teacher/lost-found/{item_id}",
+            data={"class_ids": [str(c2.id)]},
+        )
+        assert resp.status_code == 200
+
+        ids1 = {i["id"] for i in s1.get("/api/v1/student/lost-found").json()["data"]["items"]}
+        ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
+        assert item_id not in ids1
+        assert item_id in ids2
+
+        # 不传 class_ids：可见范围不变
+        resp = teacher_client.put(
+            f"/api/v1/teacher/lost-found/{item_id}",
+            data={"title": "改标题"},
+        )
+        assert resp.status_code == 200
+        ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
+        assert item_id in ids2
+
+    def test_detail_returns_class_ids(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """详情返回 class_ids（编辑回显用；空列表=所有班级可见）"""
+        c1 = _make_class(session, "1班")
+        scoped_id = _create_scoped_item(teacher_client, [c1.id])
+        public_id = _create_item(teacher_client, title="公开物品")
+
+        resp = teacher_client.get(f"/api/v1/teacher/lost-found/{scoped_id}")
+        assert resp.json()["data"]["class_ids"] == [c1.id]
+
+        resp = teacher_client.get(f"/api/v1/teacher/lost-found/{public_id}")
+        assert resp.json()["data"]["class_ids"] == []
+
+    def test_clear_class_scope_restores_all_visible(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """clear_class_scope：显式恢复所有班级可见（已限定班级改回全可见）"""
+        c1 = _make_class(session, "1班")
+        c2 = _make_class(session, "2班")
+        item_id = _create_scoped_item(teacher_client, [c1.id])
+
+        s1 = _make_student_client(app, session, "s_class1", "一班学生", c1.id)
+        s2 = _make_student_client(app, session, "s_class2", "二班学生", c2.id)
+
+        # 限定 1班：2班不可见
+        ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
+        assert item_id not in ids2
+
+        # clear_class_scope 恢复全可见
+        resp = teacher_client.put(
+            f"/api/v1/teacher/lost-found/{item_id}",
+            data={"clear_class_scope": "true"},
+        )
+        assert resp.status_code == 200
+
+        ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
+        assert item_id in ids2
+        # 详情确认关联行已清空
+        detail = teacher_client.get(f"/api/v1/teacher/lost-found/{item_id}").json()["data"]
+        assert detail["class_ids"] == []
+
+    def test_comment_and_claim_visibility(
+        self, app, session, teacher_client: TestClient,
+    ):
+        """评论/认领可见性：他班学生对限定物品评论/认领返回 404（防凭 item_id 猜测越权）"""
+        c1 = _make_class(session, "1班")
+        c2 = _make_class(session, "2班")
+        scoped_id = _create_scoped_item(teacher_client, [c1.id])
+
+        s1 = _make_student_client(app, session, "s_class1", "一班学生", c1.id)
+        s2 = _make_student_client(app, session, "s_class2", "二班学生", c2.id)
+
+        # 本班学生：评论/认领正常
+        assert s1.post(
+            f"/api/v1/student/lost-found/{scoped_id}/comments",
+            json={"content": "是我的"},
+        ).status_code == 200
+        assert s1.post(
+            f"/api/v1/student/lost-found/{scoped_id}/claim",
+            json={"contact": "13800000000", "message": "认领"},
+        ).status_code == 200
+
+        # 他班学生：评论/认领均 404
+        assert s2.post(
+            f"/api/v1/student/lost-found/{scoped_id}/comments",
+            json={"content": "冒充"},
+        ).status_code == 404
+        assert s2.post(
+            f"/api/v1/student/lost-found/{scoped_id}/claim",
+            json={"contact": "13900000000", "message": "冒充认领"},
+        ).status_code == 404

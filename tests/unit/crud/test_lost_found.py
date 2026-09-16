@@ -5,12 +5,13 @@ import time
 import pytest
 from sqlmodel import Session, SQLModel
 
-from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim
+from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim, LostFoundClass
+from app.models.class_ import Class_
 from app.models.user import User
 from app.models.constants import UserRoleConst
 from app.crud.lost_found import (
     create_lost_found_item, get_lost_found_item, get_lost_found_items,
-    update_lost_found_item, delete_lost_found_item,
+    update_lost_found_item, delete_lost_found_item, get_item_class_ids,
     create_comment, get_comments_by_item,
     create_claim, get_claims_by_item, get_student_claim,
     confirm_claim, reject_claim, count_claims_by_status,
@@ -305,3 +306,90 @@ class TestClaimCRUD:
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
         found = get_student_claim(session, item.id, student.id)
         assert found is None
+
+
+@pytest.fixture
+def classes(session):
+    """两个测试班级"""
+    rows = [
+        Class_(name="1班", cohort_year="2026"),
+        Class_(name="2班", cohort_year="2026"),
+    ]
+    for row in rows:
+        session.add(row)
+    session.commit()
+    for row in rows:
+        session.refresh(row)
+    return rows
+
+
+class TestClassVisibility:
+    """测试可见班级关联（无关联行 = 全班级可见）"""
+
+    def test_create_with_class_ids(self, session, teacher, classes):
+        item = create_lost_found_item(
+            session, teacher.id, "限定物品", "仅1班可见",
+            class_ids=[classes[0].id],
+        )
+        assert get_item_class_ids(session, [item.id]) == {item.id: [classes[0].id]}
+
+    def test_create_without_class_ids_no_assoc(self, session, teacher):
+        item = create_lost_found_item(session, teacher.id, "公开物品", "全部可见")
+        assert get_item_class_ids(session, [item.id]) == {}
+
+    def test_viewer_filter(self, session, teacher, classes):
+        c1, c2 = classes
+        scoped = create_lost_found_item(
+            session, teacher.id, "限定物品", "仅1班可见", class_ids=[c1.id],
+        )
+        public = create_lost_found_item(session, teacher.id, "公开物品", "全部可见")
+
+        # 1班学生：限定 + 公开都可见
+        items, total = get_lost_found_items(session, viewer_class_id=c1.id)
+        assert total == 2
+        assert {i.id for i in items} == {scoped.id, public.id}
+
+        # 2班学生：仅公开可见
+        items, total = get_lost_found_items(session, viewer_class_id=c2.id)
+        assert total == 1
+        assert items[0].id == public.id
+
+        # 教师视角（不过滤）：全部可见
+        items, total = get_lost_found_items(session)
+        assert total == 2
+
+    def test_update_class_ids_replaces(self, session, teacher, classes):
+        c1, c2 = classes
+        item = create_lost_found_item(
+            session, teacher.id, "限定物品", "描述", class_ids=[c1.id],
+        )
+
+        # 整体替换
+        update_lost_found_item(session, item.id, class_ids=[c2.id])
+        assert get_item_class_ids(session, [item.id]) == {item.id: [c2.id]}
+
+        # 不传 class_ids 不动可见范围
+        update_lost_found_item(session, item.id, title="新标题")
+        assert get_item_class_ids(session, [item.id]) == {item.id: [c2.id]}
+
+        # 空列表 = 恢复全班级可见
+        update_lost_found_item(session, item.id, class_ids=[])
+        assert get_item_class_ids(session, [item.id]) == {}
+
+    def test_get_item_class_ids_batch(self, session, teacher, classes):
+        c1, c2 = classes
+        i1 = create_lost_found_item(session, teacher.id, "物品1", "d", class_ids=[c1.id, c2.id])
+        i2 = create_lost_found_item(session, teacher.id, "物品2", "d", class_ids=[c2.id])
+        i3 = create_lost_found_item(session, teacher.id, "物品3", "d")
+
+        result = get_item_class_ids(session, [i1.id, i2.id, i3.id])
+        assert sorted(result[i1.id]) == sorted([c1.id, c2.id])
+        assert result[i2.id] == [c2.id]
+        assert i3.id not in result
+
+    def test_delete_item_clears_class_rows(self, session, teacher, classes):
+        item = create_lost_found_item(
+            session, teacher.id, "限定物品", "描述", class_ids=[classes[0].id],
+        )
+        assert delete_lost_found_item(session, item.id) is True
+        assert get_item_class_ids(session, [item.id]) == {}

@@ -1,10 +1,10 @@
 """
 问答相关 CRUD 操作
 """
-from typing import List, Optional
+from typing import Dict, List, Optional
 from sqlalchemy import and_, or_
-from sqlmodel import Session, select, func
-from app.models.question import Question, Answer
+from sqlmodel import Session, select, func, col
+from app.models.question import Question, Answer, QuestionClass
 from app.core.term import get_current_semester_id
 from app.core.timezone import get_now
 
@@ -13,13 +13,12 @@ def create_question(
     session: Session,
     teacher_id: int,
     content: str,
-    class_id: Optional[int] = None,
+    class_ids: Optional[List[int]] = None,
     is_realtime: bool = False,
 ) -> Question:
-    """创建问题"""
+    """创建问题（class_ids 为空 = 所有班级可见，不写关联行）"""
     question = Question(
         teacher_id=teacher_id,
-        class_id=class_id,
         semester_id=get_current_semester_id(session),
         content=content,
         status="active",
@@ -28,7 +27,26 @@ def create_question(
     session.add(question)
     session.commit()
     session.refresh(question)
+    for class_id in class_ids or []:
+        session.add(QuestionClass(question_id=question.id, class_id=class_id))
+    if class_ids:
+        session.commit()
     return question
+
+
+def get_question_class_ids(
+    session: Session, question_ids: List[int],
+) -> Dict[int, List[int]]:
+    """批量解析问题可见班级 ID（无关联行 = 所有班级可见，返回空列表）"""
+    if not question_ids:
+        return {}
+    rows = session.exec(
+        select(QuestionClass).where(col(QuestionClass.question_id).in_(question_ids))
+    ).all()
+    grouped: Dict[int, List[int]] = {}
+    for row in rows:
+        grouped.setdefault(row.question_id, []).append(row.class_id)
+    return {qid: sorted(grouped.get(qid, [])) for qid in question_ids}
 
 
 def get_question(session: Session, question_id: int) -> Optional[Question]:
@@ -48,7 +66,10 @@ def get_questions_by_teacher(
         Question.semester_id == get_current_semester_id(session),
     )
     if class_id is not None:
-        query = query.where(Question.class_id == class_id)
+        # 按可见班级过滤：关联表含该班的问题
+        query = query.where(Question.id.in_(
+            select(QuestionClass.question_id).where(QuestionClass.class_id == class_id)
+        ))
     if status:
         query = query.where(Question.status == status)
     query = query.order_by(Question.created_at.desc())
@@ -60,11 +81,13 @@ def get_questions_by_class(
     class_id: int,
     status: Optional[str] = "active",
 ) -> List[Question]:
-    """获取班级当前学期的问题列表（含所有班级可见的问题）"""
+    """获取班级当前学期可见的问题列表（关联表含本班，或无关联行的所有班级可见问题）"""
+    has_this_class = select(QuestionClass.question_id).where(QuestionClass.class_id == class_id)
+    has_any_class = select(QuestionClass.question_id)
     query = select(Question).where(
         or_(
-            Question.class_id == class_id,
-            Question.class_id.is_(None),
+            Question.id.in_(has_this_class),
+            ~Question.id.in_(has_any_class),
         ),
         Question.semester_id == get_current_semester_id(session),
     )

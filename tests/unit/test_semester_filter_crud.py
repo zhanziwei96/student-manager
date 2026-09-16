@@ -73,9 +73,9 @@ def two_term_data(session: Session, seed_refs):
                       semester_id=new_sem_id, is_active=True)
     session.add_all([old_group, new_group])
 
-    old_q = Question(teacher_id=1, class_id=class_id, content="上学期问题",
+    old_q = Question(teacher_id=1, content="上学期问题",
                      semester_id=old_sem_id)
-    new_q = Question(teacher_id=1, class_id=class_id, content="新学期问题",
+    new_q = Question(teacher_id=1, content="新学期问题",
                      semester_id=new_sem_id)
     session.add_all([old_q, new_q])
     session.commit()

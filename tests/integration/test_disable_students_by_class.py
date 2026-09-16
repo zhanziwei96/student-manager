@@ -338,7 +338,7 @@ class TestDisabledClassContentCreation:
 
         resp = teacher_client.post("/api/v1/teacher/questions", json={
             "content": "问题",
-            "class_id": class_id,
+            "class_ids": [class_id],
         })
         assert resp.status_code == 400
 

@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Card, Button, Input, DataContainer } from '@/components/ui'
+import { useQuery } from '@tanstack/vue-query'
+import { Card, Button, Input, DataContainer, Checkbox } from '@/components/ui'
 import {
   useCreateLostFoundItem,
   useUpdateLostFoundItem,
   useTeacherLostFoundDetail,
 } from '@/composables/useLostFound'
+import { classesApi } from '@/api/classes'
 import { useToast } from '@/composables'
 import { ArrowLeft, Upload, X } from 'lucide-vue-next'
+import type { AdminClass } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,11 +27,51 @@ const location = ref('')
 const file = ref<File | null>(null)
 const imagePreview = ref('')
 
+// 班级多选数据源（空选 = 所有班级可见）
+const { data: classesData } = useQuery({
+  queryKey: ['classes'],
+  queryFn: () => classesApi.list(),
+})
+const classes = computed(() => classesData.value ?? [])
+
+/** 班级选项按「届 · 专业」分组，组内保持后端的届/班级名顺序 */
+const classGroups = computed(() => {
+  const groups = new Map<string, { label: string; items: AdminClass[] }>()
+  for (const cls of classes.value) {
+    const label = `${cls.cohort_year}届 · ${cls.major}`
+    const group = groups.get(label) ?? { label, items: [] }
+    group.items.push(cls)
+    groups.set(label, group)
+  }
+  return [...groups.values()].sort((a, b) => b.label.localeCompare(a.label, 'zh-Hans-CN'))
+})
+
+const selectedClassIds = ref<number[]>([])
+
+const toggleClassId = (classId: number, checked: boolean) => {
+  const ids = selectedClassIds.value
+  if (checked) {
+    if (!ids.includes(classId)) ids.push(classId)
+    return
+  }
+  const index = ids.indexOf(classId)
+  if (index >= 0) ids.splice(index, 1)
+}
+
+const toggleAllClassIds = () => {
+  const ids = selectedClassIds.value
+  if (ids.length === classes.value.length) ids.length = 0
+  else ids.splice(0, ids.length, ...classes.value.map((c) => c.id))
+}
+
 // 编辑模式：加载现有数据
 const { data: existingItem, isPending: loadingItem } = useTeacherLostFoundDetail(
   () => editId.value,
   () => isEditMode.value && editId.value > 0
 )
+
+// 编辑模式：记录原始可见班级，用于判断用户是否把「已限定」清成了「所有班级可见」
+const originalClassIds = ref<number[]>([])
 
 watch(
   () => existingItem.value,
@@ -37,6 +80,8 @@ watch(
       title.value = item.title
       description.value = item.description
       location.value = item.location || ''
+      selectedClassIds.value = [...(item.class_ids ?? [])]
+      originalClassIds.value = [...(item.class_ids ?? [])]
       if (item.image_url) {
         imagePreview.value = item.image_url
       }
@@ -151,10 +196,16 @@ async function handleSubmit() {
     description: description.value.trim(),
     location: location.value.trim() || undefined,
     file: file.value || undefined,
+    class_ids: selectedClassIds.value,
   }
 
   if (isEditMode.value) {
-    await updateItem({ id: editId.value, data: payload })
+    // 编辑：原本限定了班级（original 非空），用户清成了空 → 显式恢复所有班级可见
+    const clearedToAll = originalClassIds.value.length > 0 && selectedClassIds.value.length === 0
+    await updateItem({
+      id: editId.value,
+      data: { ...payload, clear_class_scope: clearedToAll },
+    })
     router.push({ name: 'TeacherLostFoundDetail', params: { id: editId.value } })
   } else {
     await createItem(payload)
@@ -215,6 +266,58 @@ function goBack() {
             <div>
               <label class="block text-sm font-medium text-black mb-1.5">地点</label>
               <Input v-model="location" placeholder="请输入拾获/丢失地点（选填）" />
+            </div>
+
+            <!-- 可见班级 -->
+            <div>
+              <div class="flex items-center justify-between">
+                <label class="block text-sm font-medium text-black">可见班级</label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid="select-all-classes"
+                  @click="toggleAllClassIds"
+                >
+                  {{ selectedClassIds.length === classes.length && classes.length > 0 ? '清空' : '全选' }}
+                </Button>
+              </div>
+              <div class="mt-1 max-h-56 space-y-3 overflow-y-auto rounded-xl border border-[#e5e5e5] p-3">
+                <div
+                  v-for="group in classGroups"
+                  :key="group.label"
+                >
+                  <p class="mb-1 text-xs font-medium text-[#a3a3a3]">
+                    {{ group.label }}
+                  </p>
+                  <div class="space-y-1.5">
+                    <div
+                      v-for="cls in group.items"
+                      :key="cls.id"
+                      class="flex items-center gap-2"
+                    >
+                      <Checkbox
+                        :checked="selectedClassIds.includes(cls.id)"
+                        @update:checked="(checked) => toggleClassId(cls.id, checked)"
+                      />
+                      <span class="text-sm text-black">{{ cls.name }}</span>
+                    </div>
+                  </div>
+                </div>
+                <p
+                  v-if="classGroups.length === 0"
+                  class="text-xs text-[#a3a3a3]"
+                >
+                  暂无班级
+                </p>
+              </div>
+              <p
+                class="mt-1 text-xs"
+                :class="selectedClassIds.length === 0 ? 'text-[#737373]' : 'text-[#a3a3a3]'"
+              >
+                {{ selectedClassIds.length === 0
+                  ? '未选择班级 = 所有班级可见'
+                  : `已选 ${selectedClassIds.length} 个班级` }}
+              </p>
             </div>
 
             <!-- 图片上传 -->
@@ -286,6 +389,58 @@ function goBack() {
         <div>
           <label class="block text-sm font-medium text-black mb-1.5">地点</label>
           <Input v-model="location" placeholder="请输入拾获/丢失地点（选填）" />
+        </div>
+
+        <!-- 可见班级 -->
+        <div>
+          <div class="flex items-center justify-between">
+            <label class="block text-sm font-medium text-black">可见班级</label>
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="select-all-classes"
+              @click="toggleAllClassIds"
+            >
+              {{ selectedClassIds.length === classes.length && classes.length > 0 ? '清空' : '全选' }}
+            </Button>
+          </div>
+          <div class="mt-1 max-h-56 space-y-3 overflow-y-auto rounded-xl border border-[#e5e5e5] p-3">
+            <div
+              v-for="group in classGroups"
+              :key="group.label"
+            >
+              <p class="mb-1 text-xs font-medium text-[#a3a3a3]">
+                {{ group.label }}
+              </p>
+              <div class="space-y-1.5">
+                <div
+                  v-for="cls in group.items"
+                  :key="cls.id"
+                  class="flex items-center gap-2"
+                >
+                  <Checkbox
+                    :checked="selectedClassIds.includes(cls.id)"
+                    @update:checked="(checked) => toggleClassId(cls.id, checked)"
+                  />
+                  <span class="text-sm text-black">{{ cls.name }}</span>
+                </div>
+              </div>
+            </div>
+            <p
+              v-if="classGroups.length === 0"
+              class="text-xs text-[#a3a3a3]"
+            >
+              暂无班级
+            </p>
+          </div>
+          <p
+            class="mt-1 text-xs"
+            :class="selectedClassIds.length === 0 ? 'text-[#737373]' : 'text-[#a3a3a3]'"
+          >
+            {{ selectedClassIds.length === 0
+              ? '未选择班级 = 所有班级可见'
+              : `已选 ${selectedClassIds.length} 个班级` }}
+          </p>
         </div>
 
         <!-- 图片上传 -->

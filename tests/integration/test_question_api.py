@@ -26,13 +26,27 @@ def seed_class_students(test_engine, seed_refs):
 def test_teacher_create_question(teacher_client: TestClient, seed_refs):
     resp = teacher_client.post("/api/v1/teacher/questions", json={
         "content": "什么是递归？",
-        "class_id": seed_refs["一班"],
+        "class_ids": [seed_refs["一班"]],
         "is_realtime": True,
     })
     assert resp.status_code == 200
     data = resp.json()
     assert data["success"] is True
     assert "question_id" in data["data"]
+
+
+def test_teacher_create_question_multiple_classes(teacher_client: TestClient, seed_refs):
+    """多班提问：列表响应展示全部可见班级"""
+    resp = teacher_client.post("/api/v1/teacher/questions", json={
+        "content": "多班问题",
+        "class_ids": [seed_refs["一班"], seed_refs["二班"]],
+    })
+    assert resp.status_code == 200
+
+    resp = teacher_client.get("/api/v1/teacher/questions")
+    item = resp.json()["data"][0]
+    assert sorted(item["class_ids"]) == sorted([seed_refs["一班"], seed_refs["二班"]])
+    assert "、" in item["class_name"]
 
 
 def test_teacher_create_question_all_classes(teacher_client: TestClient):
@@ -43,10 +57,15 @@ def test_teacher_create_question_all_classes(teacher_client: TestClient):
     data = resp.json()
     assert data["success"] is True
 
+    resp = teacher_client.get("/api/v1/teacher/questions")
+    item = resp.json()["data"][0]
+    assert item["class_ids"] == []
+    assert item["class_name"] == "所有班级"
+
 
 def test_teacher_list_questions(teacher_client: TestClient, seed_refs):
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q2", "class_id": seed_refs["二班"]})
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_ids": [seed_refs["一班"]]})
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "Q2", "class_ids": [seed_refs["二班"]]})
 
     resp = teacher_client.get("/api/v1/teacher/questions")
     assert resp.status_code == 200
@@ -69,7 +88,7 @@ def test_teacher_close_question(teacher_client: TestClient):
 
 def test_teacher_reply_and_star(teacher_client: TestClient, student_client: TestClient, seed_refs):
     # 老师创建问题
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_ids": [seed_refs["一班"]]})
     qid = resp.json()["data"]["question_id"]
 
     # 学生回答
@@ -101,9 +120,9 @@ def test_teacher_reply_and_star(teacher_client: TestClient, student_client: Test
 # ============== 学生端测试 ==============
 
 def test_student_list_questions(student_client: TestClient, teacher_client: TestClient, seed_refs):
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "班级Q", "class_id": seed_refs["一班"]})
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "班级Q", "class_ids": [seed_refs["一班"]]})
     teacher_client.post("/api/v1/teacher/questions", json={"content": "通用Q"})
-    teacher_client.post("/api/v1/teacher/questions", json={"content": "其他班Q", "class_id": seed_refs["二班"]})
+    teacher_client.post("/api/v1/teacher/questions", json={"content": "其他班Q", "class_ids": [seed_refs["二班"]]})
 
     resp = student_client.get("/api/v1/student/questions")
     assert resp.status_code == 200
@@ -112,8 +131,24 @@ def test_student_list_questions(student_client: TestClient, teacher_client: Test
     assert len(data) == 2
 
 
+def test_student_list_questions_multi_class(student_client: TestClient, teacher_client: TestClient, seed_refs):
+    """多班问题：勾选含本班即可见"""
+    teacher_client.post("/api/v1/teacher/questions", json={
+        "content": "多班Q", "class_ids": [seed_refs["一班"], seed_refs["二班"]],
+    })
+    teacher_client.post("/api/v1/teacher/questions", json={
+        "content": "纯二班Q", "class_ids": [seed_refs["二班"]],
+    })
+
+    resp = student_client.get("/api/v1/student/questions")
+    data = resp.json()["data"]
+    contents = {q["content"] for q in data}
+    assert "多班Q" in contents
+    assert "纯二班Q" not in contents
+
+
 def test_student_create_answer(student_client: TestClient, teacher_client: TestClient, seed_refs):
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_ids": [seed_refs["一班"]]})
     qid = resp.json()["data"]["question_id"]
 
     resp = student_client.post("/api/v1/student/answers", json={
@@ -126,7 +161,7 @@ def test_student_create_answer(student_client: TestClient, teacher_client: TestC
 
 
 def test_student_cannot_answer_closed_question(student_client: TestClient, teacher_client: TestClient, seed_refs):
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_ids": [seed_refs["一班"]]})
     qid = resp.json()["data"]["question_id"]
     teacher_client.put(f"/api/v1/teacher/questions/{qid}/close")
 
@@ -138,7 +173,7 @@ def test_student_cannot_answer_closed_question(student_client: TestClient, teach
 
 
 def test_student_update_own_answer(student_client: TestClient, teacher_client: TestClient, seed_refs):
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_ids": [seed_refs["一班"]]})
     qid = resp.json()["data"]["question_id"]
     resp = student_client.post("/api/v1/student/answers", json={
         "question_id": qid, "content": "原始内容",
@@ -154,7 +189,7 @@ def test_student_update_own_answer(student_client: TestClient, teacher_client: T
 
 def test_anonymous_answer_visibility(student_client: TestClient, teacher_client: TestClient, seed_refs):
     """测试匿名回答：老师能看到姓名和 student_id，其他学生看不到"""
-    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_id": seed_refs["一班"]})
+    resp = teacher_client.post("/api/v1/teacher/questions", json={"content": "Q1", "class_ids": [seed_refs["一班"]]})
     qid = resp.json()["data"]["question_id"]
 
     student_client.post("/api/v1/student/answers", json={

@@ -13,10 +13,6 @@ class Question(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     teacher_id: int = Field(..., foreign_key="users.id", description="提问老师ID", index=True)
-    class_id: Optional[int] = Field(
-        default=None, foreign_key="classes.id", index=True,
-        description="目标班级ID（None 表示所有班级可见）",
-    )
     semester_id: Optional[int] = Field(
         default=None, foreign_key="semesters.id", index=True,
         description="学期ID（FK）",
@@ -40,6 +36,16 @@ class Answer(SQLModel, table=True):
     is_starred: bool = Field(default=False, description="是否标记优秀")
     parent_id: Optional[int] = Field(default=None, foreign_key="answers.id", description="追问的父回答ID")
     created_at: datetime = Field(default_factory=get_now, description="创建时间")
+
+
+class QuestionClass(SQLModel, table=True):
+    """问答可见班级关联表（替代 questions.class_id 单班级字段）
+
+    复合主键 (question_id, class_id)。无关联行 = 所有班级可见（与教学班通配语义一致）。
+    """
+    __tablename__ = "question_classes"
+    question_id: int = Field(..., foreign_key="questions.id", primary_key=True, description="问题ID")
+    class_id: int = Field(..., foreign_key="classes.id", primary_key=True, description="班级ID")
 
 
 # Pydantic 响应模型
