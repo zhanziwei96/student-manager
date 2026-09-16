@@ -13,7 +13,7 @@ from app.core.config import get_settings
 from app.api.deps import require_admin_or_teacher
 from app.crud.lost_found import (
     create_lost_found_item, get_lost_found_item, get_lost_found_items,
-    update_lost_found_item, delete_lost_found_item,
+    update_lost_found_item, delete_lost_found_item, get_item_class_ids,
     create_comment, get_comments_by_item,
     create_claim, get_claims_by_item, get_claim, get_student_claim,
     confirm_claim, reject_claim, count_claims_by_status,
@@ -71,6 +71,17 @@ async def _save_image(file: UploadFile) -> Optional[str]:
     return f"/uploads/lost-found/{os.path.basename(file_path)}"
 
 
+def _resolve_viewer_class_id(session: Session, user: dict) -> int:
+    """解析学生可见班级ID
+
+    学生未分班返回 0（不存在的班级ID → 仅匹配无关联行的全班级可见物品）。
+    """
+    student = get_student(session, user["sub"])
+    if student and student.class_id:
+        return student.class_id
+    return 0
+
+
 # ============== 教师端路由 ==============
 
 @router.post("/teacher/lost-found")
@@ -80,6 +91,7 @@ async def teacher_create_item(
     description: str = Form(..., description="详细描述"),
     location: Optional[str] = Form(default=None, description="丢失/拾获地点"),
     image: Optional[UploadFile] = File(default=None, description="物品图片"),
+    class_ids: List[int] = Form(default=[], description="可见班级ID（可多选，重复字段）；空=所有班级"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
@@ -97,6 +109,7 @@ async def teacher_create_item(
         description=description,
         location=location,
         image_url=image_url,
+        class_ids=class_ids or None,
     )
     return {"success": True, "data": {"item_id": item.id}}
 
@@ -217,6 +230,7 @@ async def teacher_update_item(
     description: Optional[str] = Form(default=None, description="详细描述"),
     location: Optional[str] = Form(default=None, description="丢失/拾获地点"),
     image: Optional[UploadFile] = File(default=None, description="物品图片"),
+    class_ids: Optional[List[int]] = Form(default=None, description="可见班级ID（可多选，重复字段）；提供则整体替换"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
@@ -240,6 +254,7 @@ async def teacher_update_item(
         description=description,
         location=location,
         image_url=image_url,
+        class_ids=class_ids,
     )
     return {"success": True, "data": {"item_id": updated.id}}
 
@@ -324,8 +339,11 @@ async def student_list_items(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
-    """学生浏览失物招领列表"""
-    items, total = get_lost_found_items(session, keyword, status, page, page_size)
+    """学生浏览失物招领列表（按可见班级过滤）"""
+    items, total = get_lost_found_items(
+        session, keyword, status, page, page_size,
+        viewer_class_id=_resolve_viewer_class_id(session, user),
+    )
 
     result = []
     for item in items:
@@ -363,6 +381,14 @@ async def student_get_item(
         raise HTTPException(status_code=404, detail="物品不存在")
 
     student_id = int(user["sub"])
+
+    # 可见性校验：物品限定了可见班级且本班不在其中 → 404（不泄露物品存在性）
+    visible_class_ids = get_item_class_ids(session, [item_id]).get(item_id, [])
+    if visible_class_ids:
+        student = get_student(session, user["sub"])
+        student_class_id = student.class_id if student else None
+        if student_class_id not in visible_class_ids:
+            raise HTTPException(status_code=404, detail="物品不存在")
 
     # 获取评论（学生端匿名显示）
     comments = get_comments_by_item(session, item_id)
