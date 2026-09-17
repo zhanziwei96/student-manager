@@ -145,20 +145,31 @@ const { mutateAsync: setFinal, isPending: isSettingFinal } = useMutation({
 
 // === 期末成绩（任务小组同分） ===
 const showGroupFinalDialog = ref(false)
-const groupFinalClass = ref('')
+const groupFinalClassId = ref<number | ''>('')
 const groupFinalGroupId = ref<number | ''>('')
 const groupFinalScore = ref(0)
 const groupFinalError = ref('')
 
+/** 名单中的行政班（按 class_id 去重，展示名取该班首行） */
+const rosterClassOptions = computed(() => {
+  const byId = new Map<number, string>()
+  for (const row of roster.value) {
+    if (row.class_id !== null && !byId.has(row.class_id)) {
+      byId.set(row.class_id, rowClass(row))
+    }
+  }
+  return [...byId].map(([value, label]) => ({ value, label }))
+})
+
 // 小组列表（按选中班级，enabled 时查询）
 const { data: groupsData } = useQuery({
-  queryKey: ['teacher-groups', groupFinalClass],
-  queryFn: () => groupsApi.getGroups(groupFinalClass.value),
-  enabled: () => showGroupFinalDialog.value && groupFinalClass.value !== '',
+  queryKey: ['teacher-groups', groupFinalClassId],
+  queryFn: () => groupsApi.getGroups(groupFinalClassId.value as number),
+  enabled: () => showGroupFinalDialog.value && groupFinalClassId.value !== '',
 })
 
 const openGroupFinalDialog = () => {
-  groupFinalClass.value = rosterClasses.value[0] ?? ''
+  groupFinalClassId.value = rosterClassOptions.value[0]?.value ?? ''
   groupFinalGroupId.value = ''
   groupFinalScore.value = 0
   groupFinalError.value = ''
@@ -448,8 +459,8 @@ const handleSetGroupFinal = async () => {
         <div class="space-y-2">
           <Label>班级</Label>
           <Select
-            v-model="groupFinalClass"
-            :options="rosterClasses.map((c) => ({ value: c, label: c }))"
+            v-model="groupFinalClassId"
+            :options="rosterClassOptions"
             placeholder="选择班级"
           />
         </div>

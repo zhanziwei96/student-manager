@@ -228,6 +228,7 @@ def list_offering_enrollments(
             "enrollment_id": e.id,
             "student_id": s.student_id,
             "name": s.name,
+            "class_id": s.class_id,
             "class_name": class_names.get(s.class_id),
             "score": e.score,
             "final_score": e.final_score,

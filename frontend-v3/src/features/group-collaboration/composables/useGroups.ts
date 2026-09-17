@@ -21,11 +21,11 @@ export function useAutoAssign() {
   })
 }
 
-export function useStudentGroups(className: MaybeRefOrGetter<string>, courseId?: MaybeRefOrGetter<number | null>) {
+export function useStudentGroups(classId: MaybeRefOrGetter<number | undefined>, courseId?: MaybeRefOrGetter<number | null>) {
   return useQuery({
-    queryKey: ['student-groups', className, courseId],
-    queryFn: () => groupsApi.getGroups(toValue(className), toValue(courseId) ?? undefined),
-    enabled: () => !!toValue(className),
+    queryKey: ['student-groups', classId, courseId],
+    queryFn: () => groupsApi.getGroups(toValue(classId)!, toValue(courseId) ?? undefined),
+    enabled: () => !!toValue(classId),
   })
 }
 
@@ -39,8 +39,8 @@ export function useMyGroups() {
 export function useCreateGroup() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ className, name, courseId }: { className: string; name: string; courseId: number }) =>
-      groupsApi.createGroup(className, name, courseId),
+    mutationFn: ({ classId, name, courseId }: { classId: number; name: string; courseId: number }) =>
+      groupsApi.createGroup(classId, name, courseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-groups'] })
       queryClient.invalidateQueries({ queryKey: ['student-groups'] })
