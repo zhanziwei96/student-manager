@@ -49,7 +49,8 @@ def test_teacher_create_question_multiple_classes(teacher_client: TestClient, se
     assert "、" in item["class_name"]
 
 
-def test_teacher_create_question_all_classes(teacher_client: TestClient):
+def test_teacher_create_question_empty_class_ids_scoped_to_own_classes(teacher_client: TestClient, seed_refs):
+    """教师不传 class_ids：收敛为自己授课关联的班级（不再是「全校所有班级」）"""
     resp = teacher_client.post("/api/v1/teacher/questions", json={
         "content": "通用问题",
     })
@@ -59,8 +60,8 @@ def test_teacher_create_question_all_classes(teacher_client: TestClient):
 
     resp = teacher_client.get("/api/v1/teacher/questions")
     item = resp.json()["data"][0]
-    assert item["class_ids"] == []
-    assert item["class_name"] == "所有班级"
+    assert sorted(item["class_ids"]) == sorted([seed_refs["一班"], seed_refs["二班"]])
+    assert item["class_name"] != "所有班级"
 
 
 def test_teacher_list_questions(teacher_client: TestClient, seed_refs):

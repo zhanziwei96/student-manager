@@ -8,7 +8,10 @@ from sqlmodel import Session
 
 from app.core.db import get_session
 from app.core.jwt import get_current_user
-from app.api.deps import require_admin_or_teacher, verify_class_has_active_students
+from app.api.deps import (
+    get_teacher_accessible_classes, require_admin_or_teacher,
+    verify_class_has_active_students, verify_teacher_class_access,
+)
 from app.crud.question import (
     create_question, get_question, get_questions_by_teacher,
     get_questions_by_class, get_question_class_ids, close_question, count_answers,
@@ -99,6 +102,48 @@ def _build_question_list(session: Session, questions) -> list:
     return result
 
 
+def _assert_can_manage_question_answers(user: dict, question_id: int, session: Session) -> None:
+    """追问/标记优秀等回答管理操作：仅限问题归属教师，admin 放行
+
+    与 PUT /teacher/questions/{question_id}/close 同一规则（close 保持原样、不放行 admin）。
+    此前这两个端点只按 answer_id 查库即改，任意教师都能操作别班问题下的回答。
+
+    Raises:
+        HTTPException 404: 问题不存在
+        HTTPException 403: 问题不属于当前教师
+    """
+    if user.get("role") == "admin":
+        return
+    question = get_question(session, question_id)
+    if not question:
+        raise HTTPException(status_code=404, detail="问题不存在")
+    if question.teacher_id != int(user["sub"]):
+        raise HTTPException(status_code=403, detail="无权操作此问题")
+
+
+def _assert_question_visible(session: Session, user: dict, question) -> None:
+    """非归属教师/管理员（按学生视图访问）时，校验问题对该调用者可见
+
+    可见性模型：question_classes 关联表含调用者的班，或无关联行（= 所有班级可见）。
+    学生按所在班级判定；其他教师按授课教学班关联的班级判定；无班级依据则拒绝。
+
+    Raises:
+        HTTPException 403: 问题对该调用者不可见
+    """
+    role = user.get("role", "")
+    if role == "student":
+        student = get_student(session, user["sub"])
+        class_ids = {student.class_id} if student and student.class_id else set()
+    elif role == "teacher":
+        class_ids = set(get_teacher_accessible_classes(user, session) or [])
+    else:
+        class_ids = set()
+
+    question_class_ids = set(get_question_class_ids(session, [question.id]).get(question.id, []))
+    if question_class_ids and not (class_ids & question_class_ids):
+        raise HTTPException(status_code=403, detail="无权查看该问题的回答")
+
+
 # ============== 教师端路由 ==============
 
 @router.post("/teacher/questions")
@@ -109,14 +154,23 @@ async def teacher_create_question(
     user: dict = Depends(require_admin_or_teacher),
 ):
     """老师发布问题"""
-    # 学期归档后，禁用/不存在班级不可提问（class_ids 为空表示所有班级，跳过校验）
-    for class_id in req.class_ids:
-        verify_class_has_active_students(class_id, session)
+    class_ids = req.class_ids
+    if class_ids:
+        # 教师只能投放到自己授课关联的班级（admin 不限）；再校验班级有启用学生
+        for class_id in class_ids:
+            verify_teacher_class_access(user, class_id, session)
+            verify_class_has_active_students(class_id, session)
+    elif user.get("role") != "admin":
+        # 教师空列表＝自己可访问的班级（不再等于全校所有班级）；
+        # 可访问集合为空（未配教学班关联）→ 拒绝，fail-closed
+        class_ids = get_teacher_accessible_classes(user, session) or []
+        if not class_ids:
+            raise HTTPException(status_code=403, detail="您没有关联任何班级，无法发布问题")
 
     teacher_id = int(user["sub"])
     question = create_question(
         session, teacher_id=teacher_id,
-        content=req.content, class_ids=req.class_ids,
+        content=req.content, class_ids=class_ids,
         is_realtime=req.is_realtime,
     )
     return {
@@ -171,6 +225,7 @@ async def teacher_reply_answer(
     answer = get_answer(session, answer_id)
     if not answer:
         raise HTTPException(status_code=404, detail="回答不存在")
+    _assert_can_manage_question_answers(user, answer.question_id, session)
 
     reply = create_answer(
         session, question_id=answer.question_id,
@@ -189,9 +244,12 @@ async def teacher_star_answer(
     user: dict = Depends(require_admin_or_teacher),
 ):
     """老师标记/取消标记优秀"""
-    answer = star_answer(session, answer_id, starred)
+    answer = get_answer(session, answer_id)
     if not answer:
         raise HTTPException(status_code=404, detail="回答不存在")
+    _assert_can_manage_question_answers(user, answer.question_id, session)
+
+    star_answer(session, answer_id, starred)
     return {"success": True, "message": "已标记优秀" if starred else "已取消标记"}
 
 
@@ -221,7 +279,20 @@ async def student_get_answers(
 ):
     """获取某问题的所有回答"""
     current_user_sub = user["sub"]
-    is_teacher = user.get("role") in ("admin", "teacher")
+    role = user.get("role", "")
+
+    question = get_question(session, question_id)
+    if not question:
+        raise HTTPException(status_code=404, detail="问题不存在")
+
+    # 教师视图（返回 student_id + 真实姓名）仅限问题归属教师与管理员。
+    # 此前任意教师都能拿到别班问题下匿名回答的学号与姓名。
+    is_teacher = role == "admin" or (
+        role == "teacher" and question.teacher_id == int(current_user_sub)
+    )
+    if not is_teacher:
+        # 其余调用者按学生视图（匿名）处理，且必须先可见该问题
+        _assert_question_visible(session, user, question)
 
     answers = get_answers_by_question(session, question_id)
     result = []
@@ -254,11 +325,14 @@ async def student_create_answer(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
-    """学生提交回答"""
+    """学生提交回答（仅限对自己可见的问题）"""
     student_sub = user["sub"]
     question = get_question(session, req.question_id)
     if not question:
         raise HTTPException(status_code=404, detail="问题不存在")
+    # 先判可见性再判状态：否则可用 400/200 差异探测别班问题的存在与状态；
+    # 此前 question_id 可枚举，任意学生能往别班问答板写回答（写完还读不到，前后矛盾）
+    _assert_question_visible(session, user, question)
     if question.status != "active":
         raise HTTPException(status_code=400, detail="问题已结束，无法回答")
 
