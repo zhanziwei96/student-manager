@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.class_cache import get_class_display_name_by_id
 from app.core.db import get_session
 from app.core.config import HttpStatus
@@ -186,8 +186,47 @@ def list_schedule_adjustments(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """查询课表调整记录"""
-    adjustments = get_adjustments(session, schedule_id=schedule_id, week_number=week_number)
+    """查询课表调整记录（admin 全量；教师限自己课表；学生限自己班级）"""
+    role = user.get("role", "")
+
+    if role == "admin":
+        adjustments = get_adjustments(
+            session, schedule_id=schedule_id, week_number=week_number)
+    elif role == "teacher":
+        user_id = int(user.get("sub", 0))
+        if schedule_id is not None:
+            schedule = session.get(CourseSchedule, schedule_id)
+            if not schedule:
+                raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课表不存在")
+            if schedule.teacher_id != user_id:
+                raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看此课程")
+            adjustments = get_adjustments(
+                session, schedule_id=schedule_id, week_number=week_number)
+        else:
+            schedule_ids = session.exec(
+                select(CourseSchedule.id).where(CourseSchedule.teacher_id == user_id)
+            ).all()
+            adjustments = get_adjustments(
+                session, schedule_ids=list(schedule_ids), week_number=week_number)
+    elif role == "student":
+        from app.crud import get_student
+        student = get_student(session, str(user.get("sub", "")))
+        if student is None or student.class_id is None:
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看")
+        if schedule_id is not None:
+            schedule = session.get(CourseSchedule, schedule_id)
+            if not schedule:
+                raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课表不存在")
+            if schedule.class_id != student.class_id:
+                raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看此课程")
+            adjustments = get_adjustments(
+                session, schedule_id=schedule_id, week_number=week_number)
+        else:
+            adjustments = get_adjustments(
+                session, class_id=student.class_id, week_number=week_number)
+    else:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权查看")
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [

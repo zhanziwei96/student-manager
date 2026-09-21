@@ -23,11 +23,18 @@ def get_adjustments(
     schedule_id: Optional[int] = None,
     week_number: Optional[int] = None,
     class_id: Optional[int] = None,
+    schedule_ids: Optional[List[int]] = None,
 ) -> List[ScheduleAdjustment]:
-    """查询调整记录列表"""
+    """查询调整记录列表
+
+    schedule_ids 用于按「一组课表」收敛范围（教师只查自己课表）；传空列表时
+    返回空结果（fail-closed），不会退化为全量。
+    """
     query = select(ScheduleAdjustment)
     if schedule_id is not None:
         query = query.where(ScheduleAdjustment.schedule_id == schedule_id)
+    if schedule_ids is not None:
+        query = query.where(ScheduleAdjustment.schedule_id.in_(schedule_ids))
     if week_number is not None:
         query = query.where(ScheduleAdjustment.week_number == week_number)
     if class_id is not None:
