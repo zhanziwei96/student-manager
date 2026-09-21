@@ -331,6 +331,9 @@ python -c "from app.core.config import get_settings; print(get_settings().get_da
 | 2026-04-06 | JWT `sub` (字符串) 与 API `id` (数字) 类型不一致导致比较失败 | **类型强制转换**：比较前统一使用 `Number()` 或 `String()` 转换，避免 `!==` 隐式类型比较陷阱 |
 | 2026-04-06 | useQuery queryKey 与 invalidateQueries 不一致导致缓存不刷新 | **缓存键一致性**：修改 queryKey 格式时必须同步更新所有 invalidateQueries 调用，空值用 `'all'` 等占位符保持一致 |
 | 2026-04-06 | mutation 后未 await refetch 就显示成功提示 | **异步刷新顺序**：数据刷新必须在提示之前完成：`await mutate(); await refetch(); showSuccess()` |
+| 2026-09-21 | 教师授权把「教学班无关联班级」当通配=全部班级，导致关联没配全的老师拿到全校班级权限（开发库真实发生） | **权限必须 fail-closed**：`course_offering_classes` 无关联行 = 无权限（`[]`），不再通配；需管理员在教学班页补配班级关联 |
+| 2026-09-21 | 详情页用 `!error` 做渲染开关，后台轮询偶发失败时把学生正在输入验证码的输入框整个卸载、丢光标 | **后台 refetch 失败不得推翻界面**：致命错误判定用 `!!error && !data`，不要用 `!error` 当渲染条件；轮询类页面的输入控件不得挂在错误态分支下 |
+| 2026-09-21 | `pytest.ini` 配 `-n 8` 但测试库只有 `classhub_test_0..3`，全量测试直接 collect 失败 | **测试库分片必须齐**：`classhub_test_0..7` + `classhub_migration_test_0..7` 需全部存在，一次性创建见 `tests/README.md` |
 
 ---
 
