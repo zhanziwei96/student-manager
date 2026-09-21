@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 from fastapi import HTTPException
 
-from app.api.deps import verify_teacher_class_access
+from app.api.deps import get_teacher_accessible_classes, verify_teacher_class_access
 
 
 def _teacher_with_offerings(session, class_names: list[str]):
@@ -67,8 +67,13 @@ def test_teacher_denied_for_unassigned_class(session):
     assert exc_info.value.status_code == 403
 
 
-def test_teacher_wildcard_when_no_association_rows(session):
-    """offering 无关联行 = 面向全部班级（通配，Phase 6 决策过渡期语义）"""
+def test_teacher_denied_when_no_association_rows(session):
+    """offering 无关联行 = 无权限（fail-closed，2026-09-21 收紧）
+
+    旧语义是「通配＝面向全部班级」（Phase 6 过渡期决策），会让关联没配全的老师
+    直接拿到全校班级权限——开发库中曾真实发生（某教师教学班 0 关联 → 看到全部班级）。
+    现改为一律拒绝，需管理员在「教学班」页补配班级关联。
+    """
     from app.models import Course, CourseOffering, Semester, User
     from app.core.security import hash_password
 
@@ -88,8 +93,15 @@ def test_teacher_wildcard_when_no_association_rows(session):
     ))
     session.commit()
     user = {"sub": str(teacher.id), "role": "teacher"}
-    # 任意 class_id 均放行（不抛异常即为通过）
-    verify_teacher_class_access(user, 999, session)
+
+    # 可访问集合为空 —— 不再是 None（通配）
+    assert get_teacher_accessible_classes(user, session) == []
+
+    # 任意 class_id 一律 403
+    for class_id in (1, 999):
+        with pytest.raises(HTTPException) as exc_info:
+            verify_teacher_class_access(user, class_id, session)
+        assert exc_info.value.status_code == 403
 
 
 def test_teacher_without_offerings_denied(session):

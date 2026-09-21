@@ -62,9 +62,12 @@ def get_teacher_accessible_classes(user: dict, session: Session):
     """教师可访问班级集合（唯一真源：course_offering_classes 关联表）
 
     - admin → None（表示不限范围）
-    - teacher → 授课教学班关联的 class_id 列表；
-      有教学班但关联表无行 → None（通配：面向全部班级，Phase 6 决策，过渡期语义）
-    - 其他角色/无效用户/无教学班 → []（空集，任何班级都不可访问）
+    - teacher → 授课教学班关联的 class_id 列表
+    - 其他角色 / 无效用户 / 无教学班 / **教学班未关联任何班级** → []（空集，fail-closed）
+
+    ⚠️ 安全语义（2026-09-21 收紧）：教学班没有关联班级时**不再**按「通配＝全部班级」处理。
+    通配会让「关联没配全」的老师直接拿到全校班级权限（开发库中曾真实发生过）。
+    未配关联的老师现在看不到任何班级，需管理员在「教学班」页补配班级关联。
 
     供 verify_teacher_class_access 与排行榜/列表类端点复用。
     """
@@ -91,16 +94,21 @@ def get_teacher_accessible_classes(user: dict, session: Session):
         CourseOfferingClass.offering_id.in_(offering_ids),
     )).all()
     if not class_ids:
-        # 通配（Phase 6 决策）：offering 无关联行 = 面向全部班级
-        logger.warning("教师 %s 的教学班无 course_offering_classes 关联行，按通配（全部班级）处理", user_obj.id)
-        return None
+        # fail-closed：不按通配放行。老师看不到任何班级，直到管理员补配关联。
+        logger.warning(
+            "教师 %s 的教学班未关联任何班级（course_offering_classes 无行），按无权限处理；"
+            "请管理员在教学班页面补配班级关联",
+            user_obj.id,
+        )
+        return []
     return sorted(set(class_ids))
 
 
 def verify_teacher_class_access(user: dict, class_id: int, session: Session) -> None:
     """校验教师是否有权操作指定班级（admin 放行，teacher 校验班级归属）
 
-    权限唯一真源：course_offering_classes 关联表（offering 无关联行 = 面向全部班级）。
+    权限唯一真源：course_offering_classes 关联表。fail-closed——
+    教师没有教学班、或教学班未关联任何班级时，一律拒绝。
 
     Args:
         user: get_current_user 返回的 JWT claims dict
@@ -117,10 +125,25 @@ def verify_teacher_class_access(user: dict, class_id: int, session: Session) -> 
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="需要管理员或教师权限")
 
     accessible = get_teacher_accessible_classes(user, session)
-    if accessible is None:
-        return  # 通配：面向全部班级
     if not accessible or class_id not in accessible:
         raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权操作该班级")
+
+
+def verify_teacher_group_access(user: dict, group_id: int, session: Session) -> None:
+    """校验教师是否有权操作指定小组（按小组所属班级判定）
+
+    用于只有 group_id、拿不到 class_id 的端点（小组详情/解散/踢人/转让组长等）。
+
+    Raises:
+        HTTPException 404: 小组不存在
+        HTTPException 403: 小组不属于该教师的班级
+    """
+    from app.models import Group
+
+    group = session.get(Group, group_id)
+    if group is None:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
+    verify_teacher_class_access(user, group.class_id, session)
 
 
 def verify_class_has_active_students(class_id: int, session: Session) -> None:

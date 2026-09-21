@@ -8,9 +8,14 @@ from app.core.class_cache import get_class_display_name_by_id, get_class_display
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user, require_teacher
-from app.api.deps import verify_class_has_active_students
+from app.api.deps import (
+    get_teacher_accessible_classes, verify_class_has_active_students,
+    verify_teacher_class_access, verify_teacher_group_access,
+)
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse
-from app.models.group import GroupMember, GroupMembershipRequest, Group
+from app.models.group import (
+    Group, GroupDissolutionRequest, GroupMember, GroupMembershipRequest,
+)
 from app.crud import (
     get_groups_by_class, get_group_members, transfer_group_leader,
     auto_assign_unassigned_students,
@@ -65,9 +70,10 @@ async def api_teacher_groups(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """获取班级小组列表（小组按课程划分）"""
+    """获取班级小组列表（小组按课程划分；仅限自己授课的班级）"""
     from app.models import Student, Course
     from sqlmodel import col, select as sql_select
+    verify_teacher_class_access(user, class_id, session)
     groups = get_groups_by_class(session, class_id, course_id=course_id)
     # 批量查询所有相关学生姓名
     all_member_ids = []
@@ -107,9 +113,10 @@ async def api_teacher_create_group(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """教师建组（按课程划分，组长自动加入）"""
+    """教师建组（按课程划分，组长自动加入；仅限自己授课的班级）"""
     from app.models import Course
 
+    verify_teacher_class_access(user, data.class_id, session)
     if session.get(Course, data.course_id) is None:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="课程不存在")
     verify_class_has_active_students(data.class_id, session)
@@ -128,7 +135,8 @@ async def api_auto_assign(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """自动分配未组队学生（按课程）"""
+    """自动分配未组队学生（按课程；仅限自己授课的班级）"""
+    verify_teacher_class_access(user, data.class_id, session)
     # 校验班级存在且有启用学生（防止对已归档班级分组）
     verify_class_has_active_students(data.class_id, session)
     settings = get_or_create_class_group_settings(session, data.class_id)
@@ -146,7 +154,8 @@ async def api_get_class_group_settings(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """获取班级小组设置"""
+    """获取班级小组设置（仅限自己授课的班级）"""
+    verify_teacher_class_access(user, class_id, session)
     settings = get_class_group_settings(session, class_id)
     return {
         ApiResponseConst.SUCCESS: True,
@@ -163,7 +172,8 @@ async def api_update_class_group_settings(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """更新班级小组人数上限"""
+    """更新班级小组人数上限（仅限自己授课的班级）"""
+    verify_teacher_class_access(user, data.class_id, session)
     # 校验：新上限 >= 该班所有小组中当前最大成员数
     groups = get_groups_by_class(session, data.class_id)
     max_current = 0
@@ -193,7 +203,8 @@ async def api_transfer_leader(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """转让小组组长"""
+    """转让小组组长（仅限自己班级的小组）"""
+    verify_teacher_group_access(user, group_id, session)
     group = transfer_group_leader(session, group_id, data.new_leader_id)
     if not group:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="转让失败")
@@ -209,7 +220,8 @@ async def api_get_group_detail(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """获取小组详情，包含成员列表"""
+    """获取小组详情，包含成员列表（仅限自己班级的小组）"""
+    verify_teacher_group_access(user, group_id, session)
     group_data = get_group_with_members(session, group_id)
     if not group_data:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="小组不存在")
@@ -226,7 +238,8 @@ async def api_remove_member(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """踢出小组成员"""
+    """踢出小组成员（仅限自己班级的小组）"""
+    verify_teacher_group_access(user, group_id, session)
     success = remove_group_member(session, group_id, student_id)
     if not success:
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="踢出失败，成员可能不存在")
@@ -242,7 +255,8 @@ async def api_dissolve_group(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """解散小组"""
+    """解散小组（仅限自己班级的小组）"""
+    verify_teacher_group_access(user, group_id, session)
     try:
         success = dissolve_group(session, group_id)
         if not success:
@@ -260,8 +274,21 @@ async def api_dissolution_requests(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """获取待处理的解散申请"""
+    """获取待处理的解散申请（教师只看自己班级的；管理员看全部）"""
     reqs = get_pending_dissolution_requests(session)
+
+    # get_teacher_accessible_classes: None=管理员不限；[]=教师无权限（fail-closed）
+    accessible = get_teacher_accessible_classes(user, session)
+    if accessible is not None and reqs:
+        allowed = set(accessible)
+        group_class = {
+            g.id: g.class_id
+            for g in session.exec(
+                select(Group).where(Group.id.in_([r.group_id for r in reqs]))
+            ).all()
+        }
+        reqs = [r for r in reqs if group_class.get(r.group_id) in allowed]
+
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: [
@@ -283,7 +310,12 @@ async def api_approve_dissolution(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """批准解散申请"""
+    """批准解散申请（仅限自己班级的小组）"""
+    req = session.get(GroupDissolutionRequest, req_id)
+    if req is None:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="解散申请不存在")
+    verify_teacher_group_access(user, req.group_id, session)
+
     username = user.get("username", "")
     group = approve_dissolution_request(session, req_id, username)
     if not group:
@@ -300,7 +332,12 @@ async def api_reject_dissolution(
     session: Session = Depends(get_session),
     user: dict = Depends(require_teacher),
 ):
-    """拒绝解散申请"""
+    """拒绝解散申请（仅限自己班级的小组）"""
+    pending = session.get(GroupDissolutionRequest, req_id)
+    if pending is None:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="解散申请不存在")
+    verify_teacher_group_access(user, pending.group_id, session)
+
     username = user.get("username", "")
     req = reject_dissolution_request(session, req_id, username)
     if not req:

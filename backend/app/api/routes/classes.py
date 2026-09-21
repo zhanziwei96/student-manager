@@ -7,7 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlmodel import Session, func, select
 
-from app.api.deps import require_admin, require_admin_or_teacher
+from app.api.deps import (
+    get_teacher_accessible_classes, require_admin, require_admin_or_teacher,
+)
 from app.core.class_cache import build_class_display_name, invalidate_class_cache
 from app.core.config import HttpStatus
 from app.core.db import get_session
@@ -70,12 +72,24 @@ def list_classes(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
-    """班级列表（默认只返回在用班级；可按届过滤，含学生数）"""
+    """班级列表（默认只返回在用班级；可按届过滤，含学生数）
+
+    教师只返回自己授课教学班关联的班级（fail-closed：无教学班/未配关联 → 空列表）；
+    管理员返回全部。
+    """
     query = select(Class_).order_by(Class_.cohort_year, Class_.name)
     if cohort_year:
         query = query.where(Class_.cohort_year == cohort_year)
     if not include_archived:
         query = query.where(Class_.status == "active")
+
+    # get_teacher_accessible_classes: None=管理员不限；[]=教师无权限（fail-closed）
+    accessible = get_teacher_accessible_classes(user, session)
+    if accessible is not None:
+        if not accessible:
+            return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
+        query = query.where(Class_.id.in_(accessible))
+
     classes = session.exec(query).all()
     counts = {
         row[0]: row[1] for row in session.exec(
