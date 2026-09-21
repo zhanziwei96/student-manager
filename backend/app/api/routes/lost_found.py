@@ -10,7 +10,10 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.jwt import get_current_user
 from app.core.config import get_settings
-from app.api.deps import require_admin_or_teacher
+from app.api.deps import (
+    require_admin_or_teacher, get_teacher_accessible_classes,
+    verify_teacher_class_access,
+)
 from app.crud.lost_found import (
     create_lost_found_item, get_lost_found_item, get_lost_found_items,
     update_lost_found_item, delete_lost_found_item, get_item_class_ids,
@@ -102,12 +105,24 @@ async def teacher_create_item(
     description: str = Form(..., description="详细描述"),
     location: Optional[str] = Form(default=None, description="丢失/拾获地点"),
     image: Optional[UploadFile] = File(default=None, description="物品图片"),
-    class_ids: List[int] = Form(default=[], description="可见班级ID（可多选，重复字段）；空=所有班级"),
+    class_ids: List[int] = Form(default=[], description="可见班级ID（可多选，重复字段）；空=admin 所有班级可见 / 教师收敛为自己可访问班级"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
-    """教师发布失物招领"""
+    """教师发布失物招领（教师只能发布到自己可访问的班级；admin 空=所有班级）"""
     teacher_id = int(user["sub"])
+
+    # 授权：教师的目标班级必须属于自己；空范围收敛为可访问班级，
+    # 不再产生「无关联行 = 全校可见」的物品（admin 保持原语义）
+    if user.get("role") != "admin":
+        accessible = get_teacher_accessible_classes(user, session)
+        if not accessible:
+            raise HTTPException(status_code=403, detail="无可访问班级，无法发布失物招领")
+        if class_ids:
+            for class_id in class_ids:
+                verify_teacher_class_access(user, class_id, session)
+        else:
+            class_ids = accessible
 
     image_url = None
     if image:
@@ -135,8 +150,16 @@ async def teacher_list_items(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
-    """教师获取失物招领列表（含认领统计）"""
-    items, total = get_lost_found_items(session, keyword, status, page, page_size)
+    """教师获取失物招领列表（含认领统计）
+
+    可见范围：自己发布的 OR 可见范围含自己任一班级 OR 全班级可见的物品；
+    admin 不限；教学班未关联班级的教师返回空（fail-closed）。
+    """
+    items, total = get_lost_found_items(
+        session, keyword, status, page, page_size,
+        viewer_publisher_id=int(user["sub"]),
+        viewer_class_ids=get_teacher_accessible_classes(user, session),  # admin → None
+    )
 
     result = []
     for item in items:
@@ -181,6 +204,11 @@ async def teacher_get_item(
     item = get_lost_found_item(session, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
+
+    # P0 修复：教师只能查看自己发布的物品详情（admin 不受限）
+    # 详情含全部认领记录（学号 + 联系方式）与评论者真实姓名，不能按 item_id 越权读取
+    if user.get("role") != "admin" and item.publisher_id != int(user.get("sub", 0)):
+        raise HTTPException(status_code=403, detail="无权查看他人发布的物品")
 
     publisher_name = _get_user_name(session, item.publisher_id)
 
@@ -244,7 +272,7 @@ async def teacher_update_item(
     location: Optional[str] = Form(default=None, description="丢失/拾获地点"),
     image: Optional[UploadFile] = File(default=None, description="物品图片"),
     class_ids: Optional[List[int]] = Form(default=None, description="可见班级ID（可多选，重复字段）；提供则整体替换"),
-    clear_class_scope: bool = Form(default=False, description="显式恢复所有班级可见（清空可见班级限定）"),
+    clear_class_scope: bool = Form(default=False, description="清空可见班级限定（admin 恢复所有班级可见；教师收敛为可访问班级）"),
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
@@ -264,6 +292,18 @@ async def teacher_update_item(
     # 显式清空优先于 class_ids 替换（恢复所有班级可见）
     if clear_class_scope:
         class_ids = []
+
+    # 授权：教师只能把可见范围限定到自己可访问的班级；空范围收敛为可访问班级，
+    # 否则「发布时收敛 + 编辑时放开」可绕过上面的发布限制（admin 保持原语义）
+    if class_ids is not None and user.get("role") != "admin":
+        if class_ids:
+            for class_id in class_ids:
+                verify_teacher_class_access(user, class_id, session)
+        else:
+            accessible = get_teacher_accessible_classes(user, session)
+            if not accessible:
+                raise HTTPException(status_code=403, detail="无可访问班级，无法设置可见范围")
+            class_ids = accessible
 
     updated = update_lost_found_item(
         session,

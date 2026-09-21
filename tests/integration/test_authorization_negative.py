@@ -202,10 +202,18 @@ def test_teacher_without_classes_sees_empty_checkin_list(client, teacher_without
 # ========== 失物招领越权负向测试（Task 12） ==========
 
 @pytest.fixture
-def teacher2_user(test_engine):
-    """创建第二个教师账号（不共享物品所有权）"""
+def teacher2_user(test_engine, seed_refs):
+    """创建第二个教师账号（不共享物品所有权）
+
+    授课范围 = 一班（权限真源 course_offering_classes）：没有关联班级的教师
+    fail-closed，连自己发布物品都会被拒。
+    """
+    from datetime import date
+
     from app.core.security import generate_password_hash
-    from app.models import User, UserRoleConst
+    from app.models import (
+        Course, CourseOffering, CourseOfferingClass, Semester, User, UserRoleConst,
+    )
 
     with Session(test_engine) as session:
         password_hash, salt = generate_password_hash("teacher123")
@@ -218,6 +226,24 @@ def teacher2_user(test_engine):
             is_active=True,
         )
         session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        course = Course(code="AUTHZ-T2", name="越权测试课")
+        sem = Semester(label="AUTHZ-T2-SEED", start_date=date(2026, 1, 1),
+                       total_weeks=20, is_current=False)
+        session.add(course)
+        session.add(sem)
+        session.commit()
+        offering = CourseOffering(
+            course_id=course.id, semester_id=sem.id, teacher_id=user.id,
+            teacher_name=user.name, status="active",
+        )
+        session.add(offering)
+        session.flush()
+        session.add(CourseOfferingClass(
+            offering_id=offering.id, class_id=seed_refs["一班"],
+        ))
         session.commit()
         session.refresh(user)
         return user

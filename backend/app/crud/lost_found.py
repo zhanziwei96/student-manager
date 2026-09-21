@@ -69,11 +69,17 @@ def get_lost_found_items(
     page: int = 1,
     page_size: int = 20,
     viewer_class_id: Optional[int] = None,
+    viewer_publisher_id: Optional[int] = None,
+    viewer_class_ids: Optional[List[int]] = None,
 ) -> tuple[List[LostFoundItem], int]:
     """获取物品列表（支持关键词搜索、状态过滤、分页）
 
-    viewer_class_id 提供时（学生视角）按可见班级过滤：
-    关联表含本班 OR 物品无任何关联行（全班级可见）。教师端传 None 不过滤。
+    三种可见性视角（互斥，按序判定；都不提供 = 不过滤，admin 用）：
+
+    - viewer_class_ids（教师视角，需同时提供 viewer_publisher_id）：
+      自己发布的 OR 可见范围含自己任一班级 OR 物品无任何关联行（全班级可见）；
+      **空列表 = fail-closed，返回空结果**（教学班未关联班级的老师什么都看不到）。
+    - viewer_class_id（学生视角）：关联表含本班 OR 物品无任何关联行（全班级可见）。
     """
     query = select(LostFoundItem)
     count_query = select(func.count()).select_from(LostFoundItem)
@@ -91,12 +97,27 @@ def get_lost_found_items(
         query = query.where(LostFoundItem.status == status)
         count_query = count_query.where(LostFoundItem.status == status)
 
-    if viewer_class_id is not None:
+    has_any = select(LostFoundClass.item_id)
+
+    if viewer_class_ids is not None:
+        # 教师视角：可访问班级集合为空 → fail-closed，什么都不返回
+        if not viewer_class_ids:
+            return [], 0
+        has_mine = select(LostFoundClass.item_id).where(
+            LostFoundClass.class_id.in_(viewer_class_ids)
+        )
+        visibility = or_(
+            LostFoundItem.publisher_id == viewer_publisher_id,
+            LostFoundItem.id.in_(has_mine),
+            ~LostFoundItem.id.in_(has_any),
+        )
+        query = query.where(visibility)
+        count_query = count_query.where(visibility)
+    elif viewer_class_id is not None:
         # 可见性：关联表含本班 OR 无关联行（与问答同一 or_/IN 模式）
         has_this = select(LostFoundClass.item_id).where(
             LostFoundClass.class_id == viewer_class_id
         )
-        has_any = select(LostFoundClass.item_id)
         visibility = or_(
             LostFoundItem.id.in_(has_this),
             ~LostFoundItem.id.in_(has_any),

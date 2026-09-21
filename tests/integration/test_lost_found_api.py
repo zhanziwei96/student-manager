@@ -9,16 +9,18 @@
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session, SQLModel, select
 
 from main import create_app
 from app.core.db import get_session
 from app.core.jwt import create_access_token
+from app.api.deps import get_teacher_accessible_classes
 from app.models.user import User
 from app.models.student import Student
 from app.models.class_ import Class_
 from app.models.constants import UserRoleConst
 from app.core.security import generate_password_hash
+from app.crud.lost_found import get_item_class_ids
 
 
 # ============== Fixtures ==============
@@ -53,7 +55,10 @@ def client(app):
 
 @pytest.fixture
 def teacher_user(session):
-    """创建教师用户"""
+    """创建教师用户（可访问班级 = 测试班/1班/2班，权限真源 course_offering_classes）"""
+    from datetime import date
+    from app.models import Course, CourseOffering, CourseOfferingClass, Semester
+
     password_hash, salt = generate_password_hash("teacher123")
     user = User(
         username="teacher1",
@@ -67,12 +72,33 @@ def teacher_user(session):
     session.add(user)
     session.commit()
     session.refresh(user)
+
+    # 权限真源：授课教学班关联 class_ids（本文件用到的班级都预先建好并授权，
+    # _make_class 改为 get-or-create，测试里拿到的就是这些行）
+    course = Course(code="LF-TEST", name="失物招领测试课")
+    sem = Semester(label="LF-TEST-SEED", start_date=date(2026, 1, 1),
+                   total_weeks=20, is_current=False)
+    session.add(course)
+    session.add(sem)
+    session.commit()
+    offering = CourseOffering(
+        course_id=course.id, semester_id=sem.id, teacher_id=user.id,
+        teacher_name=user.name, status="active",
+    )
+    session.add(offering)
+    session.flush()
+    for cls_name in ("测试班", "1班", "2班"):
+        session.add(CourseOfferingClass(
+            offering_id=offering.id, class_id=_make_class(session, cls_name).id,
+        ))
+    session.commit()
+    session.refresh(user)
     return user
 
 
 @pytest.fixture
 def student_user(session):
-    """创建学生用户"""
+    """创建学生用户（属测试班；class_id 必填，否则看不到任何限定班级的物品）"""
     password_hash, salt = generate_password_hash("student123")
     user = User(
         username="student1",
@@ -89,6 +115,7 @@ def student_user(session):
         student_id=str(user.id),
         name="张三",
         class_name="测试班",
+        class_id=_make_class(session, "测试班").id,
         password_hash=password_hash,
         salt=salt,
     )
@@ -377,7 +404,14 @@ class TestStudentAPI:
 # ============== 可见班级测试 ==============
 
 def _make_class(session, name: str) -> Class_:
-    """创建测试班级"""
+    """get-or-create 测试班级
+
+    必须复用 teacher_user 预建并授权的同名班级行，否则测试拿到的是「教师无权限」
+    的另一行（权限真源是 course_offering_classes 的 class_id）。
+    """
+    existing = session.exec(select(Class_).where(Class_.name == name)).first()
+    if existing is not None:
+        return existing
     cls = Class_(name=name, cohort_year="2026")
     session.add(cls)
     session.commit()
@@ -457,7 +491,7 @@ class TestClassVisibilityAPI:
         assert public_id in {i["id"] for i in data["items"]}
         assert scoped_id not in {i["id"] for i in data["items"]}
 
-        # 未分班学生（student_client 无 class_id）：仅公开可见
+        # 测试班学生：仅本班范围内可见（含教师收敛后的「测试班/1班/2班」物品）
         items = student_client.get("/api/v1/student/lost-found").json()["data"]["items"]
         ids = {i["id"] for i in items}
         assert public_id in ids
@@ -511,23 +545,32 @@ class TestClassVisibilityAPI:
         assert item_id in ids2
 
     def test_detail_returns_class_ids(
-        self, app, session, teacher_client: TestClient,
+        self, app, session, teacher_user, teacher_client: TestClient,
     ):
-        """详情返回 class_ids（编辑回显用；空列表=所有班级可见）"""
+        """详情返回 class_ids（编辑回显用）
+
+        教师不传 class_ids 时收敛为「自己的可访问班级」，不再产生
+        「无关联行 = 全校可见」的物品（空列表语义仅保留给 admin）。
+        """
         c1 = _make_class(session, "1班")
         scoped_id = _create_scoped_item(teacher_client, [c1.id])
-        public_id = _create_item(teacher_client, title="公开物品")
+        own_id = _create_item(teacher_client, title="本班物品")
+
+        accessible = get_teacher_accessible_classes(
+            {"sub": str(teacher_user.id), "role": UserRoleConst.TEACHER}, session,
+        )
 
         resp = teacher_client.get(f"/api/v1/teacher/lost-found/{scoped_id}")
         assert resp.json()["data"]["class_ids"] == [c1.id]
 
-        resp = teacher_client.get(f"/api/v1/teacher/lost-found/{public_id}")
-        assert resp.json()["data"]["class_ids"] == []
+        resp = teacher_client.get(f"/api/v1/teacher/lost-found/{own_id}")
+        assert sorted(resp.json()["data"]["class_ids"]) == sorted(accessible)
+        assert resp.json()["data"]["class_ids"] != []
 
     def test_clear_class_scope_restores_all_visible(
-        self, app, session, teacher_client: TestClient,
+        self, app, session, teacher_user, teacher_client: TestClient,
     ):
-        """clear_class_scope：显式恢复所有班级可见（已限定班级改回全可见）"""
+        """clear_class_scope：教师侧收敛回自己的可访问班级（不再产生全校可见物品）"""
         c1 = _make_class(session, "1班")
         c2 = _make_class(session, "2班")
         item_id = _create_scoped_item(teacher_client, [c1.id])
@@ -548,9 +591,13 @@ class TestClassVisibilityAPI:
 
         ids2 = {i["id"] for i in s2.get("/api/v1/student/lost-found").json()["data"]["items"]}
         assert item_id in ids2
-        # 详情确认关联行已清空
+        # 详情确认可见范围收敛为教师可访问班级（而非清空成全校可见）
+        accessible = get_teacher_accessible_classes(
+            {"sub": str(teacher_user.id), "role": UserRoleConst.TEACHER}, session,
+        )
         detail = teacher_client.get(f"/api/v1/teacher/lost-found/{item_id}").json()["data"]
-        assert detail["class_ids"] == []
+        assert sorted(detail["class_ids"]) == sorted(accessible)
+        assert detail["class_ids"] != []
 
     def test_comment_and_claim_visibility(
         self, app, session, teacher_client: TestClient,
