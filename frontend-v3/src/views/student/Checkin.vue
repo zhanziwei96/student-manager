@@ -33,7 +33,11 @@ onUnmounted(() => {
 })
 
 const isPageLoading = computed(() => isLoadingProfile.value || isLoadingSession.value || isLoadingCheckinStatus.value)
-const hasPageError = computed(() => !!sessionError.value)
+
+// 只有「首次加载失败、拿不到任何课堂数据」才算致命错误。
+// 课堂状态每 10 秒轮询一次，偶发失败（网络抖动/后端重启）时 TanStack Query 会保留旧数据、
+// 同时把 error 置上——此时若按错误态渲染，就会把学生正在输入验证码的输入框整个卸载、光标丢失。
+const sessionLoadFailed = computed(() => !!sessionError.value && !classSession.value)
 
 const canCheckin = computed(() => {
   return hasActiveSession.value && !hasCheckedIn.value && !isCheckingIn.value
@@ -63,7 +67,7 @@ const friendlyErrorMessage = computed(() => {
 
 // 监听错误并弹出 Toast（只弹一次，避免重复）
 watch(friendlyErrorMessage, (msg) => {
-  if (msg && !hasPageError.value) {
+  if (msg && !sessionLoadFailed.value) {
     // 查询错误已在 DataContainer 中显示，不再弹 Toast
     // mutation 错误才弹 Toast
     if (checkinError.value) {
@@ -120,7 +124,7 @@ const formatTime = (time: string) => {
 
     <!-- Loading State -->
     <div
-      v-if="isPageLoading && !hasPageError"
+      v-if="isPageLoading && !sessionLoadFailed"
       class="flex h-64 items-center justify-center"
     >
       <Loader2 class="h-8 w-8 animate-spin text-primary" />
@@ -170,9 +174,9 @@ const formatTime = (time: string) => {
         :class="hasActiveSession ? 'bg-green-50 border-green-200' : 'bg-[#fafafa] border-[#e5e5e5]'"
         class="relative overflow-hidden p-4 md:p-6 mb-5"
       >
-        <!-- 查询错误状态 -->
+        <!-- 查询错误状态（仅首次加载就失败、没有可用课堂数据时；后台轮询失败不推翻界面） -->
         <div
-          v-if="sessionError"
+          v-if="sessionLoadFailed"
           class="flex items-center gap-3 text-red-500"
         >
           <AlertCircle class="h-5 w-5 flex-shrink-0" />
@@ -240,9 +244,11 @@ const formatTime = (time: string) => {
           </Badge>
         </div>
 
-        <!-- Checkin Verification Code - 背景区域 -->
+        <!-- Checkin Verification Code - 背景区域
+             注意：这里只看 hasActiveSession，不能加 !sessionError——
+             轮询偶发失败会把学生正在输入的验证码框卸载、光标丢失 -->
         <div
-          v-if="hasActiveSession && !sessionError"
+          v-if="hasActiveSession"
           class="mt-4 md:mt-6 p-4 rounded-xl border border-green-500/20"
         >
           <div
