@@ -71,11 +71,13 @@ def list_offerings(
     session: Session = Depends(get_session),
     user: dict = Depends(require_admin_or_teacher),
 ):
-    """教学班列表（可按学期过滤）"""
+    """教学班列表（可按学期过滤；教师仅本人授课，admin 全部）"""
     from app.core.term import get_current_semester_id
     if semester_id is None:
         semester_id = get_current_semester_id(session)
     query = select(CourseOffering).order_by(CourseOffering.id)
+    if user.get("role") != "admin":
+        query = query.where(CourseOffering.teacher_id == int(user.get("sub")))
     if semester_id is not None:
         query = query.where(CourseOffering.semester_id == semester_id)
     offerings = session.exec(query).all()

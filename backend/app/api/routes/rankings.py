@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
+from app.api.deps import get_teacher_accessible_classes, verify_teacher_class_access
 from app.core.config import HttpStatus
 from app.core.db import get_session
 from app.core.jwt import get_current_user
@@ -28,13 +29,18 @@ def get_rankings(
 ):
     """成绩排行榜
 
-    教师：可查自己授课科目的个人/小组榜；scope=class 需指定行政班。
+    教师：可查自己授课科目的个人/小组榜，且结果**收敛到本人可访问的行政班**
+    （class_id 传入时校验归属；未传入时按可访问班级集合过滤，集合为空即空榜）。
     学生：只能查本班（class_id 强制取学生自己的行政班，scope 强制 class）。
+    admin：不限。
     """
     role = user.get("role", "")
     course = session.get(Course, course_id)
     if course is None:
         raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="课程不存在")
+
+    # 班级范围：None = 不额外限制（admin/学生沿用旧语义）；序列 = 只允许这些班级（空集=空榜）
+    allowed_class_ids: Optional[list] = None
 
     if role == "teacher":
         offering = session.exec(select(CourseOffering).where(
@@ -43,6 +49,14 @@ def get_rankings(
         ).limit(1)).first()
         if offering is None:
             raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="只能查看自己授课科目的排行榜")
+        if class_id is not None:
+            # 指定班级必须属于本人可访问班级（fail-closed → 403）
+            verify_teacher_class_access(user, class_id, session)
+            allowed_class_ids = [class_id]
+        else:
+            # scope=all（或不带 class_id）：收敛到本人可访问班级集合，
+            # 否则可读到同科目其他教师教学班的学生/小组数据
+            allowed_class_ids = get_teacher_accessible_classes(user, session) or []
     elif role == "student":
         student = session.get(Student, user.get("sub"))
         if student is None:
@@ -62,9 +76,11 @@ def get_rankings(
         raise HTTPException(status_code=HttpStatus.BAD_REQUEST, detail="当前学期未设置")
 
     if type == "individual":
-        entries = get_individual_ranking(session, course_id, scope, class_id, semester_id)
+        entries = get_individual_ranking(session, course_id, scope, class_id, semester_id,
+                                         class_ids=allowed_class_ids)
     else:
-        entries = get_group_ranking(session, course_id, scope, class_id, semester_id)
+        entries = get_group_ranking(session, course_id, scope, class_id, semester_id,
+                                    class_ids=allowed_class_ids)
 
     # 教师 scope=class 时的班级下拉选项：该科目名单中的行政班（展示名）
     if role == "teacher":
