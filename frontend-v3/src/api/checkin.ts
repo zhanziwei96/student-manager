@@ -18,6 +18,12 @@ export interface ActiveCourseSession {
   start_time: string
 }
 
+/** 本人签到状态 - 对应后端 GET /checkins/my-status 响应 */
+export interface MyCheckinStatus {
+  checked_in: boolean
+  checkin_time: string | null
+}
+
 /**
  * 签到管理 API - FE-003 修复后
  *
@@ -58,6 +64,15 @@ export const checkinApi = {
    */
   getCourseSessionForClass: (classId: number): Promise<CourseSessionStatus> =>
     get(`/course-sessions/class/${classId}`),
+
+  /**
+   * 查询本人在指定课堂的签到状态（仅返回本人记录）
+   *
+   * 学生端判断"我是否已签到"必须用此接口；
+   * /checkins/session/{id} 是教师接口，会返回全班名单且学生无权访问。
+   */
+  getMyCheckinStatus: (sessionId: number): Promise<MyCheckinStatus> =>
+    get(`/checkins/my-status?session_id=${sessionId}`),
 
   /**
    * 获取所有活跃课堂列表（管理员Dashboard使用）

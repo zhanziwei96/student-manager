@@ -12,24 +12,29 @@ import {
 import { Users, Crown, Plus, LogIn, Trash2, LogOut } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import { groupsApi } from '@/api'
-import { coursesApi } from '@/api/courses'
+import { enrollmentsApi } from '@/api/enrollments'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { useAuthQuery } from '@/composables/useAuth'
 import { useAuthStore } from '@/stores'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const { success: toastSuccess, error: toastError } = useToast()
 const queryClient = useQueryClient()
 const authStore = useAuthStore()
+const { user } = useAuthQuery()
 
 // 学生本班级（班级ID 用于后端查询；展示名仅用于界面文案）
 const classId = computed(() => authStore.user?.class_id ?? undefined)
 const className = computed(() => authStore.user?.class_name || '')
+const studentId = computed(() => user.value?.username || '')
 
-// 我的小组（每科一个）+ 课程目录
+// 我的小组（每科一个）+ 我的选课（课程下拉来源）
 const { data: myGroups, isPending: loadingMyGroups, refetch: refetchMyGroups } = useMyGroups()
-const { data: courses, refetch: refetchCourses } = useQuery({
-  queryKey: ['courses'],
-  queryFn: () => coursesApi.list(),
+// 课程下拉：学生只能访问自己的选课接口（/courses 是管理员/教师接口，学生会 403）
+const { data: enrollments, isPending: loadingEnrollments, refetch: refetchEnrollments } = useQuery({
+  queryKey: ['my-enrollments', studentId],
+  queryFn: () => enrollmentsApi.getMyEnrollments(studentId.value),
+  enabled: () => !!studentId.value,
 })
 
 // 课程选择（默认选中第一个已有小组的课程）
@@ -41,8 +46,8 @@ watch(myGroups, (groups) => {
 }, { immediate: true })
 
 const courseOptions = computed(() => {
-  const list = courses.value ?? []
-  return list.filter((c) => c.status === 'active').map((c) => ({ value: c.id, label: c.name }))
+  const list = enrollments.value ?? []
+  return list.map((e) => ({ value: e.course_id, label: e.course_name }))
 })
 
 // 当前课程下我的小组
@@ -139,7 +144,7 @@ const { mutateAsync: joinGroup, isPending: joining } = useJoinGroup()
 // 下拉刷新（移动端手势）：await 全部查询完成后 refreshing 复位
 const pageRef = ref<HTMLElement | null>(null)
 const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async () => {
-  await Promise.all([refetchMyGroups(), refetchCourses(), refetchAvailableGroups()])
+  await Promise.all([refetchMyGroups(), refetchEnrollments(), refetchAvailableGroups()])
 })
 
 async function handleJoin(groupId: number) {
@@ -197,7 +202,10 @@ function formatTime(iso: string) {
     </div>
 
     <!-- 课程选择 -->
-    <div class="w-full sm:w-56">
+    <div
+      v-if="courseOptions.length > 0"
+      class="w-full sm:w-56"
+    >
       <Select
         v-model="selectedCourseId"
         :options="courseOptions"
@@ -205,7 +213,18 @@ function formatTime(iso: string) {
       />
     </div>
 
+    <!-- 未选课：无课程可选时提示 -->
+    <Card
+      v-if="courseOptions.length === 0 && !loadingEnrollments"
+      class="bg-white border-[#e5e5e5] p-5"
+    >
+      <p class="text-sm text-[#737373]">
+        你当前学期还没有选课，暂时无法分组。请联系任课教师确认选课名单。
+      </p>
+    </Card>
+
     <DataContainer
+      v-else
       :loading="loadingMyGroups"
       :has-data="true"
     >

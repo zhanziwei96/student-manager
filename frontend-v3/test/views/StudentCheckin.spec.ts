@@ -27,6 +27,9 @@ vi.mock('@/composables/useStudentProfile', () => ({
 }))
 
 const mockRefetchSession = vi.fn()
+const mockDoCheckin = vi.fn()
+const mockToastSuccess = vi.fn()
+const mockToastError = vi.fn()
 
 // 可变 mock 状态，用于在测试中动态切换返回值
 const mockCourseSessionState = {
@@ -45,7 +48,7 @@ const mockCourseSessionState = {
 vi.mock('@/composables/useStudentCheckin', () => ({
   useStudentCourseSession: () => mockCourseSessionState,
   useStudentSelfCheckin: () => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: mockDoCheckin,
     isPending: ref(false),
     error: ref(null),
     isSuccess: ref(false)
@@ -70,8 +73,8 @@ vi.mock('@/composables/useCheckins', () => ({
 // Mock Toast
 vi.mock('@/composables/useToast', () => ({
   useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
+    success: mockToastSuccess,
+    error: mockToastError,
     warning: vi.fn(),
     info: vi.fn(),
     showToast: vi.fn(),
@@ -133,6 +136,7 @@ describe('Student Checkin with GPS', () => {
     mockCourseSessionState.isPending.value = false
     mockCourseSessionState.error.value = null
     mockCourseSessionState.hasActiveSession.value = true
+    mockDoCheckin.mockReset()
   })
 
   const mountComponent = () => {
@@ -145,7 +149,7 @@ describe('Student Checkin with GPS', () => {
           Button: MockButton,
           Badge: MockBadge,
           DataContainer: MockDataContainer,
-          Input: { props: ['modelValue', 'placeholder', 'maxlength'], template: '<input class="mock-input" :placeholder="placeholder" :value="modelValue" :maxlength="maxlength" />' },
+          Input: { props: ['modelValue', 'placeholder', 'maxlength'], emits: ['update:modelValue'], template: '<input class="mock-input" :placeholder="placeholder" :value="modelValue" :maxlength="maxlength" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
           Toast: { template: '<div class="mock-toast" />' }
         }
       }
@@ -187,6 +191,39 @@ describe('Student Checkin with GPS', () => {
     expect(wrapper.text()).toContain('签到说明')
     expect(wrapper.text()).toContain('请在老师开启课堂后进行签到')
     expect(wrapper.text()).toContain('每节课只能签到一次')
+  })
+
+  it('签到成功后应弹出统一 success toast', async () => {
+    mockDoCheckin.mockResolvedValue({ id: 1, student_id: '2024001', session_id: 1 })
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    // 输入 6 位验证码并提交
+    const input = wrapper.find('.mock-input')
+    await input.setValue('ABC123')
+    const checkinBtn = wrapper.findAll('button').find((b) => b.text().includes('确认签到'))
+    expect(checkinBtn).toBeTruthy()
+    await checkinBtn!.trigger('click')
+    await flushPromises()
+
+    expect(mockDoCheckin).toHaveBeenCalledWith('ABC123')
+    expect(mockToastSuccess).toHaveBeenCalledWith('签到成功！')
+  })
+
+  it('签到失败时应弹出 error toast', async () => {
+    mockDoCheckin.mockRejectedValue(new Error('验证码无效或已过期'))
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    const input = wrapper.find('.mock-input')
+    await input.setValue('ABC123')
+    const checkinBtn = wrapper.findAll('button').find((b) => b.text().includes('确认签到'))
+    await checkinBtn!.trigger('click')
+    await flushPromises()
+
+    expect(mockToastError).toHaveBeenCalledWith('验证码无效或已过期')
   })
 })
 

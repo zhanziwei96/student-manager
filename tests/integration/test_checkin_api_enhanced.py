@@ -21,7 +21,6 @@ def student_user(test_engine, seed_refs):
             name="学生1",
             class_id=seed_refs["一班"],
             password_hash=password_hash,
-            salt=salt,
         )
         session.add(student)
         session.commit()

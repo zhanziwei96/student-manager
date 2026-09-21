@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { Card, Button, Badge, DataContainer, Input } from '@/components/ui'
 import { useToast } from '@/composables/useToast'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck, Keyboard } from 'lucide-vue-next'
-
-
 
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
 const { data: classSession, isPending: isLoadingSession, error: sessionError, refetch: refetchSession, hasActiveSession } = useStudentCourseSession(
@@ -15,22 +13,9 @@ const { data: classSession, isPending: isLoadingSession, error: sessionError, re
 const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } = useStudentSelfCheckin()
 const { hasCheckedIn, sessionCheckin, isPending: isLoadingCheckinStatus } = useHasCheckedInSession(computed(() => classSession.value?.id))
 
-const { error: showErrorToast } = useToast()
+const { success: showSuccessToast, error: showErrorToast } = useToast()
 
 const verificationCode = ref('')
-const showSuccess = ref(false)
-const successMessage = ref('')
-
-// Toast 定时器引用（用于组件卸载时清理）
-let toastTimeoutId: ReturnType<typeof setTimeout> | null = null
-
-// 组件卸载时清理定时器
-onUnmounted(() => {
-  if (toastTimeoutId) {
-    clearTimeout(toastTimeoutId)
-    toastTimeoutId = null
-  }
-})
 
 const isPageLoading = computed(() => isLoadingProfile.value || isLoadingSession.value || isLoadingCheckinStatus.value)
 
@@ -90,12 +75,7 @@ const handleCheckin = async () => {
   try {
     await doCheckin(code)
     verificationCode.value = ''
-    showSuccess.value = true
-    successMessage.value = '签到成功！'
-    toastTimeoutId = setTimeout(() => {
-      showSuccess.value = false
-      toastTimeoutId = null
-    }, 3000)
+    showSuccessToast('签到成功！')
   } catch (err: any) {
     showErrorToast(err.message || '签到失败，请重试')
   }
@@ -349,25 +329,5 @@ const formatTime = (time: string) => {
         </div>
       </Card>
     </template>
-
-    <!-- Success Toast -->
-    <Transition
-      enter-active-class="transition duration-300 ease-out"
-      enter-from-class="transform translate-y-2 opacity-0"
-      enter-to-class="transform translate-y-0 opacity-100"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="transform translate-y-0 opacity-100"
-      leave-to-class="transform translate-y-2 opacity-0"
-    >
-      <div
-        v-if="showSuccess"
-        class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 z-50 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 md:w-auto"
-      >
-        <div class="flex items-center justify-center md:justify-start gap-2 text-green-400">
-          <CheckCircle class="h-5 w-5 flex-shrink-0" />
-          <span class="text-sm md:text-base">{{ successMessage }}</span>
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>

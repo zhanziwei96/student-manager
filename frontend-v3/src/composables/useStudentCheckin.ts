@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { computed, type Ref, ref, toValue, type MaybeRefOrGetter } from 'vue'
 import { checkinApi } from '@/api/checkin'
 import { useStudentProfile } from './useStudentProfile'
-import { useSessionCheckins } from './useCheckins'
 import { getEnhancedDeviceFingerprint, getDeviceInfo } from '@/lib/device'
 import type { CheckinRecord } from '@/types'
 
@@ -75,7 +74,8 @@ export function useStudentSelfCheckin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-course-session'] })
-      // 使用 exact: false 匹配所有以 ['session-checkins'] 开头的 query（包含 sessionId）
+      // 立即刷新本人签到状态（签到页据此显示"已签到"）
+      queryClient.invalidateQueries({ queryKey: ['my-checkin-status'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['session-checkins'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
     },
@@ -159,28 +159,44 @@ export function useGeolocation() {
 
 /**
  * 检查学生是否已在指定课堂签到
+ *
+ * 使用 GET /checkins/my-status（仅返回本人记录）。
+ * 不可用教师接口 /checkins/session/{id}：会返回全班名单且学生无权访问（403）。
  */
 export function useHasCheckedInSession(sessionId?: number | Ref<number | undefined>) {
-  const { data: studentProfile } = useStudentProfile()
-  const { data: sessionCheckins, isPending } = useSessionCheckins(sessionId)
-
   const targetSessionId = computed(() => {
     if (sessionId === undefined) return undefined
     return typeof sessionId === 'number' ? sessionId : sessionId.value
   })
 
-  const hasCheckedIn = computed(() => {
-    if (!sessionCheckins.value || !studentProfile.value || !targetSessionId.value) return false
-    return sessionCheckins.value.some(
-      c => c.student_id === studentProfile.value!.student_id && c.session_id === targetSessionId.value
-    )
+  const { data, isPending } = useQuery({
+    queryKey: computed(() => ['my-checkin-status', targetSessionId.value]),
+    queryFn: async () => {
+      const id = targetSessionId.value
+      if (id === undefined) return null
+      return await checkinApi.getMyCheckinStatus(id)
+    },
+    enabled: computed(() => targetSessionId.value !== undefined),
+    refetchInterval: 10000,
+    retry: (failureCount, error) => {
+      // 网络错误重试 2 次，业务错误不重试
+      const msg = (error as Error).message || ''
+      const isNetworkError = msg.includes('Network Error') || msg.includes('fetch') || msg.includes('Failed to fetch')
+      return isNetworkError && failureCount < 2
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 3000),
   })
 
+  const hasCheckedIn = computed(() => data.value?.checked_in ?? false)
+
+  // 保持与旧返回结构兼容：sessionCheckin 仅暴露签到时间
   const sessionCheckin = computed(() => {
-    if (!sessionCheckins.value || !studentProfile.value || !targetSessionId.value) return null
-    return sessionCheckins.value.find(
-      c => c.student_id === studentProfile.value!.student_id && c.session_id === targetSessionId.value
-    ) || null
+    if (!data.value?.checked_in || !data.value.checkin_time) return null
+    return {
+      student_id: '',
+      session_id: targetSessionId.value ?? 0,
+      checkin_time: data.value.checkin_time,
+    } as CheckinRecord
   })
 
   return {
