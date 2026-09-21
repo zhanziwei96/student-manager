@@ -10,7 +10,11 @@ from app.core.class_cache import get_class_display_name_by_id, get_class_display
 from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.jwt import get_current_user
-from app.api.deps import verify_class_has_active_students
+from app.api.deps import (
+    verify_class_has_active_students,
+    verify_teacher_class_access,
+    require_admin_or_teacher,
+)
 # 周次计算收敛至 core/term.py 单一真源
 from app.core.term import get_current_week_number as _get_current_week_number
 from app.models import CourseSession, CourseSchedule
@@ -99,9 +103,11 @@ def begin_course_session(
     request: Request,
     data: StartCourseSessionRequest,
     session: Session = Depends(get_session),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_admin_or_teacher)
 ):
     """开始上课"""
+    # 教师仅能为自己授课范围内的班级开课（admin 不限）；先校验归属，再校验班级可用性
+    verify_teacher_class_access(user, data.class_id, session)
     # 学期归档后，禁用/不存在班级不可开课
     verify_class_has_active_students(data.class_id, session)
 

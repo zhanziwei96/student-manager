@@ -12,7 +12,7 @@ from app.core.db import get_session
 from app.core.config import HttpStatus
 from app.core.rate_limit import check_rate_limit
 from app.crud import (
-    create_checkin, get_students_by_class
+    create_checkin, get_students_by_class, get_student
 )
 from app.crud.checkin import (
     get_checkins_by_session_id, get_all_checkins
@@ -31,7 +31,10 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse
 )
 from app.models import CourseSession
-from app.api.deps import verify_teacher_class_access, require_admin_or_teacher
+from app.api.deps import (
+    verify_teacher_class_access, require_admin_or_teacher,
+    get_teacher_accessible_classes,
+)
 
 router = APIRouter(tags=["checkin"])
 
@@ -361,12 +364,26 @@ def get_active_course_sessions(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取所有活跃课堂列表（需登录，学生签到页使用）"""
+    """获取活跃课堂列表（学生仅本班、教师仅授课班级、管理员全部）"""
     from sqlmodel import select
     query = select(CourseSession).where(
         CourseSession.status == "active",
         CourseSession.semester_id == get_current_semester_id(session),
     )
+
+    role = user.get("role", "")
+    if role == "student":
+        student = get_student(session, str(user.get("sub", "")))
+        if student is None or student.class_id is None:
+            return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
+        query = query.where(CourseSession.class_id == student.class_id)
+    elif role != "admin":
+        # 教师按授课班级收敛；无权限（含 fail-closed 空集）返回空列表
+        accessible = get_teacher_accessible_classes(user, session)
+        if not accessible:
+            return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: []}
+        query = query.where(CourseSession.class_id.in_(accessible))
+
     active_sessions = session.exec(query).all()
     name_map = get_class_display_names(session, (s.class_id for s in active_sessions))
 
@@ -393,7 +410,15 @@ async def get_course_session_for_student(
     session: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """获取指定班级的活跃课堂状态（学生端使用）"""
+    """获取指定班级的活跃课堂状态（学生端使用，仅限本人所在班级）"""
+    if user.get("role", "") == "student":
+        student = get_student(session, str(user.get("sub", "")))
+        if student is None or student.class_id != class_id:
+            raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="无权访问该班级")
+    else:
+        # admin 放行；teacher 校验班级归属（其他角色一律拒绝）
+        verify_teacher_class_access(user, class_id, session)
+
     cs = get_active_course_session_by_class_id(session, class_id)
 
     if cs and cs.status == "active":

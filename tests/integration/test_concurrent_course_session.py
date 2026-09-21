@@ -104,21 +104,39 @@ class TestConcurrentCourseSession:
         class_id = ensure_class_and_semester(test_engine)
         with Session(test_engine) as session:
             password_hash, salt = generate_password_hash("teacher123")
-            session.add(User(
+            teacher = User(
                 username="teacher1",
                 name="教师1",
                 password_hash=password_hash,
                 salt=salt,
                 role=UserRoleConst.TEACHER,
                 is_active=True
-            ))
+            )
+            session.add(teacher)
+            session.flush()
             # 开课校验要求班级有启用学生
-            from app.models import Student
+            from app.models import (
+                Student, Course, CourseOffering, CourseOfferingClass, Semester,
+            )
+            from sqlmodel import select as _select
             session.add(Student(
                 student_id="CCS001",
                 name="学生1",
                 class_id=class_id,
             ))
+            # 权限真源：教师须有教学班且关联该班级，否则开课 403
+            course = Course(code="MATH1", name="高等数学")
+            session.add(course)
+            sem = session.exec(
+                _select(Semester).where(Semester.is_current.is_(True))).first()
+            session.flush()
+            offering = CourseOffering(
+                course_id=course.id, semester_id=sem.id, teacher_id=teacher.id,
+                teacher_name=teacher.name, status="active",
+            )
+            session.add(offering)
+            session.flush()
+            session.add(CourseOfferingClass(offering_id=offering.id, class_id=class_id))
             session.commit()
 
         login_response = client.post("/api/v1/login", json={

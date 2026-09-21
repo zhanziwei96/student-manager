@@ -119,7 +119,7 @@ class TestCourseSessionAPI:
     def test_start_course_session_manual(self, teacher_client, seed_class_students):
         """POST /course-sessions/start 不带 schedule_id"""
         response = teacher_client.post("/api/v1/course-sessions/start", json={
-            "class_id": seed_class_students["三班"],
+            "class_id": seed_class_students["一班"],
             "course_name": "英语"
         })
         assert response.status_code == 200
@@ -133,10 +133,10 @@ class TestCourseSessionAPI:
     def test_start_course_session_with_schedule_id(self, teacher_client, create_test_schedule, seed_class_students):
         """POST /course-sessions/start 带 schedule_id"""
         schedule = create_test_schedule(
-            class_id=seed_class_students["四班"], course_name="计算机基础")
+            class_id=seed_class_students["一班"], course_name="计算机基础")
 
         response = teacher_client.post("/api/v1/course-sessions/start", json={
-            "class_id": seed_class_students["四班"],
+            "class_id": seed_class_students["一班"],
             "schedule_id": schedule.id
         })
         assert response.status_code == 200
@@ -150,12 +150,12 @@ class TestCourseSessionAPI:
     def test_start_course_session_conflict_same_class(self, teacher_client, seed_class_students):
         """同一班级已有活跃课堂时无法开始新课堂"""
         teacher_client.post("/api/v1/course-sessions/start", json={
-            "class_id": seed_class_students["五班"],
+            "class_id": seed_class_students["二班"],
             "course_name": "物理"
         })
 
         response = teacher_client.post("/api/v1/course-sessions/start", json={
-            "class_id": seed_class_students["五班"],
+            "class_id": seed_class_students["二班"],
             "course_name": "化学"
         })
         assert response.status_code == 409
@@ -165,7 +165,7 @@ class TestCourseSessionAPI:
     def test_end_course_session(self, teacher_client, seed_class_students):
         """POST /course-sessions/{id}/end 结束课堂"""
         start_resp = teacher_client.post("/api/v1/course-sessions/start", json={
-            "class_id": seed_class_students["六班"],
+            "class_id": seed_class_students["一班"],
             "course_name": "生物"
         })
         session_id = start_resp.json()["data"]["id"]
@@ -202,9 +202,9 @@ class TestCourseSessionAPI:
         assert data["data"]["class_name"] == "2026届一班"
 
     def test_get_course_session_for_student_no_active(self, student_client, seed_class_students):
-        """学生端获取没有活跃课堂的班级状态"""
+        """学生端获取没有活跃课堂的班级状态（本班无课 → active=False）"""
         response = student_client.get(
-            f"/api/v1/course-sessions/class/{seed_class_students['二班']}")
+            f"/api/v1/course-sessions/class/{seed_class_students['一班']}")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
