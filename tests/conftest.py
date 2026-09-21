@@ -42,15 +42,15 @@ from sqlmodel import Session, SQLModel, create_engine
 
 
 def _truncate_all_tables(engine) -> None:
-    """清空测试库脏表（只清非空表：全量 TRUNCATE 约 300ms，按需约 20ms）"""
-    tables = list(SQLModel.metadata.tables.keys())
-    with Session(engine) as s:
-        probe = " UNION ALL ".join(
-            f"SELECT '{t}' AS t WHERE EXISTS (SELECT 1 FROM {t})" for t in tables)
-        nonempty = [row[0] for row in s.execute(text(probe)).all()]
-        if nonempty:
-            s.execute(text("TRUNCATE %s RESTART IDENTITY CASCADE" % ", ".join(nonempty)))
-        s.commit()
+    """清空测试库脏表（实现见 tests/db_cleanup.py）
+
+    注意：只清非空表还不够 —— 只要非空表里有 classes/semesters 这类「被大量表引用」的表，
+    `TRUNCATE ... CASCADE` 就会被外键规则逼着截断整张图（实测 27/31 张表，~700ms/用例）。
+    共享实现改用「逆依赖序 DELETE 非空表 + 序列复位」，实测 717ms → 37ms。
+    """
+    from tests.db_cleanup import clear_all_tables
+
+    clear_all_tables(engine)
 
 
 # PostgreSQL 测试引擎（session 级，函数级清表见 session fixture）

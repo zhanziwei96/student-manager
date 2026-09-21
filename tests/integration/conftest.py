@@ -57,23 +57,18 @@ from app.core.security import generate_password_hash
 
 
 def _clear_all_data():
-    """清理脏数据 —— 只 TRUNCATE 非空表
+    """清理脏数据 —— 实现见 tests/db_cleanup.py
 
-    全量 TRUNCATE 29 张表约 300ms/次（PG 需对每张表加 ACCESS EXCLUSIVE 并写 WAL），
-    而多数用例只写 2-5 张表。先用 EXISTS 精确判定哪些表非空（约 9ms 一次往返），
-    再只清这些表：典型用例从 ~300ms 降到 ~20-60ms。
-    非空表用 EXISTS 实测而非 pg_stat 估算，避免统计滞后导致的跨用例残留。
+    先用 EXISTS 一次往返探出非空表（约 29ms，非 pg_stat 估算——统计有滞后），
+    再按「逆依赖序 DELETE + 序列复位」只清这些表。
+
+    为什么不是 `TRUNCATE ... CASCADE`：PG 不允许 TRUNCATE 一张被外键引用的表，
+    **哪怕引用者是空表**。只要非空表含 classes/semesters，CASCADE 就会截断 27/31 张表
+    （WSL 上约 26ms/张，~700ms/用例）。DELETE 无此限制，实测 717ms → 37ms。
     """
-    from sqlalchemy import text
-    tables = list(SQLModel.metadata.tables.keys())
-    with Session(_test_engine) as session:
-        probe = " UNION ALL ".join(
-            f"SELECT '{t}' AS t WHERE EXISTS (SELECT 1 FROM {t})" for t in tables)
-        nonempty = [row[0] for row in session.execute(text(probe)).all()]
-        if nonempty:
-            session.execute(text(
-                "TRUNCATE %s RESTART IDENTITY CASCADE" % ", ".join(nonempty)))
-        session.commit()
+    from tests.db_cleanup import clear_all_tables
+
+    clear_all_tables(_test_engine)
 
 
 @pytest.fixture(scope="function")
