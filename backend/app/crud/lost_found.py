@@ -242,13 +242,13 @@ def count_claims_by_status(session: Session, item_id: int, status: str) -> int:
 def create_comment(
     session: Session,
     item_id: int,
-    user_id: int,
+    student_id: str,
     content: str,
 ) -> LostFoundComment:
-    """创建评论"""
+    """创建评论（student_id 是学号字符串，非 users.id）"""
     comment = LostFoundComment(
         item_id=item_id,
-        user_id=user_id,
+        student_id=student_id,
         content=content,
     )
     session.add(comment)
@@ -273,7 +273,7 @@ def get_comments_by_item(session: Session, item_id: int) -> List[LostFoundCommen
 def create_claim(
     session: Session,
     item_id: int,
-    student_id: int,
+    student_id: str,
     contact: str,
     message: Optional[str] = None,
 ) -> LostFoundClaim:
@@ -335,9 +335,9 @@ def get_claim(session: Session, claim_id: int) -> Optional[LostFoundClaim]:
 def get_student_claim(
     session: Session,
     item_id: int,
-    student_id: int,
+    student_id: str,
 ) -> Optional[LostFoundClaim]:
-    """获取学生对指定物品的认领记录"""
+    """获取学生对指定物品的认领记录（student_id 是学号字符串）"""
     query = select(LostFoundClaim).where(
         LostFoundClaim.item_id == item_id,
         LostFoundClaim.student_id == student_id,

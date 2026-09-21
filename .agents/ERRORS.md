@@ -334,6 +334,7 @@ python -c "from app.core.config import get_settings; print(get_settings().get_da
 | 2026-09-21 | 教师授权把「教学班无关联班级」当通配=全部班级，导致关联没配全的老师拿到全校班级权限（开发库真实发生） | **权限必须 fail-closed**：`course_offering_classes` 无关联行 = 无权限（`[]`），不再通配；需管理员在教学班页补配班级关联 |
 | 2026-09-21 | 详情页用 `!error` 做渲染开关，后台轮询偶发失败时把学生正在输入验证码的输入框整个卸载、丢光标 | **后台 refetch 失败不得推翻界面**：致命错误判定用 `!!error && !data`，不要用 `!error` 当渲染条件；轮询类页面的输入控件不得挂在错误态分支下 |
 | 2026-09-21 | `pytest.ini` 配 `-n 8` 但测试库只有 `classhub_test_0..3`，全量测试直接 collect 失败 | **测试库分片必须齐**：`classhub_test_0..7` + `classhub_migration_test_0..7` 需全部存在，一次性创建见 `tests/README.md` |
+| 2026-09-21 | 失物招领评论/认领把**学生的学号**当 `users.id` 存外键（`int(user["sub"])`），学生一提交就 500，两张表从未写进过一行 | **先确认 `sub` 的语义再建外键**：学生登录 `sub` = 学号（`login.py`），教师/管理员 `sub` = `users.id`。学生操作者一律用 `student_id: str` FK→`students.student_id`（见 `enrollments`），**禁止**假设 `sub` 是数字用户 ID |
 
 ---
 

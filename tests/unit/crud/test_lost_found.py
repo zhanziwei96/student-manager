@@ -8,6 +8,7 @@ from sqlmodel import Session, SQLModel
 from app.models.lost_found import LostFoundItem, LostFoundComment, LostFoundClaim, LostFoundClass
 from app.models.class_ import Class_
 from app.models.user import User
+from app.models.student import Student
 from app.models.constants import UserRoleConst
 from app.crud.lost_found import (
     create_lost_found_item, get_lost_found_item, get_lost_found_items,
@@ -55,30 +56,26 @@ def teacher(session):
 
 @pytest.fixture
 def student(session):
-    user = User(
-        username="student1",
-        name="学生一",
-        password_hash="x",
-        role=UserRoleConst.STUDENT,
-    )
-    session.add(user)
+    """真实的学生行
+
+    评论者/认领者的标识是**学号**，外键指向 students.student_id（不是 users.id）。
+    旧 fixture 建的是 User 行，是「操作者被误当成 users.id」这个设计错误的复制品。
+    """
+    s = Student(student_id="S001", name="学生一")
+    session.add(s)
     session.commit()
-    session.refresh(user)
-    return user
+    session.refresh(s)
+    return s
 
 
 @pytest.fixture
 def student2(session):
-    user = User(
-        username="student2",
-        name="学生二",
-        password_hash="x",
-        role=UserRoleConst.STUDENT,
-    )
-    session.add(user)
+    """第二个真实学生行（用于「同一物品多个认领人」的场景）"""
+    s = Student(student_id="S002", name="学生二")
+    session.add(s)
     session.commit()
-    session.refresh(user)
-    return user
+    session.refresh(s)
+    return s
 
 
 class TestItemCRUD:
@@ -169,8 +166,8 @@ class TestItemCRUD:
 
     def test_delete_item(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "待删除", "描述")
-        create_comment(session, item.id, student.id, "评论1")
-        create_claim(session, item.id, student.id, "13800000000")
+        create_comment(session, item.id, student.student_id, "评论1")
+        create_claim(session, item.id, student.student_id, "13800000000")
 
         result = delete_lost_found_item(session, item.id)
         assert result is True
@@ -192,18 +189,18 @@ class TestCommentCRUD:
 
     def test_create_comment(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        comment = create_comment(session, item.id, student.id, "这是我的钱包！")
+        comment = create_comment(session, item.id, student.student_id, "这是我的钱包！")
         assert comment.id is not None
         assert comment.content == "这是我的钱包！"
         assert comment.item_id == item.id
-        assert comment.user_id == student.id
+        assert comment.student_id == student.student_id
 
     def test_get_comments(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        c1 = create_comment(session, item.id, student.id, "第一条")
+        c1 = create_comment(session, item.id, student.student_id, "第一条")
         # 确保时间戳不同
         time.sleep(0.01)
-        c2 = create_comment(session, item.id, student.id, "第二条")
+        c2 = create_comment(session, item.id, student.student_id, "第二条")
 
         comments = get_comments_by_item(session, item.id)
         assert len(comments) == 2
@@ -217,7 +214,7 @@ class TestClaimCRUD:
 
     def test_create_claim(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        claim = create_claim(session, item.id, student.id, "13800000000", "这是我的")
+        claim = create_claim(session, item.id, student.student_id, "13800000000", "这是我的")
 
         assert claim.id is not None
         assert claim.status == "pending"
@@ -230,10 +227,10 @@ class TestClaimCRUD:
 
     def test_duplicate_claim(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        create_claim(session, item.id, student.id, "13800000000")
+        create_claim(session, item.id, student.student_id, "13800000000")
 
         with pytest.raises(DuplicateClaimError):
-            create_claim(session, item.id, student.id, "13900000000")
+            create_claim(session, item.id, student.student_id, "13900000000")
 
     def test_claim_closed_item(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
@@ -243,12 +240,12 @@ class TestClaimCRUD:
         session.commit()
 
         with pytest.raises(ItemNotClaimableError):
-            create_claim(session, item.id, student.id, "13800000000")
+            create_claim(session, item.id, student.student_id, "13800000000")
 
     def test_confirm_claim(self, session, teacher, student, student2):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        claim1 = create_claim(session, item.id, student.id, "13800000000")
-        claim2 = create_claim(session, item.id, student2.id, "13900000000")
+        claim1 = create_claim(session, item.id, student.student_id, "13800000000")
+        claim2 = create_claim(session, item.id, student2.student_id, "13900000000")
 
         confirmed = confirm_claim(session, item.id, claim1.id)
         assert confirmed.status == "confirmed"
@@ -263,7 +260,7 @@ class TestClaimCRUD:
 
     def test_reject_claim_restores_open(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        claim = create_claim(session, item.id, student.id, "13800000000")
+        claim = create_claim(session, item.id, student.student_id, "13800000000")
         assert get_lost_found_item(session, item.id).status == "claiming"
 
         rejected = reject_claim(session, item.id, claim.id)
@@ -275,8 +272,8 @@ class TestClaimCRUD:
 
     def test_reject_claim_keeps_claiming(self, session, teacher, student, student2):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        claim1 = create_claim(session, item.id, student.id, "13800000000")
-        claim2 = create_claim(session, item.id, student2.id, "13900000000")
+        claim1 = create_claim(session, item.id, student.student_id, "13800000000")
+        claim2 = create_claim(session, item.id, student2.student_id, "13900000000")
 
         # 拒绝一条，但还有另一条 pending
         reject_claim(session, item.id, claim1.id)
@@ -288,23 +285,23 @@ class TestClaimCRUD:
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
         assert count_claims_by_status(session, item.id, "pending") == 0
 
-        create_claim(session, item.id, student.id, "13800000000")
+        create_claim(session, item.id, student.student_id, "13800000000")
         assert count_claims_by_status(session, item.id, "pending") == 1
 
-        create_claim(session, item.id, student2.id, "13900000000")
+        create_claim(session, item.id, student2.student_id, "13900000000")
         assert count_claims_by_status(session, item.id, "pending") == 2
 
     def test_get_student_claim(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        claim = create_claim(session, item.id, student.id, "13800000000")
+        claim = create_claim(session, item.id, student.student_id, "13800000000")
 
-        found = get_student_claim(session, item.id, student.id)
+        found = get_student_claim(session, item.id, student.student_id)
         assert found is not None
         assert found.id == claim.id
 
     def test_get_student_claim_not_found(self, session, teacher, student):
         item = create_lost_found_item(session, teacher.id, "钱包", "描述")
-        found = get_student_claim(session, item.id, student.id)
+        found = get_student_claim(session, item.id, student.student_id)
         assert found is None
 
 

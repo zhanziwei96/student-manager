@@ -63,11 +63,12 @@ export interface StudentLostFoundDetail {
   my_claim?: MyClaimInfo
 }
 
+/** 评论者/认领者的标识是**学号**（students.student_id），不是 users.id */
 export interface LostFoundComment {
   id: number
   item_id: number
-  user_id: number
-  user_name?: string
+  student_id: string
+  student_name?: string
   content: string
   created_at: string
 }
@@ -75,14 +76,15 @@ export interface LostFoundComment {
 export interface LostFoundCommentAnonymous {
   id: number
   content: string
-  user_name: string
+  student_id: string
+  student_name: string
   created_at: string
 }
 
 export interface LostFoundClaim {
   id: number
   item_id: number
-  student_id: number
+  student_id: string
   student_name?: string
   contact: string
   message?: string

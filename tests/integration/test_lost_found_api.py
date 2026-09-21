@@ -273,10 +273,10 @@ class TestStudentAPI:
         assert resp.status_code == 200
         data = resp.json()["data"]
 
-        # 评论应显示匿名用户
+        # 评论应显示匿名用户（评论者标识是学号，匿名时不回显）
         assert len(data["comments"]) == 1
-        assert data["comments"][0]["user_name"] == "匿名用户"
-        assert data["comments"][0]["user_id"] == 0
+        assert data["comments"][0]["student_name"] == "匿名用户"
+        assert data["comments"][0]["student_id"] == ""
 
     def test_create_comment(self, teacher_client: TestClient, student_client: TestClient):
         """学生发表评论"""

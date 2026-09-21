@@ -48,14 +48,19 @@ def _format_datetime(dt) -> str:
 
 
 def _get_user_name(session: Session, user_id: int) -> Optional[str]:
-    """获取用户真实姓名：优先从学生表获取，否则使用用户名"""
+    """获取发布者显示名（物品发布者一律是教师/管理员，来自 users 表）
+
+    旧实现拿同一个数字先在 users.id 查、又在 students.student_id 查，
+    是「评论者标识被误当成 users.id」这个设计错误的残留，现已拆开。
+    """
     user = get_user(session, user_id)
-    if user:
-        student = get_student(session, str(user_id))
-        if student:
-            return student.name
-        return user.username
-    return None
+    return user.username if user else None
+
+
+def _get_student_name(session: Session, student_id: str) -> Optional[str]:
+    """获取学生姓名（评论者/认领者一律是学生，标识为学号）"""
+    student = get_student(session, student_id)
+    return student.name if student else None
 
 
 async def _save_image(file: UploadFile) -> Optional[str]:
@@ -216,12 +221,12 @@ async def teacher_get_item(
     comments = get_comments_by_item(session, item_id)
     comment_list = []
     for c in comments:
-        user_name = _get_user_name(session, c.user_id)
+        user_name = _get_student_name(session, c.student_id)
         comment_list.append({
             "id": c.id,
             "item_id": c.item_id,
-            "user_id": c.user_id,
-            "user_name": user_name,
+            "student_id": c.student_id,
+            "student_name": user_name,
             "content": c.content,
             "created_at": _format_datetime(c.created_at),
         })
@@ -230,7 +235,7 @@ async def teacher_get_item(
     claims = get_claims_by_item(session, item_id)
     claim_list = []
     for claim in claims:
-        student_name = _get_user_name(session, claim.student_id)
+        student_name = _get_student_name(session, claim.student_id)
         claim_list.append({
             "id": claim.id,
             "item_id": claim.item_id,
@@ -438,7 +443,7 @@ async def student_get_item(
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
 
-    student_id = int(user["sub"])
+    student_id = str(user["sub"])
 
     # 可见性校验：物品限定了可见班级且本班不在其中 → 404（不泄露物品存在性）
     _check_item_visibility(session, item_id, user["sub"])
@@ -450,8 +455,8 @@ async def student_get_item(
         comment_list.append({
             "id": c.id,
             "item_id": c.item_id,
-            "user_id": 0,  # 隐藏真实用户ID
-            "user_name": "匿名用户",
+            "student_id": "",  # 隐藏真实学号
+            "student_name": "匿名用户",
             "content": c.content,
             "created_at": _format_datetime(c.created_at),
         })
@@ -497,7 +502,7 @@ async def student_create_comment(
 
     _check_item_visibility(session, item_id, user["sub"])
 
-    student_id = int(user["sub"])
+    student_id = str(user["sub"])
     comment = create_comment(session, item_id, student_id, req.content)
 
     return {"success": True, "data": {"comment_id": comment.id}}
@@ -518,7 +523,7 @@ async def student_claim_item(
 
     _check_item_visibility(session, item_id, user["sub"])
 
-    student_id = int(user["sub"])
+    student_id = str(user["sub"])
     try:
         claim = create_claim(
             session,

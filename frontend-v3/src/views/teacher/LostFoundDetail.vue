@@ -187,7 +187,7 @@ function formatDate(iso: string) {
               class="rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-3"
             >
               <div class="flex items-center justify-between mb-1">
-                <span class="text-sm font-medium text-black">{{ comment.user_name || '匿名用户' }}</span>
+                <span class="text-sm font-medium text-black">{{ comment.student_name || '匿名用户' }}</span>
                 <span class="text-xs text-[#525252]">{{ formatDate(comment.created_at) }}</span>
               </div>
               <p class="text-sm text-[#737373]">{{ comment.content }}</p>
