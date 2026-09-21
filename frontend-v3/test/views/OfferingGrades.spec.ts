@@ -52,6 +52,7 @@ const fakeRow = (id: number, sid: string, name: string, className: string | null
   enrollment_id: id,
   student_id: sid,
   name,
+  class_id: className === null ? null : 1,
   class_name: className,
   score: 80,
   final_score: null,

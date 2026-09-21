@@ -21,7 +21,8 @@ const { success: toastSuccess, error: toastError } = useToast()
 const queryClient = useQueryClient()
 const authStore = useAuthStore()
 
-// 学生本班级
+// 学生本班级（班级ID 用于后端查询；展示名仅用于界面文案）
+const classId = computed(() => authStore.user?.class_id ?? undefined)
 const className = computed(() => authStore.user?.class_name || '')
 
 // 我的小组（每科一个）+ 课程目录
@@ -115,7 +116,7 @@ async function handleCreate() {
   try {
     creating.value = true
     await createGroup({
-      className: className.value,
+      classId: classId.value!,
       name: createForm.value.name.trim(),
       courseId: Number(createCourseId.value),
     })
@@ -130,7 +131,7 @@ async function handleCreate() {
 
 // 可加入小组（当前课程、未入组时）
 const { data: availableGroups, isPending: loadingGroups, refetch: refetchAvailableGroups } = useStudentGroups(
-  className,
+  classId,
   computed(() => (selectedCourseId.value === '' ? null : Number(selectedCourseId.value))),
 )
 const { mutateAsync: joinGroup, isPending: joining } = useJoinGroup()

@@ -35,7 +35,8 @@ export interface User {
   username: string              // 用户名
   name: string                  // 姓名
   role: UserRole                // 角色
-  class_name?: string           // 学生所属班级
+  class_id?: number | null      // 学生所属班级ID（未分班为 null）
+  class_name?: string           // 学生所属班级展示名
   is_account_enabled: boolean   // 账户是否启用
   last_login?: string           // 最后登录时间（ISO格式）
   created_at?: string           // 创建时间（ISO格式）
@@ -258,7 +259,8 @@ export interface EnrollmentRow {
   enrollment_id: number         // 选课记录ID
   student_id: string            // 学号
   name: string                  // 姓名
-  class_name: string            // 班级
+  class_id: number | null       // 班级ID（未分班为 null）
+  class_name: string            // 班级展示名
   score: number                 // 平时成绩
   final_score: number | null    // 期末成绩
 }

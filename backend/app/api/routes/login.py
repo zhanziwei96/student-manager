@@ -120,6 +120,7 @@ async def login(
             "name": student.name,
             "role": UserRoleConst.STUDENT,
             "is_admin": False,
+            "class_id": student.class_id,
             "class_name": class_display,
         }
         access_token = create_access_token(token_data)
@@ -135,6 +136,7 @@ async def login(
                 'username': str(student.student_id),
                 'name': student.name,
                 'role': UserRoleConst.STUDENT,
+                'class_id': student.class_id,
                 'class_name': class_display
             }
         }

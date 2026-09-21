@@ -87,10 +87,10 @@ export const groupsApi = {
     post(`/teacher/group-dissolution-requests/${reqId}/reject`, {}),
 
   // 学生
-  createGroup: (className: string, name: string, courseId: number): Promise<{ group_id: number; name: string }> =>
-    post('/student/groups', { class_name: className, name, course_id: courseId }),
-  getGroups: (className: string, courseId?: number): Promise<Group[]> =>
-    get('/student/groups', courseId ? { class_name: className, course_id: courseId } : { class_name: className }),
+  createGroup: (classId: number, name: string, courseId: number): Promise<{ group_id: number; name: string }> =>
+    post('/student/groups', { class_id: classId, name, course_id: courseId }),
+  getGroups: (classId: number, courseId?: number): Promise<Group[]> =>
+    get('/student/groups', courseId ? { class_id: classId, course_id: courseId } : { class_id: classId }),
   requestJoin: (groupId: number): Promise<unknown> =>
     post(`/student/groups/${groupId}/join-requests`, {}),
   approveJoin: (reqId: number): Promise<unknown> =>
