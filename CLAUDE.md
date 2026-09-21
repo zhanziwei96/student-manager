@@ -130,17 +130,46 @@ make status         # 检查服务健康状态
 ### 测试命令
 
 ```bash
-# 后端测试（在项目根目录运行）
-pytest tests/ -v                    # 全部测试（467个）
+# 后端测试（在项目根目录运行，需先建好 8 个分库，见 tests/README.md）
+pytest tests/ -v                    # 全部测试
 pytest tests/unit -v                # 仅单元测试
 pytest tests/integration -v         # 仅集成测试
 pytest tests/unit/test_jwt.py -v    # 单个测试文件
 
 # 前端测试（在 frontend-v3/ 目录运行）
 cd frontend-v3
-pnpm test:run                       # 运行所有测试（130个）
+pnpm test:run                       # 运行所有测试（335 个）
 pnpm test                           # 交互式测试模式
 ```
+
+#### 测试性能设计（已调优，别改回去）
+
+后端测试经历过两轮提速（`c3c13fa`：~2.5 min → 82s；`934d444`：套件增大后 187s → 169s）。瓶颈不在测试本身，而在夹具与并行度。四处改动：
+
+| 改动 | 位置 | 效果 |
+|---|---|---|
+| **8 分库并行** | `pytest.ini` → `addopts = -n 8` | `-n 8` ≈ `-n 12`（约 82s）；`-n 16` 反而退化到 180s（CPU 饱和） |
+| **按需清表：逆依赖序 DELETE + 批量序列复位** | `tests/db_cleanup.py`（两个 conftest 共用） | 717ms → ~75ms / 用例；全量 187s → 169s |
+| **去掉每用例 `create_all`** | 建表只在 conftest 导入时做一次 | 省约 18ms / 用例 |
+
+**清表为什么不能只 TRUNCATE 非空表**：PostgreSQL 不允许 TRUNCATE 任何「被外键引用」的表——哪怕引用者是空表。只要 `seed_refs` 写过 classes/semesters，`TRUNCATE ... CASCADE` 就被迫遍历整张外键图，实测截断 27/31 张表（717ms/用例）。而 DELETE 没有这个限制：引用者是空表就不会违反外键。
+
+**清表怎么做的**（`tests/db_cleanup.py`）：
+1. EXISTS 一次往返探出非空表（实测而非 `pg_stat` 估算，避免统计滞后导致脏数据残留）
+2. 逆依赖序（Kahn 拓扑）**只 DELETE 非空表**——无「被引用就不能删」的限制
+3. 序列复位范围 = 非空表 ∪ 其外键闭包，对齐原 `TRUNCATE ... RESTART IDENTITY CASCADE` 的行为（部分测试硬编码 teacher_id=1）。**必须批量**：逐列 setval 要 400+ 次往返（384ms），改成「一次查序列 + 一次 unnest 批量 setval」后 209 列与 11 列同价
+4. 外键图有环时回退 TRUNCATE CASCADE（宁可慢也不删错）
+
+**分库前置条件**（首次在新机器上跑必做，完整命令见 `tests/README.md`）：`classhub_test_0..7` + `classhub_migration_test_0..7` 必须全部存在；迁移库还要求 `public` schema 属主是 `classhub`。缺库会直接 collect 失败。
+
+**并行 agent 时必须独占分库**：多个 agent/会话同时跑测试，若都落在 `0..7` 会互相清库，产生 `ObjectDeletedError`、唯一键冲突、TRUNCATE 死锁等**假失败**。指定独占分库并禁用 xdist：
+```bash
+PYTEST_XDIST_WORKER=gwN pytest <files> -q -n 0
+```
+
+**试过但无效/有害，别重复踩**：
+- `synchronous_commit=off` —— 对 TRUNCATE 无改善（保留仅为减少 fsync 压力）
+- `QueuePool` 替换 `NullPool` —— 并发签到用例（20–50 线程）连接饿死，全量退化到 563s。**NullPool 是并发压测的必要条件，不能换**
 
 ### 环境要求
 
