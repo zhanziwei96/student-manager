@@ -47,6 +47,7 @@ vi.mock('@/api/checkin', () => ({
   checkinApi: {
     getCourseSessionForClass: vi.fn(),
     checkin: vi.fn(),
+    getMyCheckinStatus: vi.fn(),
   },
 }))
 
@@ -222,106 +223,65 @@ describe('useStudentSelfCheckin', () => {
 })
 
 describe('useHasCheckedInSession', () => {
-  const mockStudent: Student = {
-    id: '1',
-    student_id: 'S001',
-    name: '张三',
-    class_name: '计算机一班',
-    score: 100,
-  }
-
-  const mockCheckins: CheckinRecord[] = [
-    {
-      id: 1,
-      student_id: 'S001',
-      student_name: '张三',
-      class_name: '计算机一班',
-      course_name: '软件工程',
-      session_id: 1,
-      checkin_time: '2024-01-01T08:30:00Z',
-      status: 'present',
-    },
-    {
-      id: 2,
-      student_id: 'S002',
-      student_name: '李四',
-      class_name: '计算机一班',
-      course_name: '软件工程',
-      session_id: 1,
-      checkin_time: '2024-01-01T08:35:00Z',
-      status: 'present',
-    },
-  ]
+  // 新实现走 GET /checkins/my-status（仅返回本人记录），不再依赖教师接口 /checkins/session/{id}
+  const checkedInStatus = { checked_in: true, checkin_time: '2024-01-01T08:30:00Z' }
+  const notCheckedInStatus = { checked_in: false, checkin_time: null }
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useStudentProfile).mockReturnValue({
-      data: ref(mockStudent),
-      isPending: ref(false),
-      error: ref(null),
-    } as QueryResult<Student>)
-    vi.mocked(useSessionCheckins).mockReturnValue({
-      data: ref(mockCheckins),
-      isPending: ref(false),
-      error: ref(null),
-    } as QueryResult<CheckinRecord[]>)
+    vi.mocked(checkinApi.getMyCheckinStatus).mockResolvedValue(checkedInStatus)
   })
 
-  it('当学生已签到指定课堂时应返回true', () => {
+  it('当学生已签到指定课堂时应返回true', async () => {
     const { result, unmount } = withSetup(() => useHasCheckedInSession(1))
 
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    await nextTick()
+
+    expect(checkinApi.getMyCheckinStatus).toHaveBeenCalledWith(1)
     expect(result.hasCheckedIn.value).toBe(true)
     unmount()
   })
 
-  it('当学生未签到指定课堂时应返回false', () => {
-    const { result, unmount } = withSetup(() => useHasCheckedInSession(999))
-
-    expect(result.hasCheckedIn.value).toBe(false)
-    unmount()
-  })
-
-  it('应返回正确的签到记录详情', () => {
-    const { result, unmount } = withSetup(() => useHasCheckedInSession(1))
-
-    expect(result.sessionCheckin.value).toEqual(mockCheckins[0])
-    unmount()
-  })
-
-  it('当签到列表为空时应返回false', () => {
-    vi.mocked(useSessionCheckins).mockReturnValue({
-      data: ref([]),
-      isPending: ref(false),
-      error: ref(null),
-    } as QueryResult<Student>)
+  it('当学生未签到指定课堂时应返回false', async () => {
+    vi.mocked(checkinApi.getMyCheckinStatus).mockResolvedValue(notCheckedInStatus)
 
     const { result, unmount } = withSetup(() => useHasCheckedInSession(1))
 
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    await nextTick()
+
     expect(result.hasCheckedIn.value).toBe(false)
+    expect(result.sessionCheckin.value).toBeNull()
     unmount()
   })
 
-  it('当学生信息未加载时应返回false', () => {
-    vi.mocked(useStudentProfile).mockReturnValue({
-      data: ref(null),
-      isPending: ref(true),
-      error: ref(null),
-    } as QueryResult<Student>)
+  it('应返回签到时间', async () => {
+    const { result, unmount } = withSetup(() => useHasCheckedInSession(1))
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    await nextTick()
+
+    expect(result.sessionCheckin.value?.checkin_time).toBe('2024-01-01T08:30:00Z')
+    unmount()
+  })
+
+  it('未签到时不返回签到详情', async () => {
+    vi.mocked(checkinApi.getMyCheckinStatus).mockResolvedValue(notCheckedInStatus)
 
     const { result, unmount } = withSetup(() => useHasCheckedInSession(1))
 
-    expect(result.hasCheckedIn.value).toBe(false)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    await nextTick()
+
+    expect(result.sessionCheckin.value).toBeNull()
     unmount()
   })
 
-  it('应支持响应式sessionId', () => {
-    const sessionId = ref(1)
-    const { result, unmount } = withSetup(() => useHasCheckedInSession(sessionId))
+  it('未传入 sessionId 时不应调用API', () => {
+    const { result, unmount } = withSetup(() => useHasCheckedInSession(undefined))
 
-    expect(result.hasCheckedIn.value).toBe(true)
-
-    // 切换 sessionId
-    sessionId.value = 2
+    expect(checkinApi.getMyCheckinStatus).not.toHaveBeenCalled()
     expect(result.hasCheckedIn.value).toBe(false)
     unmount()
   })

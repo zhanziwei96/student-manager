@@ -12,7 +12,7 @@ import MyGroup from '@/views/student/MyGroup.vue'
 
 // Shared mutable state for mocks
 const mockMyGroups = ref<any[]>([])
-const mockCourses = ref<any[]>([])
+const mockEnrollments = ref<any[]>([])
 const mockCreateGroup = vi.fn()
 
 vi.mock('@/composables', () => ({
@@ -27,15 +27,21 @@ vi.mock('@/features/group-collaboration', () => ({
   useApproveJoin: () => ({ mutateAsync: vi.fn() }),
 }))
 
-vi.mock('@/api/courses', () => ({
-  coursesApi: {
-    list: vi.fn(),
+vi.mock('@/api/enrollments', () => ({
+  enrollmentsApi: {
+    getMyEnrollments: vi.fn(),
   },
+}))
+
+vi.mock('@/composables/useAuth', () => ({
+  useAuthQuery: () => ({
+    user: ref({ id: '2021001', username: '2021001', name: '测试学生', role: 'student', class_id: 1, class_name: '计算机1班' }),
+  }),
 }))
 
 vi.mock('@/stores', () => ({
   useAuthStore: () => ({
-    user: ref({ id: '2021001', name: '测试学生', role: 'student', class_name: '计算机1班' }),
+    user: ref({ id: '2021001', name: '测试学生', role: 'student', class_id: 1, class_name: '计算机1班' }),
   }),
 }))
 
@@ -47,7 +53,7 @@ vi.mock('@tanstack/vue-query', async () => {
   }
 })
 
-import { coursesApi } from '@/api/courses'
+import { enrollmentsApi } from '@/api/enrollments'
 
 const fakeGroup = (id: number, courseId: number, courseName: string) => ({
   id,
@@ -87,11 +93,23 @@ function mountMyGroup() {
   })
 }
 
+const fakeEnrollment = (courseId: number, courseName: string) => ({
+  enrollment_id: courseId,
+  course_id: courseId,
+  course_name: courseName,
+  teacher_name: '测试教师',
+  class_scope: '所有班级',
+  score: 0,
+  final_score: null,
+  status: 'enrolled',
+})
+
 describe('MyGroup', () => {
   beforeEach(() => {
     mockMyGroups.value = [fakeGroup(1, 1, '高等数学')]
-    mockCourses.value = [{ id: 1, code: 'MATH1', name: '高等数学', department: '', status: 'active' }]
-    vi.mocked(coursesApi.list).mockResolvedValue(mockCourses.value)
+    mockEnrollments.value = [fakeEnrollment(1, '高等数学')]
+    // 用 mockImplementation 读取 ref 当前值，避免用例内改 ref 后仍拿到旧快照
+    vi.mocked(enrollmentsApi.getMyEnrollments).mockImplementation(async () => mockEnrollments.value)
     mockCreateGroup.mockReset()
   })
 
@@ -127,5 +145,27 @@ describe('MyGroup', () => {
     expect(dialog.exists()).toBe(true)
     expect(dialog.text()).toContain('课程')
     expect(dialog.find('select').exists()).toBe(true)
+  })
+
+  it('未选课时显示提示且不渲染课程选择框', async () => {
+    mockMyGroups.value = []
+    mockEnrollments.value = []
+
+    const wrapper = mountMyGroup()
+    // 等待 my-groups 与 my-enrollments 两个查询先后落定
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('你当前学期还没有选课')
+    expect(wrapper.find('select').exists()).toBe(false)
+  })
+
+  it('有选课时正常渲染课程选择框', async () => {
+    const wrapper = mountMyGroup()
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('你当前学期还没有选课')
+    expect(wrapper.find('select').exists()).toBe(true)
   })
 })

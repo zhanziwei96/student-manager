@@ -28,9 +28,9 @@ from app.core.jwt import get_current_user
 from app.core.qr_signature import verify_verification_code
 from app.models.constants import (
     ApiResponseConst, MessageConst,
-    ApiResponse, ApiSuccessResponse
+    ApiResponse, ApiSuccessResponse, UserRoleConst
 )
-from app.models import CourseSession
+from app.models import CourseSession, CheckinRecord
 from app.api.deps import (
     verify_teacher_class_access, require_admin_or_teacher,
     get_teacher_accessible_classes,
@@ -91,6 +91,12 @@ class StudentSessionData(BaseModel):
     start_time: Optional[datetime] = None
 
 
+class MyCheckinStatusData(BaseModel):
+    """学生本人签到状态（仅本人可见，不含他人记录）"""
+    checked_in: bool
+    checkin_time: Optional[datetime] = None
+
+
 class CheckinResponse(ApiResponse[CheckinData]):
     """签到响应"""
     pass
@@ -113,6 +119,11 @@ class ActiveSessionsResponse(ApiResponse[list[ActiveSessionData]]):
 
 class StudentSessionResponse(ApiResponse[StudentSessionData]):
     """学生端课堂响应"""
+    pass
+
+
+class MyCheckinStatusResponse(ApiResponse[MyCheckinStatusData]):
+    """学生本人签到状态响应"""
     pass
 
 
@@ -438,4 +449,34 @@ async def get_course_session_for_student(
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.DATA: {'active': False}
+    }
+
+
+@router.get("/checkins/my-status", response_model=MyCheckinStatusResponse)
+async def get_my_checkin_status(
+    session_id: int,
+    db_session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """学生查询本人在指定课堂的签到状态（仅返回本人记录）
+
+    学生签到页需要判断"我是否已签到"，不能用教师接口
+    /checkins/session/{id}（会返回全班名单且学生无权访问）。
+    """
+    student_id = str(user.get("sub", ""))
+    if user.get("role") not in (UserRoleConst.STUDENT, UserRoleConst.TEACHER, UserRoleConst.ADMIN):
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail='无权查询签到状态')
+
+    from sqlmodel import select
+    record = db_session.exec(select(CheckinRecord).where(
+        CheckinRecord.session_id == session_id,
+        CheckinRecord.student_id == student_id,
+    )).first()
+
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: {
+            'checked_in': record is not None,
+            'checkin_time': record.checkin_time if record else None,
+        }
     }

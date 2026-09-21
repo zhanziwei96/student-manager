@@ -23,10 +23,15 @@ def _worker_suffix() -> str:
 
 os.environ['ENV'] = 'testing'
 os.environ['RATE_LIMIT__ENABLED'] = 'false'
-os.environ['DATABASE__URL'] = (
-    'postgresql+psycopg2://classhub:classhub_dev@localhost:5432/classhub_test'
-    + _worker_suffix()
+# 测试库连接串：
+# 允许通过 DATABASE__URL 环境变量覆盖（不同开发机/CI 的 PG 端口、密码可能不同：
+# 例如既有 localhost:5432/classhub_dev，也有 localhost:5433/classhub_secret）。
+# 未设置时回退到项目默认值，保证零配置下行为与原先一致。
+os.environ.setdefault(
+    'DATABASE__URL',
+    'postgresql+psycopg2://classhub:classhub_dev@localhost:5432/classhub_test',
 )
+os.environ['DATABASE__URL'] += _worker_suffix()
 TEST_DATABASE_URL = os.environ['DATABASE__URL']
 
 import pytest
