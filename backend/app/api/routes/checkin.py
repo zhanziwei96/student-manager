@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Body, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.class_cache import get_class_display_name_by_id, get_class_display_names
 from app.core.term import get_current_semester_id
 from app.core.db import get_session
@@ -24,7 +24,11 @@ from app.crud.course_session import (
 )
 from app.crud.checkin import DuplicateCheckinError
 from app.crud.device_bind import upsert_device_bind
-from app.crud.seat import get_classroom_by_name
+from app.crud.seat import (
+    get_classroom_by_name, occupy_seat,
+    SeatNotFoundError, SeatClassroomMismatchError, SeatBrokenError,
+    SeatOccupiedError, NotMySeatError,
+)
 from app.core.jwt import get_current_user
 from app.core.qr_signature import verify_verification_code
 from app.models.constants import (
@@ -47,6 +51,7 @@ class CheckinRequest(BaseModel):
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
     verification_code: Optional[str] = Field(default=None, description="动态验证码")
     session_id: Optional[int] = Field(default=None, description="课堂会话ID（教师手动签到时必填）")
+    seat_id: Optional[int] = Field(default=None, description="座位ID（课堂启用座位图时学生必填）")
 
 
 class CheckinData(BaseModel):
@@ -182,6 +187,34 @@ async def do_checkin(
             upsert_device_bind(db_session, cs.id, data.student_id, data.device_id)
             device_bound = True
 
+        # 座位占用：课堂所在教室启用座位图时 seat_id 必填；未启用时禁止携带
+        seat_info = None
+        room = get_classroom_by_name(db_session, cs.classroom) if cs.classroom else None
+        has_seat_map = room is not None and room.status == "active"
+        if has_seat_map and data.seat_id is None:
+            raise HTTPException(status_code=422, detail='该课堂需要先选择座位')
+        if data.seat_id is not None:
+            if not has_seat_map:
+                raise HTTPException(status_code=422, detail='该课堂未启用座位图')
+            try:
+                seat_info = occupy_seat(
+                    db_session,
+                    student_id=data.student_id,
+                    seat_id=data.seat_id,
+                    course_session_id=cs.id,
+                    semester_id=cs.semester_id,
+                )
+            except SeatNotFoundError:
+                raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='座位不存在')
+            except SeatClassroomMismatchError:
+                raise HTTPException(status_code=422, detail='座位不属于本课堂教室')
+            except SeatBrokenError:
+                raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该座位电脑故障，请选择其他座位')
+            except SeatOccupiedError:
+                raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该座位已被占用')
+            except NotMySeatError as e:
+                raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
+
         try:
             checkin = create_checkin(
                 db_session,
@@ -193,9 +226,27 @@ async def do_checkin(
                 device_info=data.device_info,
                 qr_signature=data.verification_code,
                 device_bound=device_bound,
+                seat_id=seat_info["seat_id"] if seat_info else None,
             )
         except DuplicateCheckinError as e:
-            raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
+            # 重复签到幂等：仅涉座场景放宽（无座位图课堂维持 409 原行为）
+            existing = None
+            if data.seat_id is not None:
+                existing = db_session.exec(select(CheckinRecord).where(
+                    CheckinRecord.session_id == cs.id,
+                    CheckinRecord.student_id == data.student_id,
+                )).first()
+            if existing is not None and existing.seat_id == data.seat_id:
+                checkin = existing  # 同座位重复签到 → 200 返回原记录
+            elif existing is not None and existing.seat_id is None:
+                # 已有记录无座位（如教师手动签到）→ 补录座位
+                existing.seat_id = data.seat_id
+                db_session.add(existing)
+                db_session.commit()
+                db_session.refresh(existing)
+                checkin = existing
+            else:
+                raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
 
     elif is_teacher_or_admin and data.session_id:
         # === 教师手动签到路径 ===
