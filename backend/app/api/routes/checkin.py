@@ -24,6 +24,7 @@ from app.crud.course_session import (
 )
 from app.crud.checkin import DuplicateCheckinError
 from app.crud.device_bind import upsert_device_bind
+from app.crud.seat import get_classroom_by_name
 from app.core.jwt import get_current_user
 from app.core.qr_signature import verify_verification_code
 from app.models.constants import (
@@ -89,6 +90,7 @@ class StudentSessionData(BaseModel):
     class_name: Optional[str] = None
     teacher_name: Optional[str] = None
     start_time: Optional[datetime] = None
+    seat_classroom_id: Optional[int] = None
 
 
 class MyCheckinStatusData(BaseModel):
@@ -433,6 +435,7 @@ async def get_course_session_for_student(
     cs = get_active_course_session_by_class_id(session, class_id)
 
     if cs and cs.status == "active":
+        seat_room = get_classroom_by_name(session, cs.classroom) if cs.classroom else None
         return {
             ApiResponseConst.SUCCESS: True,
             ApiResponseConst.DATA: {
@@ -442,7 +445,10 @@ async def get_course_session_for_student(
                 'course_name': cs.course_name,
                 'class_name': get_class_display_name_by_id(session, cs.class_id),
                 'teacher_name': cs.teacher_name,
-                'start_time': cs.start_time
+                'start_time': cs.start_time,
+                'seat_classroom_id': (
+                    seat_room.id if seat_room and seat_room.status == "active" else None
+                ),
             }
         }
 
