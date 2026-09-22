@@ -499,6 +499,8 @@ class TestStatus:
 
 注意：`seed_refs` fixture 在 `tests/conftest.py` 已存在（造 3 个班 + 当前学期）；`session` fixture 同文件。
 
+**测试数据铁律（Task 3 实践踩出）**：凡插入 `SeatAssignment`（或任何 FK→`students.student_id` 的表），必须先在同一个 session 里建对应学生行——`session.add(Student(student_id="S001", name="张三")); session.commit()`。`Student` 只有 `student_id`/`name` 两列必填。本计划 Task 4/5 的测试代码同理。
+
 - [ ] **Step 2: 运行确认失败**
 
 Run: `conda run -n student-manage python -m pytest tests/unit/crud/test_seat_classroom.py -v -n 0`
@@ -875,10 +877,15 @@ git commit -m "feat(seat): 座位图查询（四态）+ 我的座位列表"
 2. 座位故障 → `SeatBrokenError`（任何情况不可坐）
 3. 本课堂已被他人占用（checkin_records 或 override）→ `SeatOccupiedError`
 4. 有本课堂 override 指向我 → 坐 override 的座位， mismatch 则 `NotMySeatError`；`temporary=True`
-5. 无固定分配（本学期本教室）→ 创建固定分配，`created_fixed=True`
-6. 固定分配就是这个座位 → 通过
-7. 固定分配故障 → 允许临时坐任意空位，`temporary=True`
-8. 其余 → `NotMySeatError`
+5. **座位本学期已固定分配给他人 → `SeatOccupiedError`**（评审裁决补入：否则撞 `uix_seat_semester` 变 500；与前端「assigned 不可选」语义一致）
+6. 无固定分配（本学期本教室）→ 创建固定分配，`created_fixed=True`
+7. 固定分配就是这个座位 → 通过
+8. 固定分配故障 → 允许临时坐任意空位，`temporary=True`
+9. 其余 → `NotMySeatError`
+
+**评审裁决补入（Task 5 修复轮 1）：**
+- DB 并发兜底：`checkin_records` 部分唯一索引 `(session_id, seat_id) WHERE seat_id IS NOT NULL`；`seat_session_overrides` 唯一约束 `(session_id, seat_id)`（写在 Task 1 迁移里，模型层同步）
+- `set_seat_override` 后若该生本课堂已有 checkin 且座位不同 → 同步更正记录的 `seat_id`（记录语义 = 本课堂实际座位）
 
 - [ ] **Step 1: 写失败的单测**
 
