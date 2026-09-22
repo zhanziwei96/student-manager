@@ -47,6 +47,15 @@ export function useStudentCourseSession(classId?: MaybeRefOrGetter<number | unde
 }
 
 /**
+ * 学生签到 mutation 变量
+ *
+ * 兼容两种调用形状：
+ * - 字符串：仅验证码（原有形状，无座位图课堂）
+ * - 对象：验证码 + 座位（座位图课堂，seat_id 与后端 CheckinRequest 字段同名）
+ */
+export type SelfCheckinVariables = string | { verification_code: string; seat_id?: number }
+
+/**
  * 学生签到 - 执行签到 - FE-003 修复后
  */
 export function useStudentSelfCheckin() {
@@ -54,10 +63,13 @@ export function useStudentSelfCheckin() {
   const { data: studentProfile } = useStudentProfile()
 
   const { mutateAsync, isPending, error, isSuccess } = useMutation({
-    mutationFn: async (verificationCode: string): Promise<CheckinRecord> => {
+    mutationFn: async (variables: SelfCheckinVariables): Promise<CheckinRecord> => {
       if (!studentProfile.value) {
         throw new Error('未找到学生信息')
       }
+
+      const verificationCode = typeof variables === 'string' ? variables : variables.verification_code
+      const seatId = typeof variables === 'string' ? undefined : variables.seat_id
 
       // 获取设备指纹
       const deviceId = await getEnhancedDeviceFingerprint()
@@ -70,6 +82,7 @@ export function useStudentSelfCheckin() {
         device_id: deviceId,
         device_info: deviceInfo,
         verification_code: verificationCode.toUpperCase(),
+        ...(seatId != null ? { seat_id: seatId } : {}),
       })
     },
     onSuccess: () => {
@@ -78,6 +91,8 @@ export function useStudentSelfCheckin() {
       queryClient.invalidateQueries({ queryKey: ['my-checkin-status'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['session-checkins'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['checkin-stats'] })
+      // 座位图课堂：签到成功后刷新座位占用状态
+      queryClient.invalidateQueries({ queryKey: ['seat-map'], exact: false })
     },
     retry: (failureCount, error) => {
       // 网络错误重试 1 次，业务错误（如 409 重复签到）不重试
