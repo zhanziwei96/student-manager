@@ -84,6 +84,7 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(["student_id"], ["students.student_id"], ondelete="CASCADE"),
             sa.ForeignKeyConstraint(["seat_id"], ["seats.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("session_id", "student_id"),
+            sa.UniqueConstraint("session_id", "seat_id", name="uix_override_session_seat"),
         )
 
     # checkin_records.seat_id（可空：旧数据/无座位图课堂）
@@ -96,6 +97,29 @@ def upgrade() -> None:
         op.create_foreign_key(
             "fk_checkin_records_seat_id", "checkin_records", "seats",
             ["seat_id"], ["id"], ondelete="SET NULL",
+        )
+
+    # 并发兜底：同一课堂同一座位最多一条签到占用；同一课堂同一座位最多一条调座
+    idx_exists = bind.execute(sa.text(
+        "SELECT to_regclass('public.uix_checkin_session_seat') IS NOT NULL"
+    )).scalar()
+    if not idx_exists:
+        op.create_index(
+            "uix_checkin_session_seat", "checkin_records", ["session_id", "seat_id"],
+            unique=True,
+            postgresql_where=sa.text("seat_id IS NOT NULL"),
+        )
+
+    # 中间态兜底：seat_session_overrides 已存在但约束缺失（旧版迁移建过表）则补上
+    constraint_exists = bind.execute(sa.text(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints "
+        "WHERE table_name='seat_session_overrides' "
+        "AND constraint_name='uix_override_session_seat')"
+    )).scalar()
+    if not constraint_exists:
+        op.create_unique_constraint(
+            "uix_override_session_seat", "seat_session_overrides",
+            ["session_id", "seat_id"],
         )
 
 

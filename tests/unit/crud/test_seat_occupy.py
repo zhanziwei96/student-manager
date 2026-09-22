@@ -112,6 +112,15 @@ class TestOccupy:
                         course_session_id=course_session.id,
                         semester_id=seed_refs["semester_id"])
 
+    def test_others_fixed_seat_refused(self, session, seed_refs, room, course_session):
+        # A 先固定 P11
+        occupy_seat(session, student_id="S001", seat_id=_seat(session, room, "P11").id,
+                    course_session_id=course_session.id, semester_id=seed_refs["semester_id"])
+        # B（本教室无固定分配）选 P11 → SeatOccupiedError，而不是 500
+        with pytest.raises(SeatOccupiedError):
+            occupy_seat(session, student_id="S002", seat_id=_seat(session, room, "P11").id,
+                        course_session_id=course_session.id, semester_id=seed_refs["semester_id"])
+
 
 class TestOverride:
     def test_override_allows_other_seat(self, session, seed_refs, room, course_session):
@@ -142,3 +151,21 @@ class TestOverride:
         with pytest.raises(SeatBrokenError):
             set_seat_override(session, session_id=course_session.id,
                               student_id="S001", seat_id=broken.id)
+
+    def test_override_moves_existing_checkin(self, session, seed_refs, room, course_session):
+        from app.models.checkin import CheckinRecord
+        seat_a = _seat(session, room, "P11")
+        occupy_seat(session, student_id="S001", seat_id=seat_a.id,
+                    course_session_id=course_session.id, semester_id=seed_refs["semester_id"])
+        session.add(CheckinRecord(session_id=course_session.id, student_id="S001",
+                                  student_name="张三", class_id=seed_refs["一班"],
+                                  semester_id=seed_refs["semester_id"],
+                                  checkin_type="code", seat_id=seat_a.id))
+        session.commit()
+        seat_b = _seat(session, room, "P22")
+        set_seat_override(session, session_id=course_session.id,
+                          student_id="S001", seat_id=seat_b.id)
+        record = session.exec(select(CheckinRecord).where(
+            CheckinRecord.session_id == course_session.id,
+            CheckinRecord.student_id == "S001")).one()
+        assert record.seat_id == seat_b.id

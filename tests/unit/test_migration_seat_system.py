@@ -71,12 +71,38 @@ def _column_exists(url, table, column):
         ).scalar()
 
 
+def _index_exists(url, index):
+    engine = create_engine(url)
+    with engine.connect() as conn:
+        return conn.execute(
+            text("SELECT to_regclass(:t) IS NOT NULL"), {"t": f"public.{index}"}
+        ).scalar()
+
+
+def _constraint_exists(url, table, constraint):
+    engine = create_engine(url)
+    with engine.connect() as conn:
+        return conn.execute(
+            text(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints "
+                "WHERE table_name=:t AND constraint_name=:c)"
+            ),
+            {"t": table, "c": constraint},
+        ).scalar()
+
+
 class TestSeatSystemMigration:
     def test_upgrade_creates_seat_tables(self, scratch_db):
         _run_upgrade(scratch_db)
         for table in ("classrooms", "seats", "seat_assignments", "seat_session_overrides"):
             assert _table_exists(scratch_db, table), f"缺表 {table}"
         assert _column_exists(scratch_db, "checkin_records", "seat_id")
+
+    def test_upgrade_creates_concurrency_guards(self, scratch_db):
+        _run_upgrade(scratch_db)
+        assert _index_exists(scratch_db, "uix_checkin_session_seat")
+        assert _constraint_exists(
+            scratch_db, "seat_session_overrides", "uix_override_session_seat")
 
     def test_upgrade_is_idempotent(self, scratch_db):
         _run_upgrade(scratch_db)

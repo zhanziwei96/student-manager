@@ -283,6 +283,16 @@ def occupy_seat(session: Session, *, student_id: str, seat_id: int,
         )
     ).first()
 
+    # 别人的固定座位不可选（与前端四态 assigned 不可选一致），防撞 uix_seat_semester 唯一约束
+    owner = session.exec(
+        select(SeatAssignment).where(
+            SeatAssignment.seat_id == seat_id,
+            SeatAssignment.semester_id == semester_id,
+        )
+    ).first()
+    if owner is not None and owner.student_id != student_id:
+        raise SeatOccupiedError(seat.seat_no)
+
     if fixed is None:
         assignment = SeatAssignment(
             seat_id=seat_id, student_id=student_id,
@@ -325,6 +335,16 @@ def set_seat_override(session: Session, *, session_id: int, student_id: str,
     else:
         override.seat_id = seat_id
     session.add(override)
+    # 调座同步更正已有签到记录：记录 = 本课堂实际座位
+    record = session.exec(
+        select(CheckinRecord).where(
+            CheckinRecord.session_id == session_id,
+            CheckinRecord.student_id == student_id,
+        )
+    ).first()
+    if record is not None and record.seat_id != seat_id:
+        record.seat_id = seat_id
+        session.add(record)
     session.commit()
     session.refresh(override)
     return override

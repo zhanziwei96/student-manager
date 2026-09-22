@@ -56,6 +56,10 @@ class SeatSessionOverride(SQLModel, table=True):
     """教师临时调座：这节课有效，随 session 生命周期失效，不动固定分配。"""
 
     __tablename__ = "seat_session_overrides"
+    __table_args__ = (
+        # 并发兜底：同一课堂同一座位最多一条调座
+        UniqueConstraint("session_id", "seat_id", name="uix_override_session_seat"),
+    )
 
     session_id: int = Field(foreign_key="course_sessions.id", primary_key=True)
     student_id: str = Field(foreign_key="students.student_id", max_length=20, primary_key=True)
