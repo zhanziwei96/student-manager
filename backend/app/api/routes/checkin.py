@@ -36,6 +36,7 @@ from app.models.constants import (
     ApiResponse, ApiSuccessResponse, UserRoleConst
 )
 from app.models import CourseSession, CheckinRecord
+from app.models.seat import Seat
 from app.api.deps import (
     verify_teacher_class_access, require_admin_or_teacher,
     get_teacher_accessible_classes,
@@ -63,6 +64,8 @@ class CheckinData(BaseModel):
     checkin_time: datetime
     checkin_type: str
     session_id: int
+    seat_id: Optional[int] = Field(default=None, description="本次签到座位ID")
+    seat_no: Optional[str] = Field(default=None, description="座位编号")
 
 
 class CheckinStatsData(BaseModel):
@@ -157,6 +160,7 @@ async def do_checkin(
 
     user_role = user.get("role", "")
     is_teacher_or_admin = user_role in ("admin", "teacher")
+    seat_info = None  # 占座结果（仅学生带座分支有值），用于响应携带 seat_no
 
     if data.verification_code:
         # === 学生验证码签到路径 ===
@@ -188,7 +192,6 @@ async def do_checkin(
             device_bound = True
 
         # 座位占用：课堂所在教室启用座位图时 seat_id 必填；未启用时禁止携带
-        seat_info = None
         room = get_classroom_by_name(db_session, cs.classroom) if cs.classroom else None
         has_seat_map = room is not None and room.status == "active"
         if has_seat_map and data.seat_id is None:
@@ -278,6 +281,12 @@ async def do_checkin(
 
     checkin_data = checkin.model_dump()
     checkin_data["class_name"] = get_class_display_name_by_id(db_session, checkin.class_id)
+    # 响应携带座位信息：优先用本次占座结果；幂等返回原记录时反查 Seat
+    seat_no = seat_info["seat_no"] if seat_info else None
+    if seat_no is None and checkin.seat_id is not None:
+        seat = db_session.get(Seat, checkin.seat_id)
+        seat_no = seat.seat_no if seat else None
+    checkin_data["seat_no"] = seat_no
     return {
         ApiResponseConst.SUCCESS: True,
         ApiResponseConst.MESSAGE: MessageConst.CHECKIN_SUCCESS,

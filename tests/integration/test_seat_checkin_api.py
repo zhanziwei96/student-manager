@@ -123,3 +123,28 @@ class TestSeatCheckin:
         resp = _checkin(student_client, student,
                         seat_classroom["session_code"], seat_id)
         assert resp.status_code == 409
+
+    def test_teacher_checkin_then_student_fills_seat(
+            self, client, student_client, sample_students, test_engine,
+            seed_refs, seat_classroom):
+        """教师先代签（无座）→ 学生带座签到 → 200 且原记录补录 seat_id，记录数仍为 1"""
+        from app.core.jwt import create_access_token
+        student = sample_students[0]
+        # 教师代签（session_id 分支，无 seat_id）；seat_classroom 课堂 teacher_id=1
+        teacher_token = create_access_token({"sub": "1", "role": "teacher"})
+        client.cookies.set("access_token", teacher_token)
+        r1 = client.post("/api/v1/checkin", json={
+            "student_id": student.student_id, "student_name": student.name,
+            "session_id": seat_classroom["session_id"],
+        })
+        assert r1.status_code == 200, r1.text
+        # 学生带座补签
+        seat_id = _seat_id(test_engine, seat_classroom["room_id"], "P12")
+        r2 = _checkin(student_client, student, seat_classroom["session_code"], seat_id)
+        assert r2.status_code == 200, r2.text
+        assert r2.json()["data"]["seat_no"] == "P12"
+        with Session(test_engine) as s:
+            records = s.exec(select(CheckinRecord).where(
+                CheckinRecord.student_id == student.student_id)).all()
+            assert len(records) == 1
+            assert records[0].seat_id == seat_id
