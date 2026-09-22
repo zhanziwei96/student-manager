@@ -41,3 +41,4 @@ class CheckinRecord(SQLModel, table=True):
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
     qr_signature: str | None = Field(default=None, description="二维码签名")
     device_bound: bool = Field(default=True, description="是否绑定设备")
+    seat_id: Optional[int] = Field(default=None, foreign_key="seats.id")  # 本次实际坐的座位
