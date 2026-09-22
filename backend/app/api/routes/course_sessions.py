@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.class_cache import get_class_display_name_by_id, get_class_display_names
 from app.core.db import get_session
 from app.core.config import HttpStatus
@@ -17,7 +17,7 @@ from app.api.deps import (
 )
 # 周次计算收敛至 core/term.py 单一真源
 from app.core.term import get_current_week_number as _get_current_week_number
-from app.models import CourseSession, CourseSchedule
+from app.models import CourseSession, CourseSchedule, Classroom
 from app.models.constants import ApiResponseConst, MessageConst, ApiResponse, ApiSuccessResponse
 from app.crud.course_session import (
     get_teacher_active_course_sessions,
@@ -50,6 +50,7 @@ class CourseSessionData(BaseModel):
     schedule_id: Optional[int] = None
     week_number: Optional[int] = None
     source_type: str
+    seat_classroom_id: Optional[int] = None
 
 
 class CourseSessionListResponse(ApiResponse[list[CourseSessionData]]):
@@ -76,6 +77,18 @@ def get_course_sessions(
 
     name_map = get_class_display_names(session, (cs.class_id for cs in sessions))
 
+    # 座位图教室锚点：课堂 classroom 名称 → active 教室 id（一次查询避免 N+1）
+    room_names = {cs.classroom for cs in sessions if cs.classroom}
+    seat_room_map: dict[str, int] = {}
+    if room_names:
+        rooms = session.exec(
+            select(Classroom).where(
+                Classroom.name.in_(room_names),
+                Classroom.status == "active",
+            )
+        ).all()
+        seat_room_map = {room.name: room.id for room in rooms}
+
     data = []
     for cs in sessions:
         data.append({
@@ -90,6 +103,7 @@ def get_course_sessions(
             "schedule_id": cs.schedule_id,
             "week_number": cs.week_number,
             "source_type": cs.source_type,
+            "seat_classroom_id": seat_room_map.get(cs.classroom) if cs.classroom else None,
         })
 
     return {

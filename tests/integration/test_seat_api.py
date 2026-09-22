@@ -149,3 +149,52 @@ class TestBrokenAndOverride:
         resp = student_client.post(f"/api/v1/sessions/{cs.id}/seat-overrides",
                                    json={"student_id": "S001", "seat_id": 1})
         assert resp.status_code == 403
+
+
+class TestTeacherSessionSeatClassroom:
+    """教师课堂列表下发 seat_classroom_id（Task 12 补：此前仅学生端接口下发）。"""
+
+    def test_sessions_include_seat_classroom_id(self, teacher_client, teacher_user,
+                                                test_engine, seed_refs, classroom):
+        from sqlmodel import Session
+        from app.models import CourseSession
+        with Session(test_engine) as s:
+            s.add(CourseSession(
+                session_code="SEATTCH1",
+                course_name="高等数学",
+                class_id=seed_refs["一班"],
+                semester_id=seed_refs["semester_id"],
+                classroom="机房601",
+                teacher_id=teacher_user.id,
+                teacher_name=teacher_user.name,
+                status="active",
+            ))
+            s.commit()
+        resp = teacher_client.get("/api/v1/course-sessions")
+        assert resp.status_code == 200
+        sessions = [x for x in resp.json()["data"] if x["session_code"] == "SEATTCH1"]
+        assert len(sessions) == 1
+        assert sessions[0]["seat_classroom_id"] == classroom["id"]
+
+    def test_sessions_seat_classroom_none_when_unmatched(self, teacher_client, teacher_user,
+                                                         test_engine, seed_refs):
+        """课堂 classroom 未匹配到 active 座位教室时 seat_classroom_id 为 None。"""
+        from sqlmodel import Session
+        from app.models import CourseSession
+        with Session(test_engine) as s:
+            s.add(CourseSession(
+                session_code="SEATTCH2",
+                course_name="高等数学",
+                class_id=seed_refs["二班"],
+                semester_id=seed_refs["semester_id"],
+                classroom="普通教室A",
+                teacher_id=teacher_user.id,
+                teacher_name=teacher_user.name,
+                status="active",
+            ))
+            s.commit()
+        resp = teacher_client.get("/api/v1/course-sessions")
+        assert resp.status_code == 200
+        sessions = [x for x in resp.json()["data"] if x["session_code"] == "SEATTCH2"]
+        assert len(sessions) == 1
+        assert sessions[0]["seat_classroom_id"] is None

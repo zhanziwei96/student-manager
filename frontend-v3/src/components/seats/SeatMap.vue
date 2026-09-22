@@ -28,8 +28,9 @@ function gridPos(seat: SeatCell) {
 }
 
 function selectable(seat: SeatCell) {
-  if (seat.is_broken) return false
+  // 教师模式全可点：故障位也要能点（弹层里执行「取消故障」）
   if (props.mode === 'teacher') return true
+  if (seat.is_broken) return false
   return seat.state === 'empty' || seat.state === 'mine'
 }
 </script>
@@ -48,6 +49,7 @@ function selectable(seat: SeatCell) {
         :key="seat.seat_id"
         :seat="seat"
         :selectable="selectable(seat)"
+        :allow-broken-click="mode === 'teacher'"
         :style="gridPos(seat)"
         :class="{ 'seat-selected': seat.seat_id === selectedSeatId }"
         @click="emit('seat-click', seat)"

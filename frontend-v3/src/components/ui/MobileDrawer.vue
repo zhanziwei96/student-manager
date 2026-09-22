@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X, User, LayoutDashboard, Users, GraduationCap, CheckCircle, School, KeyRound, CalendarRange, Layers, Library, Presentation, CalendarDays } from 'lucide-vue-next'
+import { X, User, LayoutDashboard, Users, GraduationCap, CheckCircle, School, KeyRound, CalendarRange, Layers, Library, Presentation, CalendarDays, Armchair } from 'lucide-vue-next'
 import { Button } from '.'
 import { useAuthStore } from '@/stores'
 import { computed, watch } from 'vue'
@@ -33,6 +33,7 @@ const navItems = computed(() => {
       { name: '班级管理', path: '/admin/classes', icon: School },
       { name: '课程管理', path: '/admin/courses', icon: Library },
       { name: '教学班', path: '/admin/offerings', icon: Presentation },
+      { name: '教室管理', path: '/admin/classrooms', icon: Armchair },
       { name: '学生管理', path: '/admin/students', icon: Users },
       { name: '教师管理', path: '/admin/teachers', icon: User },
       { name: '课表管理', path: '/admin/schedules', icon: CalendarDays },

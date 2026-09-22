@@ -34,6 +34,15 @@ describe('SeatUnit', () => {
     expect(wrapper.emitted('click')).toBeUndefined()
   })
 
+  it('allowBrokenClick 时故障座位可点（教师端取消故障）', async () => {
+    const wrapper = mount(SeatUnit, {
+      props: { seat: cell({ is_broken: true }), selectable: true, allowBrokenClick: true },
+    })
+    expect(wrapper.attributes('aria-disabled')).toBeUndefined()
+    await wrapper.trigger('click')
+    expect(wrapper.emitted('click')).toHaveLength(1)
+  })
+
   it('可点的空位触发 click', async () => {
     const wrapper = mount(SeatUnit, { props: { seat: cell(), selectable: true } })
     await wrapper.trigger('click')

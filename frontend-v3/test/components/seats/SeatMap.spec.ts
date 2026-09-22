@@ -37,6 +37,24 @@ describe('SeatMap', () => {
     expect(wrapper.emitted('seat-click')?.[0][0]).toMatchObject({ seat_no: 'P11' })
   })
 
+  it('学生模式点故障位不发出 seat-click', async () => {
+    const brokenSeats = seats.map((s, i) => (i === 0 ? { ...s, is_broken: true } : s))
+    const wrapper = mount(SeatMap, {
+      props: { classroom, seats: brokenSeats, mode: 'student' },
+    })
+    await wrapper.findAll('.seat-unit')[0].trigger('click')
+    expect(wrapper.emitted('seat-click')).toBeUndefined()
+  })
+
+  it('教师模式点故障位也发出 seat-click（取消故障入口）', async () => {
+    const brokenSeats = seats.map((s, i) => (i === 0 ? { ...s, is_broken: true } : s))
+    const wrapper = mount(SeatMap, {
+      props: { classroom, seats: brokenSeats, mode: 'teacher' },
+    })
+    await wrapper.findAll('.seat-unit')[0].trigger('click')
+    expect(wrapper.emitted('seat-click')?.[0][0]).toMatchObject({ seat_no: 'P11' })
+  })
+
   it('深色作用域类存在', () => {
     const wrapper = mount(SeatMap, {
       props: { classroom, seats, mode: 'teacher' },

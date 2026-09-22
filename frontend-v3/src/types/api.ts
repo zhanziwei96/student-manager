@@ -303,6 +303,7 @@ export interface CourseSession {
   week_number?: number
   schedule_id?: number
   source_type: 'scheduled' | 'manual' | 'makeup'
+  seat_classroom_id?: number | null  // 座位图教室ID（课堂 classroom 未匹配 active 座位教室时为 null）
 }
 
 export interface StartCourseSessionRequest {

@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import type { SeatCell } from '@/types/seats'
 
-const props = defineProps<{ seat: SeatCell; selectable: boolean }>()
+const props = defineProps<{
+  seat: SeatCell
+  selectable: boolean
+  /** 教师端需要点故障位来「取消故障」；学生端缺省 false，故障位始终不可点 */
+  allowBrokenClick?: boolean
+}>()
 const emit = defineEmits<{ (e: 'click'): void }>()
 
 function onClick() {
-  if (!props.selectable || props.seat.is_broken) return
+  if (!props.selectable) return
+  if (props.seat.is_broken && !props.allowBrokenClick) return
   emit('click')
 }
 </script>
@@ -16,7 +22,7 @@ function onClick() {
     class="seat-unit"
     :data-state="seat.state"
     :data-broken="seat.is_broken || undefined"
-    :aria-disabled="!selectable || seat.is_broken || undefined"
+    :aria-disabled="!selectable || (seat.is_broken && !allowBrokenClick) || undefined"
     :aria-label="`${seat.seat_no}${seat.student_name ? ' ' + seat.student_name : ''}${seat.is_broken ? ' 电脑故障' : ''}`"
     @click="onClick"
   >
