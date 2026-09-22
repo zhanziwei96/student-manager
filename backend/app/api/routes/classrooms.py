@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select, func
 
 from app.api.deps import get_current_user, require_admin_or_teacher
@@ -13,7 +14,7 @@ from app.crud.course_session import get_active_course_session_by_class_id
 from app.crud.seat import (
     ClassroomNameConflictError, SeatBrokenError, SeatLayoutConflictError,
     SeatNotFoundError, SeatOccupiedError,
-    clear_seat_override, create_classroom, get_classroom,
+    clear_seat_override, create_classroom, get_classroom, get_classroom_by_name,
     get_my_seat_assignments, get_seat_map, list_classrooms,
     set_classroom_status, set_seat_broken, set_seat_override,
     update_classroom_layout,
@@ -94,9 +95,15 @@ def update(classroom_id: int, body: ClassroomUpdateIn,
         if body.status is not None:
             room = set_classroom_status(session, classroom_id, body.status)
         if body.name is not None and body.name != room.name:
+            if get_classroom_by_name(session, body.name) is not None:
+                raise HTTPException(409, "教室名已存在")
             room.name = body.name
             session.add(room)
-            session.commit()
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                raise HTTPException(409, "教室名已存在")
             session.refresh(room)
     except SeatLayoutConflictError as e:
         # 409 的 removed_seat_nos 需要进 data：HTTPException.detail 只会落到 message
@@ -179,6 +186,8 @@ def set_override(session_id: int, body: OverrideIn,
     cs = session.get(CourseSession, session_id)
     if cs is None:
         raise HTTPException(404, "课堂不存在")
+    if user.get("role") not in ("admin", "teacher"):
+        raise HTTPException(403, "仅教师或管理员可调座")
     if user.get("role") != "admin" and cs.teacher_id != int(user["sub"]):
         raise HTTPException(403, "只能调整自己课堂的座位")
     try:
@@ -201,6 +210,8 @@ def delete_override(session_id: int, student_id: str,
     cs = session.get(CourseSession, session_id)
     if cs is None:
         raise HTTPException(404, "课堂不存在")
+    if user.get("role") not in ("admin", "teacher"):
+        raise HTTPException(403, "仅教师或管理员可调座")
     if user.get("role") != "admin" and cs.teacher_id != int(user["sub"]):
         raise HTTPException(403, "只能调整自己课堂的座位")
     clear_seat_override(session, session_id, student_id)

@@ -73,6 +73,11 @@ class TestClassroomCrud:
         assert resp.status_code == 409
         assert "P23" in resp.json()["data"]["removed_seat_nos"]
 
+    def test_rename_conflict_409(self, admin_client, classroom):
+        admin_client.post("/api/v1/classrooms", json={"name": "机房602", "rows": 1, "cols": 1})
+        resp = admin_client.put(f"/api/v1/classrooms/{classroom['id']}", json={"name": "机房602"})
+        assert resp.status_code == 409
+
 
 class TestSeatMap:
     def test_student_reads_own_classroom_map(self, student_client, classroom,
@@ -134,3 +139,13 @@ class TestBrokenAndOverride:
         resp = teacher_client.delete(
             f"/api/v1/sessions/{session_id}/seat-overrides/S001")
         assert resp.status_code == 200, resp.text
+
+    def test_student_override_forbidden(self, student_client, test_engine, seed_refs, classroom):
+        from sqlmodel import Session
+        from app.crud.course_session import start_course_session
+        with Session(test_engine) as s:
+            cs = start_course_session(s, class_id=seed_refs["一班"], teacher_id=1,
+                                      teacher_name="王老师", classroom="机房601")
+        resp = student_client.post(f"/api/v1/sessions/{cs.id}/seat-overrides",
+                                   json={"student_id": "S001", "seat_id": 1})
+        assert resp.status_code == 403
