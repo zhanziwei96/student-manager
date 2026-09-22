@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 
 from app.core.seat_layout import build_seat_rows
 from app.models.checkin import CheckinRecord
+from app.models.course_session import CourseSession
 from app.models.seat import Classroom, Seat, SeatAssignment
 from app.models.seat import SeatSessionOverride
 
@@ -197,3 +198,140 @@ def get_my_seat_assignments(session: Session, student_id: str,
         }
         for assignment, seat, room in rows
     ]
+
+
+class SeatNotFoundError(Exception):
+    pass
+
+
+class SeatBrokenError(Exception):
+    pass
+
+
+class SeatOccupiedError(Exception):
+    pass
+
+
+class NotMySeatError(Exception):
+    pass
+
+
+class SeatClassroomMismatchError(Exception):
+    pass
+
+
+def set_seat_broken(session: Session, seat_id: int, is_broken: bool) -> Seat:
+    seat = session.get(Seat, seat_id)
+    if seat is None:
+        raise SeatNotFoundError(seat_id)
+    seat.is_broken = is_broken
+    session.add(seat)
+    session.commit()
+    session.refresh(seat)
+    return seat
+
+
+def _session_occupiers(session: Session, course_session_id: int) -> tuple[set, dict]:
+    """本课堂占用情况：checkin_records + overrides。返回 (被占 seat_id 集合, seat_id→student_id)。"""
+    records = session.exec(
+        select(CheckinRecord).where(
+            CheckinRecord.session_id == course_session_id,
+            CheckinRecord.seat_id.is_not(None),
+        )
+    ).all()
+    overrides = session.exec(
+        select(SeatSessionOverride).where(
+            SeatSessionOverride.session_id == course_session_id)
+    ).all()
+    by_seat = {r.seat_id: r.student_id for r in records}
+    for o in overrides:
+        by_seat.setdefault(o.seat_id, o.student_id)
+    return set(by_seat), by_seat
+
+
+def occupy_seat(session: Session, *, student_id: str, seat_id: int,
+                course_session_id: int, semester_id: int) -> dict:
+    """校验并占座。规则顺序见计划 Task 5。"""
+    seat = session.get(Seat, seat_id)
+    if seat is None:
+        raise SeatNotFoundError(seat_id)
+
+    cs = session.get(CourseSession, course_session_id)
+    room = session.get(Classroom, seat.classroom_id)
+    if cs is None or room is None or cs.classroom != room.name:
+        raise SeatClassroomMismatchError(seat_id)
+
+    if seat.is_broken:
+        raise SeatBrokenError(seat.seat_no)
+
+    occupied_ids, occupier_by_seat = _session_occupiers(session, course_session_id)
+    if seat_id in occupied_ids and occupier_by_seat[seat_id] != student_id:
+        raise SeatOccupiedError(seat.seat_no)
+
+    override = session.get(SeatSessionOverride, (course_session_id, student_id))
+    if override is not None:
+        if override.seat_id != seat_id:
+            raise NotMySeatError("教师已将你调到其他座位")
+        return {"seat_id": seat_id, "seat_no": seat.seat_no,
+                "created_fixed": False, "temporary": True}
+
+    fixed = session.exec(
+        select(SeatAssignment).where(
+            SeatAssignment.student_id == student_id,
+            SeatAssignment.semester_id == semester_id,
+            SeatAssignment.classroom_id == seat.classroom_id,
+        )
+    ).first()
+
+    if fixed is None:
+        assignment = SeatAssignment(
+            seat_id=seat_id, student_id=student_id,
+            classroom_id=seat.classroom_id, semester_id=semester_id,
+            created_at=datetime.now(),
+        )
+        session.add(assignment)
+        session.commit()
+        return {"seat_id": seat_id, "seat_no": seat.seat_no,
+                "created_fixed": True, "temporary": False}
+
+    if fixed.seat_id == seat_id:
+        return {"seat_id": seat_id, "seat_no": seat.seat_no,
+                "created_fixed": False, "temporary": False}
+
+    fixed_seat = session.get(Seat, fixed.seat_id)
+    if fixed_seat is not None and fixed_seat.is_broken:
+        return {"seat_id": seat_id, "seat_no": seat.seat_no,
+                "created_fixed": False, "temporary": True}
+
+    raise NotMySeatError(f"你的固定座位是 {fixed_seat.seat_no if fixed_seat else fixed.seat_id}")
+
+
+def set_seat_override(session: Session, *, session_id: int, student_id: str,
+                      seat_id: int) -> SeatSessionOverride:
+    """教师临时调座：本课堂有效。目标座位必须存在、未故障、本课堂未被他人占用。"""
+    seat = session.get(Seat, seat_id)
+    if seat is None:
+        raise SeatNotFoundError(seat_id)
+    if seat.is_broken:
+        raise SeatBrokenError(seat.seat_no)
+    occupied_ids, occupier_by_seat = _session_occupiers(session, session_id)
+    if seat_id in occupied_ids and occupier_by_seat[seat_id] != student_id:
+        raise SeatOccupiedError(seat.seat_no)
+
+    override = session.get(SeatSessionOverride, (session_id, student_id))
+    if override is None:
+        override = SeatSessionOverride(session_id=session_id, student_id=student_id,
+                                       seat_id=seat_id, created_at=datetime.now())
+    else:
+        override.seat_id = seat_id
+    session.add(override)
+    session.commit()
+    session.refresh(override)
+    return override
+
+
+def clear_seat_override(session: Session, session_id: int, student_id: str) -> None:
+    override = session.get(SeatSessionOverride, (session_id, student_id))
+    if override is not None:
+        session.delete(override)
+        session.commit()
