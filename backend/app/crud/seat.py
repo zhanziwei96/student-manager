@@ -6,7 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.core.seat_layout import build_seat_rows
+from app.models.checkin import CheckinRecord
 from app.models.seat import Classroom, Seat, SeatAssignment
+from app.models.seat import SeatSessionOverride
 
 
 class ClassroomNameConflictError(Exception):
@@ -109,3 +111,89 @@ def update_classroom_layout(session: Session, classroom_id: int, *,
     session.commit()
     session.refresh(room)
     return room
+
+
+def get_seat_map(session: Session, classroom_id: int, *, semester_id: int,
+                 session_id: Optional[int] = None,
+                 viewer_student_id: Optional[str] = None) -> list[dict]:
+    """座位图：四态 empty/assigned/occupied/mine。
+
+    mine      = 本学期分配给 viewer，或本课堂 override 指向 viewer
+    occupied  = 本课堂已有他人签到占用，或 override 指向他人（需传 session_id）
+    assigned  = 本学期分配给他人且本课堂未占用
+    empty     = 其余
+    """
+    seats = session.exec(
+        select(Seat).where(Seat.classroom_id == classroom_id)
+        .order_by(Seat.row, Seat.col)
+    ).all()
+    seat_ids = [s.id for s in seats]
+
+    assignments = session.exec(
+        select(SeatAssignment).where(
+            SeatAssignment.seat_id.in_(seat_ids),
+            SeatAssignment.semester_id == semester_id,
+        )
+    ).all() if seat_ids else []
+    assigned_by_seat = {a.seat_id: a for a in assignments}
+
+    occupied_by_seat: dict[int, str] = {}
+    override_by_seat: dict[int, str] = {}
+    override_by_student: dict[str, int] = {}
+    if session_id is not None and seat_ids:
+        records = session.exec(
+            select(CheckinRecord).where(
+                CheckinRecord.session_id == session_id,
+                CheckinRecord.seat_id.in_(seat_ids),
+            )
+        ).all()
+        occupied_by_seat = {r.seat_id: r.student_id for r in records if r.seat_id}
+        overrides = session.exec(
+            select(SeatSessionOverride).where(
+                SeatSessionOverride.session_id == session_id,
+                SeatSessionOverride.seat_id.in_(seat_ids),
+            )
+        ).all()
+        override_by_seat = {o.seat_id: o.student_id for o in overrides}
+        override_by_student = {o.student_id: o.seat_id for o in overrides}
+
+    cells = []
+    for s in seats:
+        occupier = occupied_by_seat.get(s.id) or override_by_seat.get(s.id)
+        fixed = assigned_by_seat.get(s.id)
+        student_id = occupier or (fixed.student_id if fixed else None)
+        if viewer_student_id and (
+            student_id == viewer_student_id
+            or override_by_student.get(viewer_student_id) == s.id
+        ):
+            state = "mine"
+        elif occupier:
+            state = "occupied"
+        elif fixed:
+            state = "assigned"
+        else:
+            state = "empty"
+        cells.append({
+            "seat_id": s.id, "seat_no": s.seat_no, "row": s.row, "col": s.col,
+            "is_broken": s.is_broken, "state": state,
+            "student_id": student_id, "student_name": None,
+        })
+    return cells
+
+
+def get_my_seat_assignments(session: Session, student_id: str,
+                            semester_id: int) -> list[dict]:
+    rows = session.exec(
+        select(SeatAssignment, Seat, Classroom)
+        .join(Seat, SeatAssignment.seat_id == Seat.id)
+        .join(Classroom, SeatAssignment.classroom_id == Classroom.id)
+        .where(SeatAssignment.student_id == student_id,
+               SeatAssignment.semester_id == semester_id)
+    ).all()
+    return [
+        {
+            "classroom_id": room.id, "classroom_name": room.name,
+            "seat_id": seat.id, "seat_no": seat.seat_no, "is_broken": seat.is_broken,
+        }
+        for assignment, seat, room in rows
+    ]
