@@ -57,6 +57,7 @@ export interface StartCourseSessionParams {
   classId: number
   courseName?: string
   scheduleId?: number
+  classroom?: string
 }
 
 export function useCourseSessionStart() {
@@ -67,6 +68,7 @@ export function useCourseSessionStart() {
         class_id: params.classId,
         course_name: params.courseName,
         schedule_id: params.scheduleId,
+        classroom: params.classroom,
       })
     },
     onSuccess: () => {
