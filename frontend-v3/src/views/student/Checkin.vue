@@ -340,10 +340,6 @@ const handleAnimatorFinished = async () => {
                 <Loader2 class="h-6 w-6 animate-spin text-primary" />
               </div>
               <div class="flex items-center gap-3 text-sm text-[#737373]">
-                <SeatCheckinAnimator
-                  :state="animatorState"
-                  @finished="handleAnimatorFinished"
-                />
                 <span v-if="selectedSeat">已选座位 {{ selectedSeat.seat_no }}</span>
                 <span v-else>点击座位图选择座位</span>
               </div>
@@ -361,6 +357,19 @@ const handleAnimatorFinished = async () => {
             </template>
           </div>
 
+          <!--
+            动画器必须挂在这个条件块之外：签到成功后 my-checkin-status 失效重取
+            会让 hasCheckedIn 立即变 true、canCheckin 变 false，若动画器在块内
+            会在开播瞬间被卸载（finished 永不触发、成功提示也随之丢失）。
+            已签到卡片等动画播完（animatorState 回到 idle）再出现。
+          -->
+          <div class="flex items-center justify-center gap-3 py-1 text-sm text-[#737373]">
+            <SeatCheckinAnimator
+              :state="animatorState"
+              @finished="handleAnimatorFinished"
+            />
+          </div>
+
           <div
             v-if="isCheckingIn"
             class="flex flex-col items-center justify-center gap-3 py-8"
@@ -372,7 +381,7 @@ const handleAnimatorFinished = async () => {
           </div>
 
           <div
-            v-else-if="showCheckedInStatus && sessionCheckin"
+            v-else-if="showCheckedInStatus && sessionCheckin && animatorState === 'idle'"
             class="rounded-lg border border-green-500/20 bg-green-500/10 p-4 md:p-6 text-center"
           >
             <CheckCircle class="mx-auto h-8 w-8 md:h-10 md:w-10 text-green-400" />

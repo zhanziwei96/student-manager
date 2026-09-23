@@ -29,6 +29,9 @@ const twoEmptySeats = () => ({
   ],
 })
 const seatMapData = ref<any>(twoEmptySeats())
+// 模拟签到成功后 my-checkin-status 重取：hasCheckedIn 立即翻 true（回归 fix/seat-animator-unmount 的竞态）
+const hasCheckedInRef = ref(false)
+const sessionCheckinRef = ref<any>(null)
 
 vi.mock('@/composables/useStudentProfile', () => ({
   useStudentProfile: () => ({
@@ -52,8 +55,8 @@ vi.mock('@/composables/useStudentCheckin', () => ({
     isSuccess: ref(false),
   }),
   useHasCheckedInSession: () => ({
-    hasCheckedIn: ref(false),
-    sessionCheckin: ref(null),
+    hasCheckedIn: hasCheckedInRef,
+    sessionCheckin: sessionCheckinRef,
     isPending: ref(false),
   }),
 }))
@@ -122,6 +125,8 @@ describe('学生座位签到', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDoCheckin.mockReset()
+    hasCheckedInRef.value = false
+    sessionCheckinRef.value = null
     courseSessionData.value = {
       id: 10,
       active: true,
@@ -191,6 +196,35 @@ describe('学生座位签到', () => {
 
     animator.vm.$emit('finished')
     await flushPromises()
+    expect(mockToastSuccess).toHaveBeenCalledWith('签到成功！')
+  })
+
+  it('回归：hasCheckedIn 翻 true 后动画器不被卸载，已签到卡片等动画播完才出现', async () => {
+    // 模拟真实竞态：doCheckin 成功后 my-checkin-status 立即重取，hasCheckedIn 翻 true
+    mockDoCheckin.mockImplementation(async () => {
+      hasCheckedInRef.value = true
+      sessionCheckinRef.value = { checkin_time: '2026-04-01T10:05:00' }
+      return {}
+    })
+    const wrapper = mountPage()
+    await flushPromises()
+
+    await wrapper.findAll('.mock-seat')[0].trigger('click')
+    await wrapper.find('.mock-input').setValue('123456')
+    await findConfirmButton(wrapper)!.trigger('click')
+    await flushPromises()
+
+    // hasCheckedIn 已为 true，但动画器仍在 DOM 中且状态为 success
+    const animator = wrapper.findComponent({ name: 'SeatCheckinAnimator' })
+    expect(animator.exists()).toBe(true)
+    expect(animator.props('state')).toBe('success')
+    // 已签到卡片在动画播完前不出现
+    expect(wrapper.text()).not.toContain('本节课已完成签到')
+
+    animator.vm.$emit('finished')
+    await flushPromises()
+    // 播完后卡片出现 + toast
+    expect(wrapper.text()).toContain('本节课已完成签到')
     expect(mockToastSuccess).toHaveBeenCalledWith('签到成功！')
   })
 
