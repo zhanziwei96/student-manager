@@ -300,7 +300,12 @@ def occupy_seat(session: Session, *, student_id: str, seat_id: int,
             created_at=datetime.now(),
         )
         session.add(assignment)
-        session.commit()
+        try:
+            session.commit()
+        except IntegrityError:
+            # 并发首次选座：后提交者撞 uix_seat_semester / uix_student_semester_classroom
+            session.rollback()
+            raise SeatOccupiedError(seat.seat_no)
         return {"seat_id": seat_id, "seat_no": seat.seat_no,
                 "created_fixed": True, "temporary": False}
 

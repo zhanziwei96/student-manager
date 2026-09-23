@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Body, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from app.core.class_cache import get_class_display_name_by_id, get_class_display_names
 from app.core.term import get_current_semester_id
@@ -245,7 +246,12 @@ async def do_checkin(
                 # 已有记录无座位（如教师手动签到）→ 补录座位
                 existing.seat_id = data.seat_id
                 db_session.add(existing)
-                db_session.commit()
+                try:
+                    db_session.commit()
+                except IntegrityError:
+                    # 并发补录同一座位：撞 uix_checkin_session_seat → 409
+                    db_session.rollback()
+                    raise HTTPException(status_code=HttpStatus.CONFLICT, detail='该座位已被占用')
                 db_session.refresh(existing)
                 checkin = existing
             else:

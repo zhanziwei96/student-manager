@@ -121,6 +121,30 @@ class TestOccupy:
             occupy_seat(session, student_id="S002", seat_id=_seat(session, room, "P11").id,
                         course_session_id=course_session.id, semester_id=seed_refs["semester_id"])
 
+    def test_concurrent_first_choice_translated_to_occupied(
+            self, session, seed_refs, room, course_session):
+        """并发首次选座：竞态胜者在快照建立后提交，IntegrityError 须翻译为 SeatOccupiedError。"""
+        from datetime import datetime
+        from sqlmodel import Session
+        seat = _seat(session, room, "P11")
+        session.commit()  # 结束当前事务，以便切换隔离级别
+        # REPEATABLE READ 快照：模拟"校验通过 → 提交"窗口内胜者已提交的竞态
+        session.connection(execution_options={"isolation_level": "REPEATABLE READ"})
+        session.exec(select(SeatAssignment)).all()  # 建立快照（看不到之后的提交）
+        winner = Session(session.get_bind())
+        try:
+            winner.add(SeatAssignment(
+                seat_id=seat.id, student_id="S002", classroom_id=room.id,
+                semester_id=seed_refs["semester_id"], created_at=datetime.now(),
+            ))
+            winner.commit()
+        finally:
+            winner.close()
+        with pytest.raises(SeatOccupiedError):
+            occupy_seat(session, student_id="S001", seat_id=seat.id,
+                        course_session_id=course_session.id,
+                        semester_id=seed_refs["semester_id"])
+
 
 class TestOverride:
     def test_override_allows_other_seat(self, session, seed_refs, room, course_session):
