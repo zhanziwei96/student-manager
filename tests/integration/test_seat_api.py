@@ -198,3 +198,38 @@ class TestTeacherSessionSeatClassroom:
         sessions = [x for x in resp.json()["data"] if x["session_code"] == "SEATTCH2"]
         assert len(sessions) == 1
         assert sessions[0]["seat_classroom_id"] is None
+
+
+class TestManualStartWithClassroom:
+    """手动开课携带 classroom 字段 → 座位图对手动课堂生效（spec 合规修复）。"""
+
+    def test_start_with_classroom_activates_seat_map(self, admin_client, student_client,
+                                                     seed_refs):
+        resp = admin_client.post("/api/v1/classrooms",
+                                 json={"name": "机房T", "rows": 2, "cols": 2})
+        assert resp.status_code == 201, resp.text
+        classroom_id = resp.json()["data"]["id"]
+
+        start = admin_client.post("/api/v1/course-sessions/start", json={
+            "class_id": seed_refs["一班"],
+            "course_name": "上机实践",
+            "classroom": "机房T",
+        })
+        assert start.status_code == 200, start.text
+
+        got = student_client.get(f"/api/v1/course-sessions/class/{seed_refs['一班']}")
+        assert got.status_code == 200, got.text
+        assert got.json()["data"]["seat_classroom_id"] == classroom_id
+
+    def test_start_without_classroom_keeps_none(self, admin_client, student_client,
+                                                seed_refs):
+        """不带 classroom 开课 → seat_classroom_id 为 None（回退不破坏原行为）。"""
+        start = admin_client.post("/api/v1/course-sessions/start", json={
+            "class_id": seed_refs["一班"],
+            "course_name": "自习",
+        })
+        assert start.status_code == 200, start.text
+
+        got = student_client.get(f"/api/v1/course-sessions/class/{seed_refs['一班']}")
+        assert got.status_code == 200, got.text
+        assert got.json()["data"]["seat_classroom_id"] is None

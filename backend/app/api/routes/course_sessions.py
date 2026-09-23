@@ -4,7 +4,7 @@
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 from app.core.class_cache import get_class_display_name_by_id, get_class_display_names
 from app.core.db import get_session
@@ -37,6 +37,7 @@ class StartCourseSessionRequest(BaseModel):
     class_id: int
     course_name: Optional[str] = None
     schedule_id: Optional[int] = None
+    classroom: Optional[str] = Field(default=None, max_length=50)
 
 
 class CourseSessionData(BaseModel):
@@ -172,6 +173,10 @@ def begin_course_session(
                     status_code=HttpStatus.BAD_REQUEST,
                     detail="该周课程已取消，无法开始上课"
                 )
+
+    # 手动开课回退：schedule/adjustment 未提供教室时采用请求中的 classroom
+    if not classroom:
+        classroom = data.classroom
 
     try:
         course_session = start_course_session(
