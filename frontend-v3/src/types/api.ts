@@ -310,6 +310,7 @@ export interface StartCourseSessionRequest {
   class_id: number
   course_name?: string
   schedule_id?: number
+  classroom?: string  // 教室名；匹配「教室管理」中的 active 教室时启用座位签到
 }
 
 // 课表调整记录

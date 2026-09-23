@@ -9,7 +9,7 @@
  * - 顶部今日课表快捷开始
  */
 import { ref, computed, watch } from 'vue'
-import { useQueryClient } from '@tanstack/vue-query'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import {
   useCourseSessions,
   useCourseSessionStart,
@@ -24,7 +24,7 @@ import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useSessionCheckins } from '@/composables/useCheckins'
 import { useTeacherCourses } from '@/composables/useTeacherCourses'
 import { useSeatMap } from '@/composables/useSeatMap'
-import { seatsApi, seatOverridesApi } from '@/api/seats'
+import { seatsApi, seatOverridesApi, classroomsApi } from '@/api/seats'
 import { useAuthStore } from '@/stores'
 import { Card, Button, Input, Select, Badge, NetworkErrorBanner, ResponsiveDialog } from '@/components/ui'
 import {
@@ -111,6 +111,18 @@ const formatDuration = (startTime: string): string => {
 // ===== 状态定义 =====
 const classId = ref<number | ''>('')
 const courseName = ref('')
+const classroom = ref('')
+
+// 可选教室（active）：开课时选择后该课堂启用座位签到
+const { data: classroomsData } = useQuery({
+  queryKey: ['classrooms', 'active'],
+  queryFn: () => classroomsApi.list(),
+})
+const activeClassroomOptions = computed(() =>
+  (classroomsData.value ?? [])
+    .filter(c => c.status === 'active')
+    .map(c => ({ label: `${c.name}（${c.rows}×${c.cols}）`, value: c.name })),
+)
 const studentCode = ref('')
 const searchQuery = ref('')
 const showStartForm = ref(false)
@@ -348,11 +360,13 @@ const handleStartSession = async () => {
       classId: classId.value,
       courseName: courseName.value || undefined,
       scheduleId: undefined,
+      classroom: classroom.value || undefined,
     })
     showSuccessToast('课堂已开始！')
     activeTab.value = 0
     classId.value = ''
     courseName.value = ''
+    classroom.value = ''
     showStartForm.value = false
     softLimitWarning.value = false
   } catch (err: unknown) {
@@ -697,6 +711,15 @@ const getSourceTypeBadge = (sourceType: string) => {
             class="w-full"
             placeholder="请选择班级"
             :options="availableClassOptions"
+          />
+        </div>
+        <div class="mb-4">
+          <Select
+            v-model="classroom"
+            class="w-full"
+            placeholder="选择教室（可选，选后启用座位签到）"
+            :options="activeClassroomOptions"
+            clearable
           />
         </div>
         <Button
