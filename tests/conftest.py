@@ -13,7 +13,7 @@ if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
 # 测试环境变量（必须在任何应用模块导入前设置）
-# xdist 并行：每 worker 独立分库（classhub_test_0..3），避免 TRUNCATE 交错
+# xdist 并行：每 worker 独立分库（classhub_test_0..7，对应 pytest.ini 的 -n 8），避免 TRUNCATE 交错
 def _worker_suffix() -> str:
     worker = os.environ.get("PYTEST_XDIST_WORKER", "")
     if worker.startswith("gw"):
