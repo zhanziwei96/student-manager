@@ -155,6 +155,7 @@ export interface CheckinRequest {
   device_info?: string
   verification_code?: string
   session_id?: number
+  seat_id?: number             // 座位ID（课堂启用座位图时学生必填）
 }
 
 export interface CheckinRecord {
@@ -176,6 +177,7 @@ export interface CourseSessionStatus {
   class_name?: string
   teacher_name?: string
   start_time?: string
+  seat_classroom_id?: number | null  // 座位图教室ID（无活跃课堂时后端不下发该字段，故可选）
 }
 
 /**
@@ -301,6 +303,7 @@ export interface CourseSession {
   week_number?: number
   schedule_id?: number
   source_type: 'scheduled' | 'manual' | 'makeup'
+  seat_classroom_id?: number | null  // 座位图教室ID（课堂 classroom 未匹配 active 座位教室时为 null）
 }
 
 export interface StartCourseSessionRequest {

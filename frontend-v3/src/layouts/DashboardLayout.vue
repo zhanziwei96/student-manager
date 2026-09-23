@@ -21,6 +21,7 @@ import {
   Presentation,
   CalendarDays,
   Trophy,
+  Armchair,
 } from 'lucide-vue-next'
 import { KeyRound } from 'lucide-vue-next'
 import { onClickOutside } from '@vueuse/core'
@@ -57,7 +58,8 @@ const navGroups = computed(() => {
           { name: '届管理', path: '/admin/cohorts', icon: Layers },
           { name: '班级管理', path: '/admin/classes', icon: School },
           { name: '课程管理', path: '/admin/courses', icon: Library },
-          { name: '教学班', path: '/admin/offerings', icon: Presentation }
+          { name: '教学班', path: '/admin/offerings', icon: Presentation },
+          { name: '教室管理', path: '/admin/classrooms', icon: Armchair }
         ]
       },
       {
@@ -83,6 +85,7 @@ const navGroups = computed(() => {
         { name: '我的教学班', path: '/teacher/my-offerings', icon: Presentation },
         { name: '排行榜', path: '/teacher/rankings', icon: Trophy },
         { name: '课堂签到', path: '/teacher/session', icon: Calendar },
+        { name: '教室管理', path: '/teacher/classrooms', icon: Armchair },
         { name: '课表管理', path: '/teacher/schedules', icon: BookOpen },
         { name: '小组管理', path: '/teacher/groups', icon: GraduationCap },
         { name: '课堂问答', path: '/teacher/questions', icon: MessageCircle },

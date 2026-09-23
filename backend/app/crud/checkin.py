@@ -78,7 +78,8 @@ def create_checkin(
     session: Session, student_id: str, student_name: str,
     class_id: Optional[int], session_id: int, checkin_type: Optional[str] = None,
     device_id: Optional[str] = None, device_info: Optional[str] = None,
-    qr_signature: Optional[str] = None, device_bound: bool = False
+    qr_signature: Optional[str] = None, device_bound: bool = False,
+    seat_id: Optional[int] = None
 ) -> CheckinRecord:
     """创建签到记录（在同一事务内完成重复检查与插入）"""
     from sqlalchemy.exc import IntegrityError
@@ -103,7 +104,8 @@ def create_checkin(
         device_id=device_id,
         device_info=device_info,
         qr_signature=qr_signature,
-        device_bound=device_bound
+        device_bound=device_bound,
+        seat_id=seat_id
     )
     session.add(checkin)
     try:

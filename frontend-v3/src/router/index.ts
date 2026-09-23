@@ -47,6 +47,11 @@ const routes = [
         component: () => import('@/views/admin/Semesters.vue'),
       },
       {
+        path: 'classrooms',
+        name: 'AdminClassrooms',
+        component: () => import('@/views/teacher/Classrooms.vue'),
+      },
+      {
         path: 'cohorts',
         name: 'AdminCohorts',
         component: () => import('@/views/admin/Cohorts.vue'),
@@ -113,6 +118,11 @@ const routes = [
         path: 'session',
         name: 'TeacherSession',
         component: () => import('@/views/teacher/CourseSession.vue'),
+      },
+      {
+        path: 'classrooms',
+        name: 'TeacherClassrooms',
+        component: () => import('@/views/teacher/Classrooms.vue'),
       },
       {
         path: 'schedules',

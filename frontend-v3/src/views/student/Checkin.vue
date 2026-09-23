@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
+import { useSeatMap } from '@/composables/useSeatMap'
+import SeatMap from '@/components/seats/SeatMap.vue'
+import SeatCheckinAnimator from '@/components/seats/SeatCheckinAnimator.vue'
 import { Card, Button, Badge, DataContainer, Input } from '@/components/ui'
 import { useToast } from '@/composables/useToast'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck, Keyboard } from 'lucide-vue-next'
+import type { SeatCell } from '@/types/seats'
 
 const { data: studentProfile, isPending: isLoadingProfile } = useStudentProfile()
 const { data: classSession, isPending: isLoadingSession, error: sessionError, refetch: refetchSession, hasActiveSession } = useStudentCourseSession(
@@ -14,8 +19,23 @@ const { mutateAsync: doCheckin, isPending: isCheckingIn, error: checkinError } =
 const { hasCheckedIn, sessionCheckin, isPending: isLoadingCheckinStatus } = useHasCheckedInSession(computed(() => classSession.value?.id))
 
 const { success: showSuccessToast, error: showErrorToast } = useToast()
+const queryClient = useQueryClient()
 
 const verificationCode = ref('')
+
+// 座位图签到分支：seat_classroom_id 有值时走「选座 → 验证码 → 动画」流程
+const seatClassroomId = computed(() => classSession.value?.seat_classroom_id ?? null)
+const seatSessionId = computed(() => classSession.value?.id ?? null)
+const { data: seatMapData } = useSeatMap(seatClassroomId, seatSessionId)
+
+const selectedSeat = ref<SeatCell | null>(null)
+const animatorState = ref<'idle' | 'success' | 'fail'>('idle')
+const seatFlowError = ref('')
+
+// 我的固定座位故障 → 提示挑一个空位
+const mineSeatBroken = computed(
+  () => seatMapData.value?.seats.some((s) => s.state === 'mine' && s.is_broken) ?? false
+)
 
 const isPageLoading = computed(() => isLoadingProfile.value || isLoadingSession.value || isLoadingCheckinStatus.value)
 
@@ -51,8 +71,9 @@ const friendlyErrorMessage = computed(() => {
 })
 
 // 监听错误并弹出 Toast（只弹一次，避免重复）
+// 座位图流程的失败提示由动画 finished 后统一弹出（展示后端 message），此处跳过避免双弹
 watch(friendlyErrorMessage, (msg) => {
-  if (msg && !sessionLoadFailed.value) {
+  if (msg && !sessionLoadFailed.value && !seatClassroomId.value) {
     // 查询错误已在 DataContainer 中显示，不再弹 Toast
     // mutation 错误才弹 Toast
     if (checkinError.value) {
@@ -86,6 +107,49 @@ const formatTime = (time: string) => {
     return new Date(time).toLocaleString('zh-CN')
   } catch {
     return time
+  }
+}
+
+const handleSeatClick = (seat: SeatCell) => {
+  selectedSeat.value = seat
+}
+
+const handleSeatCheckin = async () => {
+  if (!selectedSeat.value) {
+    showErrorToast('请先选择座位')
+    return
+  }
+  const code = verificationCode.value.trim().toUpperCase()
+  if (!code) {
+    showErrorToast('请输入验证码')
+    return
+  }
+  if (code.length !== 6) {
+    showErrorToast('验证码为6位字符')
+    return
+  }
+
+  try {
+    await doCheckin({ verification_code: code, seat_id: selectedSeat.value.seat_id })
+    animatorState.value = 'success'
+  } catch (err: any) {
+    seatFlowError.value = err.message || '签到失败，请重试'
+    animatorState.value = 'fail'
+  }
+}
+
+// 动画播完后再落地结果：成功 → 等数据刷新完成再提示；失败 → 清验证码、保留选中座位
+const handleAnimatorFinished = async () => {
+  if (animatorState.value === 'success') {
+    animatorState.value = 'idle'
+    verificationCode.value = ''
+    await queryClient.invalidateQueries({ queryKey: ['my-checkin-status'], exact: false })
+    await queryClient.invalidateQueries({ queryKey: ['seat-map'], exact: false })
+    showSuccessToast('签到成功！')
+  } else if (animatorState.value === 'fail') {
+    animatorState.value = 'idle'
+    verificationCode.value = ''
+    showErrorToast(seatFlowError.value || '签到失败，请重试')
   }
 }
 </script>
@@ -235,21 +299,66 @@ const formatTime = (time: string) => {
             v-if="canCheckin && !isCheckingIn"
             class="flex flex-col items-center gap-4"
           >
-            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[#e0e7ff]">
-              <Keyboard class="h-7 w-7 text-[#6366f1]" />
-            </div>
-            <h3 class="text-base font-medium text-[#171717]">输入验证码签到</h3>
-            <Input
-              v-model="verificationCode"
-              placeholder="请输入6位验证码"
-              maxlength="6"
-              class="w-full max-w-[200px] text-center text-xl tracking-[0.15em] uppercase"
-              @keyup.enter="handleCheckin"
-            />
-            <Button variant="cta" class="h-14 w-full max-w-[200px] text-base" @click="handleCheckin">
-              <CheckCircle class="h-4 w-4" />
-              确认签到
-            </Button>
+            <!-- 无座位图课堂：原验证码流程，零改动 -->
+            <template v-if="!seatClassroomId">
+              <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[#e0e7ff]">
+                <Keyboard class="h-7 w-7 text-[#6366f1]" />
+              </div>
+              <h3 class="text-base font-medium text-[#171717]">输入验证码签到</h3>
+              <Input
+                v-model="verificationCode"
+                placeholder="请输入6位验证码"
+                maxlength="6"
+                class="w-full max-w-[200px] text-center text-xl tracking-[0.15em] uppercase"
+                @keyup.enter="handleCheckin"
+              />
+              <Button variant="cta" class="h-14 w-full max-w-[200px] text-base" @click="handleCheckin">
+                <CheckCircle class="h-4 w-4" />
+                确认签到
+              </Button>
+            </template>
+
+            <!-- 座位图课堂：选座 → 验证码 → 动画 -->
+            <template v-else>
+              <h3 class="text-base font-medium text-[#171717]">选择座位并输入验证码</h3>
+              <div
+                v-if="mineSeatBroken"
+                class="w-full rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-600"
+              >
+                你的座位电脑故障，请挑一个空位
+              </div>
+              <SeatMap
+                v-if="seatMapData"
+                :classroom="seatMapData.classroom"
+                :seats="seatMapData.seats"
+                mode="student"
+                :selected-seat-id="selectedSeat?.seat_id ?? null"
+                class="w-full"
+                @seat-click="handleSeatClick"
+              />
+              <div v-else class="flex items-center justify-center py-6">
+                <Loader2 class="h-6 w-6 animate-spin text-primary" />
+              </div>
+              <div class="flex items-center gap-3 text-sm text-[#737373]">
+                <SeatCheckinAnimator
+                  :state="animatorState"
+                  @finished="handleAnimatorFinished"
+                />
+                <span v-if="selectedSeat">已选座位 {{ selectedSeat.seat_no }}</span>
+                <span v-else>点击座位图选择座位</span>
+              </div>
+              <Input
+                v-model="verificationCode"
+                placeholder="请输入6位验证码"
+                maxlength="6"
+                class="w-full max-w-[200px] text-center text-xl tracking-[0.15em] uppercase"
+                @keyup.enter="handleSeatCheckin"
+              />
+              <Button variant="cta" class="h-14 w-full max-w-[200px] text-base" @click="handleSeatCheckin">
+                <CheckCircle class="h-4 w-4" />
+                确认签到
+              </Button>
+            </template>
           </div>
 
           <div

@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Optional
 from sqlmodel import SQLModel, Field, UniqueConstraint
-from sqlalchemy import Index, desc
+from sqlalchemy import Index, desc, text
 from app.models.constants import CheckinTypeConst
 from app.core.timezone import get_now
 
@@ -16,6 +16,9 @@ class CheckinRecord(SQLModel, table=True):
         # 同一学生在同一课堂只能签到一次
         UniqueConstraint('session_id', 'student_id', name='idx_unique_session_student'),
         Index('idx_checkin_records_checkin_time', desc('checkin_time')),
+        # 并发兜底：同一课堂同一座位最多一条签到占用（NULL 不约束）
+        Index('uix_checkin_session_seat', 'session_id', 'seat_id', unique=True,
+              postgresql_where=text('seat_id IS NOT NULL')),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -41,3 +44,4 @@ class CheckinRecord(SQLModel, table=True):
     device_info: Optional[str] = Field(default=None, description="设备信息JSON")
     qr_signature: str | None = Field(default=None, description="二维码签名")
     device_bound: bool = Field(default=True, description="是否绑定设备")
+    seat_id: Optional[int] = Field(default=None, foreign_key="seats.id")  # 本次实际坐的座位

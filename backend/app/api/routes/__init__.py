@@ -22,6 +22,7 @@ from app.api.routes.courses import router as courses_router
 from app.api.routes.course_offerings import router as course_offerings_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.rankings import router as rankings_router
+from app.api.routes.classrooms import router as classrooms_router
 
 __all__ = [
     "login_router",
@@ -45,4 +46,5 @@ __all__ = [
     "course_offerings_router",
     "rankings_router",
     "audit_router",
+    "classrooms_router",
 ]

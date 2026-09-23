@@ -32,6 +32,7 @@ from app.models.course import (
     Enrollment, EnrollmentResponse, EnrollmentScoreLog,
 )
 from app.models.student_class_semester import StudentClassSemester, StudentClassSemesterResponse
+from app.models.seat import Classroom, Seat, SeatAssignment, SeatSessionOverride
 
 __all__ = [
     # Student
@@ -74,4 +75,6 @@ __all__ = [
     "Enrollment", "EnrollmentResponse", "EnrollmentScoreLog",
     # Student-Class-Semester Bridge
     "StudentClassSemester", "StudentClassSemesterResponse",
+    # Seat System
+    "Classroom", "Seat", "SeatAssignment", "SeatSessionOverride",
 ]

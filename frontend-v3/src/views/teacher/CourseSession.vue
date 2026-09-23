@@ -9,6 +9,7 @@
  * - 顶部今日课表快捷开始
  */
 import { ref, computed, watch } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import {
   useCourseSessions,
   useCourseSessionStart,
@@ -22,6 +23,8 @@ import {
 import { useClasses, useClassStudents } from '@/composables/useClasses'
 import { useSessionCheckins } from '@/composables/useCheckins'
 import { useTeacherCourses } from '@/composables/useTeacherCourses'
+import { useSeatMap } from '@/composables/useSeatMap'
+import { seatsApi, seatOverridesApi } from '@/api/seats'
 import { useAuthStore } from '@/stores'
 import { Card, Button, Input, Select, Badge, NetworkErrorBanner, ResponsiveDialog } from '@/components/ui'
 import {
@@ -30,11 +33,13 @@ import {
 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/error'
 import type { CourseSession } from '@/types'
+import type { SeatCell } from '@/types/seats'
 
 // 子组件
 import StudentCheckinGrid from '@/components/teacher/StudentCheckinGrid.vue'
 import CheckinStats from '@/components/teacher/CheckinStats.vue'
 import QRCodeDisplay from '@/components/teacher/QRCodeDisplay.vue'
+import SeatMap from '@/components/seats/SeatMap.vue'
 
 // ===== 卡片主题辅助函数 - 统一使用 Indigo 主题 =====
 
@@ -173,6 +178,53 @@ const { data: classStudents, isPending: isLoadingStudents } = useClassStudents(s
 const { data: sessionCheckins, refetch: refetchCheckins } = useSessionCheckins(selectedSessionId)
 
 const { mutateAsync: checkIn, isPending: isCheckingIn } = useStudentCheckIn(selectedSessionId)
+
+// ===== 实时座位图（课堂绑定了座位教室时启用） =====
+const queryClient = useQueryClient()
+const seatClassroomId = computed(() => selectedSession.value?.seat_classroom_id ?? null)
+const seatMapSessionId = computed(() => selectedSession.value?.id ?? null)
+const { data: seatMapData } = useSeatMap(seatClassroomId, seatMapSessionId)
+
+// 点座位弹层：标记/取消故障 + 调座
+const activeSeat = ref<SeatCell | null>(null)
+const overrideStudentId = ref('')
+
+const openSeatActions = (seat: SeatCell) => {
+  activeSeat.value = seat
+  overrideStudentId.value = ''
+}
+
+const seatOverrideStudentOptions = computed(() =>
+  (classStudents.value ?? []).map(s => ({ value: s.student_id, label: s.name }))
+)
+
+const invalidateSeatMap = () => queryClient.invalidateQueries({ queryKey: ['seat-map'] })
+
+const handleToggleBroken = async () => {
+  const seat = activeSeat.value
+  if (!seat) return
+  try {
+    await seatsApi.setBroken(seat.seat_id, !seat.is_broken)
+    await invalidateSeatMap()
+    showSuccessToast(seat.is_broken ? '已取消故障标记' : '已标记电脑故障')
+    activeSeat.value = null
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '操作失败')
+  }
+}
+
+const handleOverride = async () => {
+  const seat = activeSeat.value
+  if (!seat || !overrideStudentId.value || !selectedSession.value) return
+  try {
+    await seatOverridesApi.set(selectedSession.value.id, overrideStudentId.value, seat.seat_id)
+    await invalidateSeatMap()
+    showSuccessToast('调座成功')
+    activeSeat.value = null
+  } catch (err: unknown) {
+    showErrorToast(getErrorMessage(err) || '调座失败')
+  }
+}
 
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 const { data: teacherCourses } = useTeacherCourses()
@@ -857,6 +909,26 @@ const getSourceTypeBadge = (sourceType: string) => {
       <!-- QR Code Display -->
       <QRCodeDisplay :session-id="selectedSession.id" class="mb-5" />
 
+      <!-- 实时座位图（课堂绑定座位教室时显示，10s 轮询） -->
+      <Card
+        v-if="seatClassroomId"
+        class="relative overflow-hidden p-4 md:p-6 mb-5 bg-white border-[#e5e5e5]"
+      >
+        <h3 class="font-medium text-black mb-1">
+          实时座位图
+        </h3>
+        <p class="text-sm text-[#737373] mb-4">
+          点击座位可标记故障或给学生调座
+        </p>
+        <SeatMap
+          v-if="seatMapData"
+          :classroom="seatMapData.classroom"
+          :seats="seatMapData.seats"
+          mode="teacher"
+          @seat-click="openSeatActions"
+        />
+      </Card>
+
       <!-- Check-in form - Indigo 主题 -->
       <Card class="relative overflow-hidden p-4 md:p-6 mb-5 bg-white border-[#e5e5e5]">
         <div class="relative z-10 flex items-center gap-3">
@@ -902,6 +974,52 @@ const getSourceTypeBadge = (sourceType: string) => {
         @quick-check-in="handleQuickCheckIn"
       />
     </template>
+
+    <!-- 座位操作弹层（标记/取消故障 + 调座） -->
+    <ResponsiveDialog
+      :open="!!activeSeat"
+      :title="`座位 ${activeSeat?.seat_no ?? ''}`"
+      @update:open="activeSeat = null"
+    >
+      <template #description>
+        {{ activeSeat?.student_name ? `当前学生：${activeSeat.student_name}` : '当前为空位' }}{{ activeSeat?.is_broken ? ' · 电脑故障' : '' }}
+      </template>
+      <div class="py-2 space-y-4">
+        <Button
+          variant="outline"
+          class="w-full min-h-[44px] border-[#e5e5e5] text-black hover:bg-[#fafafa]"
+          @click="handleToggleBroken"
+        >
+          <AlertTriangle class="mr-2 h-4 w-4" />
+          {{ activeSeat?.is_broken ? '取消故障' : '标记电脑故障' }}
+        </Button>
+        <div class="border-t border-[#e5e5e5] pt-4">
+          <label class="text-sm text-[#737373]">把学生调到这里</label>
+          <Select
+            v-model="overrideStudentId"
+            class="w-full mt-2"
+            placeholder="选择学生"
+            :options="seatOverrideStudentOptions"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="outline"
+            @click="activeSeat = null"
+          >
+            取消
+          </Button>
+          <Button
+            :disabled="!overrideStudentId"
+            @click="handleOverride"
+          >
+            确认调座
+          </Button>
+        </div>
+      </template>
+    </ResponsiveDialog>
 
     <!-- End Session Confirmation Dialog -->
     <ResponsiveDialog
