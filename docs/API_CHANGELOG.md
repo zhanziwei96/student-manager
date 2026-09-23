@@ -2,10 +2,10 @@
 
 ---
 
-**文档版本**: v1.1  
-**最后更新**: 2026-09-11  
-**适用版本**: v3.1.0+  
-**当前API版本**: v3.1.0  
+**文档版本**: v1.2  
+**最后更新**: 2026-09-23  
+**适用版本**: v3.2.0+  
+**当前API版本**: v3.2.0  
 **API前缀**: `/api/v1`  
 **状态**: ✅ 已同步代码
 
@@ -20,6 +20,38 @@
 - 变更接口
 - 弃用接口
 - 移除接口
+
+---
+
+## v3.2.0 (2026-09-23) — 座位系统
+
+> 新增教室座位图能力：管理员/教师维护教室与行列布局，学生在座位图上选座后完成签到，教师端实时查看占用、标记故障座位并临时调座。
+
+### 新增接口
+
+| 接口 | 方法 | 路径 | 说明 |
+|------|------|------|------|
+| 教室列表 | GET | `/api/v1/classrooms` | 列出全部教室（含 archived），返回 `seat_count`；仅 admin/teacher |
+| 创建教室 | POST | `/api/v1/classrooms` | body `{name, rows, cols}`（1–50），按布局生成 `P{row}{col}` 座位；201；教室名重复 409 |
+| 更新教室 | PUT | `/api/v1/classrooms/{classroom_id}` | body `{name?, rows?, cols?, status?}`；缩小布局与占用冲突时 409 且 `data.removed_seat_nos` 列出受影响座位号 |
+| 座位图 | GET | `/api/v1/classrooms/{classroom_id}/seats` | query `session_id: int?`；每格含四态 `empty/assigned/occupied/mine`、`is_broken`、`student_id/student_name`；学生仅可看自己班级活跃课堂所在教室 |
+| 我的座位 | GET | `/api/v1/seat-assignments/mine` | 当前学期本人在各教室的固定座位；仅学生 |
+| 故障标记 | POST | `/api/v1/seats/{seat_id}/broken` | body `{is_broken: bool}`；故障座位任何角色不可选；仅 admin/teacher |
+| 临时调座 | POST | `/api/v1/sessions/{session_id}/seat-overrides` | body `{student_id, seat_id}`，本课堂内生效；目标故障/已占用 409；教师仅限自己课堂 |
+| 撤销调座 | DELETE | `/api/v1/sessions/{session_id}/seat-overrides/{student_id}` | 清除该学生本课堂的调座覆盖 |
+
+### 变更接口
+
+| 接口 | 变更 |
+|------|------|
+| `POST /api/v1/checkin` | 请求新增 `seat_id: int?`——课堂所在教室启用座位图时学生**必填**，未启用时**禁止携带**；响应 `data` 新增 `seat_id`、`seat_no` |
+| `GET /api/v1/course-sessions` | 响应每行新增 `seat_classroom_id: int?`（课堂 classroom 名对应的 active 教室 ID，无座位图为 `null`） |
+| `GET /api/v1/course-sessions/class/{class_id}` | 响应 `data` 新增 `seat_classroom_id: int?`，学生端据此分流「选座签到 / 纯验证码签到」 |
+
+### 数据模型变更
+
+- **新增** `classrooms`（名称唯一，`status: active|archived`）、`seats`（`seat_no` 按 `P{row}{col}` 生成，`is_broken`）、`seat_assignments`（学期内固定座位，含冗余列 `classroom_id` 支撑唯一约束）、`seat_session_overrides`（课堂级临时调座，随 session 生命周期失效）
+- `checkin_records` **新增** `seat_id: int?`（FK `seats.id`）及部分唯一索引 `uix_checkin_session_seat (session_id, seat_id) WHERE seat_id IS NOT NULL`——同一课堂同一座位仅一条签到
 
 ---
 

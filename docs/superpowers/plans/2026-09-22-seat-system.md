@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **状态：全部任务完成于 2026-09-23（feat/seat-system 分支）**
+
 **Goal:** 学生在教室座位图上点座「坐下」+ 输验证码完成签到；教师端实时座位图（含故障标记与临时调座）。
 
 **Architecture:** 后端新增教室/座位/座位分配/会话覆盖四张表，签到接口扩展 `seat_id`；前端新增 `src/components/seats/` 组件族（深色局部作用域），学生签到页按「该课堂教室是否有座位图」分流。无座位图的教室走原有纯验证码流程，完全不变。
