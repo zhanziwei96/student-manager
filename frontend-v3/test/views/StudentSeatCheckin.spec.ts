@@ -86,13 +86,6 @@ const MockSeatMap = {
     '<div class="mock-seatmap"><button v-for="s in seats" :key="s.seat_id" type="button" class="mock-seat" @click="$emit(\'seat-click\', s)">{{ s.seat_no }}</button></div>',
 }
 
-const MockAnimator = {
-  name: 'SeatCheckinAnimator',
-  props: ['state'],
-  emits: ['finished'],
-  template: '<div class="mock-animator" :data-state="state" />',
-}
-
 function mountPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -112,7 +105,6 @@ function mountPage() {
             '<input class="mock-input" :value="modelValue" :maxlength="maxlength" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         SeatMap: MockSeatMap,
-        SeatCheckinAnimator: MockAnimator,
       },
     },
   })
@@ -179,7 +171,7 @@ describe('学生座位签到', () => {
     expect(mockToastError).toHaveBeenCalledWith('请先选择座位')
   })
 
-  it('签到成功 → animator success → finished 后才弹成功提示', async () => {
+  it('签到成功 → 刷新完成后直接弹成功提示', async () => {
     mockDoCheckin.mockResolvedValue({ id: 1 })
     const wrapper = mountPage()
     await flushPromises()
@@ -189,18 +181,12 @@ describe('学生座位签到', () => {
     await findConfirmButton(wrapper)!.trigger('click')
     await flushPromises()
 
-    const animator = wrapper.findComponent({ name: 'SeatCheckinAnimator' })
-    expect(animator.props('state')).toBe('success')
-    // 动画播完前不弹 toast
-    expect(mockToastSuccess).not.toHaveBeenCalled()
-
-    animator.vm.$emit('finished')
-    await flushPromises()
     expect(mockToastSuccess).toHaveBeenCalledWith('签到成功！')
+    // 验证码已清空
+    expect((wrapper.find('.mock-input').element as HTMLInputElement).value).toBe('')
   })
 
-  it('回归：hasCheckedIn 翻 true 后动画器不被卸载，已签到卡片等动画播完才出现', async () => {
-    // 模拟真实竞态：doCheckin 成功后 my-checkin-status 立即重取，hasCheckedIn 翻 true
+  it('签到成功且 hasCheckedIn 翻 true → 显示已签到卡片', async () => {
     mockDoCheckin.mockImplementation(async () => {
       hasCheckedInRef.value = true
       sessionCheckinRef.value = { checkin_time: '2026-04-01T10:05:00' }
@@ -214,21 +200,11 @@ describe('学生座位签到', () => {
     await findConfirmButton(wrapper)!.trigger('click')
     await flushPromises()
 
-    // hasCheckedIn 已为 true，但动画器仍在 DOM 中且状态为 success
-    const animator = wrapper.findComponent({ name: 'SeatCheckinAnimator' })
-    expect(animator.exists()).toBe(true)
-    expect(animator.props('state')).toBe('success')
-    // 已签到卡片在动画播完前不出现
-    expect(wrapper.text()).not.toContain('本节课已完成签到')
-
-    animator.vm.$emit('finished')
-    await flushPromises()
-    // 播完后卡片出现 + toast
     expect(wrapper.text()).toContain('本节课已完成签到')
     expect(mockToastSuccess).toHaveBeenCalledWith('签到成功！')
   })
 
-  it('签到失败 → animator fail → finished 后清验证码、保留座位、toast 后端 message', async () => {
+  it('签到失败 → 直接清验证码、保留座位、toast 后端 message', async () => {
     mockDoCheckin.mockRejectedValue(new Error('座位已被占用'))
     const wrapper = mountPage()
     await flushPromises()
@@ -238,11 +214,7 @@ describe('学生座位签到', () => {
     await findConfirmButton(wrapper)!.trigger('click')
     await flushPromises()
 
-    const animator = wrapper.findComponent({ name: 'SeatCheckinAnimator' })
-    expect(animator.props('state')).toBe('fail')
-    expect(mockToastError).not.toHaveBeenCalled()
-
-    animator.vm.$emit('finished')
+    expect(mockToastError).toHaveBeenCalledWith('座位已被占用')
     await flushPromises()
     expect(mockToastError).toHaveBeenCalledWith('座位已被占用')
     // 验证码已清空

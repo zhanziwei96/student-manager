@@ -5,7 +5,6 @@ import { useStudentProfile } from '@/composables/useStudentProfile'
 import { useStudentCourseSession, useStudentSelfCheckin, useHasCheckedInSession } from '@/composables/useStudentCheckin'
 import { useSeatMap } from '@/composables/useSeatMap'
 import SeatMap from '@/components/seats/SeatMap.vue'
-import SeatCheckinAnimator from '@/components/seats/SeatCheckinAnimator.vue'
 import { Card, Button, Badge, DataContainer, Input } from '@/components/ui'
 import { useToast } from '@/composables/useToast'
 import { CheckCircle, Clock, User, GraduationCap, Loader2, AlertCircle, CalendarCheck, Keyboard } from 'lucide-vue-next'
@@ -29,8 +28,6 @@ const seatSessionId = computed(() => classSession.value?.id ?? null)
 const { data: seatMapData } = useSeatMap(seatClassroomId, seatSessionId)
 
 const selectedSeat = ref<SeatCell | null>(null)
-const animatorState = ref<'idle' | 'success' | 'fail'>('idle')
-const seatFlowError = ref('')
 
 // 我的固定座位故障 → 提示挑一个空位
 const mineSeatBroken = computed(
@@ -131,25 +128,14 @@ const handleSeatCheckin = async () => {
 
   try {
     await doCheckin({ verification_code: code, seat_id: selectedSeat.value.seat_id })
-    animatorState.value = 'success'
-  } catch (err: any) {
-    seatFlowError.value = err.message || '签到失败，请重试'
-    animatorState.value = 'fail'
-  }
-}
-
-// 动画播完后再落地结果：成功 → 等数据刷新完成再提示；失败 → 清验证码、保留选中座位
-const handleAnimatorFinished = async () => {
-  if (animatorState.value === 'success') {
-    animatorState.value = 'idle'
     verificationCode.value = ''
     await queryClient.invalidateQueries({ queryKey: ['my-checkin-status'], exact: false })
     await queryClient.invalidateQueries({ queryKey: ['seat-map'], exact: false })
     showSuccessToast('签到成功！')
-  } else if (animatorState.value === 'fail') {
-    animatorState.value = 'idle'
+  } catch (err: any) {
+    // 清验证码、保留选中座位，直接提示后端 message
     verificationCode.value = ''
-    showErrorToast(seatFlowError.value || '签到失败，请重试')
+    showErrorToast(err.message || '签到失败，请重试')
   }
 }
 </script>
@@ -357,19 +343,6 @@ const handleAnimatorFinished = async () => {
             </template>
           </div>
 
-          <!--
-            动画器必须挂在这个条件块之外：签到成功后 my-checkin-status 失效重取
-            会让 hasCheckedIn 立即变 true、canCheckin 变 false，若动画器在块内
-            会在开播瞬间被卸载（finished 永不触发、成功提示也随之丢失）。
-            已签到卡片等动画播完（animatorState 回到 idle）再出现。
-          -->
-          <div class="flex items-center justify-center gap-3 py-1 text-sm text-[#737373]">
-            <SeatCheckinAnimator
-              :state="animatorState"
-              @finished="handleAnimatorFinished"
-            />
-          </div>
-
           <div
             v-if="isCheckingIn"
             class="flex flex-col items-center justify-center gap-3 py-8"
@@ -381,7 +354,7 @@ const handleAnimatorFinished = async () => {
           </div>
 
           <div
-            v-else-if="showCheckedInStatus && sessionCheckin && animatorState === 'idle'"
+            v-else-if="showCheckedInStatus && sessionCheckin"
             class="rounded-lg border border-green-500/20 bg-green-500/10 p-4 md:p-6 text-center"
           >
             <CheckCircle class="mx-auto h-8 w-8 md:h-10 md:w-10 text-green-400" />
