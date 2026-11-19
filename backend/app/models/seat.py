@@ -35,18 +35,24 @@ class Seat(SQLModel, table=True):
 
 
 class SeatAssignment(SQLModel, table=True):
-    """固定座位分配（每学期一份）。classroom_id 冗余自 seat.classroom_id，唯一约束需要。"""
+    """固定座位分配（每班每学期一份）。
+
+    class_id / classroom_id 冗余自 seat.classroom_id，唯一约束需要。
+    维度 = 班级 × 学期 × 座位：同一教室被多个班共用时，各班有各自的座位表。
+    """
 
     __tablename__ = "seat_assignments"
     __table_args__ = (
-        UniqueConstraint("seat_id", "semester_id", name="uix_seat_semester"),
-        UniqueConstraint("student_id", "semester_id", "classroom_id",
-                         name="uix_student_semester_classroom"),
+        UniqueConstraint("seat_id", "class_id", "semester_id",
+                         name="uix_seat_class_semester"),
+        UniqueConstraint("student_id", "class_id", "classroom_id", "semester_id",
+                         name="uix_student_class_classroom_semester"),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     seat_id: int = Field(foreign_key="seats.id")
     student_id: str = Field(foreign_key="students.student_id", max_length=20, index=True)
+    class_id: int = Field(default=None, foreign_key="classes.id", index=True)
     classroom_id: int = Field(foreign_key="classrooms.id")
     semester_id: int = Field(foreign_key="semesters.id")
     created_at: Optional[datetime] = None

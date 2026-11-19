@@ -1,4 +1,6 @@
 """占座规则：首次固定 / 本人固定座 / 故障临坐 / 冲突拒绝。"""
+from datetime import datetime
+
 import pytest
 from sqlmodel import select
 
@@ -44,7 +46,7 @@ class TestOccupy:
         seat = _seat(session, room, "P11")
         result = occupy_seat(session, student_id="S001", seat_id=seat.id,
                              course_session_id=course_session.id,
-                             semester_id=seed_refs["semester_id"])
+                             semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         assert result["created_fixed"] is True
         assert result["temporary"] is False
         fixed = session.exec(
@@ -56,39 +58,39 @@ class TestOccupy:
         seat = _seat(session, room, "P11")
         occupy_seat(session, student_id="S001", seat_id=seat.id,
                     course_session_id=course_session.id,
-                    semester_id=seed_refs["semester_id"])
+                    semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         again = occupy_seat(session, student_id="S001", seat_id=seat.id,
                             course_session_id=course_session.id,
-                            semester_id=seed_refs["semester_id"])
+                            semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         assert again["created_fixed"] is False
 
     def test_other_seat_refused(self, session, seed_refs, room, course_session):
         occupy_seat(session, student_id="S001", seat_id=_seat(session, room, "P11").id,
                     course_session_id=course_session.id,
-                    semester_id=seed_refs["semester_id"])
+                    semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         with pytest.raises(NotMySeatError):
             occupy_seat(session, student_id="S001",
                         seat_id=_seat(session, room, "P12").id,
                         course_session_id=course_session.id,
-                        semester_id=seed_refs["semester_id"])
+                        semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
 
     def test_broken_seat_refused(self, session, seed_refs, room, course_session):
         seat = set_seat_broken(session, _seat(session, room, "P21").id, True)
         with pytest.raises(SeatBrokenError):
             occupy_seat(session, student_id="S001", seat_id=seat.id,
                         course_session_id=course_session.id,
-                        semester_id=seed_refs["semester_id"])
+                        semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
 
     def test_fixed_broken_allows_temporary(self, session, seed_refs, room, course_session):
         fixed_seat = _seat(session, room, "P11")
         occupy_seat(session, student_id="S001", seat_id=fixed_seat.id,
                     course_session_id=course_session.id,
-                    semester_id=seed_refs["semester_id"])
+                    semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         set_seat_broken(session, fixed_seat.id, True)
         result = occupy_seat(session, student_id="S001",
                              seat_id=_seat(session, room, "P22").id,
                              course_session_id=course_session.id,
-                             semester_id=seed_refs["semester_id"])
+                             semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         assert result["temporary"] is True
         # 固定分配不变
         fixed = session.exec(
@@ -100,7 +102,7 @@ class TestOccupy:
         seat = _seat(session, room, "P11")
         occupy_seat(session, student_id="S001", seat_id=seat.id,
                     course_session_id=course_session.id,
-                    semester_id=seed_refs["semester_id"])
+                    semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         from app.models.checkin import CheckinRecord
         session.add(CheckinRecord(session_id=course_session.id, student_id="S001",
                                   student_name="张三", class_id=seed_refs["一班"],
@@ -110,16 +112,71 @@ class TestOccupy:
         with pytest.raises(SeatOccupiedError):
             occupy_seat(session, student_id="S002", seat_id=seat.id,
                         course_session_id=course_session.id,
-                        semester_id=seed_refs["semester_id"])
+                        semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
 
     def test_others_fixed_seat_refused(self, session, seed_refs, room, course_session):
         # A 先固定 P11
         occupy_seat(session, student_id="S001", seat_id=_seat(session, room, "P11").id,
-                    course_session_id=course_session.id, semester_id=seed_refs["semester_id"])
+                    course_session_id=course_session.id, semester_id=seed_refs["semester_id"],
+                    class_id=seed_refs["一班"])
         # B（本教室无固定分配）选 P11 → SeatOccupiedError，而不是 500
         with pytest.raises(SeatOccupiedError):
             occupy_seat(session, student_id="S002", seat_id=_seat(session, room, "P11").id,
-                        course_session_id=course_session.id, semester_id=seed_refs["semester_id"])
+                        course_session_id=course_session.id, semester_id=seed_refs["semester_id"],
+                        class_id=seed_refs["一班"])
+
+    def test_other_class_fixed_seat_is_selectable(self, session, seed_refs, room):
+        """跨班不霸占：A 班的固定座位，B 班学生应能正常选择（各自班级维度独立）。"""
+        from app.crud.course_session import start_course_session
+        class_a, class_b = seed_refs["一班"], seed_refs["二班"]
+        seat = _seat(session, room, "P11")
+
+        # A 班学生在该教室留下固定座位分配
+        session.add(SeatAssignment(
+            seat_id=seat.id, student_id="S001", class_id=class_a,
+            classroom_id=room.id, semester_id=seed_refs["semester_id"],
+            created_at=datetime.now(),
+        ))
+        session.commit()
+
+        # B 班在该教室开课
+        cs_b = start_course_session(
+            session, class_id=class_b, teacher_id=1,
+            teacher_name="王老师", classroom=room.name,
+        )
+        result = occupy_seat(session, student_id="S002", seat_id=seat.id,
+                             course_session_id=cs_b.id,
+                             semester_id=seed_refs["semester_id"], class_id=class_b)
+        assert result["created_fixed"] is True
+        assert result["seat_no"] == "P11"
+
+        # 两个班的分配行共存（维度 = 班级 × 学期 × 座位）
+        rows = session.exec(
+            select(SeatAssignment).where(SeatAssignment.seat_id == seat.id)
+        ).all()
+        assert {r.class_id for r in rows} == {class_a, class_b}
+
+    def test_seat_map_isolated_per_class(self, session, seed_refs, room):
+        """座位图按班级隔离：A 班的 assigned 对 B 班而言是 empty/可选。"""
+        from app.crud.seat import get_seat_map
+        class_a, class_b = seed_refs["一班"], seed_refs["二班"]
+        seat = _seat(session, room, "P11")
+        session.add(SeatAssignment(
+            seat_id=seat.id, student_id="S001", class_id=class_a,
+            classroom_id=room.id, semester_id=seed_refs["semester_id"],
+            created_at=datetime.now(),
+        ))
+        session.commit()
+
+        cells_b = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"],
+                               class_id=class_b)
+        cell = next(c for c in cells_b if c["seat_id"] == seat.id)
+        assert cell["state"] == "empty"
+
+        cells_a = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"],
+                               class_id=class_a, viewer_student_id="S002")
+        cell_a = next(c for c in cells_a if c["seat_id"] == seat.id)
+        assert cell_a["state"] == "assigned"
 
     def test_concurrent_first_choice_translated_to_occupied(
             self, session, seed_refs, room, course_session):
@@ -135,6 +192,7 @@ class TestOccupy:
         try:
             winner.add(SeatAssignment(
                 seat_id=seat.id, student_id="S002", classroom_id=room.id,
+                class_id=seed_refs["一班"],
                 semester_id=seed_refs["semester_id"], created_at=datetime.now(),
             ))
             winner.commit()
@@ -143,7 +201,7 @@ class TestOccupy:
         with pytest.raises(SeatOccupiedError):
             occupy_seat(session, student_id="S001", seat_id=seat.id,
                         course_session_id=course_session.id,
-                        semester_id=seed_refs["semester_id"])
+                        semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
 
 
 class TestOverride:
@@ -151,13 +209,13 @@ class TestOverride:
         occupy_seat(session, student_id="S001",
                     seat_id=_seat(session, room, "P11").id,
                     course_session_id=course_session.id,
-                    semester_id=seed_refs["semester_id"])
+                    semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         target = _seat(session, room, "P22")
         set_seat_override(session, session_id=course_session.id,
                           student_id="S001", seat_id=target.id)
         result = occupy_seat(session, student_id="S001", seat_id=target.id,
                              course_session_id=course_session.id,
-                             semester_id=seed_refs["semester_id"])
+                             semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         assert result["temporary"] is True
 
     def test_clear_override(self, session, seed_refs, room, course_session):
@@ -180,7 +238,7 @@ class TestOverride:
         from app.models.checkin import CheckinRecord
         seat_a = _seat(session, room, "P11")
         occupy_seat(session, student_id="S001", seat_id=seat_a.id,
-                    course_session_id=course_session.id, semester_id=seed_refs["semester_id"])
+                    course_session_id=course_session.id, semester_id=seed_refs["semester_id"], class_id=seed_refs["一班"])
         session.add(CheckinRecord(session_id=course_session.id, student_id="S001",
                                   student_name="张三", class_id=seed_refs["一班"],
                                   semester_id=seed_refs["semester_id"],

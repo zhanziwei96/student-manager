@@ -31,7 +31,8 @@ def _mk_session(session, session_id, refs):
 class TestSeatMap:
     def test_all_empty_initially(self, session, seed_refs):
         room = create_classroom(session, name="机房401", rows=2, cols=2)
-        cells = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"])
+        cells = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"],
+                       class_id=seed_refs["一班"])
         assert all(c["state"] == "empty" for c in cells)
         assert [c["seat_no"] for c in cells] == ["P11", "P12", "P21", "P22"]
 
@@ -40,10 +41,11 @@ class TestSeatMap:
         seat = _seat(session, room.id, "P11")
         _mk_student(session, "S001", "张三")
         session.add(SeatAssignment(seat_id=seat.id, student_id="S001",
-                                   classroom_id=room.id,
+                                   class_id=seed_refs["一班"], classroom_id=room.id,
                                    semester_id=seed_refs["semester_id"]))
         session.commit()
-        cells = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"])
+        cells = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"],
+                       class_id=seed_refs["一班"])
         assert cells[0]["state"] == "assigned"
         assert cells[0]["student_id"] == "S001"
 
@@ -52,11 +54,11 @@ class TestSeatMap:
         seat = _seat(session, room.id, "P11")
         _mk_student(session, "S001", "张三")
         session.add(SeatAssignment(seat_id=seat.id, student_id="S001",
-                                   classroom_id=room.id,
+                                   class_id=seed_refs["一班"], classroom_id=room.id,
                                    semester_id=seed_refs["semester_id"]))
         session.commit()
         cells = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"],
-                             viewer_student_id="S001")
+                       class_id=seed_refs["一班"], viewer_student_id="S001")
         assert cells[0]["state"] == "mine"
 
     def test_occupied_in_session(self, session, seed_refs):
@@ -70,7 +72,7 @@ class TestSeatMap:
                                   checkin_type="code", seat_id=seat.id))
         session.commit()
         cells = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"],
-                             session_id=9001)
+                       class_id=seed_refs["一班"], session_id=9001)
         assert cells[0]["state"] == "occupied"
 
     def test_override_marks_mine(self, session, seed_refs):
@@ -82,7 +84,7 @@ class TestSeatMap:
                                         seat_id=seat.id))
         session.commit()
         cells = get_seat_map(session, room.id, semester_id=seed_refs["semester_id"],
-                             session_id=9002, viewer_student_id="S001")
+                       class_id=seed_refs["一班"], session_id=9002, viewer_student_id="S001")
         assert cells[1]["state"] == "mine"
 
 
@@ -92,14 +94,15 @@ class TestMyAssignments:
         seat = _seat(session, room.id, "P11")
         _mk_student(session, "S001", "张三")
         session.add(SeatAssignment(seat_id=seat.id, student_id="S001",
-                                   classroom_id=room.id,
+                                   class_id=seed_refs["一班"], classroom_id=room.id,
                                    semester_id=seed_refs["semester_id"]))
         session.commit()
-        mine = get_my_seat_assignments(session, "S001", seed_refs["semester_id"])
+        mine = get_my_seat_assignments(session, "S001", seed_refs["semester_id"],
+                               class_id=seed_refs["一班"])
         assert mine == [{
             "classroom_id": room.id, "classroom_name": "机房406",
             "seat_id": seat.id, "seat_no": "P11", "is_broken": False,
         }]
 
     def test_empty_for_other_semester(self, session, seed_refs):
-        assert get_my_seat_assignments(session, "S001", 999999) == []
+        assert get_my_seat_assignments(session, "S001", 999999, class_id=seed_refs["一班"]) == []

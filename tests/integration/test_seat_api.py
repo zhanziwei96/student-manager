@@ -65,6 +65,7 @@ class TestClassroomCrud:
             seat = s.exec(select(Seat).where(
                 Seat.classroom_id == classroom["id"], Seat.seat_no == "P23")).one()
             s.add(SeatAssignment(seat_id=seat.id, student_id="S001",
+                                 class_id=seed_refs["一班"],
                                  classroom_id=classroom["id"],
                                  semester_id=seed_refs["semester_id"]))
             s.commit()

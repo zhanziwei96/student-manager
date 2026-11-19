@@ -43,8 +43,8 @@ class TestUpdateLayout:
         session.add(Student(student_id="S001", name="张三"))
         session.commit()
         session.add(SeatAssignment(
-            seat_id=seat.id, student_id="S001", classroom_id=room.id,
-            semester_id=seed_refs["semester_id"],
+            seat_id=seat.id, student_id="S001", class_id=seed_refs["一班"],
+            classroom_id=room.id, semester_id=seed_refs["semester_id"],
         ))
         session.commit()
         with pytest.raises(SeatLayoutConflictError) as exc:

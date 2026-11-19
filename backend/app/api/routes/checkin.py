@@ -207,6 +207,7 @@ async def do_checkin(
                     seat_id=data.seat_id,
                     course_session_id=cs.id,
                     semester_id=cs.semester_id,
+                    class_id=cs.class_id,
                 )
             except SeatNotFoundError:
                 raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='座位不存在')
