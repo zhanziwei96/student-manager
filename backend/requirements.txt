@@ -26,10 +26,9 @@ pandas>=2.0.0
 # 环境变量
 python-dotenv>=1.0.0
 
-# SQLModel
-sqlmodel>=0.0.21
-# SQLAlchemy 2.1 起 naive datetime 处理不兼容当前 timestamp without time zone 模型，先锁定 2.0.x
-SQLAlchemy>=2.0.14,<2.1.0
+# SQLModel / SQLAlchemy：固定到当前测试通过组合，避免新版 naive datetime 行为导致登录 500
+sqlmodel==0.0.38
+SQLAlchemy==2.0.49
 
 # 数据库迁移
 alembic>=1.13.0
