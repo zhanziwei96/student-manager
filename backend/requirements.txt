@@ -28,6 +28,8 @@ python-dotenv>=1.0.0
 
 # SQLModel
 sqlmodel>=0.0.21
+# SQLAlchemy 2.1 起 naive datetime 处理不兼容当前 timestamp without time zone 模型，先锁定 2.0.x
+SQLAlchemy>=2.0.14,<2.1.0
 
 # 数据库迁移
 alembic>=1.13.0
