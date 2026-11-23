@@ -118,9 +118,6 @@ const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async ()
                     :class="{ 'rotate-180': expandedId === enrollment.enrollment_id }"
                   />
                 </p>
-                <p class="text-xs text-[#525252]">
-                  {{ enrollment.class_scope }}
-                </p>
               </td>
               <td class="px-4 py-3">
                 {{ enrollment.teacher_name }}
