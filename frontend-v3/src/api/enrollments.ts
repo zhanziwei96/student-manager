@@ -29,6 +29,17 @@ export interface MyEnrollment {
   status: string
 }
 
+/** 成绩变更明细 - 对应后端 GET /enrollments/{id}/score-logs 响应 */
+export interface EnrollmentScoreLog {
+  id: number
+  old_score: number | null
+  new_score: number | null
+  delta: number | null
+  reason: string | null
+  operator: string | null
+  created_at: string
+}
+
 /**
  * 选课成绩 API - 个人成绩/期末成绩（授课教师）+ 我的成绩（学生）
  *
@@ -38,6 +49,10 @@ export const enrollmentsApi = {
   /** 我的成绩：当前学期选课列表 */
   getMyEnrollments: (studentId: string): Promise<MyEnrollment[]> =>
     get(`/students/${studentId}/enrollments`),
+
+  /** 成绩变更明细（学生仅本人，教师/管理员不限） */
+  getScoreLogs: (enrollmentId: number): Promise<EnrollmentScoreLog[]> =>
+    get(`/enrollments/${enrollmentId}/score-logs`),
 
   /** 个人成绩加减分（乐观锁） */
   updateScore: (enrollmentId: number, data: UpdateEnrollmentScoreRequest): Promise<{ enrollment_id: number; score: number }> =>

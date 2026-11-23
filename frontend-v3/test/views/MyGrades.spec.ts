@@ -12,6 +12,7 @@ import MyGrades from '@/views/student/MyGrades.vue'
 vi.mock('@/api/enrollments', () => ({
   enrollmentsApi: {
     getMyEnrollments: vi.fn(),
+    getScoreLogs: vi.fn(),
   },
 }))
 
@@ -21,6 +22,7 @@ vi.mock('@/composables/useAuth', () => ({
 
 import { enrollmentsApi } from '@/api/enrollments'
 const mockedGetMyEnrollments = vi.mocked(enrollmentsApi.getMyEnrollments)
+const mockedGetScoreLogs = vi.mocked(enrollmentsApi.getScoreLogs)
 
 const MockCard = { template: '<div class="mock-card"><slot /></div>' }
 
@@ -79,5 +81,47 @@ describe('MyGrades 我的成绩', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('暂无选课成绩')
+  })
+
+  it('点击某门课展开加减分明细', async () => {
+    mockedGetScoreLogs.mockResolvedValue([
+      { id: 1, old_score: 80, new_score: 85, delta: 5, reason: '课堂积极发言', operator: '张老师', created_at: '2026-11-02T14:21:04' },
+      { id: 2, old_score: 85, new_score: 83, delta: -2, reason: '旷课', operator: '张老师', created_at: '2026-11-03T10:00:00' },
+    ])
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    // 初始不请求明细
+    expect(mockedGetScoreLogs).not.toHaveBeenCalled()
+
+    const row = wrapper.findAll('tr').find((tr) => tr.text().includes('高等数学'))!
+    await row.trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(mockedGetScoreLogs).toHaveBeenCalledWith(1)
+    expect(wrapper.text()).toContain('课堂积极发言')
+    expect(wrapper.text()).toContain('+5')
+    expect(wrapper.text()).toContain('-2')
+    expect(wrapper.text()).toContain('旷课')
+  })
+
+  it('明细无记录时显示空提示，再次点击收起', async () => {
+    mockedGetScoreLogs.mockResolvedValue([])
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    const row = wrapper.findAll('tr').find((tr) => tr.text().includes('大学英语'))!
+    await row.trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(mockedGetScoreLogs).toHaveBeenCalledWith(2)
+    expect(wrapper.text()).toContain('暂无分数变更记录')
+
+    // 再次点击收起
+    await row.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('暂无分数变更记录')
   })
 })

@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { Card, Badge, PullToRefreshIndicator } from '@/components/ui'
-import { Loader2, GraduationCap, Users } from 'lucide-vue-next'
+import { Loader2, GraduationCap, Users, ChevronDown } from 'lucide-vue-next'
 import { enrollmentsApi } from '@/api/enrollments'
 import { groupsApi } from '@/api/groups'
 import { useAuthQuery } from '@/composables/useAuth'
@@ -18,6 +18,26 @@ const { data: enrollmentsData, isPending, refetch: refetchEnrollments } = useQue
   enabled: () => !!studentId.value,
 })
 const enrollments = computed(() => enrollmentsData.value ?? [])
+
+// 点击某门课展开/收起加减分明细
+const expandedId = ref<number | null>(null)
+const { data: scoreLogs, isPending: logsLoading } = useQuery({
+  queryKey: ['enrollment-score-logs', expandedId],
+  queryFn: () => enrollmentsApi.getScoreLogs(expandedId.value!),
+  enabled: () => expandedId.value !== null,
+})
+function toggleLogs(enrollmentId: number) {
+  expandedId.value = expandedId.value === enrollmentId ? null : enrollmentId
+}
+
+function formatLogTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 // 我的小组分（每科小组累计分）
 const { data: myGroupsData, refetch: refetchMyGroups } = useQuery({
@@ -82,34 +102,87 @@ const { pulling, pullDistance, refreshing } = usePullToRefresh(pageRef, async ()
           </tr>
         </thead>
         <tbody class="divide-y divide-[#e5e5e5]">
-          <tr
+          <template
             v-for="enrollment in enrollments"
             :key="enrollment.enrollment_id"
-            class="text-[#737373] hover:bg-[#fafafa] transition-colors"
           >
-            <td class="px-4 py-3">
-              <p class="font-medium text-black">
-                {{ enrollment.course_name }}
-              </p>
-              <p class="text-xs text-[#525252]">
-                {{ enrollment.class_scope }}
-              </p>
-            </td>
-            <td class="px-4 py-3">
-              {{ enrollment.teacher_name }}
-            </td>
-            <td class="px-4 py-3 text-right font-medium text-black">
-              {{ enrollment.score }}
-            </td>
-            <td class="px-4 py-3 text-right font-medium text-black">
-              {{ enrollment.final_score ?? '—' }}
-            </td>
-            <td class="px-4 py-3">
-              <Badge :variant="enrollment.status === 'enrolled' ? 'default' : 'secondary'">
-                {{ enrollment.status === 'enrolled' ? '在读' : '已退课' }}
-              </Badge>
-            </td>
-          </tr>
+            <tr
+              class="text-[#737373] hover:bg-[#fafafa] transition-colors cursor-pointer"
+              @click="toggleLogs(enrollment.enrollment_id)"
+            >
+              <td class="px-4 py-3">
+                <p class="font-medium text-black inline-flex items-center gap-1.5">
+                  {{ enrollment.course_name }}
+                  <ChevronDown
+                    class="h-3.5 w-3.5 text-[#a3a3a3] transition-transform"
+                    :class="{ 'rotate-180': expandedId === enrollment.enrollment_id }"
+                  />
+                </p>
+                <p class="text-xs text-[#525252]">
+                  {{ enrollment.class_scope }}
+                </p>
+              </td>
+              <td class="px-4 py-3">
+                {{ enrollment.teacher_name }}
+              </td>
+              <td class="px-4 py-3 text-right font-medium text-black">
+                {{ enrollment.score }}
+              </td>
+              <td class="px-4 py-3 text-right font-medium text-black">
+                {{ enrollment.final_score ?? '—' }}
+              </td>
+              <td class="px-4 py-3">
+                <Badge :variant="enrollment.status === 'enrolled' ? 'default' : 'secondary'">
+                  {{ enrollment.status === 'enrolled' ? '在读' : '已退课' }}
+                </Badge>
+              </td>
+            </tr>
+            <!-- 加减分明细展开行 -->
+            <tr v-if="expandedId === enrollment.enrollment_id">
+              <td
+                colspan="5"
+                class="px-4 py-3 bg-[#fafafa]"
+              >
+                <div
+                  v-if="logsLoading"
+                  class="flex h-16 items-center justify-center"
+                >
+                  <Loader2 class="h-5 w-5 animate-spin text-primary" />
+                </div>
+                <div
+                  v-else-if="scoreLogs && scoreLogs.length > 0"
+                  class="space-y-2"
+                >
+                  <div
+                    v-for="log in scoreLogs"
+                    :key="log.id"
+                    class="flex items-center justify-between rounded-lg border border-[#e5e5e5] bg-white px-3 py-2"
+                  >
+                    <div>
+                      <p class="text-sm text-black/90">
+                        {{ log.reason || '分数变更' }}
+                      </p>
+                      <p class="text-[11px] text-[#a3a3a3] mt-0.5">
+                        {{ formatLogTime(log.created_at) }}<span v-if="log.operator"> · {{ log.operator }}</span>
+                      </p>
+                    </div>
+                    <span
+                      class="text-sm font-medium tabular-nums"
+                      :class="(log.delta ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'"
+                    >
+                      {{ (log.delta ?? 0) >= 0 ? '+' : '' }}{{ log.delta }}
+                    </span>
+                  </div>
+                </div>
+                <p
+                  v-else
+                  class="py-3 text-center text-sm text-[#a3a3a3]"
+                >
+                  暂无分数变更记录
+                </p>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
 
