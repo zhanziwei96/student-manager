@@ -11,6 +11,7 @@ from app.core.db import get_session
 from app.core.jwt import get_current_user
 from app.core.term import get_current_semester_id
 from app.crud.enrollment import (
+    get_enrollment_score_logs,
     get_student_enrollments,
     set_final_score,
     set_final_scores_for_group,
@@ -68,6 +69,27 @@ def get_enrollments(
 
     data = get_student_enrollments(session, student_id, get_current_semester_id(session))
     return {ApiResponseConst.SUCCESS: True, ApiResponseConst.DATA: data}
+
+
+@router.get("/enrollments/{enrollment_id}/score-logs", response_model=ApiResponse[list])
+def get_enrollment_score_logs_api(
+    enrollment_id: int,
+    session: Session = Depends(get_session),
+    user: dict = Depends(get_current_user),
+):
+    """个人成绩变更明细（学生仅本人，教师/管理员不限）"""
+    enrollment = session.get(Enrollment, enrollment_id)
+    if enrollment is None:
+        raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail="选课记录不存在")
+
+    if user.get("role") == "student" and user.get("sub") != enrollment.student_id:
+        raise HTTPException(status_code=HttpStatus.FORBIDDEN, detail="只能查看自己的成绩明细")
+
+    logs = get_enrollment_score_logs(session, enrollment_id)
+    return {
+        ApiResponseConst.SUCCESS: True,
+        ApiResponseConst.DATA: [log.model_dump() for log in logs],
+    }
 
 
 @router.put("/enrollments/{enrollment_id}/score", response_model=ApiResponse[dict])

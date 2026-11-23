@@ -136,6 +136,22 @@ def set_final_scores_for_group(
     return len(enrollments)
 
 
+def get_enrollment_score_logs(
+    session: Session,
+    enrollment_id: int,
+    limit: int = 50,
+    offset: int = 0,
+) -> List[EnrollmentScoreLog]:
+    """个人成绩变更日志（按时间倒序）"""
+    return list(session.exec(
+        select(EnrollmentScoreLog)
+        .where(EnrollmentScoreLog.enrollment_id == enrollment_id)
+        .order_by(EnrollmentScoreLog.created_at.desc(), EnrollmentScoreLog.id.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all())
+
+
 def get_student_enrollments(
     session: Session,
     student_id: str,

@@ -117,3 +117,59 @@ def test_teacher_sets_group_final_scores(teacher_client, enrollment_chain, sessi
     session.refresh(e2)
     assert enrollment.final_score == 88.0
     assert e2.final_score == 88.0
+
+
+def test_student_views_own_score_logs(teacher_client, student_client, enrollment_chain):
+    """学生查看自己的加减分明细"""
+    enrollment, _ = enrollment_chain
+    resp = teacher_client.put(
+        f"/api/v1/enrollments/{enrollment.id}/score",
+        json={"score_change": 5, "reason": "课堂表现"},
+    )
+    assert resp.status_code == 200
+
+    resp = student_client.get(f"/api/v1/enrollments/{enrollment.id}/score-logs")
+    assert resp.status_code == 200
+    logs = resp.json()["data"]
+    assert len(logs) == 1
+    assert logs[0]["reason"] == "课堂表现"
+    assert logs[0]["delta"] == 5
+    assert logs[0]["old_score"] == 80.0
+    assert logs[0]["new_score"] == 85.0
+
+
+def test_student_cannot_view_others_score_logs(student_client, enrollment_chain, session):
+    """学生查看他人加减分明细被 403 拦截"""
+    _, offering = enrollment_chain
+    cls_id = session.exec(select(Class_).where(Class_.name == "一班")).one().id
+    session.add(Student(student_id="S002", name="学生2", class_name="一班",
+                        class_id=cls_id, cohort_year="2026"))
+    session.flush()
+    e2 = Enrollment(student_id="S002", offering_id=offering.id,
+                    semester_id=offering.semester_id, status="enrolled", score=70.0)
+    session.add(e2)
+    session.commit()
+    session.refresh(e2)
+
+    resp = student_client.get(f"/api/v1/enrollments/{e2.id}/score-logs")
+    assert resp.status_code == 403
+
+
+def test_teacher_views_score_logs(teacher_client, enrollment_chain):
+    """教师可查看任意学生的加减分明细"""
+    enrollment, _ = enrollment_chain
+    resp = teacher_client.get(f"/api/v1/enrollments/{enrollment.id}/score-logs")
+    assert resp.status_code == 200
+    assert resp.json()["data"] == []
+
+
+def test_score_logs_enrollment_not_found(admin_client):
+    """选课记录不存在返回 404"""
+    resp = admin_client.get("/api/v1/enrollments/99999/score-logs")
+    assert resp.status_code == 404
+
+
+def test_score_logs_unauthenticated(client):
+    """未登录访问返回 401"""
+    resp = client.get("/api/v1/enrollments/1/score-logs")
+    assert resp.status_code == 401
