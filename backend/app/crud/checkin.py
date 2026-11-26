@@ -110,8 +110,14 @@ def create_checkin(
     session.add(checkin)
     try:
         session.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         session.rollback()
+        # 区分两类唯一冲突：同一学生重复签到 vs 同一课堂同座位被抢
+        constraint = getattr(getattr(e, "orig", None), "diag", None)
+        constraint_name = getattr(constraint, "constraint_name", "") or ""
+        if constraint_name == "uix_checkin_session_seat":
+            from app.crud.seat import SeatOccupiedError
+            raise SeatOccupiedError("该座位已被占用")
         raise DuplicateCheckinError("您已在本课堂签到")
     session.refresh(checkin)
     return checkin

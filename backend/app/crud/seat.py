@@ -115,32 +115,19 @@ def update_classroom_layout(session: Session, classroom_id: int, *,
 
 
 def get_seat_map(session: Session, classroom_id: int, *, semester_id: int,
-                 class_id: int,
                  session_id: Optional[int] = None,
                  viewer_student_id: Optional[str] = None) -> list[dict]:
-    """座位图：四态 empty/assigned/occupied/mine。
+    """座位图：每节课自选座位，只保留 empty/occupied/mine。
 
-    mine      = 本班本学期分配给 viewer，或本课堂 override 指向 viewer
+    mine      = 本课堂签到/override 指向 viewer
     occupied  = 本课堂已有他人签到占用，或 override 指向他人（需传 session_id）
-    assigned  = 本班本学期分配给他人且本课堂未占用
-    empty     = 其余（含「别的班占的座位」—— 跨班不霸占）
-
-    ⚠️ 座位分配按 class_id 隔离：同一教室被多个班共用时，只认本班的分配。
+    empty     = 其余座位；不再有跨学期固定座位 assigned 状态
     """
     seats = session.exec(
         select(Seat).where(Seat.classroom_id == classroom_id)
         .order_by(Seat.row, Seat.col)
     ).all()
     seat_ids = [s.id for s in seats]
-
-    assignments = session.exec(
-        select(SeatAssignment).where(
-            SeatAssignment.seat_id.in_(seat_ids),
-            SeatAssignment.semester_id == semester_id,
-            SeatAssignment.class_id == class_id,
-        )
-    ).all() if seat_ids else []
-    assigned_by_seat = {a.seat_id: a for a in assignments}
 
     occupied_by_seat: dict[int, str] = {}
     override_by_seat: dict[int, str] = {}
@@ -165,8 +152,7 @@ def get_seat_map(session: Session, classroom_id: int, *, semester_id: int,
     cells = []
     for s in seats:
         occupier = occupied_by_seat.get(s.id) or override_by_seat.get(s.id)
-        fixed = assigned_by_seat.get(s.id)
-        student_id = occupier or (fixed.student_id if fixed else None)
+        student_id = occupier
         if viewer_student_id and (
             student_id == viewer_student_id
             or override_by_student.get(viewer_student_id) == s.id
@@ -174,8 +160,6 @@ def get_seat_map(session: Session, classroom_id: int, *, semester_id: int,
             state = "mine"
         elif occupier:
             state = "occupied"
-        elif fixed:
-            state = "assigned"
         else:
             state = "empty"
         cells.append({
@@ -189,23 +173,8 @@ def get_seat_map(session: Session, classroom_id: int, *, semester_id: int,
 def get_my_seat_assignments(session: Session, student_id: str,
                             semester_id: int,
                             class_id: Optional[int] = None) -> list[dict]:
-    stmt = (
-        select(SeatAssignment, Seat, Classroom)
-        .join(Seat, SeatAssignment.seat_id == Seat.id)
-        .join(Classroom, SeatAssignment.classroom_id == Classroom.id)
-        .where(SeatAssignment.student_id == student_id,
-               SeatAssignment.semester_id == semester_id)
-    )
-    if class_id is not None:
-        stmt = stmt.where(SeatAssignment.class_id == class_id)
-    rows = session.exec(stmt).all()
-    return [
-        {
-            "classroom_id": room.id, "classroom_name": room.name,
-            "seat_id": seat.id, "seat_no": seat.seat_no, "is_broken": seat.is_broken,
-        }
-        for assignment, seat, room in rows
-    ]
+    """已废弃：座位改为每节课自选，不再有固定座位分配。"""
+    return []
 
 
 class SeatNotFoundError(Exception):
@@ -258,13 +227,8 @@ def _session_occupiers(session: Session, course_session_id: int) -> tuple[set, d
 
 
 def occupy_seat(session: Session, *, student_id: str, seat_id: int,
-                course_session_id: int, semester_id: int,
-                class_id: int) -> dict:
-    """校验并占座。
-
-    ⚠️ 座位分配维度 = 班级 × 学期 × 座位。占座/冲突判定一律带 class_id：
-    别的班在本教室的固定座位不算「有人占」，本班学生可以自由选择（跨班不霸占）。
-    """
+                course_session_id: int) -> dict:
+    """校验并占座。座位只在本课堂有效：不写入/不读取固定座位分配。"""
     seat = session.get(Seat, seat_id)
     if seat is None:
         raise SeatNotFoundError(seat_id)
@@ -288,53 +252,8 @@ def occupy_seat(session: Session, *, student_id: str, seat_id: int,
         return {"seat_id": seat_id, "seat_no": seat.seat_no,
                 "created_fixed": False, "temporary": True}
 
-    fixed = session.exec(
-        select(SeatAssignment).where(
-            SeatAssignment.student_id == student_id,
-            SeatAssignment.semester_id == semester_id,
-            SeatAssignment.class_id == class_id,
-            SeatAssignment.classroom_id == seat.classroom_id,
-        )
-    ).first()
-
-    # 本班别人的固定座位不可选（与前端四态 assigned 不可选一致），防撞 uix_seat_class_semester
-    # 注意：只查本班分配行 —— 别的班占的座位对本班是空位，可自由选择
-    owner = session.exec(
-        select(SeatAssignment).where(
-            SeatAssignment.seat_id == seat_id,
-            SeatAssignment.semester_id == semester_id,
-            SeatAssignment.class_id == class_id,
-        )
-    ).first()
-    if owner is not None and owner.student_id != student_id:
-        raise SeatOccupiedError(seat.seat_no)
-
-    if fixed is None:
-        assignment = SeatAssignment(
-            seat_id=seat_id, student_id=student_id, class_id=class_id,
-            classroom_id=seat.classroom_id, semester_id=semester_id,
-            created_at=datetime.now(),
-        )
-        session.add(assignment)
-        try:
-            session.commit()
-        except IntegrityError:
-            # 并发首次选座：后提交者撞 uix_seat_class_semester / uix_student_class_classroom_semester
-            session.rollback()
-            raise SeatOccupiedError(seat.seat_no)
-        return {"seat_id": seat_id, "seat_no": seat.seat_no,
-                "created_fixed": True, "temporary": False}
-
-    if fixed.seat_id == seat_id:
-        return {"seat_id": seat_id, "seat_no": seat.seat_no,
-                "created_fixed": False, "temporary": False}
-
-    fixed_seat = session.get(Seat, fixed.seat_id)
-    if fixed_seat is not None and fixed_seat.is_broken:
-        return {"seat_id": seat_id, "seat_no": seat.seat_no,
-                "created_fixed": False, "temporary": True}
-
-    raise NotMySeatError(f"你的固定座位是 {fixed_seat.seat_no if fixed_seat else fixed.seat_id}")
+    return {"seat_id": seat_id, "seat_no": seat.seat_no,
+            "created_fixed": False, "temporary": False}
 
 
 def set_seat_override(session: Session, *, session_id: int, student_id: str,

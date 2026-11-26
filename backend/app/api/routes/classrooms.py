@@ -129,7 +129,6 @@ def seat_map(classroom_id: int,
 
     role = user.get("role")
     viewer_student_id: Optional[str] = None
-    viewer_class_id: Optional[int] = None
     if role == "student":
         viewer_student_id = str(user["sub"])
         student = session.get(Student, viewer_student_id)
@@ -139,7 +138,6 @@ def seat_map(classroom_id: int,
         if cs is None or cs.classroom != room.name:
             raise HTTPException(403, "当前没有可用的座位图")
         session_id = cs.id
-        viewer_class_id = student.class_id
     else:
         if session_id is not None:
             cs = session.get(CourseSession, session_id)
@@ -147,11 +145,9 @@ def seat_map(classroom_id: int,
                 raise HTTPException(404, "课堂不存在")
             if role != "admin" and cs.teacher_id != int(user["sub"]):
                 raise HTTPException(403, "只能查看自己课堂的座位图")
-            viewer_class_id = cs.class_id
 
     cells = get_seat_map(session, classroom_id,
                          semester_id=get_current_semester_id(session),
-                         class_id=viewer_class_id,
                          session_id=session_id,
                          viewer_student_id=viewer_student_id)
     # 补学生姓名（assigned/occupied/mine 需要显示名）

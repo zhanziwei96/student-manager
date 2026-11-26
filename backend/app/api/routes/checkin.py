@@ -206,8 +206,6 @@ async def do_checkin(
                     student_id=data.student_id,
                     seat_id=data.seat_id,
                     course_session_id=cs.id,
-                    semester_id=cs.semester_id,
-                    class_id=cs.class_id,
                 )
             except SeatNotFoundError:
                 raise HTTPException(status_code=HttpStatus.NOT_FOUND, detail='座位不存在')
@@ -257,6 +255,8 @@ async def do_checkin(
                 checkin = existing
             else:
                 raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
+        except SeatOccupiedError as e:
+            raise HTTPException(status_code=HttpStatus.CONFLICT, detail=str(e))
 
     elif is_teacher_or_admin and data.session_id:
         # === 教师手动签到路径 ===
